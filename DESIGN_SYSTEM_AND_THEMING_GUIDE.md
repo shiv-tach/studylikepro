@@ -1,6 +1,6 @@
-# POS Application Design System & Theming Guide
+# Studylikepro Design System & Theming Guide
 
-This document serves as the official style guide, design pattern reference, and developer guidelines for the POS application. Any future enhancements, new UI features, or layout changes must strictly adhere to these patterns to maintain visual cohesion and high aesthetics.
+This document serves as the official style guide, design pattern reference, and developer guidelines for the Studylikepro application. Any future enhancements, new UI features, or layout changes must strictly adhere to these patterns to maintain visual cohesion and high aesthetics.
 
 ---
 
@@ -54,7 +54,7 @@ The system supports six distinct presets configured via the database and synchro
 ---
 
 ### 3. Background Patterns
-Custom background patterns are defined in [app.css](file:///d:/POS/resources/css/app.css) using CSS radial gradients:
+Custom background patterns are defined in [app.css](file:///d:/Github/studylikepro/resources/css/app.css) using CSS radial gradients:
 * **Grid Pattern (`.bg-pattern-grid`):** Subtle slate grid lines.
 * **Dots Pattern (`.bg-pattern-dots`):** Playful small indigo dots.
 * **Waves Pattern (`.bg-pattern-waves`):** Multi-layered cyan/blue/indigo radial gradients.
@@ -63,7 +63,7 @@ Custom background patterns are defined in [app.css](file:///d:/POS/resources/css
 
 ## ⚡ Theming Architecture & Anti-Flashing Guard
 
-To prevent the brief flash of the light/default theme during page reloads, a blocking script is injected directly inside the `<head>` of [app.blade.php](file:///d:/POS/resources/views/layouts/app.blade.php):
+To prevent the brief flash of the light/default theme during page reloads, a blocking script is injected directly inside the `<head>` of [app.blade.php](file:///d:/Github/studylikepro/resources/views/layouts/app.blade.php):
 
 ```html
 <!-- Blocking theme script: prevents flash of light theme on page load -->
@@ -99,7 +99,7 @@ To prevent the brief flash of the light/default theme during page reloads, a blo
 
 ### Flow Method: AlpineJS Live Preview
 Theme adjustments on the settings page update the UI instantly using AlpineJS component state and a custom window event (`theme-changed`):
-1. **User interaction:** User clicks a preset/accent in [edit.blade.php](file:///d:/POS/resources/views/settings/edit.blade.php).
+1. **User interaction:** User clicks a preset/accent in [edit.blade.php](file:///d:/Github/studylikepro/resources/views/settings/edit.blade.php).
 2. **Preview function runs:**
    ```javascript
    previewTheme(preset, accent, mode, sidebarStyle) {
@@ -139,8 +139,8 @@ When writing new views, editing components, or extending layouts, you **MUST** f
 ---
 
 ## 🗂️ Key Files Reference
-* **Tailwind Config:** [tailwind.config.js](file:///d:/POS/tailwind.config.js)
-* **Custom Patterns CSS:** [resources/css/app.css](file:///d:/POS/resources/css/app.css)
-* **Master Layout File:** [resources/views/layouts/app.blade.php](file:///d:/POS/resources/views/layouts/app.blade.php)
-* **Sidebar Template:** [resources/views/layouts/navigation.blade.php](file:///d:/POS/resources/views/layouts/navigation.blade.php)
-* **Theme Configuration view:** [resources/views/settings/edit.blade.php](file:///d:/POS/resources/views/settings/edit.blade.php)
+* **Tailwind Config:** [tailwind.config.js](file:///d:/Github/studylikepro/tailwind.config.js)
+* **Custom Patterns CSS:** [resources/css/app.css](file:///d:/Github/studylikepro/resources/css/app.css)
+* **Master Layout File:** [resources/views/layouts/app.blade.php](file:///d:/Github/studylikepro/resources/views/layouts/app.blade.php)
+* **Sidebar Template:** [resources/views/layouts/navigation.blade.php](file:///d:/Github/studylikepro/resources/views/layouts/navigation.blade.php)
+* **Theme Configuration view:** [resources/views/settings/edit.blade.php](file:///d:/Github/studylikepro/resources/views/settings/edit.blade.php)

@@ -51,6 +51,15 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        // A suspended account cannot sign in at all — even with the right password.
+        if (Auth::user()?->isSuspended()) {
+            Auth::guard('web')->logout();
+
+            throw ValidationException::withMessages([
+                'email' => __('This account is suspended. Contact support if you believe this is a mistake.'),
+            ]);
+        }
     }
 
     /**

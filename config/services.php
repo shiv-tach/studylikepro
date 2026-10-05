@@ -35,4 +35,25 @@ return [
         ],
     ],
 
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+        'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
+        'timeout' => (int) env('OPENAI_TIMEOUT', 45),
+    ],
+
+    'razorpay' => [
+        'key' => env('RAZORPAY_KEY'),
+        'secret' => env('RAZORPAY_SECRET'),
+        'webhook_secret' => env('RAZORPAY_WEBHOOK_SECRET'),
+        'base_url' => env('RAZORPAY_BASE_URL', 'https://api.razorpay.com/v1'),
+        'timeout' => (int) env('RAZORPAY_TIMEOUT', 30),
+    ],
+
+    'daily' => [
+        'key' => env('DAILY_API_KEY'),
+        'base_url' => env('DAILY_BASE_URL', 'https://api.daily.co/v1'),
+        'timeout' => (int) env('DAILY_TIMEOUT', 20),
+    ],
+
 ];

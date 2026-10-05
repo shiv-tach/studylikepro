@@ -7,6 +7,12 @@
 
     <div class="mx-auto max-w-5xl space-y-8">
 
+        @if (session('status') === 'notifications-updated')
+            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                {{ __('Notification preferences saved.') }}
+            </div>
+        @endif
+
         {{-- Page Description --}}
         <div class="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
             <div class="flex items-start gap-4">
@@ -73,6 +79,7 @@
             </a>
 
             {{-- Notification Settings Card (Demo) --}}
+            {{-- Notifications Card --}}
             <div class="group flex flex-col rounded-2xl border border-slate-200 bg-white p-6 transition-all duration-200 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-primary/40">
                 <div class="mb-4 flex items-center gap-3">
                     <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
@@ -82,18 +89,35 @@
                     </div>
                     <div>
                         <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Notifications</h3>
-                        <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">Coming Soon</span>
+                        @php $unreadNotifications = auth()->user()->unreadNotifications()->count(); @endphp
+                        @if ($unreadNotifications > 0)
+                            <span class="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">{{ $unreadNotifications }} unread</span>
+                        @else
+                            <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">Up to date</span>
+                        @endif
                     </div>
                 </div>
                 <p class="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                    Manage your notification preferences for email alerts, in-app notifications, and system updates. Control how and when you receive important updates.
+                    Lesson reminders, payments, refunds and verification updates always land in your in-app <a href="{{ route('notifications.index') }}" class="font-semibold text-primary hover:underline">notification centre</a>. Choose whether we also email you about them.
                 </p>
-                <div class="mt-4 flex items-center gap-1 text-sm font-medium text-slate-400 dark:text-slate-500">
-                    <span>Available soon</span>
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <form method="POST" action="{{ route('settings.notifications.update') }}" class="mt-4 space-y-3">
+                    @csrf
+                    <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+                        <input type="checkbox" name="email" value="1" @checked(auth()->user()->wantsEmailNotifications())
+                               class="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary dark:border-slate-600 dark:bg-slate-800">
+                        <span>
+                            <span class="block text-sm font-semibold text-slate-700 dark:text-slate-200">Email me about my lessons and money</span>
+                            <span class="block text-xs text-slate-500 dark:text-slate-400">Reminders, confirmations, refunds, payouts and verification results.</span>
+                        </span>
+                    </label>
+                    <x-primary-button>{{ __('Save notification preferences') }}</x-primary-button>
+                </form>
+                <a href="{{ route('notifications.index') }}" class="mt-4 flex items-center gap-1 text-sm font-medium text-primary">
+                    {{ __('View notifications') }}
+                    <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
-                </div>
+                </a>
             </div>
 
             {{-- Security Settings Card (Demo) --}}
@@ -153,12 +177,12 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Store / Business Info</h3>
+                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Account & Billing</h3>
                         <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">Coming Soon</span>
                     </div>
                 </div>
                 <p class="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                    Configure your POS business details including store name, address, tax information, currency preferences, and receipt customization for your point of sale.
+                    Configure your billing details including currency preferences, invoices, and receipt customization for your Studylikepro account.
                 </p>
                 <div class="mt-4 flex items-center gap-1 text-sm font-medium text-slate-400 dark:text-slate-500">
                     <span>Available soon</span>
@@ -191,7 +215,7 @@
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary"></span>
-                            <span>Additional settings like <strong class="text-slate-700 dark:text-slate-300">Notifications</strong>, <strong class="text-slate-700 dark:text-slate-300">Security</strong>, and <strong class="text-slate-700 dark:text-slate-300">Store Info</strong> will be available in upcoming updates.</span>
+                            <span>Open <strong class="text-slate-700 dark:text-slate-300">Notifications</strong> in the sidebar any time to see lesson, payment and verification updates, and choose whether we email them too.</span>
                         </li>
                     </ul>
                 </div>

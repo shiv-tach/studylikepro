@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\StudentProfile;
+use App\Models\TeacherProfile;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -41,5 +43,45 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    /**
+     * Create the user with the admin role.
+     */
+    public function admin(): static
+    {
+        return $this->afterCreating(fn (User $user) => $user->assignRole(User::ROLE_ADMIN));
+    }
+
+    /**
+     * Create the user with the teacher role.
+     */
+    public function teacher(): static
+    {
+        return $this->afterCreating(fn (User $user) => $user->assignRole(User::ROLE_TEACHER));
+    }
+
+    /**
+     * Create the user with the student role.
+     */
+    public function student(): static
+    {
+        return $this->afterCreating(fn (User $user) => $user->assignRole(User::ROLE_STUDENT));
+    }
+
+    /**
+     * Create a completed profile matching the user's role.
+     */
+    public function onboarded(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            if ($user->isStudent()) {
+                StudentProfile::factory()->for($user)->create();
+            }
+
+            if ($user->isTeacher()) {
+                TeacherProfile::factory()->for($user)->create();
+            }
+        });
     }
 }

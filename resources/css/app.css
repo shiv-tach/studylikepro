@@ -6,6 +6,10 @@
     --primary: 99 102 241; /* Default Indigo */
 }
 
+[x-cloak] {
+    display: none !important;
+}
+
 /* Background Patterns */
 .bg-pattern-grid {
     background-image: radial-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px);

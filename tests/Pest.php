@@ -1,5 +1,14 @@
 <?php
 
+use App\Enums\BookingStatus;
+use App\Models\Booking;
+use App\Models\Payment;
+use App\Models\TeacherEarning;
+use App\Models\TeacherProfile;
+use App\Models\User;
+use App\Services\BookingService;
+use App\Services\Meetings\MeetingService;
+use App\Services\Payments\EarningsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -47,4 +56,89 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * A booking whose student has finished onboarding, so the student routes accept them.
+ * Used by the student-facing booking suites.
+ */
+function ownedBooking(BookingStatus $status = BookingStatus::PendingPayment, array $overrides = []): Booking
+{
+    $student = User::factory()->student()->onboarded()->create();
+    $teacherUser = User::factory()->teacher()->create();
+    $teacher = TeacherProfile::factory()->approved()->create(['user_id' => $teacherUser->id]);
+
+    return Booking::factory()->create([
+        'student_id' => $student->id,
+        'teacher_profile_id' => $teacher->id,
+        'status' => $status,
+        'expires_at' => $status === BookingStatus::PendingPayment
+            ? now()->addMinutes(platform_settings()->int('hold_ttl_minutes'))
+            : null,
+        ...$overrides,
+    ]);
+}
+
+/**
+ * A confirmed lesson with a captured payment and the matching earnings row.
+ *
+ * @return array{student: User, teacherUser: User, teacher: TeacherProfile, booking: Booking, payment: Payment, earning: TeacherEarning}
+ */
+function paidBookingScenario(int $priceMinor = 70000, int $hoursAhead = 72): array
+{
+    $student = User::factory()->student()->onboarded()->create();
+    $teacherUser = User::factory()->teacher()->create();
+    $teacher = TeacherProfile::factory()->approved()->create(['user_id' => $teacherUser->id]);
+
+    $booking = Booking::factory()->create([
+        'student_id' => $student->id,
+        'teacher_profile_id' => $teacher->id,
+        'status' => BookingStatus::Confirmed,
+        'starts_at' => now()->addHours($hoursAhead),
+        'ends_at' => now()->addHours($hoursAhead)->addHour(),
+        'price_minor' => $priceMinor,
+        'confirmed_at' => now(),
+        ...app(BookingService::class)->feeBreakdown($priceMinor),
+    ]);
+
+    $payment = Payment::factory()->create([
+        'booking_id' => $booking->id,
+        'student_id' => $student->id,
+        'amount_minor' => $priceMinor,
+    ]);
+
+    $earning = app(EarningsService::class)->recordForBooking($booking->fresh(), $payment);
+
+    return compact('student', 'teacherUser', 'teacher', 'booking', 'payment', 'earning');
+}
+
+/**
+ * A confirmed lesson set up for classroom tests: two participants and, unless
+ * asked otherwise, a live room from the offline meeting provider.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array{student: User, teacherUser: User, teacher: TeacherProfile, booking: Booking}
+ */
+function classroomScenario(int $minutesFromNow = 5, int $durationMinutes = 45, array $overrides = [], bool $withRoom = true): array
+{
+    $student = User::factory()->student()->onboarded()->create();
+    $teacherUser = User::factory()->teacher()->create();
+    $teacher = TeacherProfile::factory()->approved()->create(['user_id' => $teacherUser->id]);
+
+    $booking = Booking::factory()->create([
+        'student_id' => $student->id,
+        'teacher_profile_id' => $teacher->id,
+        'status' => BookingStatus::Confirmed,
+        'starts_at' => now()->addMinutes($minutesFromNow),
+        'ends_at' => now()->addMinutes($minutesFromNow + $durationMinutes),
+        'confirmed_at' => now(),
+        ...$overrides,
+    ]);
+
+    if ($withRoom) {
+        app(MeetingService::class)->provision($booking);
+        $booking->refresh();
+    }
+
+    return compact('student', 'teacherUser', 'teacher', 'booking');
 }

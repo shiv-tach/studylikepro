@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>{{ config('app.name', 'Studylikepro') }}</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -157,30 +157,70 @@
 
                     <!-- Right utility nav -->
                     <div class="flex items-center gap-4">
-                        <!-- Search Bar (Desktop) -->
-                        <div class="hidden max-w-xs relative md:block">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        <!-- Notification bell -->
+                        <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                            <button @click="open = !open" class="relative rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800" aria-label="{{ __('Notifications') }}">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                 </svg>
-                            </span>
-                            <input type="text" placeholder="Search..." class="w-full pl-9 pr-4 py-1.5 text-sm rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary dark:border-slate-800 dark:bg-slate-950 dark:focus:ring-primary/30" />
-                        </div>
+                                @if (($unreadNotificationCount ?? 0) > 0)
+                                    <span class="absolute -right-0.5 -top-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 py-0.5 text-[10px] font-bold text-white">{{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}</span>
+                                @endif
+                            </button>
 
-                        <!-- Notification Bell -->
-                        <button class="relative rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors">
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                            <span class="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900"></span>
-                        </button>
+                            <div x-show="open"
+                                 x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="transform opacity-0 scale-95"
+                                 x-transition:enter-end="transform opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-75"
+                                 x-transition:leave-start="transform opacity-100 scale-100"
+                                 x-transition:leave-end="transform opacity-0 scale-95"
+                                 class="absolute right-0 mt-2 w-80 origin-top-right rounded-xl border border-slate-200 bg-white shadow-lg ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-900 dark:ring-white/5 sm:w-96"
+                                 style="display: none;">
+                                <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+                                    <p class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ __('Notifications') }}</p>
+                                    @if (($unreadNotificationCount ?? 0) > 0)
+                                        <form method="POST" action="{{ route('notifications.read-all') }}">
+                                            @csrf
+                                            <button type="submit" class="text-xs font-semibold text-primary hover:underline">{{ __('Mark all read') }}</button>
+                                        </form>
+                                    @endif
+                                </div>
+
+                                <div class="max-h-80 overflow-y-auto">
+                                    @forelse (($recentNotifications ?? collect()) as $notification)
+                                        <form method="POST" action="{{ route('notifications.open', $notification->id) }}">
+                                            @csrf
+                                            <button type="submit" class="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 {{ $notification->read_at === null ? 'bg-primary/5' : '' }}">
+                                                <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full {{ $notification->read_at === null ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600' }}"></span>
+                                                <span class="min-w-0">
+                                                    <span class="block truncate text-sm font-semibold text-slate-700 dark:text-slate-200">{{ data_get($notification->data, 'title', 'Notification') }}</span>
+                                                    <span class="mt-0.5 block text-xs leading-relaxed text-slate-500 dark:text-slate-400">{{ \Illuminate\Support\Str::limit((string) data_get($notification->data, 'body', ''), 110) }}</span>
+                                                    <span class="mt-1 block text-[10px] uppercase tracking-wide text-slate-400">{{ $notification->created_at->diffForHumans() }}</span>
+                                                </span>
+                                            </button>
+                                        </form>
+                                    @empty
+                                        <p class="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">{{ __('Nothing yet — lesson updates show up here.') }}</p>
+                                    @endforelse
+                                </div>
+
+                                <a href="{{ route('notifications.index') }}" class="block border-t border-slate-200 px-4 py-3 text-center text-sm font-semibold text-primary hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60">
+                                    {{ __('View all notifications') }}
+                                </a>
+                            </div>
+                        </div>
 
                         <!-- Profile Dropdown -->
                         <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                             <button @click="open = !open" class="flex items-center gap-2 rounded-xl p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                                <div class="h-8 w-8 rounded-xl bg-gradient-to-tr from-primary to-purple-500 text-white flex items-center justify-center font-semibold text-sm shadow-md shadow-primary/20">
-                                    {{ substr(Auth::user()->name, 0, 2) }}
-                                </div>
+                                @if (Auth::user()->avatarUrl())
+                                    <img src="{{ Auth::user()->avatarUrl() }}" alt="{{ Auth::user()->name }}" class="h-8 w-8 rounded-xl object-cover shadow-md" />
+                                @else
+                                    <div class="h-8 w-8 rounded-xl bg-gradient-to-tr from-primary to-purple-500 text-white flex items-center justify-center font-semibold text-sm shadow-md shadow-primary/20">
+                                        {{ substr(Auth::user()->name, 0, 2) }}
+                                    </div>
+                                @endif
                                 <span class="hidden text-sm font-medium text-slate-700 dark:text-slate-300 md:block">{{ Auth::user()->name }}</span>
                                 <svg class="hidden h-4 w-4 text-slate-400 md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
