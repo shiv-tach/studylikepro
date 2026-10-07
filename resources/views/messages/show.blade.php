@@ -5,7 +5,7 @@
     $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
     $bookingsRoute = $isTeacher ? 'teacher.bookings.show' : 'student.bookings.show';
     $lesson = $conversation->booking;
-    $lessonTitle = $lesson?->topic?->name ?? $lesson?->subject?->name ?? __('Tutoring lesson');
+    $lessonTitle = $lesson?->lesson?->name ?? $lesson?->subject?->name ?? __('Tutoring lesson');
     $timezone = auth()->user()->studentProfile?->timezone
         ?? auth()->user()->teacherProfile?->timezone
         ?? config('studylikepro.default_display_timezone');

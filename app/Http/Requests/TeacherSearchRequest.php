@@ -18,9 +18,10 @@ class TeacherSearchRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'level' => ['nullable', 'string', Rule::exists('education_levels', 'key')->where('is_active', true)],
             'subject' => ['nullable', 'string', 'exists:subjects,slug,is_active,1'],
-            'topic' => ['nullable', 'string', 'exists:topics,slug,is_active,1'],
-            'grade_level' => ['nullable', 'string', Rule::in(array_keys(config('studylikepro.grade_levels')))],
+            'lesson' => ['nullable', 'integer', Rule::exists('lessons', 'id')->where('is_active', true)],
+            'grade' => ['nullable', 'integer', Rule::exists('grades', 'id')->where('is_active', true)],
             'language' => ['nullable', 'string', Rule::in(config('studylikepro.languages'))],
             'min_rate' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'max_rate' => array_values(array_filter([
@@ -44,7 +45,7 @@ class TeacherSearchRequest extends FormRequest
 
     public function hasFilters(): bool
     {
-        return collect(['subject', 'topic', 'grade_level', 'language', 'min_rate', 'max_rate', 'weekday', 'time_from', 'time_to'])
+        return collect(['level', 'subject', 'lesson', 'grade', 'language', 'min_rate', 'max_rate', 'weekday', 'time_from', 'time_to'])
             ->contains(fn (string $key) => filled($this->input($key)));
     }
 }

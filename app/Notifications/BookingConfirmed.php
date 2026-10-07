@@ -18,7 +18,7 @@ class BookingConfirmed extends Notification implements ShouldQueue
     {
         $isStudent = $notifiable->id === $this->booking->student_id;
         $when = $this->windowLabel($this->booking, $notifiable);
-        $subject = $this->booking->topic?->name ?? $this->booking->subject?->name ?? 'Tutoring lesson';
+        $subject = $this->booking->lesson?->name ?? $this->booking->subject?->name ?? 'Tutoring lesson';
 
         $message = (new MailMessage)
             ->subject('Lesson confirmed — '.$when)

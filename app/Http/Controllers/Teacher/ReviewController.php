@@ -33,7 +33,7 @@ class ReviewController extends Controller
             'breakdown' => $this->stats->ratingBreakdown($teacher),
             'reviews' => $teacher->reviews()
                 ->visible()
-                ->with(['student', 'booking.subject', 'booking.topic'])
+                ->with(['student', 'booking.subject', 'booking.lesson'])
                 ->paginate(10),
             'reported' => $teacher->reviews()->flagged()->visible()->count(),
         ]);

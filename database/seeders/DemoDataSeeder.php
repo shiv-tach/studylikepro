@@ -11,6 +11,8 @@ use App\Enums\ResponseStatus;
 use App\Enums\VerificationStatus;
 use App\Models\Booking;
 use App\Models\Dispute;
+use App\Models\Grade;
+use App\Models\Lesson;
 use App\Models\Payment;
 use App\Models\Review;
 use App\Models\StudentProfile;
@@ -46,12 +48,13 @@ class DemoDataSeeder extends Seeder
         }
 
         $student = $this->createUser('Demo Student', 'student@studylikepro.test', User::ROLE_STUDENT);
+        $studentGrade = Grade::query()->where('number', 11)->first();
         StudentProfile::query()->firstOrCreate(
             ['user_id' => $student->id],
             [
-                'grade_level' => 'high_school',
+                'grade_id' => $studentGrade?->id,
                 'timezone' => 'Asia/Colombo',
-                'learning_goals' => 'Improve maths and physics for board exams.',
+                'learning_goals' => 'Improve maths and science for board exams.',
                 'completed_at' => now(),
             ]
         );
@@ -60,7 +63,7 @@ class DemoDataSeeder extends Seeder
         $teacherProfile = TeacherProfile::query()->firstOrCreate(
             ['user_id' => $teacher->id],
             [
-                'headline' => 'Maths & Physics tutor for high school',
+                'headline' => 'Maths & Science tutor for high school',
                 'bio' => '10+ years helping students build strong fundamentals and exam confidence.',
                 'experience_years' => 10,
                 'education' => 'M.Sc. Physics, University of Delhi',
@@ -72,24 +75,26 @@ class DemoDataSeeder extends Seeder
             ]
         );
 
-        $mathematics = Subject::query()->where('slug', 'mathematics')->first();
-        $physics = Subject::query()->where('slug', 'physics')->first();
+        $mathematics = $this->subjectFor('ol', 'mathematics');
+        $science = $this->subjectFor('ol', 'science');
 
-        if ($mathematics && $physics) {
-            $student->interestedSubjects()->sync([$mathematics->id, $physics->id]);
-            $student->interestedTopics()->sync($this->topicIds($mathematics, ['algebra']));
+        if ($mathematics && $science) {
+            $mathematicsGrades = $this->gradeIdsFor($mathematics);
+            $scienceGrades = $this->gradeIdsFor($science);
+            $student->interestedSubjects()->sync([$mathematics->id, $science->id]);
+            $student->interestedLessons()->sync($this->lessonIds($mathematics, ['unit-01']));
 
-            $teacherProfile->subjects()->sync([$mathematics->id, $physics->id]);
+            $teacherProfile->subjects()->sync([$mathematics->id, $science->id]);
             $teacherProfile->subjects()->updateExistingPivot($mathematics->id, [
-                'grade_levels' => ['high_school', 'college'],
+                'grade_levels' => $mathematicsGrades,
             ]);
-            $teacherProfile->subjects()->updateExistingPivot($physics->id, [
-                'grade_levels' => ['high_school'],
+            $teacherProfile->subjects()->updateExistingPivot($science->id, [
+                'grade_levels' => $scienceGrades,
                 'rate_per_hour_minor' => 90000,
             ]);
-            $teacherProfile->topics()->sync(array_merge(
-                $this->topicIds($mathematics, ['algebra', 'geometry', 'calculus']),
-                $this->topicIds($physics, ['mechanics', 'electricity-magnetism'])
+            $teacherProfile->lessons()->sync(array_merge(
+                $this->lessonIds($mathematics, ['unit-01', 'unit-02', 'unit-03']),
+                $this->lessonIds($science, ['unit-01', 'unit-02'])
             ));
         }
 
@@ -114,10 +119,10 @@ class DemoDataSeeder extends Seeder
         if ($mathematics) {
             $verifiedProfile->subjects()->sync([$mathematics->id]);
             $verifiedProfile->subjects()->updateExistingPivot($mathematics->id, [
-                'grade_levels' => ['high_school', 'college'],
+                'grade_levels' => $this->gradeIdsFor($mathematics),
             ]);
-            $verifiedProfile->topics()->sync(
-                $this->topicIds($mathematics, ['algebra', 'calculus'])
+            $verifiedProfile->lessons()->sync(
+                $this->lessonIds($mathematics, ['unit-01', 'unit-02'])
             );
         }
 
@@ -139,21 +144,21 @@ class DemoDataSeeder extends Seeder
             ]
         );
 
-        $chemistry = Subject::query()->where('slug', 'chemistry')->first();
-        $biology = Subject::query()->where('slug', 'biology')->first();
+        $chemistry = $this->subjectFor('al', 'chemistry');
+        $biology = $this->subjectFor('al', 'biology');
 
         if ($chemistry && $biology) {
             $chemistryProfile->subjects()->sync([$chemistry->id, $biology->id]);
             $chemistryProfile->subjects()->updateExistingPivot($chemistry->id, [
-                'grade_levels' => ['high_school', 'college'],
+                'grade_levels' => $this->gradeIdsFor($chemistry),
                 'rate_per_hour_minor' => 65000,
             ]);
             $chemistryProfile->subjects()->updateExistingPivot($biology->id, [
-                'grade_levels' => ['high_school'],
+                'grade_levels' => $this->gradeIdsFor($biology),
             ]);
-            $chemistryProfile->topics()->sync(array_merge(
-                $this->topicIds($chemistry, ['organic-chemistry', 'chemical-equations']),
-                $this->topicIds($biology, ['cell-biology', 'genetics'])
+            $chemistryProfile->lessons()->sync(array_merge(
+                $this->lessonIds($chemistry, ['unit-01', 'unit-02']),
+                $this->lessonIds($biology, ['unit-01', 'unit-02'])
             ));
         }
 
@@ -236,10 +241,11 @@ class DemoDataSeeder extends Seeder
 
         $bookings = app(BookingService::class);
         $timezone = 'Asia/Colombo';
-        $mathematics = Subject::query()->where('slug', 'mathematics')->first();
-        $chemistry = Subject::query()->where('slug', 'chemistry')->first();
+        $mathematics = $this->subjectFor('ol', 'mathematics');
+        $chemistry = $this->subjectFor('al', 'chemistry');
 
         if ($mathematics) {
+            $lesson = $this->lessonFor($mathematics, 'unit-01');
             $startsAt = $this->nextWeekday(CarbonInterface::TUESDAY, $timezone)->setTime(17, 0);
             $price = $bookings->priceMinor($mathematicsTeacher, $mathematics, 45);
 
@@ -247,14 +253,14 @@ class DemoDataSeeder extends Seeder
                 'student_id' => $student->id,
                 'teacher_profile_id' => $mathematicsTeacher->id,
                 'subject_id' => $mathematics->id,
-                'topic_id' => $mathematics->topics()->where('slug', 'algebra')->value('id'),
+                'lesson_id' => $lesson?->id,
                 'starts_at' => $startsAt->utc(),
                 'ends_at' => $startsAt->addMinutes(45)->utc(),
                 'status' => BookingStatus::Confirmed,
                 'price_minor' => $price,
                 'currency' => 'LKR',
                 'learner_name' => $student->name,
-                'learner_grade' => 'high_school',
+                'learner_grade_id' => $lesson?->grade_id,
                 'confirmed_at' => now()->subDay(),
                 ...$bookings->feeBreakdown($price),
                 ...$this->bookingFee(),
@@ -262,6 +268,7 @@ class DemoDataSeeder extends Seeder
         }
 
         if ($chemistry && $mathematics) {
+            $lesson = $this->lessonFor($mathematics, 'unit-02');
             $startsAt = $this->nextWeekday(CarbonInterface::THURSDAY, $timezone)->setTime(16, 0);
             $price = $bookings->priceMinor($mathematicsTeacher, $mathematics, 45);
 
@@ -270,19 +277,20 @@ class DemoDataSeeder extends Seeder
                 'student_id' => $student->id,
                 'teacher_profile_id' => $mathematicsTeacher->id,
                 'subject_id' => $mathematics->id,
-                'topic_id' => $mathematics->topics()->where('slug', 'calculus')->value('id'),
+                'lesson_id' => $lesson?->id,
                 'starts_at' => $startsAt->utc(),
                 'ends_at' => $startsAt->addMinutes(45)->utc(),
                 'status' => BookingStatus::PendingPayment,
                 'price_minor' => $price,
                 'currency' => 'LKR',
                 'learner_name' => $student->name,
-                'learner_grade' => 'high_school',
+                'learner_grade_id' => $lesson?->grade_id,
                 'expires_at' => now()->addMinutes((int) platform_settings()->int('hold_ttl_minutes')),
                 ...$bookings->feeBreakdown($price),
                 ...$this->bookingFee(),
             ]);
 
+            $lesson = $this->lessonFor($chemistry, 'unit-01');
             $deliveredAt = CarbonImmutable::now($timezone)->subDays(6)->setTime(7, 30);
             $price = $bookings->priceMinor($chemistryTeacher, $chemistry, 60);
 
@@ -290,14 +298,14 @@ class DemoDataSeeder extends Seeder
                 'student_id' => $student->id,
                 'teacher_profile_id' => $chemistryTeacher->id,
                 'subject_id' => $chemistry->id,
-                'topic_id' => $chemistry->topics()->where('slug', 'organic-chemistry')->value('id'),
+                'lesson_id' => $lesson?->id,
                 'starts_at' => $deliveredAt->utc(),
                 'ends_at' => $deliveredAt->addHour()->utc(),
                 'status' => BookingStatus::Completed,
                 'price_minor' => $price,
                 'currency' => 'LKR',
                 'learner_name' => $student->name,
-                'learner_grade' => 'high_school',
+                'learner_grade_id' => $lesson?->grade_id,
                 'confirmed_at' => $deliveredAt->subDays(2)->utc(),
                 'started_at' => $deliveredAt->utc(),
                 'completed_at' => $deliveredAt->addHour()->utc(),
@@ -405,8 +413,7 @@ class DemoDataSeeder extends Seeder
      */
     private function seedReviewHistory(TeacherProfile $mathematicsTeacher): void
     {
-        $mathematics = Subject::query()->where('slug', 'mathematics')->first();
-        $chemistry = Subject::query()->where('slug', 'chemistry')->first();
+        $mathematics = $this->subjectFor('ol', 'mathematics');
 
         if ($mathematics === null || Review::query()->exists()) {
             return;
@@ -419,7 +426,7 @@ class DemoDataSeeder extends Seeder
                 'name' => 'Aisha Khan',
                 'email' => 'aisha@studylikepro.test',
                 'days_ago' => 21,
-                'topic' => 'algebra',
+                'lesson' => 'unit-01',
                 'rating' => 5,
                 'comment' => 'Priya turned algebra into something I look forward to. She spotted the gaps from my old tests and fixed them one by one.',
             ],
@@ -427,7 +434,7 @@ class DemoDataSeeder extends Seeder
                 'name' => 'Rohan Mehta',
                 'email' => 'rohan@studylikepro.test',
                 'days_ago' => 28,
-                'topic' => 'calculus',
+                'lesson' => 'unit-02',
                 'rating' => 4,
                 'comment' => 'Great session — we ran out of time before the last topic, but the method for limits finally clicked.',
             ],
@@ -440,12 +447,13 @@ class DemoDataSeeder extends Seeder
             StudentProfile::query()->firstOrCreate(
                 ['user_id' => $pastStudent->id],
                 [
-                    'grade_level' => 'high_school',
+                    'grade_id' => Grade::query()->where('number', 11)->value('id'),
                     'timezone' => 'Asia/Colombo',
                     'completed_at' => now(),
                 ]
             );
 
+            $entryLesson = $this->lessonFor($mathematics, $entry['lesson']);
             $startsAt = CarbonImmutable::now('Asia/Colombo')->subDays($entry['days_ago'])->setTime(17, 0);
             $price = $bookings->priceMinor($mathematicsTeacher, $mathematics, 45);
 
@@ -453,14 +461,14 @@ class DemoDataSeeder extends Seeder
                 'student_id' => $pastStudent->id,
                 'teacher_profile_id' => $mathematicsTeacher->id,
                 'subject_id' => $mathematics->id,
-                'topic_id' => $mathematics->topics()->where('slug', $entry['topic'])->value('id'),
+                'lesson_id' => $entryLesson?->id,
                 'starts_at' => $startsAt->utc(),
                 'ends_at' => $startsAt->addMinutes(45)->utc(),
                 'status' => BookingStatus::Completed,
                 'price_minor' => $price,
                 'currency' => 'LKR',
                 'learner_name' => $entry['name'],
-                'learner_grade' => 'high_school',
+                'learner_grade_id' => $entryLesson?->grade_id,
                 'confirmed_at' => $startsAt->subDays(2)->utc(),
                 'started_at' => $startsAt->utc(),
                 'completed_at' => $startsAt->addMinutes(45)->utc(),
@@ -481,6 +489,8 @@ class DemoDataSeeder extends Seeder
         }
 
         // The demo student's own review of the delivered chemistry lesson.
+        $chemistry = $this->subjectFor('al', 'chemistry');
+
         $delivered = Booking::query()
             ->where('status', BookingStatus::Completed->value)
             ->where('teacher_profile_id', '!=', $mathematicsTeacher->id)
@@ -560,9 +570,9 @@ class DemoDataSeeder extends Seeder
             return;
         }
 
-        $topic = $subject->topics()->where('slug', 'algebra')->first();
+        $lesson = $this->lessonFor($subject, 'unit-01');
 
-        if ($topic === null) {
+        if ($lesson === null) {
             return;
         }
 
@@ -587,14 +597,15 @@ class DemoDataSeeder extends Seeder
 
         $tutoringRequest = $student->tutoringRequests()->create([
             'subject_id' => $subject->id,
-            'topic_id' => $topic->id,
+            'grade_id' => $lesson->grade_id,
+            'lesson_id' => $lesson->id,
             'description' => 'I keep losing marks on quadratic factorising — especially when the middle term splits into fractions. My board exam is next month and I want to fix the basics before we move on.',
             'classification_status' => ClassificationStatus::Completed,
             'ai_confidence' => 0.92,
             'ai_payload' => [
                 'raw' => ['source' => 'demo-seeder'],
                 'subject_id' => $subject->id,
-                'topic_id' => $topic->id,
+                'lesson_id' => $lesson->id,
                 'confidence' => 0.92,
                 'alternates' => [],
             ],
@@ -651,9 +662,38 @@ class DemoDataSeeder extends Seeder
      * @param  list<string>  $slugs
      * @return list<int>
      */
-    private function topicIds(Subject $subject, array $slugs): array
+    private function lessonIds(Subject $subject, array $slugs): array
     {
-        return $subject->topics()->whereIn('slug', $slugs)->pluck('id')->all();
+        return $subject->lessons()->whereIn('slug', $slugs)->pluck('id')->all();
+    }
+
+    /**
+     * The subject with this slug in the given level. Slugs are globally unique,
+     * so a name another level already owns carries the level key as a prefix
+     * ("mathematics" in Primary vs "ol-mathematics" in O/L).
+     */
+    private function subjectFor(string $levelKey, string $slug): ?Subject
+    {
+        return Subject::query()
+            ->whereIn('slug', [$slug, $levelKey.'-'.$slug])
+            ->whereHas('educationLevel', fn ($query) => $query->where('key', $levelKey))
+            ->first();
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function gradeIdsFor(Subject $subject): array
+    {
+        return Grade::query()
+            ->where('education_level_id', $subject->education_level_id)
+            ->pluck('id')
+            ->all();
+    }
+
+    private function lessonFor(Subject $subject, string $slug): ?Lesson
+    {
+        return $subject->lessons()->where('slug', $slug)->orderBy('grade_id')->first();
     }
 
     private function createUser(string $name, string $email, string $role): User

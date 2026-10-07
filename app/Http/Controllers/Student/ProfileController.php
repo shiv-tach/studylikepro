@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Concerns\StoresAvatar;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StudentProfileRequest;
+use App\Services\CatalogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -12,6 +13,8 @@ use Illuminate\View\View;
 class ProfileController extends Controller
 {
     use StoresAvatar;
+
+    public function __construct(private readonly CatalogService $catalog) {}
 
     /**
      * Show the learning profile form (doubles as onboarding).
@@ -22,6 +25,7 @@ class ProfileController extends Controller
 
         return view('student.profile', [
             'profile' => $profile,
+            'levels' => $this->catalog->levels(),
             'isOnboarding' => ! $profile?->isComplete(),
         ]);
     }

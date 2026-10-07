@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\EducationLevel;
+use App\Models\Grade;
+use App\Models\Lesson;
 use App\Models\Subject;
-use App\Models\Topic;
 use App\Models\User;
 
 test('the subjects page requires an onboarded teacher', function () {
@@ -23,26 +25,27 @@ test('teachers can select their subjects', function () {
         ->toEqualCanonicalizing([$math->id, $physics->id]);
 });
 
-test('removing a subject also removes its topics', function () {
+test('removing a subject also removes its lessons', function () {
     $math = Subject::factory()->create();
-    $topic = Topic::factory()->for($math)->create();
+    $lesson = Lesson::factory()->for($math)->create();
     $user = User::factory()->teacher()->onboarded()->create();
     $profile = $user->teacherProfile;
 
     $profile->subjects()->sync([$math->id]);
-    $profile->topics()->sync([$topic->id]);
+    $profile->lessons()->sync([$lesson->id]);
 
     $this->actingAs($user)
         ->post(route('teacher.subjects.store'), ['subjects' => []])
         ->assertRedirect();
 
     expect($profile->fresh()->subjects()->count())->toBe(0)
-        ->and($profile->fresh()->topics()->count())->toBe(0);
+        ->and($profile->fresh()->lessons()->count())->toBe(0);
 });
 
-test('teachers can configure topics, grade levels and a rate override per subject', function () {
-    $math = Subject::factory()->create();
-    [$algebra, $geometry] = Topic::factory()->for($math)->count(2)->create();
+test('teachers can configure lessons, grades and a rate override per subject', function () {
+    $math = Subject::factory()->create(['name' => 'Mathematics']);
+    $grade = Grade::factory()->create(['education_level_id' => $math->education_level_id]);
+    [$algebra, $geometry] = Lesson::factory()->for($math)->count(2)->create(['grade_id' => $grade->id]);
     $user = User::factory()->teacher()->onboarded()->create();
     $profile = $user->teacherProfile;
 
@@ -50,52 +53,102 @@ test('teachers can configure topics, grade levels and a rate override per subjec
 
     $this->actingAs($user)
         ->post(route('teacher.subjects.update', $math), [
-            'topics' => [$algebra->id, $geometry->id],
-            'grade_levels' => ['high_school', 'college'],
+            'lessons' => [$algebra->id, $geometry->id],
+            'grades' => [$grade->id],
             'rate_per_hour' => 750,
         ])
         ->assertRedirect(route('teacher.subjects.index'));
 
     $profile->refresh();
 
-    expect($profile->topics()->pluck('topics.id')->all())->toEqualCanonicalizing([$algebra->id, $geometry->id]);
+    expect($profile->lessons()->pluck('lessons.id')->all())->toEqualCanonicalizing([$algebra->id, $geometry->id]);
 
     $pivot = $profile->subjects()->where('subjects.id', $math->id)->first()->pivot;
 
-    expect($pivot->grade_levels)->toBe(['high_school', 'college'])
+    expect($pivot->grade_levels)->toBe([(string) $grade->id])
         ->and($pivot->rate_per_hour_minor)->toBe(75000);
 });
 
-test('updating one subject keeps topics of other subjects', function () {
+test('a grade from another level is rejected', function () {
     $math = Subject::factory()->create();
-    $physics = Subject::factory()->create();
-    $algebra = Topic::factory()->for($math)->create();
-    $mechanics = Topic::factory()->for($physics)->create();
-    $user = User::factory()->teacher()->onboarded()->create();
-    $profile = $user->teacherProfile;
-
-    $profile->subjects()->sync([$math->id, $physics->id]);
-    $profile->topics()->sync([$algebra->id, $mechanics->id]);
-
-    $this->actingAs($user)
-        ->post(route('teacher.subjects.update', $physics), ['topics' => [$mechanics->id]])
-        ->assertRedirect();
-
-    expect($profile->fresh()->topics()->pluck('topics.id')->all())
-        ->toEqualCanonicalizing([$algebra->id, $mechanics->id]);
-});
-
-test('topics from another subject are rejected', function () {
-    $math = Subject::factory()->create();
-    $english = Subject::factory()->create();
-    $englishTopic = Topic::factory()->for($english)->create();
+    $otherLevelGrade = Grade::factory()->create();
     $user = User::factory()->teacher()->onboarded()->create();
 
     $user->teacherProfile->subjects()->sync([$math->id]);
 
     $this->actingAs($user)
-        ->post(route('teacher.subjects.update', $math), ['topics' => [$englishTopic->id]])
-        ->assertSessionHasErrors('topics.0');
+        ->post(route('teacher.subjects.update', $math), [
+            'grades' => [$otherLevelGrade->id],
+        ])
+        ->assertSessionHasErrors('grades.0');
+});
+
+test('updating one subject keeps lessons of other subjects', function () {
+    $math = Subject::factory()->create();
+    $physics = Subject::factory()->create();
+    $algebra = Lesson::factory()->for($math)->create();
+    $mechanics = Lesson::factory()->for($physics)->create();
+    $user = User::factory()->teacher()->onboarded()->create();
+    $profile = $user->teacherProfile;
+
+    $profile->subjects()->sync([$math->id, $physics->id]);
+    $profile->lessons()->sync([$algebra->id, $mechanics->id]);
+
+    $this->actingAs($user)
+        ->post(route('teacher.subjects.update', $physics), ['lessons' => [$mechanics->id]])
+        ->assertRedirect();
+
+    expect($profile->fresh()->lessons()->pluck('lessons.id')->all())
+        ->toEqualCanonicalizing([$algebra->id, $mechanics->id]);
+});
+
+test('lessons from another subject are rejected', function () {
+    $math = Subject::factory()->create();
+    $english = Subject::factory()->create();
+    $englishLesson = Lesson::factory()->for($english)->create();
+    $user = User::factory()->teacher()->onboarded()->create();
+
+    $user->teacherProfile->subjects()->sync([$math->id]);
+
+    $this->actingAs($user)
+        ->post(route('teacher.subjects.update', $math), ['lessons' => [$englishLesson->id]])
+        ->assertSessionHasErrors('lessons.0');
+});
+
+test('updating a subject targets it by slug even when another level shares the name', function () {
+    $primary = EducationLevel::query()->where('key', 'primary')->firstOrFail();
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+
+    Subject::factory()->create([
+        'name' => 'Mathematics',
+        'slug' => 'mathematics',
+        'education_level_id' => $primary->id,
+    ]);
+    $olMath = Subject::factory()->create([
+        'name' => 'Mathematics',
+        'slug' => 'ol-mathematics',
+        'education_level_id' => $ol->id,
+    ]);
+
+    $grade = Grade::factory()->create(['education_level_id' => $ol->id]);
+    $lesson = Lesson::factory()->for($olMath)->create(['grade_id' => $grade->id]);
+
+    $user = User::factory()->teacher()->onboarded()->create();
+    $user->teacherProfile->subjects()->sync([$olMath->id]);
+
+    $this->actingAs($user)
+        ->post(route('teacher.subjects.update', $olMath), [
+            'lessons' => [$lesson->id],
+            'grades' => [$grade->id],
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('teacher.subjects.index'));
+
+    expect($user->teacherProfile->fresh()->lessons()->pluck('lessons.id')->all())->toBe([$lesson->id]);
+
+    $pivot = $user->teacherProfile->fresh()->subjects()->where('subjects.id', $olMath->id)->first()->pivot;
+
+    expect($pivot->grade_levels)->toBe([(string) $grade->id]);
 });
 
 test('teachers cannot configure a subject they do not teach', function () {

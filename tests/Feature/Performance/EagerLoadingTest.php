@@ -68,6 +68,10 @@ function eagerLoadingScenario(): array
 
     $subject = Subject::query()->active()->first() ?? Subject::factory()->create(['is_active' => true]);
 
+    // The public subject page previews its teachers, so the scenario teacher
+    // gets the subject - the card has to render from eager-loaded data too.
+    $scenario['teacher']->subjects()->attach($subject->id, ['grade_levels' => []]);
+
     return [...$scenario, 'conversation' => $conversation, 'review' => $review, 'dispute' => $dispute, 'subject' => $subject];
 }
 

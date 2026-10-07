@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Grade;
 use App\Models\StudentProfile;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -17,7 +18,7 @@ class StudentProfileFactory extends Factory
     {
         return [
             'user_id' => User::factory()->student(),
-            'grade_level' => 'high_school',
+            'grade_id' => Grade::factory(),
             'timezone' => 'Asia/Colombo',
             'learning_goals' => fake()->optional()->sentence(),
             'guardian_name' => null,

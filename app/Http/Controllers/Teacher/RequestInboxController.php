@@ -16,7 +16,7 @@ use Illuminate\View\View;
 class RequestInboxController extends Controller
 {
     /**
-     * Open requests that match the teacher's topics and availability.
+     * Open requests that match the teacher's lessons and availability.
      */
     public function index(Request $request, RequestMatcher $matcher): View
     {
@@ -35,7 +35,7 @@ class RequestInboxController extends Controller
             'requests' => $requests,
             'suggestedSlots' => $suggestedSlots,
             'myResponses' => $profile->requestResponses()
-                ->with(['tutoringRequest.subject', 'tutoringRequest.topic'])
+                ->with(['tutoringRequest.subject', 'tutoringRequest.lesson'])
                 ->latest('responded_at')
                 ->limit(10)
                 ->get(),

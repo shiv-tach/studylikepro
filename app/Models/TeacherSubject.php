@@ -12,6 +12,7 @@ class TeacherSubject extends Pivot
     {
         return [
             'grade_levels' => 'array',
+            'grade_rates' => 'array',
         ];
     }
 }

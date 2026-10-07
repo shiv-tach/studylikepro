@@ -1,9 +1,9 @@
 <?php
 
+use App\Models\Lesson;
 use App\Models\RequestAttachment;
 use App\Models\Subject;
 use App\Models\TeacherProfile;
-use App\Models\Topic;
 use App\Models\TutoringRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
@@ -16,7 +16,7 @@ function requestAttachmentScenario(): array
     Storage::fake('local');
 
     $subject = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'mathematics']);
-    $topic = Topic::factory()->create([
+    $lesson = Lesson::factory()->create([
         'subject_id' => $subject->id,
         'name' => 'Algebra',
         'slug' => 'algebra',
@@ -27,7 +27,7 @@ function requestAttachmentScenario(): array
     $request = TutoringRequest::factory()->create([
         'student_id' => $student->id,
         'subject_id' => $subject->id,
-        'topic_id' => $topic->id,
+        'lesson_id' => $lesson->id,
     ]);
 
     $attachment = RequestAttachment::factory()->create([
@@ -39,14 +39,14 @@ function requestAttachmentScenario(): array
 
     Storage::disk('local')->put($attachment->path, 'question-image-bytes');
 
-    return compact('subject', 'topic', 'student', 'request', 'attachment');
+    return compact('subject', 'lesson', 'student', 'request', 'attachment');
 }
 
 it('lets the owner, an admin, and a matching teacher download the attachment', function () {
     $scenario = requestAttachmentScenario();
 
     $matching = TeacherProfile::factory()->approved()->create(['timezone' => 'UTC']);
-    $matching->topics()->attach($scenario['topic']->id);
+    $matching->lessons()->attach($scenario['lesson']->id);
 
     $ownerResponse = $this->actingAs($scenario['student'])
         ->get(route('request-attachments.show', $scenario['attachment']))

@@ -70,7 +70,7 @@ class SendDailyDigest extends Command
                 $today->copy()->startOfDay()->utc(),
                 $today->copy()->endOfDay()->utc(),
             ])
-            ->with(['subject', 'topic', 'teacherProfile.user', 'student'])
+            ->with(['subject', 'lesson', 'teacherProfile.user', 'student'])
             ->orderBy('starts_at');
 
         if ($user->isTeacher()) {
@@ -82,7 +82,7 @@ class SendDailyDigest extends Command
         return $query->get()->map(function (Booking $booking) use ($user, $timezone, $today) {
             $startsAt = $booking->starts_at->copy()->setTimezone($timezone);
 
-            $lesson = $booking->topic?->name ?? $booking->subject?->name ?? 'Tutoring lesson';
+            $lesson = $booking->lesson?->name ?? $booking->subject?->name ?? 'Tutoring lesson';
             $with = $user->isTeacher()
                 ? ($booking->learner_name ?: $booking->student->name)
                 : $booking->teacherProfile->user->name;

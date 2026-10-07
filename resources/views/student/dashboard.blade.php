@@ -3,7 +3,7 @@
     $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
     $chip = 'inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400';
     $profile = Auth::user()->studentProfile;
-    $gradeLabel = $profile ? (config('studylikepro.grade_levels')[$profile->grade_level] ?? null) : null;
+    $gradeLabel = $profile?->grade?->label;
     $interestsCount = Auth::user()->interestedSubjects()->count();
     $openRequestsCount = Auth::user()->tutoringRequests()->where('status', \App\Enums\RequestStatus::Open->value)->count();
     $upcomingLessonsCount = Auth::user()->bookings()->upcoming()->whereIn('status', ['pending_payment', 'confirmed', 'in_progress'])->count();
@@ -26,7 +26,7 @@
         <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-primary/80 to-purple-600 p-6 text-white shadow-lg shadow-primary/10 dark:shadow-primary/5">
             <div class="relative z-10 max-w-xl">
                 <h3 class="text-xl font-bold md:text-2xl">Welcome, {{ Auth::user()->name }}! 👋</h3>
-                <p class="mt-1 text-sm text-white/90">Studylikepro connects you with verified tutors for live 1-on-1 lessons. Upload a question, get matched to the right topic, and book a time that works for you.</p>
+                <p class="mt-1 text-sm text-white/90">Studylikepro connects you with verified tutors for live 1-on-1 lessons. Upload a question, get matched to the right lesson, and book a time that works for you.</p>
                 @if ($profile)
                     <div class="mt-3 flex flex-wrap gap-2">
                         @if ($gradeLabel)
@@ -53,7 +53,7 @@
                     </div>
                 </div>
                 <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">Ask a question</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Describe it or upload a photo — AI finds the topic.</p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Describe it or upload a photo — AI finds the lesson.</p>
             </a>
 
             <a href="{{ route('student.requests.index') }}" class="group {{ $cardBase }}"
@@ -119,10 +119,10 @@
                     @if ($interestsCount > 0)
                         <span class="{{ $chip }}">{{ $interestsCount }} {{ Str::plural('subject', $interestsCount) }}</span>
                     @else
-                        <span class="{{ $chip }}">Pick topics</span>
+                        <span class="{{ $chip }}">Pick lessons</span>
                     @endif
                 </div>
-                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">Subjects & topics</h3>
+                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">Subjects & lessons</h3>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Tell us what you want help with.</p>
             </a>
 
@@ -145,8 +145,8 @@
                 @php
                     $steps = [
                         ['Profile & onboarding', 'Add your learning details so tutors know how to help.', 'Phase 1'],
-                        ['Choose subjects & topics', 'Pick what you want help with from the catalog.', 'Phase 2'],
-                        ['Upload your question', 'Add a photo and AI suggests the exact topic.', 'Phase 4'],
+                        ['Choose subjects & lessons', 'Pick what you want help with from the catalog.', 'Phase 2'],
+                        ['Upload your question', 'Add a photo and AI suggests the exact lesson.', 'Phase 4'],
                         ['Book & pay securely', 'Pick an available time and pay through the payment gateway.', 'Phase 5–6'],
                         ['Join your live lesson', 'Meet your teacher in a private video room.', 'Phase 7'],
                         ['Chat, review & history', 'Stay in touch, rate the lesson, and revisit past lessons.', 'Phase 8–9'],
@@ -177,7 +177,7 @@
                 @php
                     $flow = [
                         ['📷', 'Upload your question', 'Snap a photo of what you are stuck on.'],
-                        ['🤖', 'AI identifies the topic', 'Know exactly what to learn next.'],
+                        ['🤖', 'AI identifies the lesson', 'Know exactly what to learn next.'],
                         ['👨‍🏫', 'Match with a verified teacher', 'Only approved tutors appear.'],
                         ['🕐', 'Choose a time & pay', 'Real availability, secure checkout.'],
                         ['🎥', 'Live lesson, then review', 'Learn 1-on-1 and rate your tutor.'],

@@ -56,10 +56,10 @@ class RequestResponseService
                 startsAt: $startsAt,
                 endsAt: $endsAt,
                 subject: $request->subject,
-                topic: $request->topic,
+                lesson: $request->lesson,
                 tutoringRequest: $request,
                 learnerName: $request->student->name,
-                learnerGrade: $request->student->studentProfile?->grade_level,
+                learnerGradeId: $request->grade_id ?? $request->student->studentProfile?->grade_id,
                 priceMinor: $price,
             ));
 
@@ -112,6 +112,7 @@ class RequestResponseService
             $teacher,
             $request->subject,
             (int) $startsAt->diffInMinutes($endsAt),
+            $request->grade_id === null ? null : (int) $request->grade_id,
         );
     }
 
@@ -123,11 +124,11 @@ class RequestResponseService
             ]);
         }
 
-        $teachesTopic = $teacher->topics()->where('topics.id', $request->topic_id)->exists();
+        $teachesLesson = $teacher->lessons()->where('lessons.id', $request->lesson_id)->exists();
 
-        if (! $teacher->isApproved() || ! $teachesTopic) {
+        if (! $teacher->isApproved() || ! $teachesLesson) {
             throw ValidationException::withMessages([
-                'status' => __('You can only respond to requests in topics you teach.'),
+                'status' => __('You can only respond to requests in lessons you teach.'),
             ]);
         }
     }

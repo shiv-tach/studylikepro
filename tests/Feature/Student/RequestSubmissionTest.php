@@ -5,6 +5,7 @@ use App\Enums\RequestStatus;
 use App\Enums\ResponseStatus;
 use App\Jobs\ClassifyTutoringRequestJob;
 use App\Models\Booking;
+use App\Models\Grade;
 use App\Models\RequestResponse;
 use App\Models\TutoringRequest;
 use App\Models\User;
@@ -212,19 +213,41 @@ it('keeps teachers and guests out of the student request routes', function () {
         ->assertForbidden();
 });
 
+it('stores the learner grade, defaulting to the profile grade', function () {
+    Queue::fake();
+
+    $student = User::factory()->student()->onboarded()->create();
+    $profileGradeId = $student->studentProfile->grade_id;
+    $otherGrade = Grade::factory()->create([
+        'education_level_id' => $student->studentProfile->grade->education_level_id,
+    ]);
+
+    $this->actingAs($student)
+        ->post(route('student.requests.store'), studentRequestPayload(['grade_id' => $otherGrade->id]))
+        ->assertRedirect();
+
+    expect(TutoringRequest::query()->latest('id')->firstOrFail()->grade_id)->toBe($otherGrade->id);
+
+    $this->actingAs($student)
+        ->post(route('student.requests.store'), studentRequestPayload())
+        ->assertRedirect();
+
+    expect(TutoringRequest::query()->latest('id')->firstOrFail()->grade_id)->toBe($profileGradeId);
+});
+
 it('shows the pending state while the classification is running', function () {
     $student = User::factory()->student()->onboarded()->create();
     $request = TutoringRequest::factory()->pendingClassification()->create([
         'student_id' => $student->id,
         'subject_id' => null,
-        'topic_id' => null,
+        'lesson_id' => null,
     ]);
 
     $this->actingAs($student)
         ->get(route('student.requests.show', $request))
         ->assertOk()
-        ->assertSee('AI topic matching')
+        ->assertSee('AI lesson matching')
         ->assertSee('Reading your question')
-        ->assertSee('Proposals appear here as soon as the topic is confirmed.')
-        ->assertDontSee('Confirm topic');
+        ->assertSee('Proposals appear here as soon as the lesson is confirmed.')
+        ->assertDontSee('Confirm lesson');
 });

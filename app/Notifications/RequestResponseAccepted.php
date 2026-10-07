@@ -21,7 +21,7 @@ class RequestResponseAccepted extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject($teacher->name.' accepted your request')
             ->greeting('Good news, '.$notifiable->name.'!')
-            ->line($teacher->name.' can help with '.$this->response->tutoringRequest->topic->name.'.')
+            ->line($teacher->name.' can help with '.$this->response->tutoringRequest->lesson->name.'.')
             ->line('Proposed time: '.$startsAt->format('D d M Y, H:i').'.')
             ->line('The slot is held for '.platform_settings()->int('hold_ttl_minutes').' minutes while you complete payment.')
             ->action('Open your request', route('student.requests.show', $this->response->tutoring_request_id));

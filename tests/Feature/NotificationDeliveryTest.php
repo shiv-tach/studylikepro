@@ -1,10 +1,10 @@
 <?php
 
 use App\Enums\ClassificationStatus;
+use App\Models\Lesson;
 use App\Models\Subject;
 use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherProfile;
-use App\Models\Topic;
 use App\Models\TutoringRequest;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -18,7 +18,7 @@ use Carbon\CarbonImmutable;
 function notificationScenario(): array
 {
     $subject = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'mathematics']);
-    $topic = Topic::factory()->create([
+    $lesson = Lesson::factory()->create([
         'subject_id' => $subject->id,
         'name' => 'Algebra',
         'slug' => 'algebra',
@@ -31,8 +31,8 @@ function notificationScenario(): array
         'hourly_rate_minor' => 60000,
         'lesson_duration_minutes' => 60,
     ]);
-    $teacher->subjects()->attach($subject->id, ['grade_levels' => ['high_school']]);
-    $teacher->topics()->attach($topic->id);
+    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) $lesson->grade_id]]);
+    $teacher->lessons()->attach($lesson->id);
 
     $windowStart = CarbonImmutable::now('UTC')->addDays(2)->setTime(18, 0);
     TeacherAvailabilitySlot::factory()
@@ -43,14 +43,14 @@ function notificationScenario(): array
     $request = TutoringRequest::factory()->create([
         'student_id' => $student->id,
         'subject_id' => $subject->id,
-        'topic_id' => $topic->id,
+        'lesson_id' => $lesson->id,
         'preferred_windows' => [[
             'starts_at' => $windowStart->toIso8601String(),
             'ends_at' => $windowStart->setTime(20, 0)->toIso8601String(),
         ]],
     ]);
 
-    return compact('subject', 'topic', 'teacher', 'teacherUser', 'student', 'request', 'windowStart');
+    return compact('subject', 'lesson', 'teacher', 'teacherUser', 'student', 'request', 'windowStart');
 }
 
 it('stores an in-app notification for the student when a teacher accepts', function () {
@@ -70,19 +70,19 @@ it('stores an in-app notification for the student when a teacher accepts', funct
         ->and(data_get($notification->data, 'url'))->toBe(route('student.requests.show', $scenario['request']));
 });
 
-it('stores an in-app notification for matching teachers when a topic is confirmed', function () {
+it('stores an in-app notification for matching teachers when a lesson is confirmed', function () {
     $scenario = notificationScenario();
 
     $scenario['request']->update([
         'subject_id' => null,
-        'topic_id' => null,
+        'lesson_id' => null,
         'classification_status' => ClassificationStatus::LowConfidence,
     ]);
 
     $this->actingAs($scenario['student'])
-        ->put(route('student.requests.topic.update', $scenario['request']), [
+        ->put(route('student.requests.lesson.update', $scenario['request']), [
             'subject_id' => $scenario['subject']->id,
-            'topic_id' => $scenario['topic']->id,
+            'lesson_id' => $scenario['lesson']->id,
         ])
         ->assertRedirect(route('student.requests.show', $scenario['request']));
 

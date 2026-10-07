@@ -8,7 +8,7 @@
     $isLive = $booking->status->isLive();
     $windowOpen = $booking->isJoinWindowOpen();
     $windowClosed = $isLive && now()->greaterThan($booking->joinClosesAt());
-    $lessonTitle = $booking->topic?->name ?? $booking->subject?->name ?? __('Lesson');
+    $lessonTitle = $booking->lesson?->name ?? $booking->subject?->name ?? __('Lesson');
     $counterpart = $isTeacher
         ? ($booking->learner_name ?: $booking->student->name)
         : $booking->teacherProfile->user->name;

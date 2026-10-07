@@ -2,7 +2,7 @@
     $cardBase = 'rounded-2xl border p-6';
     $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
     $teacher = $booking->teacherProfile->user;
-    $lessonTitle = $booking->topic?->name ?? $booking->subject?->name ?? __('Tutoring lesson');
+    $lessonTitle = $booking->lesson?->name ?? $booking->subject?->name ?? __('Tutoring lesson');
     $timezone = auth()->user()->studentProfile?->timezone ?? config('studylikepro.default_display_timezone');
     $isEdit = $review !== null;
 @endphp

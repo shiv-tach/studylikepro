@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreBookingRequest extends FormRequest
 {
@@ -18,11 +19,15 @@ class StoreBookingRequest extends FormRequest
     {
         return [
             'subject_id' => ['required', 'integer', 'exists:subjects,id'],
-            'topic_id' => ['nullable', 'integer', 'exists:topics,id'],
+            'lesson_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('lessons', 'id')->where('subject_id', $this->input('subject_id')),
+            ],
             'duration' => ['required', 'integer', 'in:'.implode(',', config('studylikepro.lesson_durations'))],
             'starts_at' => ['required', 'date'],
             'learner_name' => ['nullable', 'string', 'max:120'],
-            'learner_grade' => ['nullable', 'string', 'in:'.implode(',', array_keys(config('studylikepro.grade_levels')))],
+            'learner_grade_id' => ['nullable', 'integer', 'exists:grades,id'],
         ];
     }
 

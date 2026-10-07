@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
             PlatformSettingsSeeder::class,
             CatalogSeeder::class,
             AdminUserSeeder::class,
-            DemoDataSeeder::class,
+            // DemoDataSeeder::class,
         ]);
     }
 }

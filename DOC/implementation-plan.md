@@ -2,9 +2,9 @@
 
 **Companion to:** [overview.md](./overview.md)
 **Design rules:** [DESIGN_SYSTEM_AND_THEMING_GUIDE.md](../DESIGN_SYSTEM_AND_THEMING_GUIDE.md)
-**Progress:** Phase 0 (foundation, roles, rebrand) ✅ · Phase 1 (profiles & onboarding) ✅ · Phase 2 (catalog, teacher subjects, admin verification) ✅ · Phase 3 (teacher discovery, availability, pricing) ✅ · Phase 4 (tutoring requests & AI matching) ✅ · Phase 5 (booking & scheduling engine) ✅ · Phase 6 (payments, commission, refunds & earnings) ✅ · Phase 7 (live classes) ✅ · Phase 8 (chat & notifications) ✅ · Phase 9 (reviews, ratings & lesson history) ✅ · Phase 10 (admin console: management, disputes, reports & settings) ✅ · Phase 11 (hardening, UAT & launch) ✅. Launch artefacts: [deployment.md](./deployment.md) runbook and [uat-checklist.md](./uat-checklist.md).
+**Progress:** Phase 0 (foundation, roles, rebrand) ✅ · Phase 1 (profiles & onboarding) ✅ · Phase 2 (catalog, teacher subjects, admin verification) ✅ · Phase 3 (teacher discovery, availability, pricing) ✅ · Phase 4 (tutoring requests & AI matching) ✅ · Phase 5 (booking & scheduling engine) ✅ · Phase 6 (payments, commission, refunds & earnings) ✅ · Phase 7 (live classes) ✅ · Phase 8 (chat & notifications) ✅ · Phase 9 (reviews, ratings & lesson history) ✅ · Phase 10 (admin console: management, disputes, reports & settings) ✅ · Phase 11 (hardening, UAT & launch) ✅ · Phase 12 (Sri Lankan curriculum: levels, grades & per-grade lessons) ✅. Launch artefacts: [deployment.md](./deployment.md) runbook and [uat-checklist.md](./uat-checklist.md). See also the companion plan [curriculum-and-grade-plan.md](./curriculum-and-grade-plan.md).
 
-**Goal in one sentence:** A two-sided tutoring marketplace where a student uploads a question, AI identifies the topic, the platform matches a verified teacher, the student books and pays for a live 1-on-1 lesson, and both sides rate and track the outcome — with an admin console running verification, payments, disputes, and commission.
+**Goal in one sentence:** A two-sided tutoring marketplace where a student uploads a question, AI identifies the lesson, the platform matches a verified teacher, the student books and pays for a live 1-on-1 lesson, and both sides rate and track the outcome — with an admin console running verification, payments, disputes, and commission.
 
 **Estimated duration:** ~13 weeks for one full-time developer. Phases are ordered by dependency, not calendar; compress or rebalance as team size changes. Every phase ends with the previous phase's demo path still working and the full Pest suite green.
 
@@ -45,8 +45,9 @@ V1 assumptions to confirm (see Section 5): single market, single currency, Engli
 | --- | --- |
 | Registration | P0 (roles) + P1 (onboarding) |
 | Parent/student profile | P1 |
-| Subject selection | P2 |
-| Topic selection | P2 (catalog) + P4 (AI suggestion, manual override) |
+| Grade selection (profile + per request) | P12 |
+| Subject selection | P2 (catalog) + P12 (level-scoped catalog) |
+| Lesson selection | P2 (catalog) + P4 (AI suggestion, manual override) + P12 (grade-scoped) |
 | Create tutoring request | P4 |
 | Browse teachers | P3 |
 | Teacher profile | P3 |
@@ -64,7 +65,7 @@ V1 assumptions to confirm (see Section 5): single market, single currency, Engli
 | Registration | P0 + P1 |
 | Verification | P1 (submit docs) + P2 (admin queue, approval gate) |
 | Subjects | P2 |
-| Topics | P2 |
+| Lessons & grade scope | P2 (pivot) + P12 (auto-assigned from the curriculum) |
 | Availability | P3 |
 | Pricing | P3 |
 | Requests | P4 |
@@ -85,7 +86,7 @@ V1 assumptions to confirm (see Section 5): single market, single currency, Engli
 | Refunds | P6 (engine) + P10 (admin UI) |
 | Commission | P6 (engine) + P10 (config + reports) |
 | Reports | P10 |
-| Subject/topic management | P2 |
+| Curriculum management (levels, grades, subjects, lessons) | P2 (subjects) + P12 |
 
 ---
 
@@ -112,16 +113,17 @@ V1 assumptions to confirm (see Section 5): single market, single currency, Engli
 | Entity | Key fields / relations |
 | --- | --- |
 | `users` | existing + `status` (active/suspended), role via spatie |
-| `student_profiles` | user_id, grade level, timezone, learning goals, guardian name/phone |
+| `education_levels` / `grades` | the Sri Lankan structure: Primary (1–5), O/L (6–11), A/L (12–13), Other; a subject belongs to one level, a lesson to one subject **and** one grade |
+| `student_profiles` | user_id, grade_id → grades, timezone, learning goals, guardian name/phone |
 | `teacher_profiles` | user_id, headline, bio, experience, education, languages, timezone, base hourly rate, verification_status, rating_avg/rating_count, lessons_completed_count |
 | `teacher_verification_documents` | teacher_profile_id, type, private file path |
-| `subjects` / `topics` | catalog with active flag + sort order (topic belongs to subject) |
-| `teacher_subjects` / `teacher_topics` | which subjects/topics a teacher teaches (+ optional grade levels, rate override) |
-| `student_subject_interests` / `student_topic_interests` | student's selection |
+| `subjects` / `lessons` | catalog with active flag + sort order (lesson belongs to a subject + grade) |
+| `teacher_subjects` / `teacher_lessons` | which subjects a teacher teaches — `grade_levels` JSON holds the covered grade ids, `grade_rates` JSON holds an explicit hourly rate per grade id, and `rate_per_hour_minor` is the subject default; the lesson pivot lists the exact lessons |
+| `student_subject_interests` / `student_lesson_interests` | student's selection (level- and grade-scoped) |
 | `teacher_availability_slots` | weekly recurring ranges (day of week, start, end) |
 | `teacher_time_off` | date ranges excluded from availability |
-| `tutoring_requests` + `request_attachments` + `request_responses` | student question, AI classification, teacher accept/reject |
-| `bookings` | student, teacher, subject/topic, UTC start/end, status, price/commission/booking-fee snapshot, learner name/grade, meeting fields, cancellation fields |
+| `tutoring_requests` + `request_attachments` + `request_responses` | student question, learner grade, AI classification, teacher accept/reject |
+| `bookings` | student, teacher, subject/lesson, learner grade id, UTC start/end, status, price/commission/booking-fee snapshot, learner name/grade, meeting fields, cancellation fields |
 | `booking_fee_promotions` | admin special offers that waive or discount the student booking fee for a window |
 | `payments` / `refunds` | gateway ids, amounts, statuses, idempotency keys |
 | `teacher_earnings` + `payouts` | ledger entries per completed booking; manual payout batches |
@@ -160,7 +162,7 @@ Rules:
 | --- | --- | --- | --- |
 | Payments | `PaymentGateway` (order, webhook verify, refund) | Razorpay (UPI/cards, easy refunds — **INR only**) | Stripe, PayHere (LKR) |
 | Video | `MeetingProvider` (create room, join URLs, status) | Daily.co (fast embed, per-room privacy) | Zoom Server-to-Server API, Jitsi Meet |
-| AI classification | `TopicClassifier` (images + text → subject/topic + confidence) | OpenAI `gpt-4o-mini` (vision, cheap) | Google Gemini Flash, Anthropic Claude |
+| AI classification | `LessonClassifier` (images + text → subject/lesson + confidence, scoped to the student's grade) | OpenAI `gpt-4o-mini` (vision, cheap) | Google Gemini Flash, Anthropic Claude |
 | Chat realtime | polling in V1 | 5-second polling with Alpine | Laravel Reverb (Post-V1) |
 | Email | Laravel mail | SMTP provider (Postmark/Resend/SES) in prod, log locally | — |
 | File storage | Laravel filesystem | S3-compatible (R2/S3) in prod, local in dev | — |
@@ -206,6 +208,7 @@ Each has a locked recommendation so implementation can proceed; changing a recom
 | M4 — Delivery | P7–P8 | Live classes, chat, notifications |
 | M5 — Trust & operations | P9–P10 | Reviews, history, full admin console |
 | M6 — Launch | P11 | Hardening, UAT, production launch |
+| M7 — Curriculum | P12 | Sri Lankan levels, grades and per-grade lesson lists end to end |
 
 | Phase | Theme | Est. |
 | --- | --- | --- |
@@ -221,10 +224,13 @@ Each has a locked recommendation so implementation can proceed; changing a recom
 | P9 | Reviews, ratings, lesson history | 1 week |
 | P10 | Admin console: management, disputes, reports | 2 weeks |
 | P11 | Hardening, UAT, launch | 1 week |
+| P12 | Sri Lankan curriculum: levels, grades & per-grade lessons | 3 weeks |
 
 ---
 
 ## 7. Phase Details
+
+> **Naming note:** phases 0–11 below built the flat `subjects` → `topics` catalog and are kept as the historical record. Phase 12 replaced that taxonomy with Sri Lankan levels, grades and lessons — everywhere an earlier phase says "topic", read "lesson" (the tables `topics`, `teacher_topics` and `student_topic_interests` became `lessons`, `teacher_lessons` and `student_lesson_interests`).
 
 ### Phase 0 — Foundation, Roles & Rebrand (Week 1)
 
@@ -479,10 +485,30 @@ Each has a locked recommendation so implementation can proceed; changing a recom
 
 **Status (shipped):**
 - **E2E acceptance run** — `tests/Feature/Acceptance/CoreFlowTest.php` drives the whole story through real routes: register → profile → interests → question photo → AI classification → teacher application → admin approval → subjects/availability → accept → checkout → signed webhook → classroom → chat → start/complete → earnings → review, plus a refund/dispute/report walk-through. The human version is [uat-checklist.md](./uat-checklist.md); the go-live steps are in [deployment.md](./deployment.md).
-- **Performance** — pagination verified on every user-facing list; the index audit added nothing new (bookings `teacher_profile_id+starts_at`, `student_id+starts_at`, `status+starts_at`; messages `conversation_id+id`; payments `gateway_order_id`/`gateway_payment_id` unique; requests `topic_id+status`, `status+expires_at`). `tests/Feature/Performance/EagerLoadingTest.php` renders 40+ pages with `preventLazyLoading()` on and mass-assignment protection enabled — zero violations, so no N+1 fixes were needed. The catalog (subjects + topics + topic counts) is cached with `CatalogService` and flushed by model events; platform settings were already cached. Uploads are bounded by dimensions as well as size; the production bundle is ~96 kB CSS + ~92 kB JS (~15 kB + ~34 kB gzipped).
+- **Performance** — pagination verified on every user-facing list; the index audit added nothing new (bookings `teacher_profile_id+starts_at`, `student_id+starts_at`, `status+starts_at`; messages `conversation_id+id`; payments `gateway_order_id`/`gateway_payment_id` unique; requests `lesson_id+status`, `status+expires_at`). `tests/Feature/Performance/EagerLoadingTest.php` renders 40+ pages with `preventLazyLoading()` on and mass-assignment protection enabled — zero violations, so no N+1 fixes were needed. The catalog (levels, grades, subjects + lessons) is cached with `CatalogService` and flushed on every curriculum write; platform settings were already cached. Uploads are bounded by dimensions as well as size; the production bundle is ~96 kB CSS + ~92 kB JS (~15 kB + ~34 kB gzipped).
 - **Security** — `SecurityHeaders` middleware (nosniff, frame options, referrer policy, Permissions-Policy scoped to the video provider, HSTS over HTTPS, CSP allow-listing fonts and the payment vendor); named rate limits for login, registration, requests, uploads, chat, checkout, contact and webhooks; upload validation reviewed (raster-only, size + dimension caps, private vs public disks deliberate); webhook signatures re-checked (constant-time compare, single application per event id); mass-assignment audit found no `create($request->all())` patterns; XSS audit found no raw Blade echoes; a repository secret-scan test and a policy-coverage suite now run in CI.
 - **Compliance & content** — `/privacy`, `/terms`, `/refund-policy` (figures read from platform settings), `/contact` (stored + notified + throttled), footer links everywhere, teacher agreement checkbox with versioned acceptance recorded on the profile, branded markdown mail theme.
 - **Ops** — deployment runbook covering servers, env checklist, first deploy, release/rollback, Supervisor, scheduler, backups + restore drill template, logging/monitoring and the post-deploy smoke test.
+
+---
+
+### Phase 12 — Sri Lankan Curriculum, Grades & Lessons (Weeks 14–16)
+
+**Goal:** Replace the flat subject→topic catalog with the Sri Lankan education structure — Primary (Grades 1–5), O/L (Grades 6–11), A/L (Grades 12–13), Other — where every subject belongs to a level and carries a **grade-by-grade lesson list**, so admins curate the curriculum once, teachers pick "O/L Mathematics" and inherit its grades + lessons, and students only ever see the subjects and lessons that exist for *their* grade.
+
+Full plan, decisions and phase-by-phase record: [curriculum-and-grade-plan.md](./curriculum-and-grade-plan.md).
+
+**Build**
+- **Taxonomy:** `education_levels` + `grades` tables; `subjects.education_level_id`; `topics` renamed to `lessons` (with a `grade_id`); `student_profiles.grade_id`; `bookings.learner_grade_id`; `tutoring_requests.grade_id`; data migration maps the old coarse buckets (`primary / middle_school / high_school / college`) onto real grades and fills each lesson's grade.
+- **Admin curriculum management:** `/admin/curriculum` (levels + subject counts) and a grade-tab matrix editor on `admin/subjects/edit` with add / copy-to-grade / bulk-activate / move-lesson tools, all audited via `ActivityLogger`.
+- **Teacher assignment:** selecting a subject auto-assigns every grade of its level and every active lesson in those grades; unchecking a grade detaches that grade's lessons; the public profile collapses the scope into "Grades 6-11" with lessons grouped by grade.
+- **Student side:** onboarding requires a grade; interests, the request form's lesson picker, the AI-confirm step and the booking lesson picker are all scoped to the learner's grade (server-side validated, not just filtered).
+- **Matching, AI & search:** `RequestMatcher` matches the request's grade against the teacher's per-subject `grade_levels` scope (both the fan-out and the inbox, including the cached nav badge); the classifier prompt only offers the student's grade's lessons and the job refuses an out-of-grade answer (cache keyed by grade + image hash); the directory gains a Level filter with cascading subject/lesson/grade pickers and cards show "Grades 6-11 · 12 lessons".
+- **Cleanup:** `student_profiles.grade_level` and `bookings.learner_grade` are dropped (`2026_10_08_000009_drop_legacy_grade_columns`), the `config('studylikepro.grade_levels')` shim is gone, and docs/UAT follow the new vocabulary. Subject slugs are globally unique (level-key prefixed when a name repeats, e.g. `ol-mathematics`).
+
+**DoD:** the seeded catalog reproduces the real shape (O/L Mathematics: 12 lessons in Grade 6, 10 in Grade 7, …); a Grade 8 student can only ever pick Grade 8 lessons; a Grade 11-only teacher never sees a Grade 8 request.
+
+**Status (shipped):** ✅ all six phases of the curriculum plan landed — taxonomy + seed (A), admin matrix (B), teacher assignment (C), grade-aware student side (D), matching/AI/search (E), legacy-column cleanup + docs (F). Suite: 578 tests, 1 pre-existing unrelated `MailBrandingTest` failure; `vendor/bin/pint` clean; verified on SQLite, MariaDB 10.4 and in a browser against a seeded scratch database (admin matrix, teacher setup, student request → confirm → booking, teacher inbox, directory cascade).
 
 ---
 
@@ -521,10 +547,10 @@ Group sessions, subscriptions/lesson packages, recurring bookings, automated tea
 
 ## 11. Launch Acceptance Checklist (maps to overview)
 
-**Student:** register → profile → pick subjects/topics → upload question → AI suggests topic → browse verified teachers → view teacher profile → book slot → pay → join live class → chat → rate → see lesson history.
+**Student:** register → profile (grade) → pick subjects/lessons for that grade → upload question → AI suggests lesson → browse verified teachers → view teacher profile → book slot → pay → join live class → chat → rate → see lesson history.
 
-**Teacher:** register → profile + docs → admin verifies → manage subjects/topics → set availability + pricing → receive request → accept/reject → teach live lesson → view earnings → see reviews.
+**Teacher:** register → profile + docs → admin verifies → manage subjects/grades/lessons → set availability + pricing → receive request (grade-scoped) → accept/reject → teach live lesson → view earnings → see reviews.
 
-**Admin:** verify teachers → manage students → manage bookings → manage payments → resolve disputes → issue refunds → configure commission → view reports → manage subjects/topics.
+**Admin:** verify teachers → manage students → manage bookings → manage payments → resolve disputes → issue refunds → configure commission → view reports → manage the curriculum (levels, grades, subjects, lessons).
 
-**Core flow end-to-end:** photo upload to AI topic to matched verified teacher to scheduled paid live lesson to review — verified on staging with real provider test integrations before launch.
+**Core flow end-to-end:** photo upload to AI lesson to matched verified teacher to scheduled paid live lesson to review — verified on staging with real provider test integrations before launch.

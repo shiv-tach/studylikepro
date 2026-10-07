@@ -67,7 +67,7 @@ class UserController extends Controller
             ->where(fn (Builder $query) => $user->isTeacher()
                 ? $query->where('teacher_profile_id', $user->teacherProfile?->id ?? 0)
                 : $query->where('student_id', $user->id))
-            ->with(['student', 'teacherProfile.user', 'subject', 'topic'])
+            ->with(['student', 'teacherProfile.user', 'subject', 'lesson'])
             ->latest('starts_at')
             ->limit(15)
             ->get();

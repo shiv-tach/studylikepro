@@ -15,7 +15,7 @@ class StudentProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'grade_level' => ['required', Rule::in(array_keys(config('studylikepro.grade_levels')))],
+            'grade_id' => ['required', 'integer', Rule::exists('grades', 'id')->where('is_active', true)],
             'learning_goals' => ['nullable', 'string', 'max:1000'],
             'guardian_name' => ['nullable', 'string', 'max:120'],
             'guardian_phone' => ['nullable', 'string', 'max:32'],

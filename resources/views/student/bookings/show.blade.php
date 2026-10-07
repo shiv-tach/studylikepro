@@ -18,7 +18,7 @@
             <div>
                 <a href="{{ route('student.bookings.index') }}" class="text-xs font-semibold text-slate-400 transition-colors hover:text-primary">&larr; {{ __('My lessons') }}</a>
                 <h2 class="mt-1 font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">
-                    {{ $booking->topic?->name ?? $booking->subject?->name ?? __('Lesson') }}
+                    {{ $booking->lesson?->name ?? $booking->subject?->name ?? __('Lesson') }}
                 </h2>
             </div>
             <x-booking-status-badge :status="$booking->status" class="px-3 py-1 text-xs" />
@@ -158,7 +158,7 @@
                 <div class="text-right">
                     <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Teacher') }}</p>
                     <a href="{{ route('teachers.show', $booking->teacher_profile_id) }}" class="mt-1 block text-sm font-bold text-primary hover:underline">{{ $teacherUser->name }}</a>
-                    <p class="text-xs text-slate-400">{{ $booking->subject?->name }}@if ($booking->topic) · {{ $booking->topic->name }}@endif</p>
+                    <p class="text-xs text-slate-400">{{ $booking->subject?->name }}@if ($booking->lesson) · {{ $booking->lesson->name }}@endif</p>
                 </div>
             </div>
 
@@ -166,8 +166,8 @@
                 <div>
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Learner') }}</dt>
                     <dd class="mt-1 font-semibold text-slate-700 dark:text-slate-200">{{ $booking->learner_name ?? auth()->user()->name }}</dd>
-                    @if ($booking->learner_grade)
-                        <dd class="text-xs text-slate-500 dark:text-slate-400">{{ config('studylikepro.grade_levels.'.$booking->learner_grade, $booking->learner_grade) }}</dd>
+                    @if ($booking->learnerGrade)
+                        <dd class="text-xs text-slate-500 dark:text-slate-400">{{ $booking->learnerGrade->label }}</dd>
                     @endif
                 </div>
                 <div>

@@ -2,18 +2,18 @@
 
 namespace App\Support;
 
+use App\Models\Lesson;
 use App\Models\Subject;
-use App\Models\Topic;
 
 class ClassificationResult
 {
     /**
-     * @param  list<array{subject: string|null, topic: string|null, confidence: float|null}>  $alternates
+     * @param  list<array{subject: string|null, lesson: string|null, confidence: float|null}>  $alternates
      * @param  array<string, mixed>  $raw
      */
     public function __construct(
         public readonly ?Subject $subject = null,
-        public readonly ?Topic $topic = null,
+        public readonly ?Lesson $lesson = null,
         public readonly float $confidence = 0.0,
         public readonly array $alternates = [],
         public readonly array $raw = [],
@@ -36,17 +36,17 @@ class ClassificationResult
     {
         return ! $this->failed
             && $this->subject !== null
-            && $this->topic !== null
+            && $this->lesson !== null
             && $this->confidence >= platform_settings()->float('ai_min_confidence');
     }
 
     public function label(): string
     {
-        if ($this->topic === null) {
-            return 'No topic matched';
+        if ($this->lesson === null) {
+            return 'No lesson matched';
         }
 
-        return $this->topic->name.' · '.round($this->confidence * 100).'% confident';
+        return $this->lesson->name.' · '.round($this->confidence * 100).'% confident';
     }
 
     /**
@@ -59,7 +59,7 @@ class ClassificationResult
         return [
             'raw' => $this->raw,
             'subject_id' => $this->subject?->id,
-            'topic_id' => $this->topic?->id,
+            'lesson_id' => $this->lesson?->id,
             'confidence' => $this->confidence,
             'alternates' => $this->alternates,
         ];

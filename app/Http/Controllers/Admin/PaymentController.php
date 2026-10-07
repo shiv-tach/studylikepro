@@ -46,7 +46,7 @@ class PaymentController extends Controller
      */
     public function show(Payment $payment): View
     {
-        $payment->load(['student', 'booking.teacherProfile.user', 'booking.subject', 'booking.topic', 'refunds']);
+        $payment->load(['student', 'booking.teacherProfile.user', 'booking.subject', 'booking.lesson', 'refunds']);
 
         return view('admin.payments.show', [
             'payment' => $payment,

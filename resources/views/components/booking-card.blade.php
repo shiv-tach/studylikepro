@@ -3,7 +3,7 @@
 @php
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);
 
-    $title = collect([$booking->subject?->name, $booking->topic?->name])->filter()->implode(' · ')
+    $title = collect([$booking->subject?->name, $booking->lesson?->name])->filter()->implode(' · ')
         ?: ($booking->tutoringRequest?->description ? Str::limit($booking->tutoringRequest->description, 60) : __('Tutoring lesson'));
 
     $counterpart = match ($perspective) {
@@ -13,7 +13,7 @@
     };
 
     $subtitle = match ($perspective) {
-        'teacher' => trim(($booking->learner_name ?: $booking->student->name).($booking->learner_grade ? ' · '.config('studylikepro.grade_levels.'.$booking->learner_grade, $booking->learner_grade) : '')),
+        'teacher' => trim(($booking->learner_name ?: $booking->student->name).($booking->learnerGrade ? ' · '.$booking->learnerGrade->label : '')),
         'admin' => $booking->learner_name ? __('Learner: :name', ['name' => $booking->learner_name]) : __('Student booking'),
         default => __('with :name', ['name' => $booking->teacherProfile->user->name]),
     };

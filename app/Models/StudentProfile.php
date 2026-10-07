@@ -13,7 +13,7 @@ class StudentProfile extends Model
     use HasFactory;
 
     protected $fillable = [
-        'grade_level',
+        'grade_id',
         'timezone',
         'learning_goals',
         'guardian_name',
@@ -31,6 +31,11 @@ class StudentProfile extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function grade(): BelongsTo
+    {
+        return $this->belongsTo(Grade::class);
     }
 
     public function isComplete(): bool

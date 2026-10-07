@@ -44,7 +44,7 @@
                         </div>
 
                         <h3 class="mt-3 truncate text-sm font-bold text-slate-800 dark:text-slate-100">
-                            {{ $tutoringRequest->topic?->name ?? Str::limit($tutoringRequest->description, 60) }}
+                            {{ $tutoringRequest->lesson?->name ?? Str::limit($tutoringRequest->description, 60) }}
                         </h3>
                         <p class="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{{ $tutoringRequest->description }}</p>
                     </div>
@@ -73,7 +73,7 @@
                 <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-2xl">💬</span>
                 <h3 class="mt-4 text-base font-bold text-slate-800 dark:text-slate-100">No requests yet</h3>
                 <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                    Describe what you are stuck on, add a photo of the problem if you have one, and we will match it to the right topic and teacher.
+                    Describe what you are stuck on, add a photo of the problem if you have one, and we will match it to the right lesson and teacher.
                 </p>
                 <a href="{{ route('student.requests.create') }}"
                    class="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90">

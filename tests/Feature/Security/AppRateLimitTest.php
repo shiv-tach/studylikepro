@@ -46,7 +46,7 @@ it('rate limits uploads', function () {
     $student = User::factory()->student()->onboarded()->create();
 
     $update = fn () => $this->actingAs($student)->put(route('student.profile.update'), [
-        'grade_level' => 'high_school',
+        'grade_id' => gradeId(11),
         'avatar' => UploadedFile::fake()->image('avatar.jpg', 200, 200),
     ]);
 

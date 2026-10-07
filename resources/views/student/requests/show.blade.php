@@ -9,8 +9,11 @@
     $status = $tutoringRequest->classification_status;
     $isOwner = $tutoringRequest->student_id === auth()->id();
     $windows = $tutoringRequest->windowLabels($timezone);
-    $topicMap = $subjects->mapWithKeys(fn ($subject) => [
-        $subject->id => $subject->topics->map(fn ($topic) => ['id' => $topic->id, 'name' => $topic->name])->values()->all(),
+    $lessonMap = $subjects->mapWithKeys(fn ($subject) => [
+        $subject->id => $subject->lessons->map(fn ($lesson) => [
+            'id' => $lesson->id,
+            'name' => ($lesson->grade?->label ? $lesson->grade->label.' — ' : '').$lesson->name,
+        ])->values()->all(),
     ])->all();
     $openForm = in_array($status, [ClassificationStatus::LowConfidence, ClassificationStatus::Failed], true);
     $pollKey = "studylikepro:request-{$tutoringRequest->id}:polls";
@@ -22,7 +25,7 @@
             <div>
                 <a href="{{ route('student.requests.index') }}" class="text-xs font-semibold text-slate-400 transition-colors hover:text-primary">&larr; {{ __('All requests') }}</a>
                 <h2 class="mt-1 font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">
-                    {{ $tutoringRequest->topic?->name ?? __('New question') }}
+                    {{ $tutoringRequest->lesson?->name ?? __('New question') }}
                 </h2>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -37,9 +40,9 @@
             <div class="rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm text-primary">
                 Your question is in — we are reading it now and notifying matching teachers. Keep this page open and it will update automatically.
             </div>
-        @elseif (session('status') === 'topic-confirmed')
+        @elseif (session('status') === 'lesson-confirmed')
             <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                Topic confirmed — matching teachers have been notified.
+                Lesson confirmed — matching teachers have been notified.
             </div>
         @endif
 
@@ -70,14 +73,14 @@
                     </span>
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('AI topic matching') }}</h3>
+                            <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('AI lesson matching') }}</h3>
                             <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $status->badgeClasses() }}">{{ $status->label() }}</span>
                         </div>
 
                         @if ($status === ClassificationStatus::Pending)
                             <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
                                 We are reading your question{{ $tutoringRequest->attachments->isNotEmpty() ? ' and your photo' : '' }}
-                                to pick the exact subject and topic. This usually takes a few seconds.
+                                to pick the exact subject and lesson. This usually takes a few seconds.
                             </p>
                             <div class="mt-3 flex items-center gap-3">
                                 <span class="inline-flex h-2 w-2 animate-ping rounded-full bg-primary"></span>
@@ -89,7 +92,7 @@
                         @elseif ($status === ClassificationStatus::Completed)
                             <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
                                 We filed your question under
-                                <span class="font-semibold text-slate-700 dark:text-slate-200">{{ $tutoringRequest->subject?->name }} · {{ $tutoringRequest->topic?->name }}</span>
+                                <span class="font-semibold text-slate-700 dark:text-slate-200">{{ $tutoringRequest->subject?->name }} · {{ $tutoringRequest->lesson?->name }}</span>
                                 @if ($tutoringRequest->ai_confidence)
                                     with {{ round($tutoringRequest->ai_confidence * 100) }}% confidence.
                                 @else
@@ -98,11 +101,11 @@
                             </p>
                         @elseif ($status === ClassificationStatus::LowConfidence)
                             <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                                We were not confident enough to publish your question. Confirm the right subject and topic below and we will notify matching teachers instantly.
+                                We were not confident enough to publish your question. Confirm the right subject and lesson below and we will notify matching teachers instantly.
                             </p>
                         @else
                             <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                                We could not read your question automatically. Pick the subject and topic below and matching teachers will be notified.
+                                We could not read your question automatically. Pick the subject and lesson below and matching teachers will be notified.
                             </p>
                         @endif
                     </div>
@@ -112,21 +115,25 @@
             @if ($status->isSettled() && $tutoringRequest->isOpen())
                 <details class="mt-5 rounded-xl border border-slate-200/80 px-4 py-3 dark:border-slate-800" @if ($openForm) open @endif>
                     <summary class="cursor-pointer text-sm font-semibold text-slate-600 dark:text-slate-300">
-                        {{ $status === ClassificationStatus::Completed ? __('Not the right topic? Change it') : __('Choose the subject and topic') }}
+                        {{ $status === ClassificationStatus::Completed ? __('Not the right lesson? Change it') : __('Choose the subject and lesson') }}
                     </summary>
 
-                    <form method="POST" action="{{ route('student.requests.topic.update', $tutoringRequest) }}" class="mt-4 flex flex-wrap items-end gap-3"
+                    @if ($grade)
+                        <p class="mt-2 text-xs text-slate-400">{{ __('Showing :level subjects and :grade lessons only.', ['level' => $grade->educationLevel?->name ?? __('all'), 'grade' => $grade->label]) }}</p>
+                    @endif
+
+                    <form method="POST" action="{{ route('student.requests.lesson.update', $tutoringRequest) }}" class="mt-4 flex flex-wrap items-end gap-3"
                           x-data="{
                               subject: @js((int) old('subject_id', $suggestedSubjectId)),
-                              topic: @js((int) old('topic_id', $suggestedTopicId)),
-                              topics: @js($topicMap),
+                              lesson: @js((int) old('lesson_id', $suggestedLessonId)),
+                              lessons: @js($lessonMap),
                           }">
                         @csrf
                         @method('PUT')
 
                         <div class="grow">
                             <x-input-label for="subject_id" :value="__('Subject')" />
-                            <select id="subject_id" name="subject_id" x-model.number="subject" @change="topic = null" required class="mt-1 w-full {{ $fieldClasses }}">
+                            <select id="subject_id" name="subject_id" x-model.number="subject" @change="lesson = null" required class="mt-1 w-full {{ $fieldClasses }}">
                                 <option value="" disabled>{{ __('Pick a subject') }}</option>
                                 @foreach ($subjects as $subject)
                                     <option value="{{ $subject->id }}">{{ $subject->icon ?? '📘' }} {{ $subject->name }}</option>
@@ -136,16 +143,16 @@
                         </div>
 
                         <div class="grow">
-                            <x-input-label for="topic_id" :value="__('Topic')" />
-                            <select id="topic_id" name="topic_id" x-model.number="topic" required :disabled="! subject" class="mt-1 w-full {{ $fieldClasses }} disabled:opacity-50">
-                                <template x-for="option in (topics[subject] ?? [])" :key="option.id">
+                            <x-input-label for="lesson_id" :value="__('Lesson')" />
+                            <select id="lesson_id" name="lesson_id" x-model.number="lesson" required :disabled="! subject" class="mt-1 w-full {{ $fieldClasses }} disabled:opacity-50">
+                                <template x-for="option in (lessons[subject] ?? [])" :key="option.id">
                                     <option :value="option.id" x-text="option.name"></option>
                                 </template>
                             </select>
-                            <x-input-error :messages="$errors->get('topic_id')" class="mt-2" />
+                            <x-input-error :messages="$errors->get('lesson_id')" class="mt-2" />
                         </div>
 
-                        <x-primary-button>{{ __('Confirm topic') }}</x-primary-button>
+                        <x-primary-button>{{ __('Confirm lesson') }}</x-primary-button>
                     </form>
                 </details>
             @endif
@@ -291,7 +298,7 @@
                         @if ($tutoringRequest->isOpen() && $status->isSettled())
                             No proposals yet — matching teachers were just notified. You will get an email and a notification the moment one replies.
                         @elseif ($status === ClassificationStatus::Pending)
-                            Proposals appear here as soon as the topic is confirmed.
+                            Proposals appear here as soon as the lesson is confirmed.
                         @else
                             No proposals for this request.
                         @endif

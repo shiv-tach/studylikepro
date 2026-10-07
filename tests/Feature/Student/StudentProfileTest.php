@@ -19,9 +19,10 @@ test('the profile page shows the onboarding form for new students', function () 
 
 test('students can complete their profile', function () {
     $user = User::factory()->student()->create();
+    $grade = gradeId(11);
 
     $response = $this->actingAs($user)->put(route('student.profile.update'), [
-        'grade_level' => 'high_school',
+        'grade_id' => $grade,
         'learning_goals' => 'Prepare for board exams',
         'guardian_name' => 'Priya Sharma',
         'guardian_phone' => '+91 98765 43210',
@@ -33,7 +34,7 @@ test('students can complete their profile', function () {
 
     expect($profile)->not->toBeNull()
         ->and($profile->completed_at)->not->toBeNull()
-        ->and($profile->grade_level)->toBe('high_school')
+        ->and($profile->grade_id)->toBe($grade)
         ->and($profile->timezone)->toBe('Asia/Colombo')
         ->and($profile->guardian_name)->toBe('Priya Sharma');
 
@@ -45,9 +46,9 @@ test('completing the profile validates its inputs', function () {
 
     $this->actingAs($user)
         ->put(route('student.profile.update'), [
-            'grade_level' => 'not-a-grade',
+            'grade_id' => 99999,
         ])
-        ->assertSessionHasErrors(['grade_level']);
+        ->assertSessionHasErrors(['grade_id']);
 
     expect($user->fresh()->studentProfile)->toBeNull();
 });
@@ -57,12 +58,12 @@ test('students can update their profile after onboarding', function () {
 
     $this->actingAs($user)
         ->put(route('student.profile.update'), [
-            'grade_level' => 'college',
+            'grade_id' => gradeId(13),
             'learning_goals' => 'Calculus and linear algebra',
         ])
         ->assertRedirect(route('student.profile'));
 
-    expect($user->fresh()->studentProfile->grade_level)->toBe('college');
+    expect($user->fresh()->studentProfile->grade_id)->toBe(gradeId(13));
 });
 
 test('students can upload an avatar and the old file is removed', function () {
@@ -73,7 +74,7 @@ test('students can upload an avatar and the old file is removed', function () {
 
     $this->actingAs($user)
         ->put(route('student.profile.update'), [
-            'grade_level' => 'high_school',
+            'grade_id' => gradeId(11),
             'avatar' => UploadedFile::fake()->image('avatar.jpg', 200, 200),
         ])
         ->assertRedirect(route('student.profile'));
@@ -92,7 +93,7 @@ test('avatar uploads are validated', function () {
 
     $this->actingAs($user)
         ->put(route('student.profile.update'), [
-            'grade_level' => 'high_school',
+            'grade_id' => gradeId(11),
             'avatar' => UploadedFile::fake()->create('document.pdf', 100, 'application/pdf'),
         ])
         ->assertSessionHasErrors('avatar');

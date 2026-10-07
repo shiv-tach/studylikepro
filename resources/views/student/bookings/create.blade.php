@@ -3,8 +3,7 @@
     $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
     $fieldClasses = 'rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);
-    $gradeLevels = config('studylikepro.grade_levels');
-    $ratePerHour = $teacher->effectiveRateFor($subject);
+    $ratePerHour = $teacher->effectiveRateFor($subject, $learnerGradeId);
     $feeGross = $bookingFee['booking_fee_minor'];
     $feeNet = $bookingFee['net_minor'];
     $totalMinor = $priceMinor + $feeNet;
@@ -22,8 +21,9 @@
         <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
             <div class="space-y-6">
                 <!-- Lesson choice -->
-                <form method="GET" action="{{ route('student.bookings.create', $teacher) }}"
+                <form method="GET" action="{{ route('student.bookings.create', $teacher) }}" id="booking-filter-form"
                       class="{{ $cardBase }}" :class="{{ $cardTheme }}">
+                    <input type="hidden" name="learner_grade_id" value="{{ $learnerGradeId }}">
                     <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ __('1. What do you need help with?') }}</h3>
                     <div class="mt-4 grid gap-4 sm:grid-cols-3">
                         <div>
@@ -35,11 +35,11 @@
                             </select>
                         </div>
                         <div>
-                            <x-input-label for="filter-topic" :value="__('Topic (optional)')" />
-                            <select id="filter-topic" name="topic_id" onchange="this.form.submit()" class="mt-1 block w-full {{ $fieldClasses }}">
-                                <option value="">{{ __('Any topic') }}</option>
-                                @foreach ($topics as $option)
-                                    <option value="{{ $option->id }}" @selected($option->id === $selectedTopicId)>{{ $option->name }}</option>
+                            <x-input-label for="filter-lesson" :value="__('Lesson (optional)')" />
+                            <select id="filter-lesson" name="lesson_id" onchange="this.form.submit()" class="mt-1 block w-full {{ $fieldClasses }}">
+                                <option value="">{{ __('Any lesson') }}</option>
+                                @foreach ($lessons as $option)
+                                    <option value="{{ $option->id }}" @selected($option->id === $selectedLessonId)>{{ $option->grade?->label ? $option->grade->label.' — ' : '' }}{{ $option->name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -52,8 +52,14 @@
                             </select>
                         </div>
                     </div>
-                    @if ($topics->isEmpty())
-                        <p class="mt-3 text-xs text-slate-400">{{ __('This teacher has not listed topics for :subject yet — you can book without picking one.', ['subject' => $subject->name]) }}</p>
+                    @if ($lessons->isEmpty())
+                        <p class="mt-3 text-xs text-slate-400">
+                            @if ($learnerGrade)
+                                {{ __('This teacher has not listed :grade lessons for :subject yet — you can still book without picking one.', ['grade' => $learnerGrade->label, 'subject' => $subject->name]) }}
+                            @else
+                                {{ __('This teacher has not listed lessons for :subject yet — you can book without picking one.', ['subject' => $subject->name]) }}
+                            @endif
+                        </p>
                     @endif
                 </form>
 
@@ -61,7 +67,7 @@
                 <form method="POST" action="{{ route('student.bookings.store', $teacher) }}" id="booking-form" class="{{ $cardBase }}" :class="{{ $cardTheme }}">
                     @csrf
                     <input type="hidden" name="subject_id" value="{{ $subjectId }}">
-                    <input type="hidden" name="topic_id" value="{{ $selectedTopicId }}">
+                    <input type="hidden" name="lesson_id" value="{{ $selectedLessonId }}">
                     <input type="hidden" name="duration" value="{{ $duration }}">
 
                     <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ __('2. Pick a time') }}</h3>
@@ -111,17 +117,21 @@
                                 <x-input-error :messages="$errors->get('learner_name')" class="mt-2" />
                             </div>
                             <div>
-                                <x-input-label for="learner_grade" :value="__('Grade level')" />
-                                <select id="learner_grade" name="learner_grade" class="mt-1 block w-full {{ $fieldClasses }}">
-                                    <option value="">{{ __('Not specified') }}</option>
-                                    @foreach ($gradeLevels as $key => $label)
-                                        <option value="{{ $key }}" @selected(old('learner_grade', auth()->user()->studentProfile?->grade_level) === $key)>{{ $label }}</option>
+                                <x-input-label for="learner_grade_id" :value="__('Grade')" />
+                                <select id="learner_grade_id" name="learner_grade_id" class="mt-1 block w-full {{ $fieldClasses }}"
+                                        onchange="const filter = document.getElementById('booking-filter-form'); filter.learner_grade_id.value = this.value; filter.submit();">
+                                    @foreach ($levels as $level)
+                                        <optgroup label="{{ $level->name }}">
+                                            @foreach ($level->grades as $grade)
+                                                <option value="{{ $grade->id }}" @selected((int) old('learner_grade_id', $learnerGradeId) === $grade->id)>{{ $grade->label }}</option>
+                                            @endforeach
+                                        </optgroup>
                                     @endforeach
                                 </select>
-                                <x-input-error :messages="$errors->get('learner_grade')" class="mt-2" />
+                                <x-input-error :messages="$errors->get('learner_grade_id')" class="mt-2" />
                             </div>
                         </div>
-                        <p class="mt-3 text-xs text-slate-400">{{ __('Booked for someone else? Put their name and grade here — the teacher sees it on the lesson brief.') }}</p>
+                        <p class="mt-3 text-xs text-slate-400">{{ __('Booked for someone else? Put their name and grade here — changing the grade reloads the page and offers that grade\'s lessons above.') }}</p>
                     </div>
 
                     <div class="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-6 dark:border-slate-800">

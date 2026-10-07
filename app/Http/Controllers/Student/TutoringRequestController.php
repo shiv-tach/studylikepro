@@ -7,8 +7,9 @@ use App\Enums\RequestStatus;
 use App\Enums\ResponseStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTutoringRequestRequest;
-use App\Http\Requests\UpdateRequestTopicRequest;
+use App\Http\Requests\UpdateRequestLessonRequest;
 use App\Jobs\ClassifyTutoringRequestJob;
+use App\Models\Lesson;
 use App\Models\TutoringRequest;
 use App\Notifications\RequestPublished;
 use App\Services\CatalogService;
@@ -29,7 +30,7 @@ class TutoringRequestController extends Controller
     public function index(Request $request): View
     {
         $requests = $request->user()->tutoringRequests()
-            ->with(['subject', 'topic'])
+            ->with(['subject', 'lesson'])
             ->withCount(['responses' => fn ($query) => $query->where('status', ResponseStatus::Pending->value)])
             ->paginate(10);
 
@@ -43,6 +44,8 @@ class TutoringRequestController extends Controller
     {
         return view('student.requests.create', [
             'subjects' => $this->catalog->subjects(),
+            'levels' => $this->catalog->levels(),
+            'defaultGradeId' => $request->user()->studentProfile?->grade_id,
             'maxAttachments' => (int) config('studylikepro.requests.max_attachments'),
         ]);
     }
@@ -56,6 +59,7 @@ class TutoringRequestController extends Controller
 
         $tutoringRequest = DB::transaction(function () use ($request, $user) {
             $created = $user->tutoringRequests()->create([
+                'grade_id' => $request->validated('grade_id') ?: $user->studentProfile?->grade_id,
                 'description' => $request->validated('description'),
                 'budget_minor' => filled($request->validated('budget'))
                     ? (int) round(((float) $request->validated('budget')) * 100)
@@ -104,35 +108,55 @@ class TutoringRequestController extends Controller
 
         $tutoringRequest->load([
             'subject',
-            'topic',
+            'grade',
+            'lesson',
             'attachments',
             'booking.teacherProfile.user',
             'responses' => fn ($query) => $query->with(['teacherProfile.user', 'teacherProfile.subjects'])->latest('responded_at'),
         ]);
 
         $suggestedSubjectId = data_get($tutoringRequest->ai_payload, 'subject_id');
-        $suggestedTopicId = data_get($tutoringRequest->ai_payload, 'topic_id');
+        $suggestedLessonId = data_get($tutoringRequest->ai_payload, 'lesson_id');
+
+        // The subject and lesson pickers only offer the request's grade, so
+        // the student physically cannot file a Grade 8 question under a
+        // Grade 11 lesson.
+        $subjects = $this->catalog->subjects();
+        $grade = $tutoringRequest->grade;
+
+        if ($grade !== null) {
+            $subjects = $subjects
+                ->where('education_level_id', $grade->education_level_id)
+                ->values();
+
+            $subjects->each(fn ($subject) => $subject->setRelation(
+                'lessons',
+                $subject->lessons->where('grade_id', $grade->id)->values(),
+            ));
+        }
 
         return view('student.requests.show', [
             'tutoringRequest' => $tutoringRequest,
             'suggestedSubjectId' => $suggestedSubjectId,
-            'suggestedTopicId' => $suggestedTopicId,
-            'subjects' => $this->catalog->subjects(),
+            'suggestedLessonId' => $suggestedLessonId,
+            'grade' => $grade,
+            'subjects' => $subjects,
         ]);
     }
 
     /**
      * Confirm or override the AI suggestion.
      */
-    public function updateTopic(UpdateRequestTopicRequest $request, TutoringRequest $tutoringRequest, RequestMatcher $matcher): RedirectResponse
+    public function updateLesson(UpdateRequestLessonRequest $request, TutoringRequest $tutoringRequest, RequestMatcher $matcher): RedirectResponse
     {
-        Gate::authorize('updateTopic', $tutoringRequest);
+        Gate::authorize('updateLesson', $tutoringRequest);
 
         $wasMatchable = $tutoringRequest->isMatchable();
 
         $tutoringRequest->update([
             'subject_id' => $request->validated('subject_id'),
-            'topic_id' => $request->validated('topic_id'),
+            'lesson_id' => $request->validated('lesson_id'),
+            'grade_id' => Lesson::query()->whereKey($request->validated('lesson_id'))->value('grade_id'),
             'classification_status' => ClassificationStatus::Completed,
         ]);
 
@@ -144,7 +168,7 @@ class TutoringRequestController extends Controller
 
         return redirect()
             ->route('student.requests.show', $tutoringRequest)
-            ->with('status', 'topic-confirmed');
+            ->with('status', 'lesson-confirmed');
     }
 
     /**

@@ -6,6 +6,7 @@ use Database\Factories\SubjectFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -15,6 +16,7 @@ class Subject extends Model
     use HasFactory;
 
     protected $fillable = [
+        'education_level_id',
         'name',
         'slug',
         'icon',
@@ -35,14 +37,39 @@ class Subject extends Model
         return 'slug';
     }
 
-    public function topics(): HasMany
+    public function educationLevel(): BelongsTo
     {
-        return $this->hasMany(Topic::class);
+        return $this->belongsTo(EducationLevel::class);
+    }
+
+    public function lessons(): HasMany
+    {
+        return $this->hasMany(Lesson::class);
     }
 
     public function teacherProfiles(): BelongsToMany
     {
         return $this->belongsToMany(TeacherProfile::class, 'teacher_subjects')->withTimestamps();
+    }
+
+    /**
+     * Human label for the grade span this subject covers, e.g. "Grades 6-11".
+     */
+    public function gradeRangeLabel(): ?string
+    {
+        return $this->educationLevel?->gradeRangeLabel();
+    }
+
+    /**
+     * @param  Builder<Subject>  $query
+     */
+    public function scopeForLevel(Builder $query, EducationLevel|string $level): Builder
+    {
+        if ($level instanceof EducationLevel) {
+            return $query->where('education_level_id', $level->id);
+        }
+
+        return $query->whereHas('educationLevel', fn (Builder $inner) => $inner->where('key', $level));
     }
 
     /**

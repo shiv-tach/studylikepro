@@ -22,7 +22,7 @@
                 <div>
                     <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">Describe it in your own words</h3>
                     <p class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                        Write the question exactly as you would to a teacher. Our AI reads it (and the photo you attach) to pick the subject and topic,
+                        Write the question exactly as you would to a teacher. Our AI reads it (and the photo you attach) to pick the subject and lesson,
                         then quietly notifies the best-matched verified teachers. You will see their proposals right here.
                     </p>
                 </div>
@@ -49,6 +49,21 @@
                           class="mt-4 w-full {{ $fieldClasses }}"
                           placeholder="e.g. I keep getting stuck on factorising quadratic equations when the middle term splits into fractions. My exam is next month.">{{ old('description') }}</textarea>
                 <x-input-error :messages="$errors->get('description')" class="mt-2" />
+
+                <div class="mt-5 sm:max-w-xs">
+                    <x-input-label for="grade_id" :value="__('Learner grade')" />
+                    <select id="grade_id" name="grade_id" class="mt-1 block w-full {{ $fieldClasses }}">
+                        @foreach ($levels as $level)
+                            <optgroup label="{{ $level->name }}">
+                                @foreach ($level->grades as $grade)
+                                    <option value="{{ $grade->id }}" @selected((int) old('grade_id', $defaultGradeId) === $grade->id)>{{ $grade->label }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endforeach
+                    </select>
+                    <x-input-error :messages="$errors->get('grade_id')" class="mt-2" />
+                    <p class="mt-1 text-xs text-slate-400">{{ __('We only offer lessons for this grade — change it if you are asking for someone else.') }}</p>
+                </div>
             </div>
 
             <!-- Preferred windows -->
@@ -113,7 +128,7 @@
             <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
                 <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Photo of the problem <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">optional</span></h3>
                 <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    Up to {{ $maxAttachments }} images (JPG, PNG or WebP, 5 MB each). A clear photo often lets the AI match the exact topic on the first try.
+                    Up to {{ $maxAttachments }} images (JPG, PNG or WebP, 5 MB each). A clear photo often lets the AI match the exact lesson on the first try.
                 </p>
 
                 <input type="file" name="attachments[]" accept="image/jpeg,image/png,image/webp" multiple

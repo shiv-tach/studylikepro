@@ -67,7 +67,7 @@
                         Stuck on a question? Get a verified tutor, fast.
                     </h1>
                     <p class="mt-4 text-lg leading-relaxed text-slate-600 dark:text-slate-400">
-                        Upload a photo of your question, let AI pinpoint the topic, book a live 1-on-1 lesson with a verified teacher, and pay securely — all in one place.
+                        Upload a photo of your question, let AI pinpoint the lesson, book a live 1-on-1 lesson with a verified teacher, and pay securely — all in one place.
                     </p>
                     <div class="mt-8 flex flex-wrap gap-3">
                         <a href="{{ route('register', ['role' => 'student']) }}" class="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90">
@@ -91,7 +91,7 @@
                         @php
                             $flow = [
                                 ['📷', 'Upload your question', 'A photo of the problem you are stuck on.'],
-                                ['🤖', 'AI identifies the topic', 'Matched to the right subject instantly.'],
+                                ['🤖', 'AI identifies the lesson', 'Matched to the right subject instantly.'],
                                 ['👨‍🏫', 'Find a verified teacher', 'Only approved tutors show up.'],
                                 ['🕐', 'Choose an available time', 'Real slots from the tutor calendar.'],
                                 ['💳', 'Pay securely', 'Safe checkout with receipts.'],
@@ -127,7 +127,7 @@
                 @php
                     $features = [
                         ['🛡️', 'Verified teachers', 'Tutors are reviewed and approved by our team before they can accept a single lesson.'],
-                        ['🧠', 'AI question matching', 'Snap a photo; AI suggests the subject and topic so you always book the right help.'],
+                        ['🧠', 'AI question matching', 'Snap a photo; AI suggests the subject and lesson so you always book the right help.'],
                         ['📅', 'Real availability', 'Book only the times a teacher has published — no back-and-forth scheduling.'],
                         ['💳', 'Secure payments', 'Online checkout with transparent pricing, receipts, and a fair refund policy.'],
                         ['💬', 'Chat & reminders', 'Message your teacher around the lesson and get timely reminders.'],

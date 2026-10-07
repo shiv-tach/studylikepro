@@ -23,7 +23,7 @@ class ClassroomController extends Controller
     {
         Gate::authorize('join', $booking);
 
-        $booking->load(['teacherProfile.user', 'student', 'subject', 'topic']);
+        $booking->load(['teacherProfile.user', 'student', 'subject', 'lesson']);
 
         // Self-heal a room that never got created (the queue was down when
         // payment landed). Only worth doing close to the lesson, and never over

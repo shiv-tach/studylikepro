@@ -4,6 +4,27 @@
     $viewerTz = auth()->user()?->studentProfile?->timezone
         ?? auth()->user()?->teacherProfile?->timezone
         ?? config('studylikepro.default_display_timezone');
+
+    $selectedLevel = $levels->firstWhere('key', $filters['level'] ?? null);
+    $selectedSubject = $subjects->firstWhere('slug', $filters['subject'] ?? null);
+
+    // The pickers cascade server-side: level narrows subjects, subject narrows
+    // lessons. Lesson values are ids because lesson slugs repeat per grade.
+    $subjectOptions = $selectedLevel
+        ? $subjects->where('education_level_id', $selectedLevel->id)
+        : $subjects;
+
+    $lessonGroups = ($selectedSubject ? $subjectOptions->where('id', $selectedSubject->id) : $subjectOptions)
+        ->map(fn ($subject) => ['subject' => $subject, 'lessons' => $subject->lessons])
+        ->filter(fn (array $group) => $group['lessons']->isNotEmpty());
+
+    $gradeOptions = $selectedSubject
+        ? $selectedSubject->lessons->pluck('grade')->filter()->unique('id')->sortBy('sort_order')->values()
+        : ($selectedLevel ? $selectedLevel->grades : $levels->flatMap(fn ($level) => $level->grades));
+
+    $gradeGroups = $levels
+        ->map(fn ($level) => ['level' => $level, 'grades' => $gradeOptions->where('education_level_id', $level->id)])
+        ->filter(fn (array $group) => $group['grades']->isNotEmpty());
 @endphp
 
 <x-public-layout>
@@ -12,7 +33,7 @@
     <div class="max-w-2xl">
         <h1 class="text-3xl font-extrabold tracking-tight sm:text-4xl">Find your teacher</h1>
         <p class="mt-3 text-slate-600 dark:text-slate-400">
-            Every teacher here is verified by our team. Filter by subject, price, and when you are free.
+            Every teacher here is verified by our team. Pick your level and subject to see the grades and lessons they teach.
         </p>
     </div>
 
@@ -21,23 +42,39 @@
           class="mt-8 rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800/80 dark:bg-slate-900">
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-                <label for="filter-subject" class="text-xs font-semibold uppercase tracking-wider text-slate-400">Subject</label>
-                <select id="filter-subject" name="subject" class="mt-1 {{ $fieldClasses }}">
-                    <option value="">Any subject</option>
-                    @foreach ($subjects as $subject)
-                        <option value="{{ $subject->slug }}" @selected(($filters['subject'] ?? '') === $subject->slug)>{{ $subject->icon }} {{ $subject->name }}</option>
+                <label for="filter-level" class="text-xs font-semibold uppercase tracking-wider text-slate-400">Level</label>
+                <select id="filter-level" name="level" class="mt-1 {{ $fieldClasses }}"
+                        onchange="this.form.subject.value=''; this.form.lesson.value=''; this.form.grade.value=''; this.form.submit();">
+                    <option value="">Any level</option>
+                    @foreach ($levels as $level)
+                        <option value="{{ $level->key }}" @selected(($filters['level'] ?? '') === $level->key)>{{ $level->icon }} {{ $level->name }}</option>
                     @endforeach
                 </select>
             </div>
 
             <div>
-                <label for="filter-topic" class="text-xs font-semibold uppercase tracking-wider text-slate-400">Topic</label>
-                <select id="filter-topic" name="topic" class="mt-1 {{ $fieldClasses }}">
-                    <option value="">Any topic</option>
-                    @foreach ($subjects as $subject)
-                        <optgroup label="{{ $subject->name }}">
-                            @foreach ($subject->topics as $topic)
-                                <option value="{{ $topic->slug }}" @selected(($filters['topic'] ?? '') === $topic->slug)>{{ $topic->name }}</option>
+                <label for="filter-subject" class="text-xs font-semibold uppercase tracking-wider text-slate-400">Subject</label>
+                <select id="filter-subject" name="subject" class="mt-1 {{ $fieldClasses }}"
+                        onchange="this.form.lesson.value=''; this.form.submit();">
+                    <option value="">Any subject</option>
+                    @foreach ($subjectOptions as $subject)
+                        <option value="{{ $subject->slug }}" @selected(($filters['subject'] ?? '') === $subject->slug)>
+                            {{ $subject->icon }} {{ $subject->name }}@if (! $selectedLevel) — {{ $subject->educationLevel->name }}@endif
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label for="filter-lesson" class="text-xs font-semibold uppercase tracking-wider text-slate-400">Lesson</label>
+                <select id="filter-lesson" name="lesson" class="mt-1 {{ $fieldClasses }}">
+                    <option value="">Any lesson</option>
+                    @foreach ($lessonGroups as $group)
+                        <optgroup label="{{ $group['subject']->name }}@if (! $selectedLevel) — {{ $group['subject']->educationLevel->name }}@endif">
+                            @foreach ($group['lessons'] as $lesson)
+                                <option value="{{ $lesson->id }}" @selected((string) ($filters['lesson'] ?? '') === (string) $lesson->id)>
+                                    {{ $lesson->name }}@if ($lesson->grade) · {{ $lesson->grade->label }}@endif
+                                </option>
                             @endforeach
                         </optgroup>
                     @endforeach
@@ -45,11 +82,15 @@
             </div>
 
             <div>
-                <label for="filter-grade" class="text-xs font-semibold uppercase tracking-wider text-slate-400">Grade level</label>
-                <select id="filter-grade" name="grade_level" class="mt-1 {{ $fieldClasses }}">
+                <label for="filter-grade" class="text-xs font-semibold uppercase tracking-wider text-slate-400">Grade</label>
+                <select id="filter-grade" name="grade" class="mt-1 {{ $fieldClasses }}">
                     <option value="">Any grade</option>
-                    @foreach (config('studylikepro.grade_levels') as $value => $label)
-                        <option value="{{ $value }}" @selected(($filters['grade_level'] ?? '') === $value)>{{ $label }}</option>
+                    @foreach ($gradeGroups as $group)
+                        <optgroup label="{{ $group['level']->name }}">
+                            @foreach ($group['grades'] as $grade)
+                                <option value="{{ $grade->id }}" @selected((string) ($filters['grade'] ?? '') === (string) $grade->id)>{{ $grade->label }}</option>
+                            @endforeach
+                        </optgroup>
                     @endforeach
                 </select>
             </div>
@@ -171,9 +212,29 @@
                         @endif
                     </div>
 
+                    @php
+                        $gradeLabel = $teacher->gradeScopeLabel($gradesById);
+                        $lessonCount = (int) ($teacher->lessons_count ?? 0);
+                    @endphp
+                    @if ($gradeLabel || $lessonCount > 0)
+                        <p class="mt-3 text-xs font-medium text-slate-500 dark:text-slate-400">
+                            @if ($gradeLabel){{ $gradeLabel }}@endif
+                            @if ($gradeLabel && $lessonCount > 0) · @endif
+                            @if ($lessonCount > 0){{ $lessonCount }} {{ Str::plural('lesson', $lessonCount) }}@endif
+                        </p>
+                    @endif
+
                     <div class="mt-auto flex items-end justify-between gap-3 pt-5">
                         <div>
-                            <p class="text-lg font-extrabold text-slate-800 dark:text-slate-100">{{ $money($teacher->startingRateMinor()) }}<span class="text-sm font-medium text-slate-400">/hr</span></p>
+                            @php
+                                $cardGradeId = filled($filters['grade'] ?? null) ? (int) $filters['grade'] : null;
+                                $cardRate = match (true) {
+                                    $selectedSubject !== null && $cardGradeId !== null => $teacher->effectiveRateFor($selectedSubject, $cardGradeId),
+                                    $selectedSubject !== null => $teacher->cheapestRateFor($selectedSubject),
+                                    default => $teacher->startingRateMinor($cardGradeId),
+                                };
+                            @endphp
+                            <p class="text-lg font-extrabold text-slate-800 dark:text-slate-100">{{ $money($cardRate) }}<span class="text-sm font-medium text-slate-400">/hr</span></p>
                             <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                                 @if ($nextSlot)
                                     Next: {{ $nextSlot['starts_at']->setTimezone($viewerTz)->format('D d M · H:i') }}

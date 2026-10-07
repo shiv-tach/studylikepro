@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\EducationLevel;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -18,6 +19,7 @@ class SubjectFactory extends Factory
         $name = fake()->unique()->words(2, true);
 
         return [
+            'education_level_id' => EducationLevel::factory(),
             'name' => Str::title($name),
             'slug' => Str::slug($name),
             'icon' => '📘',

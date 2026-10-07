@@ -49,7 +49,7 @@
                     @endif
                 </div>
                 <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">Request inbox</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Questions matched to your topics and hours.</p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Questions matched to your lessons and hours.</p>
             </a>
 
             <a href="{{ route('teacher.schedule.index') }}" class="group {{ $cardBase }}"
@@ -104,7 +104,7 @@
                         <span class="{{ $chip }}">Set up</span>
                     @endif
                 </div>
-                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">Subjects & topics</h3>
+                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">Subjects & lessons</h3>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Tag what you teach so students can find you.</p>
             </a>
 
@@ -164,10 +164,10 @@
                 @php
                     $steps = [
                         ['Profile & documents', 'Tell students who you are and upload verification documents.', 'Phase 1'],
-                        ['Subjects & topics', 'Choose the subjects and topics you want to teach.', 'Phase 2'],
+                        ['Subjects & lessons', 'Choose the subjects and lessons you want to teach.', 'Phase 2'],
                         ['Get verified', 'An admin reviews your application and approves you.', 'Phase 2'],
                         ['Availability & pricing', 'Publish weekly slots and set your hourly rate.', 'Phase 3'],
-                        ['Receive requests', 'Accept or reject tutoring requests that match your topics.', 'Phase 4'],
+                        ['Receive requests', 'Accept or reject tutoring requests that match your lessons.', 'Phase 4'],
                         ['Teach live & get paid', 'Run lessons in private video rooms and track earnings.', 'Phase 6–7'],
                     ];
                 @endphp

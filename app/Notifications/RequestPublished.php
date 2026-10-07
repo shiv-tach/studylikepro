@@ -18,7 +18,7 @@ class RequestPublished extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject('New tutoring request matches your subjects')
             ->greeting('Hi '.$notifiable->name.',')
-            ->line('A student needs help with **'.$this->request->topic->name.'** ('.$this->request->subject->name.').')
+            ->line('A student needs help with **'.$this->request->lesson->name.'** ('.$this->request->subject->name.').')
             ->line('They are free: '.implode(' · ', $this->request->windowLabels()))
             ->line('Respond first and the slot is held for the student to pay.')
             ->action('View the request', route('teacher.requests.index'))
@@ -31,7 +31,7 @@ class RequestPublished extends Notification implements ShouldQueue
     public function toDatabase(object $notifiable): array
     {
         return [
-            'title' => 'New request: '.$this->request->topic->name,
+            'title' => 'New request: '.$this->request->lesson->name,
             'body' => $this->request->subject->name.' · '.implode(' · ', $this->request->windowLabels()),
             'url' => route('teacher.requests.index'),
         ];

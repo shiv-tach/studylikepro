@@ -86,7 +86,7 @@
                 @endif
 
                 <div class="mt-5">
-                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Subjects & topics</dt>
+                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Subjects & lessons</dt>
                     <div class="mt-2 space-y-2">
                         @forelse ($profile->subjects as $subject)
                             <div class="rounded-xl border border-slate-200/80 px-4 py-3 dark:border-slate-800">
@@ -97,7 +97,7 @@
                                     @endif
                                 </div>
                                 <p class="mt-1 text-xs text-slate-400">
-                                    {{ $profile->topics->where('subject_id', $subject->id)->pluck('name')->join(', ') ?: 'No specific topics selected' }}
+                                    {{ $profile->lessons->where('subject_id', $subject->id)->pluck('name')->join(', ') ?: 'No specific lessons selected' }}
                                 </p>
                             </div>
                         @empty

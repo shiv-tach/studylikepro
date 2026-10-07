@@ -5,6 +5,8 @@ use App\Http\Controllers\Admin\BookingController as AdminBookingController;
 use App\Http\Controllers\Admin\BookingFeePromotionController as AdminBookingFeePromotionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DisputeController as AdminDisputeController;
+use App\Http\Controllers\Admin\EducationLevelController as AdminEducationLevelController;
+use App\Http\Controllers\Admin\LessonController as AdminLessonController;
 use App\Http\Controllers\Admin\ModerationController as AdminModerationController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\PayoutController as AdminPayoutController;
@@ -13,7 +15,6 @@ use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\SubjectController as AdminSubjectController;
 use App\Http\Controllers\Admin\TeacherInviteController as AdminTeacherInviteController;
 use App\Http\Controllers\Admin\TeacherVerificationController as AdminTeacherVerificationController;
-use App\Http\Controllers\Admin\TopicController as AdminTopicController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ClassroomController;
@@ -108,7 +109,7 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_STUDENT, 'not-suspende
         Route::get('/requests/create', [TutoringRequestController::class, 'create'])->middleware('onboarded')->name('requests.create');
         Route::post('/requests', [TutoringRequestController::class, 'store'])->middleware(['onboarded', 'throttle:requests'])->name('requests.store');
         Route::get('/requests/{tutoringRequest}', [TutoringRequestController::class, 'show'])->middleware('onboarded')->name('requests.show');
-        Route::put('/requests/{tutoringRequest}/topic', [TutoringRequestController::class, 'updateTopic'])->middleware('onboarded')->name('requests.topic.update');
+        Route::put('/requests/{tutoringRequest}/lesson', [TutoringRequestController::class, 'updateLesson'])->middleware('onboarded')->name('requests.lesson.update');
         Route::post('/requests/{tutoringRequest}/cancel', [TutoringRequestController::class, 'cancel'])->middleware('onboarded')->name('requests.cancel');
 
         Route::get('/lessons', [StudentBookingController::class, 'index'])->middleware('onboarded')->name('bookings.index');
@@ -200,14 +201,20 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended'
         Route::post('/disputes/{dispute}/review', [AdminDisputeController::class, 'review'])->name('disputes.review');
         Route::post('/disputes/{dispute}/resolve', [AdminDisputeController::class, 'resolve'])->name('disputes.resolve');
 
+        Route::get('/curriculum', [AdminEducationLevelController::class, 'index'])->name('curriculum.index');
+        Route::put('/curriculum/levels/{level}', [AdminEducationLevelController::class, 'update'])->name('curriculum.levels.update');
+
         Route::get('/subjects', [AdminSubjectController::class, 'index'])->name('subjects.index');
         Route::post('/subjects', [AdminSubjectController::class, 'store'])->name('subjects.store');
         Route::get('/subjects/{subject}/edit', [AdminSubjectController::class, 'edit'])->name('subjects.edit');
         Route::put('/subjects/{subject}', [AdminSubjectController::class, 'update'])->name('subjects.update');
 
-        Route::post('/subjects/{subject}/topics', [AdminTopicController::class, 'store'])->name('subjects.topics.store');
-        Route::put('/subjects/{subject}/topics/{topic}', [AdminTopicController::class, 'update'])->scopeBindings()->name('subjects.topics.update');
-        Route::delete('/subjects/{subject}/topics/{topic}', [AdminTopicController::class, 'destroy'])->scopeBindings()->name('subjects.topics.destroy');
+        Route::post('/subjects/{subject}/lessons', [AdminLessonController::class, 'store'])->name('subjects.lessons.store');
+        Route::post('/subjects/{subject}/lessons/copy', [AdminLessonController::class, 'copy'])->name('subjects.lessons.copy');
+        Route::post('/subjects/{subject}/lessons/bulk-active', [AdminLessonController::class, 'bulkActive'])->name('subjects.lessons.bulk-active');
+        Route::post('/subjects/{subject}/lessons/{lesson}/move', [AdminLessonController::class, 'move'])->scopeBindings()->name('subjects.lessons.move');
+        Route::put('/subjects/{subject}/lessons/{lesson}', [AdminLessonController::class, 'update'])->scopeBindings()->name('subjects.lessons.update');
+        Route::delete('/subjects/{subject}/lessons/{lesson}', [AdminLessonController::class, 'destroy'])->scopeBindings()->name('subjects.lessons.destroy');
 
         Route::get('/offers', [AdminBookingFeePromotionController::class, 'index'])->name('offers.index');
         Route::post('/offers', [AdminBookingFeePromotionController::class, 'store'])->name('offers.store');

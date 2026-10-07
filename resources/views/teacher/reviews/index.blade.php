@@ -85,7 +85,7 @@
                             <span class="ml-1 text-amber-500">{{ str_repeat('★', $review->rating) }}<span class="text-slate-300 dark:text-slate-600">{{ str_repeat('★', 5 - $review->rating) }}</span></span>
                         </p>
                         <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                            {{ $review->booking?->topic?->name ?? $review->booking?->subject?->name ?? __('Tutoring lesson') }}
+                            {{ $review->booking?->lesson?->name ?? $review->booking?->subject?->name ?? __('Tutoring lesson') }}
                             · {{ $review->booking?->starts_at?->format('d M Y') }}
                             · {{ __('reviewed :when', ['when' => $review->created_at->diffForHumans()]) }}
                             @if ($review->wasEdited()) · {{ __('edited') }} @endif

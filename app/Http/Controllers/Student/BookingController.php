@@ -9,10 +9,10 @@ use App\Http\Requests\StoreBookingRequest;
 use App\Models\Booking;
 use App\Models\Subject;
 use App\Models\TeacherProfile;
-use App\Models\Topic;
 use App\Services\BookingFeeService;
 use App\Services\BookingService;
 use App\Services\BookingTransitionService;
+use App\Services\CatalogService;
 use App\Services\Payments\PaymentService;
 use App\Support\BookingDraft;
 use Carbon\Carbon;
@@ -28,6 +28,7 @@ class BookingController extends Controller
     public function __construct(
         private readonly BookingService $bookings,
         private readonly BookingTransitionService $transitions,
+        private readonly CatalogService $catalog,
     ) {}
 
     /**
@@ -47,7 +48,7 @@ class BookingController extends Controller
         $tab = ($filters['tab'] ?? null) === 'past' ? 'past' : 'upcoming';
 
         $bookings = $request->user()->bookings()
-            ->with(['teacherProfile.user', 'subject', 'topic', 'review'])
+            ->with(['teacherProfile.user', 'subject', 'lesson', 'review'])
             ->when(
                 $tab === 'past',
                 fn ($query) => $query->past(),
@@ -86,12 +87,21 @@ class BookingController extends Controller
     {
         Gate::authorize('create', [Booking::class, $teacherProfile]);
 
-        $teacherProfile->load(['user', 'subjects', 'topics', 'availabilitySlots', 'timeOff']);
+        $teacherProfile->load(['user', 'subjects', 'lessons.grade', 'availabilitySlots', 'timeOff']);
 
         $timezone = $this->timezoneFor($request);
         $subjects = $teacherProfile->subjects->sortBy('name')->values();
 
         abort_if($subjects->isEmpty(), 404);
+
+        $levels = $this->catalog->levels();
+
+        // The lessons on offer are the teacher's lessons for the learner's
+        // grade (defaults to the student's own profile grade).
+        $learnerGradeId = (int) ($request->integer('learner_grade_id') ?: $request->user()->studentProfile?->grade_id) ?: null;
+        $learnerGrade = $learnerGradeId !== null
+            ? $levels->flatMap(fn ($level) => $level->grades)->firstWhere('id', $learnerGradeId)
+            : null;
 
         $subject = $subjects->firstWhere('id', (int) $request->integer('subject_id')) ?? $subjects->first();
 
@@ -103,25 +113,28 @@ class BookingController extends Controller
             ? $request->integer('duration')
             : $defaultDuration;
 
-        $topics = $teacherProfile->topics
+        $lessons = $teacherProfile->lessons
             ->where('subject_id', $subject->id)
+            ->when($learnerGradeId !== null, fn ($lessons) => $lessons->where('grade_id', $learnerGradeId))
             ->sortBy('name')
             ->values();
 
-        $selectedTopicId = $request->integer('topic_id') ?: null;
+        $selectedLessonId = $request->integer('lesson_id') ?: null;
 
         return view('student.bookings.create', [
             'teacher' => $teacherProfile,
             'subjects' => $subjects,
-            'topics' => $topics,
-            'topicMap' => $this->topicMap($teacherProfile),
+            'lessons' => $lessons,
+            'levels' => $levels,
+            'learnerGradeId' => $learnerGradeId,
+            'learnerGrade' => $learnerGrade,
             'subject' => $subject,
             'subjectId' => $subject->id,
-            'selectedTopicId' => $topics->contains('id', $selectedTopicId) ? $selectedTopicId : null,
+            'selectedLessonId' => $lessons->contains('id', $selectedLessonId) ? $selectedLessonId : null,
             'durations' => $durations,
             'duration' => $duration,
             'slotsByDate' => $this->bookings->availableSlots($teacherProfile, $duration, $timezone),
-            'priceMinor' => $this->bookings->priceMinor($teacherProfile, $subject, $duration),
+            'priceMinor' => $this->bookings->priceMinor($teacherProfile, $subject, $duration, $learnerGradeId),
             'bookingFee' => $fees->quote(),
             'timezone' => $timezone,
         ]);
@@ -134,7 +147,7 @@ class BookingController extends Controller
     {
         Gate::authorize('create', [Booking::class, $teacherProfile]);
 
-        $teacherProfile->load(['subjects', 'topics', 'availabilitySlots', 'timeOff']);
+        $teacherProfile->load(['subjects', 'lessons.grade', 'availabilitySlots', 'timeOff']);
 
         $subject = $teacherProfile->subjects->firstWhere('id', (int) $request->validated('subject_id'));
 
@@ -144,17 +157,28 @@ class BookingController extends Controller
             ]);
         }
 
-        $topicId = $request->integer('topic_id') ?: null;
-        $topic = null;
+        $student = $request->user();
+        $learnerGradeId = (int) ($request->validated('learner_grade_id') ?: $student->studentProfile?->grade_id) ?: null;
 
-        if ($topicId !== null) {
-            $topic = $teacherProfile->topics
+        $lessonId = $request->integer('lesson_id') ?: null;
+        $lesson = null;
+
+        if ($lessonId !== null) {
+            $lesson = $teacherProfile->lessons
                 ->where('subject_id', $subject->id)
-                ->firstWhere('id', $topicId);
+                ->firstWhere('id', $lessonId);
 
-            if (! $topic) {
+            if (! $lesson) {
                 throw ValidationException::withMessages([
-                    'topic_id' => __('Pick a topic this teacher covers for :subject.', ['subject' => $subject->name]),
+                    'lesson_id' => __('Pick a lesson this teacher covers for :subject.', ['subject' => $subject->name]),
+                ]);
+            }
+
+            // The picker only offers the learner's grade; enforce it for
+            // anything posted around it.
+            if ($learnerGradeId !== null && (int) $lesson->grade_id !== $learnerGradeId) {
+                throw ValidationException::withMessages([
+                    'lesson_id' => __('That lesson is for another grade — pick a lesson for the learner\'s grade.'),
                 ]);
             }
         }
@@ -169,17 +193,15 @@ class BookingController extends Controller
             ]);
         }
 
-        $student = $request->user();
-
         $booking = $this->bookings->reserve(new BookingDraft(
             student: $student,
             teacher: $teacherProfile,
             startsAt: $slot['starts_at'],
             endsAt: $slot['ends_at'],
             subject: $subject,
-            topic: $topic,
+            lesson: $lesson,
             learnerName: $request->validated('learner_name') ?: $student->name,
-            learnerGrade: $request->validated('learner_grade') ?: $student->studentProfile?->grade_level,
+            learnerGradeId: $learnerGradeId,
         ));
 
         return redirect()
@@ -194,7 +216,7 @@ class BookingController extends Controller
     {
         Gate::authorize('view', $booking);
 
-        $booking->load(['teacherProfile.user', 'subject', 'topic', 'tutoringRequest', 'review', 'conversation', 'bookingFeePromotion']);
+        $booking->load(['teacherProfile.user', 'subject', 'lesson', 'tutoringRequest', 'review', 'conversation', 'bookingFeePromotion']);
 
         return view('student.bookings.show', [
             'booking' => $booking,
@@ -247,23 +269,6 @@ class BookingController extends Controller
         }
 
         return null;
-    }
-
-    /**
-     * Topics per subject, for the Alpine topic filter.
-     *
-     * @return array<int, list<array{id: int, name: string}>>
-     */
-    private function topicMap(TeacherProfile $teacher): array
-    {
-        return $teacher->topics
-            ->groupBy('subject_id')
-            ->map(fn ($topics) => $topics
-                ->sortBy('name')
-                ->map(fn (Topic $topic) => ['id' => $topic->id, 'name' => $topic->name])
-                ->values()
-                ->all())
-            ->all();
     }
 
     private function timezoneFor(Request $request): string

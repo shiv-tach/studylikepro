@@ -3,10 +3,10 @@
 use App\Enums\BookingStatus;
 use App\Enums\RequestStatus;
 use App\Models\Booking;
+use App\Models\Lesson;
 use App\Models\Subject;
 use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherProfile;
-use App\Models\Topic;
 use App\Models\TutoringRequest;
 use App\Models\User;
 use App\Services\BookingTransitionService;
@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Notification;
 function acceptedRequestScenario(): array
 {
     $subject = Subject::factory()->create(['name' => 'Chemistry', 'slug' => 'chemistry']);
-    $topic = Topic::factory()->create([
+    $lesson = Lesson::factory()->create([
         'subject_id' => $subject->id,
         'name' => 'Organic chemistry',
         'slug' => 'organic-chemistry',
@@ -37,8 +37,8 @@ function acceptedRequestScenario(): array
         'hourly_rate_minor' => 80000,
         'lesson_duration_minutes' => 60,
     ]);
-    $teacher->subjects()->attach($subject->id, ['grade_levels' => ['high_school']]);
-    $teacher->topics()->attach($topic->id);
+    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) gradeId(11)]]);
+    $teacher->lessons()->attach($lesson->id);
 
     $slot = CarbonImmutable::now('UTC')->addDays(2)->setTime(18, 0);
     TeacherAvailabilitySlot::factory()
@@ -50,7 +50,7 @@ function acceptedRequestScenario(): array
     $request = TutoringRequest::factory()->create([
         'student_id' => $student->id,
         'subject_id' => $subject->id,
-        'topic_id' => $topic->id,
+        'lesson_id' => $lesson->id,
         'preferred_windows' => [[
             'starts_at' => $slot->toIso8601String(),
             'ends_at' => $slot->addHours(2)->toIso8601String(),
@@ -61,7 +61,7 @@ function acceptedRequestScenario(): array
 
     return [
         'subject' => $subject,
-        'topic' => $topic,
+        'lesson' => $lesson,
         'teacher' => $teacher,
         'teacherUser' => $teacherUser,
         'student' => $student,
@@ -80,7 +80,7 @@ it('turns an accepted request into a payable hold the student confirms', functio
     expect($booking->status)->toBe(BookingStatus::PendingPayment)
         ->and($booking->tutoring_request_id)->toBe($scenario['request']->id)
         ->and($booking->price_minor)->toBe(80000)
-        ->and($booking->learner_grade)->toBe('high_school');
+        ->and($booking->learner_grade_id)->toBe($scenario['student']->studentProfile->grade_id);
 
     $this->actingAs($scenario['student'])
         ->get(route('student.requests.show', $scenario['request']))

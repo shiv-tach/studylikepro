@@ -56,7 +56,7 @@
                     <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-2xl">🗓️</span>
                     <h3 class="mt-4 text-base font-bold text-slate-800 dark:text-slate-100">{{ __('No lessons booked yet') }}</h3>
                     <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                        {{ __('Keep your availability and topics up to date — students book directly into the open slots you publish.') }}
+                        {{ __('Keep your availability and lessons up to date — students book directly into the open slots you publish.') }}
                     </p>
                     <a href="{{ route('teacher.availability.index') }}"
                        class="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90">

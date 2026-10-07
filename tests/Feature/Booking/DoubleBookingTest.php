@@ -2,10 +2,10 @@
 
 use App\Enums\BookingStatus;
 use App\Models\Booking;
+use App\Models\Lesson;
 use App\Models\Subject;
 use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherProfile;
-use App\Models\Topic;
 use App\Models\User;
 use App\Notifications\BookingExpired;
 use App\Services\RequestMatcher;
@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Notification;
 function doubleBookingScenario(): array
 {
     $subject = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'mathematics']);
-    $topic = Topic::factory()->create([
+    $lesson = Lesson::factory()->create([
         'subject_id' => $subject->id,
         'name' => 'Algebra',
         'slug' => 'algebra',
@@ -33,8 +33,8 @@ function doubleBookingScenario(): array
         'hourly_rate_minor' => 60000,
         'lesson_duration_minutes' => 60,
     ]);
-    $teacher->subjects()->attach($subject->id, ['grade_levels' => ['high_school']]);
-    $teacher->topics()->attach($topic->id);
+    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) gradeId(11)]]);
+    $teacher->lessons()->attach($lesson->id);
 
     $day = CarbonImmutable::now('UTC')->addDays(2)->startOfDay();
     TeacherAvailabilitySlot::factory()
@@ -43,7 +43,7 @@ function doubleBookingScenario(): array
 
     return [
         'subject' => $subject,
-        'topic' => $topic,
+        'lesson' => $lesson,
         'teacher' => $teacher,
         'teacherUser' => $teacherUser,
         'first' => User::factory()->student()->onboarded()->create(),

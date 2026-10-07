@@ -25,7 +25,7 @@ class ReviewController extends Controller
     {
         abort_unless($booking->student_id === $request->user()->id, 403);
 
-        $booking->load(['teacherProfile.user', 'subject', 'topic', 'review']);
+        $booking->load(['teacherProfile.user', 'subject', 'lesson', 'review']);
 
         return view('student.reviews.form', [
             'booking' => $booking,

@@ -51,15 +51,15 @@
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Lesson') }}</p>
             <p class="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">{{ $startLabel }}, {{ $startTime }}–{{ $endTime }}</p>
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {{ $booking->durationMinutes() }} {{ __('minutes') }} · {{ $booking->subject?->name }}@if ($booking->topic) · {{ $booking->topic->name }}@endif
+                {{ $booking->durationMinutes() }} {{ __('minutes') }} · {{ $booking->subject?->name }}@if ($booking->lesson) · {{ $booking->lesson->name }}@endif
             </p>
 
             <dl class="mt-5 grid gap-4 border-t border-slate-200 pt-5 text-sm sm:grid-cols-3 dark:border-slate-800">
                 <div>
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Learner') }}</dt>
                     <dd class="mt-1 font-semibold text-slate-700 dark:text-slate-200">{{ $learner }}</dd>
-                    @if ($booking->learner_grade)
-                        <dd class="text-xs text-slate-500 dark:text-slate-400">{{ config('studylikepro.grade_levels.'.$booking->learner_grade, $booking->learner_grade) }}</dd>
+                    @if ($booking->learnerGrade)
+                        <dd class="text-xs text-slate-500 dark:text-slate-400">{{ $booking->learnerGrade->label }}</dd>
                     @endif
                 </div>
                 <div>

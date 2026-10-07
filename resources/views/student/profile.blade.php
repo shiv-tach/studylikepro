@@ -47,13 +47,18 @@
                 <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">This helps teachers understand how to help. All lesson times are shown in Sri Lanka time.</p>
 
                 <div class="mt-5">
-                    <x-input-label for="grade_level" :value="__('Grade level')" />
-                    <select id="grade_level" name="grade_level" class="{{ $selectClasses }}">
-                        @foreach (config('studylikepro.grade_levels') as $value => $label)
-                            <option value="{{ $value }}" @selected(old('grade_level', $profile?->grade_level) === $value)>{{ $label }}</option>
+                    <x-input-label for="grade_id" :value="__('Grade')" />
+                    <select id="grade_id" name="grade_id" class="{{ $selectClasses }}">
+                        <option value="">{{ __('Select your grade') }}</option>
+                        @foreach ($levels as $level)
+                            <optgroup label="{{ $level->name }}">
+                                @foreach ($level->grades as $grade)
+                                    <option value="{{ $grade->id }}" @selected((int) old('grade_id', $profile?->grade_id) === $grade->id)>{{ $grade->label }}</option>
+                                @endforeach
+                            </optgroup>
                         @endforeach
                     </select>
-                    <x-input-error :messages="$errors->get('grade_level')" class="mt-2" />
+                    <x-input-error :messages="$errors->get('grade_id')" class="mt-2" />
                 </div>
 
                 <div class="mt-5">

@@ -2,10 +2,11 @@
 
 namespace App\Services\AI;
 
-use App\Contracts\TopicClassifier;
+use App\Contracts\LessonClassifier;
+use App\Models\Grade;
+use App\Models\Lesson;
 use App\Models\RequestAttachment;
 use App\Models\Subject;
-use App\Models\Topic;
 use App\Models\TutoringRequest;
 use App\Support\ClassificationResult;
 use Illuminate\Database\Eloquent\Model;
@@ -17,7 +18,7 @@ use Illuminate\Support\Str;
 /**
  * OpenAI chat-completions adapter that maps the model's answer onto the catalog.
  */
-class OpenAITopicClassifier implements TopicClassifier
+class OpenAILessonClassifier implements LessonClassifier
 {
     public function classify(TutoringRequest $request): ClassificationResult
     {
@@ -29,7 +30,7 @@ class OpenAITopicClassifier implements TopicClassifier
                 'temperature' => 0,
                 'response_format' => ['type' => 'json_object'],
                 'messages' => [
-                    ['role' => 'system', 'content' => $this->systemPrompt()],
+                    ['role' => 'system', 'content' => $this->systemPrompt($request)],
                     ['role' => 'user', 'content' => $this->userContent($request)],
                 ],
             ]);
@@ -49,32 +50,34 @@ class OpenAITopicClassifier implements TopicClassifier
             return ClassificationResult::failed(['content' => $content], 'The model returned invalid JSON.');
         }
 
-        return $this->map($decoded, $payload);
+        $grade = $request->grade;
+
+        return $this->map($decoded, $payload, $grade);
     }
 
     /**
      * @param  array<string, mixed>  $decoded
      * @param  array<string, mixed>  $payload
      */
-    private function map(array $decoded, array $payload): ClassificationResult
+    private function map(array $decoded, array $payload, ?Grade $grade): ClassificationResult
     {
         $confidence = (float) ($decoded['confidence'] ?? 0);
         if ($confidence > 1) {
             $confidence /= 100;
         }
 
-        $subject = $this->matchSubject($decoded['subject'] ?? null);
-        $topic = $this->matchTopic($decoded['topic'] ?? null, $subject);
+        $subject = $this->matchSubject($decoded['subject'] ?? null, $grade);
+        $lesson = $this->matchLesson($decoded['lesson'] ?? null, $subject, $grade);
 
-        if ($subject === null && $topic !== null) {
-            $subject = $topic->subject;
+        if ($subject === null && $lesson !== null) {
+            $subject = $lesson->subject;
         }
 
         $alternates = collect($decoded['alternates'] ?? [])
             ->filter(fn ($alternate) => is_array($alternate))
             ->map(fn (array $alternate) => [
                 'subject' => $alternate['subject'] ?? null,
-                'topic' => $alternate['topic'] ?? null,
+                'lesson' => $alternate['lesson'] ?? null,
                 'confidence' => isset($alternate['confidence']) ? (float) $alternate['confidence'] : null,
             ])
             ->values()
@@ -82,45 +85,54 @@ class OpenAITopicClassifier implements TopicClassifier
 
         return new ClassificationResult(
             subject: $subject,
-            topic: $topic,
+            lesson: $lesson,
             confidence: max(0.0, min(1.0, $confidence)),
             alternates: $alternates,
             raw: ['response' => $payload, 'parsed' => $decoded],
-            failed: $subject === null || $topic === null,
+            failed: $subject === null || $lesson === null,
         );
     }
 
-    private function matchSubject(?string $name): ?Subject
+    private function matchSubject(?string $name, ?Grade $grade): ?Subject
     {
         if (blank($name)) {
             return null;
         }
 
         /** @var Collection<int, Subject> $subjects */
-        $subjects = Subject::query()->where('is_active', true)->get();
+        $subjects = Subject::query()
+            ->where('is_active', true)
+            ->when($grade !== null, fn ($query) => $query->where('education_level_id', $grade->education_level_id))
+            ->get();
 
         return $this->bestMatch($subjects, $name);
     }
 
-    private function matchTopic(?string $name, ?Subject $subject): ?Topic
+    private function matchLesson(?string $name, ?Subject $subject, ?Grade $grade): ?Lesson
     {
         if (blank($name)) {
             return null;
         }
 
-        $query = Topic::query()->where('is_active', true);
+        $query = Lesson::query()
+            ->where('is_active', true)
+            ->when($grade !== null, fn ($query) => $query->where('grade_id', $grade->id));
 
         if ($subject) {
             $query->where('subject_id', $subject->id);
         }
 
-        $topics = $query->get();
+        $lessons = $query->get();
 
-        if ($topics->isEmpty() && $subject) {
-            $topics = Topic::query()->where('is_active', true)->get();
+        // A subject name without its lesson can still resolve inside the grade.
+        if ($lessons->isEmpty() && $subject) {
+            $lessons = Lesson::query()
+                ->where('is_active', true)
+                ->when($grade !== null, fn ($query) => $query->where('grade_id', $grade->id))
+                ->get();
         }
 
-        return $this->bestMatch($topics, $name);
+        return $this->bestMatch($lessons, $name);
     }
 
     /**
@@ -182,26 +194,35 @@ class OpenAITopicClassifier implements TopicClassifier
         return 'data:'.$attachment->mime_type.';base64,'.base64_encode((string) $contents);
     }
 
-    private function systemPrompt(): string
+    private function systemPrompt(TutoringRequest $request): string
     {
+        $grade = $request->grade;
+
         $catalog = Subject::query()
             ->active()
             ->ordered()
-            ->with(['topics' => fn ($query) => $query->active()->ordered()])
+            ->when($grade !== null, fn ($query) => $query->where('education_level_id', $grade->education_level_id))
+            ->with(['lessons' => fn ($query) => $query->active()
+                ->ordered()
+                ->when($grade !== null, fn ($lessons) => $lessons->where('grade_id', $grade->id))])
             ->get()
-            ->map(fn (Subject $subject) => $subject->name.': '.$subject->topics->pluck('name')->implode(', '))
+            ->map(fn (Subject $subject) => $subject->name.': '.$subject->lessons->pluck('name')->implode(', '))
             ->implode("\n");
+
+        $scope = $grade !== null
+            ? "\n\nThe student is in {$grade->label}. Choose only from the lessons listed above for that grade."
+            : '';
 
         return <<<PROMPT
         You classify school and college tutoring questions so we can match the student with a verified teacher.
 
-        Choose exactly one subject and one topic from this catalog:
-        {$catalog}
+        Choose exactly one subject and one lesson from this catalog:
+        {$catalog}{$scope}
 
         Answer with JSON only:
-        {"subject": "<catalog subject>", "topic": "<catalog topic>", "confidence": <0 to 1>, "alternates": [{"subject": "<catalog subject>", "topic": "<catalog topic>", "confidence": <0 to 1>}]}
+        {"subject": "<catalog subject>", "lesson": "<catalog lesson>", "confidence": <0 to 1>, "alternates": [{"subject": "<catalog subject>", "lesson": "<catalog lesson>", "confidence": <0 to 1>}]}
 
-        Use the catalog spelling. If the question is unclear, lower the confidence instead of inventing a topic.
+        Use the catalog spelling. If the question is unclear, lower the confidence instead of inventing a lesson.
         PROMPT;
     }
 

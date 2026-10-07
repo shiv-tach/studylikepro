@@ -23,7 +23,7 @@ class ModerationController extends Controller
         $reported = Review::query()
             ->flagged()
             ->visible()
-            ->with(['teacherProfile.user', 'student', 'booking.subject', 'booking.topic'])
+            ->with(['teacherProfile.user', 'student', 'booking.subject', 'booking.lesson'])
             ->latest('flagged_at')
             ->paginate(15, ['*'], 'reviews');
 

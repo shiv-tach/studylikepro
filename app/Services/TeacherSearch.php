@@ -33,6 +33,7 @@ class TeacherSearch
     {
         $query = TeacherProfile::query()
             ->approved()
+            ->withCount(['lessons' => fn ($relation) => $relation->where('lessons.is_active', true)])
             ->with([
                 'user',
                 'subjects' => fn ($relation) => $relation->where('subjects.is_active', true),
@@ -46,17 +47,20 @@ class TeacherSearch
 
         $minRate = $this->toMinor($filters['min_rate'] ?? null);
         $maxRate = $this->toMinor($filters['max_rate'] ?? null);
+        $gradeId = filled($filters['grade'] ?? null) ? (int) $filters['grade'] : null;
 
         if ($subject) {
-            $query->whereHas('subjects', function (Builder $relation) use ($subject, $minRate, $maxRate) {
+            $rateExpression = $this->subjectRateExpression($gradeId);
+
+            $query->whereHas('subjects', function (Builder $relation) use ($subject, $rateExpression, $minRate, $maxRate) {
                 $relation->where('subjects.id', $subject->id);
 
                 if ($minRate !== null) {
-                    $relation->whereRaw('coalesce(teacher_subjects.rate_per_hour_minor, teacher_profiles.hourly_rate_minor) >= ?', [$minRate]);
+                    $relation->whereRaw("{$rateExpression} >= ?", [$minRate]);
                 }
 
                 if ($maxRate !== null) {
-                    $relation->whereRaw('coalesce(teacher_subjects.rate_per_hour_minor, teacher_profiles.hourly_rate_minor) <= ?', [$maxRate]);
+                    $relation->whereRaw("{$rateExpression} <= ?", [$maxRate]);
                 }
             });
         } else {
@@ -69,14 +73,21 @@ class TeacherSearch
             }
         }
 
-        if (filled($filters['topic'] ?? null)) {
-            $query->whereHas('topics', fn (Builder $relation) => $relation->where('topics.slug', $filters['topic']));
+        if (filled($filters['level'] ?? null)) {
+            $query->whereHas('subjects', fn (Builder $relation) => $relation
+                ->where('subjects.is_active', true)
+                ->whereHas('educationLevel', fn (Builder $level) => $level->where('key', $filters['level'])));
         }
 
-        if (filled($filters['grade_level'] ?? null)) {
-            // grade_levels is a JSON array on the pivot; a quoted LIKE keeps the match exact.
+        if (filled($filters['lesson'] ?? null)) {
+            $query->whereHas('lessons', fn (Builder $relation) => $relation->where('lessons.id', $filters['lesson']));
+        }
+
+        if (filled($filters['grade'] ?? null)) {
+            // grade_levels is a JSON array of grade ids on the pivot; a quoted
+            // LIKE keeps the match exact.
             $query->whereHas('subjects', fn (Builder $relation) => $relation
-                ->where('teacher_subjects.grade_levels', 'like', '%"'.$filters['grade_level'].'"%'));
+                ->where('teacher_subjects.grade_levels', 'like', '%"'.$filters['grade'].'"%'));
         }
 
         if (filled($filters['language'] ?? null)) {
@@ -104,24 +115,83 @@ class TeacherSearch
             });
         }
 
-        return $this->applySort($query, $filters['sort'] ?? 'rating');
+        return $this->applySort($query, $filters['sort'] ?? 'rating', $subject, $gradeId);
     }
 
     /**
      * @param  Builder<TeacherProfile>  $query
      * @return Builder<TeacherProfile>
      */
-    private function applySort(Builder $query, string $sort): Builder
+    private function applySort(Builder $query, string $sort, ?Subject $subject, ?int $gradeId): Builder
     {
         return match ($sort) {
-            'price_low' => $query->orderBy('hourly_rate_minor')->orderByDesc('id'),
-            'price_high' => $query->orderByDesc('hourly_rate_minor')->orderByDesc('id'),
+            'price_low' => $this->applyPriceSort($query, 'asc', $subject, $gradeId),
+            'price_high' => $this->applyPriceSort($query, 'desc', $subject, $gradeId),
             'newest' => $query->orderByDesc('created_at')->orderByDesc('id'),
-            default => $query->orderByRaw('rating_avg is null')
-                ->orderByDesc('rating_avg')
-                ->orderByDesc('rating_count')
-                ->orderByDesc('id'),
+            default => $this->applyRatingSort($query, $gradeId),
         };
+    }
+
+    /**
+     * Order by the rate the cards actually show. Without a subject filter that
+     * is the base rate; with one, the pivot rate (and grade rate) is read
+     * through a correlated subquery because the pivot only appears inside the
+     * whereHas subquery.
+     *
+     * @param  Builder<TeacherProfile>  $query
+     * @return Builder<TeacherProfile>
+     */
+    private function applyPriceSort(Builder $query, string $direction, ?Subject $subject, ?int $gradeId): Builder
+    {
+        if ($subject === null) {
+            return $query->orderBy('hourly_rate_minor', $direction)->orderByDesc('id');
+        }
+
+        $expression = $this->subjectRateExpression($gradeId);
+
+        return $query
+            ->orderByRaw(
+                "(select {$expression} from teacher_subjects where teacher_subjects.teacher_profile_id = teacher_profiles.id and teacher_subjects.subject_id = ?) {$direction}",
+                [$subject->id],
+            )
+            ->orderByDesc('id');
+    }
+
+    /**
+     * A grade rate wins, then the subject override, then the base rate. The
+     * grade id is interpolated as an integer JSON path key, so the expression
+     * can be reused inside whereHas closures and sort subqueries.
+     */
+    private function subjectRateExpression(?int $gradeId): string
+    {
+        if ($gradeId === null) {
+            return 'coalesce(teacher_subjects.rate_per_hour_minor, teacher_profiles.hourly_rate_minor)';
+        }
+
+        return "coalesce(json_extract(teacher_subjects.grade_rates, '$.\"{$gradeId}\"'), teacher_subjects.rate_per_hour_minor, teacher_profiles.hourly_rate_minor)";
+    }
+
+    /**
+     * Top rated first; when a grade filter is active, teachers who actually
+     * teach that grade float above teachers who only cleared the subject pivot.
+     *
+     * @param  Builder<TeacherProfile>  $query
+     * @return Builder<TeacherProfile>
+     */
+    private function applyRatingSort(Builder $query, ?int $gradeId): Builder
+    {
+        if ($gradeId !== null) {
+            $query->orderByRaw(
+                'exists (select 1 from teacher_lessons inner join lessons on lessons.id = teacher_lessons.lesson_id '
+                .'where teacher_lessons.teacher_profile_id = teacher_profiles.id and lessons.grade_id = ?) desc',
+                [$gradeId],
+            );
+        }
+
+        return $query->orderByRaw('rating_avg is null')
+            ->orderByDesc('rating_avg')
+            ->orderByDesc('rating_count')
+            ->orderByDesc('id');
     }
 
     private function toMinor(mixed $rate): ?int

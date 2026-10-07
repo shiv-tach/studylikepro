@@ -44,7 +44,7 @@
                 <div>
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Lesson') }}</dt>
                     <dd class="mt-1 font-semibold text-slate-800 dark:text-slate-100">
-                        {{ $booking->subject?->name }}@if ($booking->topic) · {{ $booking->topic->name }}@endif
+                        {{ $booking->subject?->name }}@if ($booking->lesson) · {{ $booking->lesson->name }}@endif
                     </dd>
                     <dd class="text-slate-500 dark:text-slate-400">
                         {{ $booking->starts_at->copy()->setTimezone($timezone)->format('D d M Y, H:i') }}–{{ $booking->ends_at->copy()->setTimezone($timezone)->format('H:i') }}
@@ -58,8 +58,8 @@
                 <div>
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Learner') }}</dt>
                     <dd class="mt-1 font-semibold text-slate-800 dark:text-slate-100">{{ $booking->learner_name ?? $payment->student->name }}</dd>
-                    @if ($booking->learner_grade)
-                        <dd class="text-slate-500 dark:text-slate-400">{{ config('studylikepro.grade_levels.'.$booking->learner_grade, $booking->learner_grade) }}</dd>
+                    @if ($booking->learnerGrade)
+                        <dd class="text-slate-500 dark:text-slate-400">{{ $booking->learnerGrade->label }}</dd>
                     @endif
                 </div>
                 <div>

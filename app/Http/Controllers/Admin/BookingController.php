@@ -32,7 +32,7 @@ class BookingController extends Controller
         ]);
 
         $bookings = Booking::query()
-            ->with(['student', 'teacherProfile.user', 'subject', 'topic'])
+            ->with(['student', 'teacherProfile.user', 'subject', 'lesson'])
             ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
             ->when($filters['teacher'] ?? null, fn (Builder $query, int $teacher) => $query->where('teacher_profile_id', $teacher))
             ->when($filters['student'] ?? null, fn (Builder $query, int $student) => $query->where('student_id', $student))
@@ -76,7 +76,7 @@ class BookingController extends Controller
             'student',
             'teacherProfile.user',
             'subject',
-            'topic',
+            'lesson',
             'tutoringRequest',
             'payments.refunds',
             'refunds',

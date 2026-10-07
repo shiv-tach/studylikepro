@@ -50,7 +50,7 @@
     ];
 
     if ($user->isStudent()) {
-        $navItems[] = ['label' => 'Subjects & topics', 'url' => route('student.interests.edit'), 'active' => request()->routeIs('student.interests*'), 'icon' => 'book', 'badge' => null];
+        $navItems[] = ['label' => 'Subjects & lessons', 'url' => route('student.interests.edit'), 'active' => request()->routeIs('student.interests*'), 'icon' => 'book', 'badge' => null];
         $navItems[] = ['label' => 'My requests', 'url' => route('student.requests.index'), 'active' => request()->routeIs('student.requests*'), 'icon' => 'doc', 'badge' => null];
         $navItems[] = ['label' => 'My lessons', 'url' => route('student.bookings.index'), 'active' => request()->routeIs('student.bookings*'), 'icon' => 'calendar', 'badge' => $upcomingLessons ?: null];
         $navItems[] = ['label' => 'Messages', 'url' => route('messages.index'), 'active' => request()->routeIs('messages.*'), 'icon' => 'chat', 'badge' => ($unreadMessageCount ?? 0) ?: null];
@@ -65,7 +65,7 @@
             ['label' => 'Verification', 'url' => route('teacher.verification'), 'active' => request()->routeIs('teacher.verification*'), 'icon' => 'shield', 'badge' => null],
         ];
     } elseif ($user->isTeacher()) {
-        $navItems[] = ['label' => 'Subjects & topics', 'url' => route('teacher.subjects.index'), 'active' => request()->routeIs('teacher.subjects*'), 'icon' => 'book', 'badge' => null];
+        $navItems[] = ['label' => 'Subjects & lessons', 'url' => route('teacher.subjects.index'), 'active' => request()->routeIs('teacher.subjects*'), 'icon' => 'book', 'badge' => null];
         $navItems[] = ['label' => 'Availability', 'url' => route('teacher.availability.index'), 'active' => request()->routeIs('teacher.availability*'), 'icon' => 'calendar', 'badge' => null];
         $navItems[] = ['label' => 'Requests', 'url' => route('teacher.requests.index'), 'active' => request()->routeIs('teacher.requests*'), 'icon' => 'doc', 'badge' => $openRequestMatches ?: null];
         $navItems[] = ['label' => 'Schedule', 'url' => route('teacher.schedule.index'), 'active' => request()->routeIs('teacher.schedule*') || request()->routeIs('teacher.bookings*'), 'icon' => 'clock', 'badge' => $unpaidHolds ?: null];
@@ -81,6 +81,7 @@
         $navItems[] = ['label' => 'Disputes', 'url' => route('admin.disputes.index'), 'active' => request()->routeIs('admin.disputes*'), 'icon' => 'shield', 'badge' => $openDisputes ?: null];
         $navItems[] = ['label' => 'Moderation', 'url' => route('admin.moderation.index'), 'active' => request()->routeIs('admin.moderation*'), 'icon' => 'flag', 'badge' => $flaggedReviews ?: null];
         $navItems[] = ['label' => 'Verification', 'url' => route('admin.verifications.index'), 'active' => request()->routeIs('admin.verifications*'), 'icon' => 'shield', 'badge' => $pendingVerifications ?: null];
+        $navItems[] = ['label' => 'Curriculum', 'url' => route('admin.curriculum.index'), 'active' => request()->routeIs('admin.curriculum*'), 'icon' => 'book', 'badge' => null];
         $navItems[] = ['label' => 'Subjects', 'url' => route('admin.subjects.index'), 'active' => request()->routeIs('admin.subjects*'), 'icon' => 'book', 'badge' => null];
         $navItems[] = ['label' => 'Bookings', 'url' => route('admin.bookings.index'), 'active' => request()->routeIs('admin.bookings*'), 'icon' => 'calendar', 'badge' => null];
         $navItems[] = ['label' => 'Payments', 'url' => route('admin.payments.index'), 'active' => request()->routeIs('admin.payments*'), 'icon' => 'card', 'badge' => null];

@@ -116,7 +116,7 @@
                     <dl class="mt-6 grid gap-5 sm:grid-cols-2">
                         <div>
                             <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Grade') }}</dt>
-                            <dd class="mt-1 text-sm text-slate-700 dark:text-slate-200">{{ $user->studentProfile->grade_level ?: '—' }}</dd>
+                            <dd class="mt-1 text-sm text-slate-700 dark:text-slate-200">{{ $user->studentProfile->grade?->label ?? '—' }}</dd>
                         </div>
                         <div>
                             <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Timezone') }}</dt>
@@ -227,7 +227,7 @@
                             <tr>
                                 <td class="px-6 py-4 font-semibold text-slate-800 dark:text-slate-100">
                                     #{{ str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT) }}
-                                    <p class="text-xs font-normal text-slate-500 dark:text-slate-400">{{ $booking->subject?->name }}@if ($booking->topic) · {{ $booking->topic->name }}@endif</p>
+                                    <p class="text-xs font-normal text-slate-500 dark:text-slate-400">{{ $booking->subject?->name }}@if ($booking->lesson) · {{ $booking->lesson->name }}@endif</p>
                                 </td>
                                 <td class="px-6 py-4 text-slate-600 dark:text-slate-300">
                                     {{ $user->isTeacher() ? $booking->student->name : $booking->teacherProfile->user->name }}

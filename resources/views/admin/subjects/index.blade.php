@@ -5,13 +5,13 @@
 @endphp
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('Subjects & topics') }}</h2>
+        <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('Subjects & lessons') }}</h2>
     </x-slot>
 
     <div class="space-y-6" x-data="{ showCreate: {{ $errors->any() ? 'true' : 'false' }} }">
         @if (session('status') === 'subject-created')
             <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                Subject created — add its topics below.
+                Subject created — add its lessons below.
             </div>
         @endif
 
@@ -26,12 +26,42 @@
             </button>
         </div>
 
+        <!-- Level filter -->
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('admin.subjects.index') }}"
+               class="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors {{ ($filters['level'] ?? null) === null ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700' }}">
+                All levels
+            </a>
+            @foreach ($levels as $level)
+                <a href="{{ route('admin.subjects.index', ['level' => $level->key]) }}"
+                   class="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors {{ ($filters['level'] ?? null) === $level->key ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700' }}">
+                    {{ $level->icon }} {{ $level->name }}
+                    <span class="ml-1 opacity-70">{{ $level->subjects_count }}</span>
+                </a>
+            @endforeach
+            <a href="{{ route('admin.curriculum.index') }}" class="text-xs font-semibold text-primary transition-colors hover:text-primary/80">
+                {{ __('Education levels') }} &rarr;
+            </a>
+        </div>
+
         <!-- Create form -->
         <div x-show="showCreate" x-transition class="{{ $cardBase }}" :class="{{ $cardTheme }}" style="display: none;">
             <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">New subject</h3>
             <form method="POST" action="{{ route('admin.subjects.store') }}" class="mt-5 space-y-5">
                 @csrf
-                <div class="grid gap-5 sm:grid-cols-2">
+                <div class="grid gap-5 sm:grid-cols-3">
+                    <div>
+                        <x-input-label for="education_level_id" :value="__('Education level')" />
+                        @php
+                            $defaultLevelId = (int) old('education_level_id') ?: ($levels->firstWhere('key', $filters['level'] ?? null)?->id ?? $levels->first()?->id);
+                        @endphp
+                        <select id="education_level_id" name="education_level_id" class="{{ $selectClasses }}">
+                            @foreach ($levels as $level)
+                                <option value="{{ $level->id }}" @selected($defaultLevelId === $level->id)>{{ $level->name }}</option>
+                            @endforeach
+                        </select>
+                        <x-input-error :messages="$errors->get('education_level_id')" class="mt-2" />
+                    </div>
                     <div>
                         <x-input-label for="name" :value="__('Name')" />
                         <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name')" placeholder="e.g. Mathematics" />
@@ -84,8 +114,10 @@
                     <p class="text-sm text-slate-500 dark:text-slate-400">No subjects yet — create the first one.</p>
                 </div>
             @else
-                <ul class="divide-y divide-slate-100 dark:divide-slate-800">
-                    @foreach ($subjects as $subject)
+                @foreach ($subjects->groupBy(fn ($subject) => $subject->educationLevel?->name ?? __('Other')) as $levelName => $levelSubjects)
+                    <p class="px-6 pt-5 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">{{ $levelName }}</p>
+                    <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+                    @foreach ($levelSubjects as $subject)
                         <li class="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
                             <div class="flex min-w-0 items-center gap-3">
                                 <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-lg">{{ $subject->icon ?? '📘' }}</span>
@@ -101,17 +133,18 @@
                             </div>
 
                             <div class="flex flex-wrap items-center gap-4 text-xs text-slate-400">
-                                <span>{{ $subject->topics_count }} {{ Str::plural('topic', $subject->topics_count) }}</span>
+                                <span>{{ $subject->lessons_count }} {{ Str::plural('lesson', $subject->lessons_count) }}</span>
                                 <span>{{ $subject->teacher_profiles_count }} {{ Str::plural('teacher', $subject->teacher_profiles_count) }}</span>
                                 <span>sort {{ $subject->sort_order }}</span>
                                 <a href="{{ route('admin.subjects.edit', $subject) }}"
                                    class="rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20">
-                                    Edit & topics
+                                    Edit & lessons
                                 </a>
                             </div>
                         </li>
                     @endforeach
-                </ul>
+                    </ul>
+                @endforeach
             @endif
         </div>
     </div>

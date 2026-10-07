@@ -57,13 +57,33 @@
                 </div>
 
                 @foreach ($profile->subjects as $subject)
-                    @if ($subject->pivot->rate_per_hour_minor)
-                        <div class="rounded-xl border border-primary/30 bg-primary/5 p-4">
-                            <p class="text-xs font-semibold uppercase tracking-wider text-primary">{{ $subject->icon ?? '📘' }} {{ $subject->name }}</p>
+                    @php
+                        $gradeRates = collect($subject->pivot->grade_rates ?? [])
+                            ->mapWithKeys(fn ($gradeRate, $gradeId) => [(int) $gradeId => (int) $gradeRate]);
+                        $subjectGrades = ($subject->educationLevel?->grades ?? collect())->keyBy('id');
+                    @endphp
+                    @continue(! $subject->pivot->rate_per_hour_minor && $gradeRates->isEmpty())
+                    <div class="rounded-xl border border-primary/30 bg-primary/5 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-primary">{{ $subject->icon ?? '📘' }} {{ $subject->name }}</p>
+
+                        @if ($subject->pivot->rate_per_hour_minor)
                             <p class="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">{{ $money($subject->pivot->rate_per_hour_minor) }}<span class="text-sm font-medium text-slate-400"> / hour</span></p>
-                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Override — you earn about {{ $money((int) round($subject->pivot->rate_per_hour_minor * (100 - $commission) / 100)) }} after the platform fee.</p>
-                        </div>
-                    @endif
+                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Default rate — you earn about {{ $money((int) round($subject->pivot->rate_per_hour_minor * (100 - $commission) / 100)) }} after the platform fee.</p>
+                        @endif
+
+                        @if ($gradeRates->isNotEmpty())
+                            <div class="mt-3 space-y-1">
+                                @foreach ($gradeRates as $gradeId => $gradeRate)
+                                    <div class="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                        <span>{{ $subjectGrades->get($gradeId)?->label ?? __('Grade') }}</span>
+                                        <span class="font-semibold text-slate-700 dark:text-slate-200">{{ $money($gradeRate) }} / hour</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <a href="{{ route('teacher.subjects.index') }}" class="mt-3 inline-block text-xs font-semibold text-primary transition-colors hover:text-primary/80">{{ __('Edit rates') }} →</a>
+                    </div>
                 @endforeach
             </div>
         </div>

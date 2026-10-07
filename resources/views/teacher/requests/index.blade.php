@@ -40,9 +40,9 @@
         <div class="flex items-start gap-3 {{ $cardBase }}" :class="{{ $cardTheme }}">
             <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xl">📥</span>
             <div>
-                <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">Questions matched to your topics</h3>
+                <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">Questions matched to your lessons</h3>
                 <p class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                    Only requests inside your subjects, your topics and your available hours appear here — in your timezone ({{ $timezone }}).
+                    Only requests inside your subjects, your lessons and your available hours appear here — in your timezone ({{ $timezone }}).
                     Accepting one holds the slot for the student while they pay.
                 </p>
             </div>
@@ -51,17 +51,17 @@
         @forelse ($requests as $tutoringRequest)
             @php
                 $slots = $suggestedSlots[$tutoringRequest->id] ?? [];
-                $gradeLevel = $tutoringRequest->student->studentProfile?->grade_level;
+                $gradeLabel = $tutoringRequest->grade?->label ?? $tutoringRequest->student->studentProfile?->grade?->label;
             @endphp
             <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-                                {{ $tutoringRequest->subject?->icon ?? '📘' }} {{ $tutoringRequest->subject?->name }} · {{ $tutoringRequest->topic?->name }}
+                                {{ $tutoringRequest->subject?->icon ?? '📘' }} {{ $tutoringRequest->subject?->name }} · {{ $tutoringRequest->lesson?->name }}
                             </span>
-                            @if ($gradeLevel)
-                                <span class="{{ $chip }}">{{ $gradeLevel }}</span>
+                            @if ($gradeLabel)
+                                <span class="{{ $chip }}">{{ $gradeLabel }}</span>
                             @endif
                             <span class="{{ $chip }}">{{ $tutoringRequest->created_at->diffForHumans() }}</span>
                             @if ($tutoringRequest->responded)
@@ -134,7 +134,7 @@
 
                         <div class="mt-4 flex flex-wrap items-center justify-end gap-3">
                             <span class="text-xs text-slate-400">
-                                {{ __('Lesson fee') }}: <span class="font-bold text-slate-600 dark:text-slate-300">{{ $money(($profile->effectiveRateFor($tutoringRequest->subject))) }}</span>
+                                {{ __('Lesson fee') }}: <span class="font-bold text-slate-600 dark:text-slate-300">{{ $money(($profile->effectiveRateFor($tutoringRequest->subject, $tutoringRequest->grade_id === null ? null : (int) $tutoringRequest->grade_id))) }}</span>
                             </span>
                             <x-primary-button name="action" value="accept">{{ __('Accept & hold slot') }}</x-primary-button>
                         </div>
@@ -157,8 +157,8 @@
                 <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-2xl">📭</span>
                 <h3 class="mt-4 text-base font-bold text-slate-800 dark:text-slate-100">No matching requests right now</h3>
                 <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                    When a student asks about a topic you teach, inside hours you are available for, the question lands here and we email you.
-                    Widen your topics or weekly availability to see more.
+                    When a student asks about a lesson you teach, inside hours you are available for, the question lands here and we email you.
+                    Widen your lessons or weekly availability to see more.
                 </p>
                 <div class="mt-5 flex flex-wrap items-center justify-center gap-3">
                     <a href="{{ route('teacher.subjects.index') }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:text-slate-300">{{ __('Update subjects') }}</a>
@@ -180,7 +180,7 @@
                     <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 px-4 py-3 dark:border-slate-800">
                         <div class="min-w-0">
                             <p class="truncate text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                {{ $response->tutoringRequest?->topic?->name ?? __('Request removed') }}
+                                {{ $response->tutoringRequest?->lesson?->name ?? __('Request removed') }}
                                 <span class="font-normal text-slate-400">· {{ $response->tutoringRequest?->subject?->name }}</span>
                             </p>
                             <p class="mt-0.5 text-xs text-slate-400">

@@ -5,7 +5,6 @@
     $viewerTz = auth()->user()?->studentProfile?->timezone
         ?? auth()->user()?->teacherProfile?->timezone
         ?? config('studylikepro.default_display_timezone');
-    $gradeLevels = config('studylikepro.grade_levels');
 
     $slotsByDate = [];
     foreach ($availability as $slot) {
@@ -81,31 +80,56 @@
                 </dl>
             </div>
 
-            <!-- Subjects & topics -->
+            <!-- Subjects & lessons -->
             <div class="{{ $cardBase }}">
-                <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">Subjects & topics</h2>
+                <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">Subjects & lessons</h2>
 
                 @forelse ($teacher->subjects as $subject)
+                    @php
+                        $subjectRates = $teacher->gradeRatesFor($subject, $gradesById);
+                        $ratesVary = $subjectRates->pluck('rate_minor')->unique()->count() > 1;
+                        $subjectRate = $subjectRates->min('rate_minor') ?? $teacher->effectiveRateFor($subject);
+                    @endphp
                     <div class="mt-4 rounded-xl border border-slate-200/80 p-4 dark:border-slate-800">
                         <div class="flex flex-wrap items-center justify-between gap-2">
-                            <p class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ $subject->icon ?? '📘' }} {{ $subject->name }}</p>
-                            <p class="text-sm font-semibold text-primary">{{ $money($teacher->effectiveRateFor($subject)) }}<span class="text-xs font-medium text-slate-400">/hr</span></p>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ $subject->icon ?? '📘' }} {{ $subject->name }}</p>
+                                @if ($subject->educationLevel)
+                                    <p class="text-xs text-slate-400">{{ $subject->educationLevel->name }}</p>
+                                @endif
+                            </div>
+                            <p class="text-sm font-semibold text-primary">
+                                @if ($ratesVary)<span class="text-xs font-medium text-slate-400">{{ __('from') }} </span>@endif{{ $money($subjectRate) }}<span class="text-xs font-medium text-slate-400">/hr</span>
+                            </p>
                         </div>
 
-                        @php $levels = collect($subject->pivot->grade_levels ?? [])->map(fn ($level) => $gradeLevels[$level] ?? $level); @endphp
-                        @if ($levels->isNotEmpty())
+                        @php $gradeScope = $teacher->gradeScopeLabelFor($subject, $gradesById); @endphp
+                        @if ($gradeScope)
                             <div class="mt-2 flex flex-wrap gap-1.5">
-                                @foreach ($levels as $level)
-                                    <span class="{{ $chip }}">{{ $level }}</span>
+                                <span class="{{ $chip }}">{{ $gradeScope }}</span>
+                            </div>
+                        @endif
+
+                        @if ($ratesVary)
+                            <div class="mt-2 flex flex-wrap gap-1.5">
+                                @foreach ($subjectRates as $gradeRate)
+                                    <span class="{{ $chip }}">{{ $gradeRate['grade']->label }} · {{ $money($gradeRate['rate_minor']) }}/hr</span>
                                 @endforeach
                             </div>
                         @endif
 
-                        @php $topics = $topicsBySubject->get($subject->id, collect()); @endphp
-                        @if ($topics->isNotEmpty())
-                            <div class="mt-3 flex flex-wrap gap-1.5">
-                                @foreach ($topics as $topic)
-                                    <span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">{{ $topic->name }}</span>
+                        @php $lessons = $lessonsBySubject->get($subject->id, collect())->groupBy(fn ($lesson) => $lesson->grade?->label ?? __('Other')); @endphp
+                        @if ($lessons->isNotEmpty())
+                            <div class="mt-3 space-y-2">
+                                @foreach ($lessons as $gradeLabel => $gradeLessons)
+                                    <div>
+                                        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{{ $gradeLabel }}</p>
+                                        <div class="mt-1 flex flex-wrap gap-1.5">
+                                            @foreach ($gradeLessons as $lesson)
+                                                <span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">{{ $lesson->name }}</span>
+                                            @endforeach
+                                        </div>
+                                    </div>
                                 @endforeach
                             </div>
                         @endif
@@ -181,7 +205,7 @@
                                     <p class="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{{ $review->comment }}</p>
                                 @endif
                                 <p class="mt-2 text-xs text-slate-400">
-                                    {{ $review->booking?->topic?->name ?? $review->booking?->subject?->name ?? __('Lesson') }}
+                                    {{ $review->booking?->lesson?->name ?? $review->booking?->subject?->name ?? __('Lesson') }}
                                     · {{ $review->created_at->format('M Y') }}
                                     @if ($review->wasEdited()) · {{ __('edited') }} @endif
                                 </p>

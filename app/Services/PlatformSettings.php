@@ -84,7 +84,7 @@ class PlatformSettings
                 'type' => 'float',
                 'group' => 'ai',
                 'label' => 'AI confidence threshold',
-                'description' => 'Below this score the student confirms the subject/topic themselves (0.30–0.95).',
+                'description' => 'Below this score the student confirms the subject/lesson themselves (0.30–0.95).',
             ],
         ];
     }

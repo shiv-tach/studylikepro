@@ -2,22 +2,27 @@
 
 namespace App\Models;
 
-use Database\Factories\TopicFactory;
+use Database\Factories\LessonFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class Topic extends Model
+/**
+ * A curriculum lesson: one unit of a subject for one specific grade.
+ */
+class Lesson extends Model
 {
-    /** @use HasFactory<TopicFactory> */
+    /** @use HasFactory<LessonFactory> */
     use HasFactory;
 
     protected $fillable = [
         'subject_id',
+        'grade_id',
         'name',
         'slug',
+        'description',
         'is_active',
         'sort_order',
     ];
@@ -34,13 +39,18 @@ class Topic extends Model
         return $this->belongsTo(Subject::class);
     }
 
+    public function grade(): BelongsTo
+    {
+        return $this->belongsTo(Grade::class);
+    }
+
     public function teacherProfiles(): BelongsToMany
     {
-        return $this->belongsToMany(TeacherProfile::class, 'teacher_topics')->withTimestamps();
+        return $this->belongsToMany(TeacherProfile::class, 'teacher_lessons')->withTimestamps();
     }
 
     /**
-     * @param  Builder<Topic>  $query
+     * @param  Builder<Lesson>  $query
      */
     public function scopeActive(Builder $query): Builder
     {
@@ -48,7 +58,7 @@ class Topic extends Model
     }
 
     /**
-     * @param  Builder<Topic>  $query
+     * @param  Builder<Lesson>  $query
      */
     public function scopeOrdered(Builder $query): Builder
     {

@@ -175,9 +175,9 @@ class User extends Authenticatable
         return $this->belongsToMany(Subject::class, 'student_subject_interests')->withTimestamps();
     }
 
-    public function interestedTopics(): BelongsToMany
+    public function interestedLessons(): BelongsToMany
     {
-        return $this->belongsToMany(Topic::class, 'student_topic_interests')->withTimestamps();
+        return $this->belongsToMany(Lesson::class, 'student_lesson_interests')->withTimestamps();
     }
 
     public function tutoringRequests(): HasMany

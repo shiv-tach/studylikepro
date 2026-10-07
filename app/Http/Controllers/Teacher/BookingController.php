@@ -27,7 +27,7 @@ class BookingController extends Controller
         $upcoming = $teacher->bookings()
             ->whereIn('status', [BookingStatus::Confirmed->value, BookingStatus::InProgress->value])
             ->where('starts_at', '>=', now()->subHour())
-            ->with(['student', 'subject', 'topic'])
+            ->with(['student', 'subject', 'lesson'])
             ->oldest('starts_at')
             ->limit(20)
             ->get();
@@ -35,13 +35,13 @@ class BookingController extends Controller
         $holds = $teacher->bookings()
             ->where('status', BookingStatus::PendingPayment->value)
             ->where('expires_at', '>', now())
-            ->with(['student', 'subject', 'topic'])
+            ->with(['student', 'subject', 'lesson'])
             ->oldest('starts_at')
             ->get();
 
         $past = $teacher->bookings()
             ->past()
-            ->with(['student', 'subject', 'topic'])
+            ->with(['student', 'subject', 'lesson'])
             ->latest('starts_at')
             ->limit(10)
             ->get();
@@ -63,7 +63,7 @@ class BookingController extends Controller
 
         abort_unless($booking->teacher_profile_id === $teacher->id || $request->user()->isAdmin(), 403);
 
-        $booking->load(['student.studentProfile', 'subject', 'topic', 'tutoringRequest', 'conversation']);
+        $booking->load(['student.studentProfile', 'subject', 'lesson', 'tutoringRequest', 'conversation']);
 
         return view('teacher.bookings.show', [
             'booking' => $booking,

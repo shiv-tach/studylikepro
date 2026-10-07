@@ -145,7 +145,7 @@
                         <a href="{{ route('admin.bookings.show', $booking) }}" class="mt-1 block text-sm font-semibold text-primary hover:underline">
                             #{{ str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT) }}
                         </a>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ $booking->subject?->name }}@if ($booking->topic) · {{ $booking->topic->name }}@endif</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ $booking->subject?->name }}@if ($booking->lesson) · {{ $booking->lesson->name }}@endif</p>
                     </div>
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('When') }}</p>

@@ -9,6 +9,7 @@ This directory contains workspace customizations. All developer agents working o
 4. **Design Reference:** For detailed documentation of presets, variables, AlpineJS preview events, patterns, and style rules, read [DESIGN_SYSTEM_AND_THEMING_GUIDE.md](file:///d:/Github/studylikepro/DESIGN_SYSTEM_AND_THEMING_GUIDE.md).
 
 ## Product Context
-- Studylikepro is a tutoring marketplace: students upload questions, AI matches a topic, verified teachers deliver paid live 1-on-1 lessons.
+- Studylikepro is a tutoring marketplace: students upload questions, AI matches a lesson, verified teachers deliver paid live 1-on-1 lessons.
+- The catalog follows the Sri Lankan curriculum: **education levels** (Primary 1–5, O/L 6–11, A/L 12–13, Other) → **grades** → **subjects** (one level each) → **lessons** (one subject + one grade each). Never reintroduce a flat subject→topic list, and keep every student surface scoped to the learner's grade. See [DOC/curriculum-and-grade-plan.md](file:///d:/Github/studylikepro/DOC/curriculum-and-grade-plan.md) — phases A–F are all implemented.
 - Follow the phased plan in [DOC/implementation-plan.md](file:///d:/Github/studylikepro/DOC/implementation-plan.md); keep scope to the current phase.
 - Keep `php artisan test` and `vendor/bin/pint` green; add Pest tests for every behavior change.

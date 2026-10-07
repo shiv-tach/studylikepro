@@ -2,17 +2,18 @@
 
 namespace Database\Factories;
 
+use App\Models\Grade;
+use App\Models\Lesson;
 use App\Models\Subject;
-use App\Models\Topic;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 /**
- * @extends Factory<Topic>
+ * @extends Factory<Lesson>
  */
-class TopicFactory extends Factory
+class LessonFactory extends Factory
 {
-    protected $model = Topic::class;
+    protected $model = Lesson::class;
 
     public function definition(): array
     {
@@ -20,8 +21,10 @@ class TopicFactory extends Factory
 
         return [
             'subject_id' => Subject::factory(),
+            'grade_id' => Grade::factory(),
             'name' => Str::title($name),
             'slug' => Str::slug($name),
+            'description' => null,
             'is_active' => true,
             'sort_order' => 0,
         ];

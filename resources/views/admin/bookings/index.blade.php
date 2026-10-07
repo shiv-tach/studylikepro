@@ -96,7 +96,7 @@
                                 <td class="px-6 py-4">
                                     <p class="font-semibold text-slate-800 dark:text-slate-100">#{{ str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT) }}</p>
                                     <p class="text-xs text-slate-500 dark:text-slate-400">
-                                        {{ $booking->subject?->name }}@if ($booking->topic) · {{ $booking->topic->name }}@endif
+                                        {{ $booking->subject?->name }}@if ($booking->lesson) · {{ $booking->lesson->name }}@endif
                                     </p>
                                     @if ($booking->tutoring_request_id)
                                         <p class="text-xs text-slate-400">{{ __('From request #:id', ['id' => $booking->tutoring_request_id]) }}</p>

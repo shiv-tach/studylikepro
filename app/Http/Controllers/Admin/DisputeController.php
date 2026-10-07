@@ -65,7 +65,7 @@ class DisputeController extends Controller
             'booking.student',
             'booking.teacherProfile.user',
             'booking.subject',
-            'booking.topic',
+            'booking.lesson',
             'booking.payments.refunds',
             'conversation.messages.sender',
             'raisedBy',

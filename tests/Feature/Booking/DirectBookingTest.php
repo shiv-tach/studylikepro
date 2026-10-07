@@ -2,10 +2,11 @@
 
 use App\Enums\BookingStatus;
 use App\Models\Booking;
+use App\Models\Grade;
+use App\Models\Lesson;
 use App\Models\Subject;
 use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherProfile;
-use App\Models\Topic;
 use App\Models\User;
 use App\Notifications\BookingRequestReceived;
 use App\Services\RequestMatcher;
@@ -14,15 +15,22 @@ use Illuminate\Support\Facades\Notification;
 
 /**
  * An approved maths teacher with a two-hour evening window two days out,
- * and a student ready to book directly into it.
+ * a Grade 11 lesson, and a Grade 11 student ready to book directly into it.
  *
  * @return array<string, mixed>
  */
 function directBookingScenario(int $durationMinutes = 60): array
 {
-    $subject = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'mathematics']);
-    $topic = Topic::factory()->create([
+    $gradeId = gradeId(11);
+
+    $subject = Subject::factory()->create([
+        'name' => 'Mathematics',
+        'slug' => 'mathematics',
+        'education_level_id' => Grade::query()->whereKey($gradeId)->value('education_level_id'),
+    ]);
+    $lesson = Lesson::factory()->create([
         'subject_id' => $subject->id,
+        'grade_id' => $gradeId,
         'name' => 'Algebra',
         'slug' => 'algebra',
     ]);
@@ -34,8 +42,8 @@ function directBookingScenario(int $durationMinutes = 60): array
         'hourly_rate_minor' => 60000,
         'lesson_duration_minutes' => $durationMinutes,
     ]);
-    $teacher->subjects()->attach($subject->id, ['grade_levels' => ['high_school']]);
-    $teacher->topics()->attach($topic->id);
+    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) $gradeId]]);
+    $teacher->lessons()->attach($lesson->id);
 
     $day = CarbonImmutable::now('UTC')->addDays(2)->startOfDay();
     TeacherAvailabilitySlot::factory()
@@ -43,10 +51,11 @@ function directBookingScenario(int $durationMinutes = 60): array
         ->create(['teacher_profile_id' => $teacher->id]);
 
     $student = User::factory()->student()->onboarded()->create();
+    $student->studentProfile->update(['grade_id' => $gradeId]);
 
     return [
         'subject' => $subject,
-        'topic' => $topic,
+        'lesson' => $lesson,
         'teacher' => $teacher,
         'teacherUser' => $teacherUser,
         'student' => $student,
@@ -75,11 +84,11 @@ it('reserves the chosen slot as a pending payment hold with the commission snaps
     $this->actingAs($scenario['student'])
         ->post(route('student.bookings.store', $scenario['teacher']), [
             'subject_id' => $scenario['subject']->id,
-            'topic_id' => $scenario['topic']->id,
+            'lesson_id' => $scenario['lesson']->id,
             'duration' => 60,
             'starts_at' => $scenario['slot']->toIso8601String(),
             'learner_name' => 'Riya Sharma',
-            'learner_grade' => 'high_school',
+            'learner_grade_id' => gradeId(11),
         ])
         ->assertSessionHasNoErrors();
 
@@ -89,14 +98,14 @@ it('reserves the chosen slot as a pending payment hold with the commission snaps
         ->and($booking->student_id)->toBe($scenario['student']->id)
         ->and($booking->teacher_profile_id)->toBe($scenario['teacher']->id)
         ->and($booking->subject_id)->toBe($scenario['subject']->id)
-        ->and($booking->topic_id)->toBe($scenario['topic']->id)
+        ->and($booking->lesson_id)->toBe($scenario['lesson']->id)
         ->and($booking->price_minor)->toBe(60000)
         ->and($booking->commission_percent)->toBe(15)
         ->and($booking->platform_fee_minor)->toBe(9000)
         ->and($booking->teacher_payout_minor)->toBe(51000)
         ->and($booking->currency)->toBe('LKR')
         ->and($booking->learner_name)->toBe('Riya Sharma')
-        ->and($booking->learner_grade)->toBe('high_school')
+        ->and($booking->learner_grade_id)->toBe(gradeId(11))
         ->and($booking->starts_at->timestamp)->toBe($scenario['slot']->timestamp)
         ->and($booking->ends_at->timestamp)->toBe($scenario['slot']->addHour()->timestamp)
         ->and($booking->expires_at->lessThanOrEqualTo(now()->addMinutes(31)))->toBeTrue();
@@ -125,7 +134,7 @@ it('prices shorter lessons pro rata', function () {
         ->and($booking->teacher_payout_minor)->toBe(25500)
         ->and($booking->durationMinutes())->toBe(30)
         ->and($booking->learner_name)->toBe($scenario['student']->name)
-        ->and($booking->learner_grade)->toBe('high_school');
+        ->and($booking->learner_grade_id)->toBe($scenario['student']->studentProfile->grade_id);
 });
 
 it('uses the per subject rate override when the teacher has one', function () {
@@ -161,9 +170,9 @@ it('rejects a subject the teacher does not offer', function () {
     expect(Booking::query()->count())->toBe(0);
 });
 
-it('rejects a topic that belongs to another subject', function () {
+it('rejects a lesson that belongs to another subject', function () {
     $scenario = directBookingScenario();
-    $foreignTopic = Topic::factory()->create([
+    $foreignLesson = Lesson::factory()->create([
         'subject_id' => Subject::factory()->create(['name' => 'Physics', 'slug' => 'physics'])->id,
         'name' => 'Optics',
         'slug' => 'optics',
@@ -172,11 +181,64 @@ it('rejects a topic that belongs to another subject', function () {
     $this->actingAs($scenario['student'])
         ->post(route('student.bookings.store', $scenario['teacher']), [
             'subject_id' => $scenario['subject']->id,
-            'topic_id' => $foreignTopic->id,
+            'lesson_id' => $foreignLesson->id,
             'duration' => 60,
             'starts_at' => $scenario['slot']->toIso8601String(),
         ])
-        ->assertSessionHasErrors('topic_id');
+        ->assertSessionHasErrors('lesson_id');
+
+    expect(Booking::query()->count())->toBe(0);
+});
+
+it('offers only the learner grade lessons on the booking page', function () {
+    $scenario = directBookingScenario();
+
+    $otherGrade = Grade::factory()->create(['education_level_id' => $scenario['subject']->education_level_id]);
+    $otherLesson = Lesson::factory()->create([
+        'subject_id' => $scenario['subject']->id,
+        'grade_id' => $otherGrade->id,
+        'name' => 'Trigonometry',
+        'slug' => 'trigonometry',
+    ]);
+    $scenario['teacher']->lessons()->attach($otherLesson->id);
+
+    $this->actingAs($scenario['student'])
+        ->get(route('student.bookings.create', $scenario['teacher']))
+        ->assertOk()
+        ->assertSee('Algebra')
+        ->assertDontSee('Trigonometry');
+
+    $this->actingAs($scenario['student'])
+        ->get(route('student.bookings.create', [
+            'teacherProfile' => $scenario['teacher'],
+            'learner_grade_id' => $otherGrade->id,
+        ]))
+        ->assertOk()
+        ->assertSee('Trigonometry')
+        ->assertDontSee('Algebra');
+});
+
+it('rejects a lesson that is not for the learner grade', function () {
+    $scenario = directBookingScenario();
+
+    $otherGrade = Grade::factory()->create(['education_level_id' => $scenario['subject']->education_level_id]);
+    $otherLesson = Lesson::factory()->create([
+        'subject_id' => $scenario['subject']->id,
+        'grade_id' => $otherGrade->id,
+        'name' => 'Trigonometry',
+        'slug' => 'trigonometry',
+    ]);
+    $scenario['teacher']->lessons()->attach($otherLesson->id);
+
+    $this->actingAs($scenario['student'])
+        ->post(route('student.bookings.store', $scenario['teacher']), [
+            'subject_id' => $scenario['subject']->id,
+            'lesson_id' => $otherLesson->id,
+            'duration' => 60,
+            'starts_at' => $scenario['slot']->toIso8601String(),
+            'learner_grade_id' => gradeId(11),
+        ])
+        ->assertSessionHasErrors('lesson_id');
 
     expect(Booking::query()->count())->toBe(0);
 });

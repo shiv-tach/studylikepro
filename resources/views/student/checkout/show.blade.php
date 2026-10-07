@@ -33,7 +33,7 @@
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Lesson') }}</p>
                     <p class="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">
-                        {{ $booking->subject?->name }}@if ($booking->topic) · {{ $booking->topic->name }}@endif
+                        {{ $booking->subject?->name }}@if ($booking->lesson) · {{ $booking->lesson->name }}@endif
                     </p>
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                         {{ $booking->starts_at->copy()->setTimezone($timezone)->format('D d M Y, H:i') }}–{{ $booking->ends_at->copy()->setTimezone($timezone)->format('H:i') }}

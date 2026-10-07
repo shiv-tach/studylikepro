@@ -15,11 +15,11 @@ class TutoringRequestPolicy
 
         return $user->isTeacher()
             && $user->teacherProfile?->isApproved()
-            && $request->topic_id !== null
-            && $user->teacherProfile->topics()->where('topics.id', $request->topic_id)->exists();
+            && $request->lesson_id !== null
+            && $user->teacherProfile->lessons()->where('lessons.id', $request->lesson_id)->exists();
     }
 
-    public function updateTopic(User $user, TutoringRequest $request): bool
+    public function updateLesson(User $user, TutoringRequest $request): bool
     {
         return $request->student_id === $user->id && $request->isOpen();
     }

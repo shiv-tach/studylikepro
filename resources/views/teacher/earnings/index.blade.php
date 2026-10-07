@@ -57,7 +57,7 @@
                             <tr>
                                 <td class="py-4 pr-4">
                                     <p class="font-semibold text-slate-800 dark:text-slate-100">
-                                        {{ $earning->booking->subject?->name }}@if ($earning->booking->topic) · {{ $earning->booking->topic->name }}@endif
+                                        {{ $earning->booking->subject?->name }}@if ($earning->booking->lesson) · {{ $earning->booking->lesson->name }}@endif
                                     </p>
                                     <p class="text-xs text-slate-500 dark:text-slate-400">
                                         {{ $earning->booking->learner_name ?: $earning->booking->student->name }}

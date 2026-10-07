@@ -4,11 +4,11 @@ use App\Enums\BookingStatus;
 use App\Enums\RequestStatus;
 use App\Enums\ResponseStatus;
 use App\Models\Booking;
+use App\Models\Lesson;
 use App\Models\RequestResponse;
 use App\Models\Subject;
 use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherProfile;
-use App\Models\Topic;
 use App\Models\TutoringRequest;
 use App\Models\User;
 use App\Notifications\RequestResponseAccepted;
@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Notification;
 function teacherInboxScenario(): array
 {
     $subject = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'mathematics']);
-    $topic = Topic::factory()->create([
+    $lesson = Lesson::factory()->create([
         'subject_id' => $subject->id,
         'name' => 'Algebra',
         'slug' => 'algebra',
@@ -38,8 +38,8 @@ function teacherInboxScenario(): array
         'hourly_rate_minor' => 60000,
         'lesson_duration_minutes' => 60,
     ]);
-    $teacher->subjects()->attach($subject->id, ['grade_levels' => ['high_school']]);
-    $teacher->topics()->attach($topic->id);
+    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) $lesson->grade_id]]);
+    $teacher->lessons()->attach($lesson->id);
 
     $windowStart = CarbonImmutable::now('UTC')->addDays(2)->setTime(18, 0);
     TeacherAvailabilitySlot::factory()
@@ -50,20 +50,20 @@ function teacherInboxScenario(): array
     $request = TutoringRequest::factory()->create([
         'student_id' => $student->id,
         'subject_id' => $subject->id,
-        'topic_id' => $topic->id,
+        'lesson_id' => $lesson->id,
         'preferred_windows' => [[
             'starts_at' => $windowStart->toIso8601String(),
             'ends_at' => $windowStart->setTime(20, 0)->toIso8601String(),
         ]],
     ]);
 
-    return compact('subject', 'topic', 'teacher', 'teacherUser', 'student', 'request', 'windowStart');
+    return compact('subject', 'lesson', 'teacher', 'teacherUser', 'student', 'request', 'windowStart');
 }
 
-it('shows only requests that match the teacher topics and availability', function () {
+it('shows only requests that match the teacher lessons and availability', function () {
     $scenario = teacherInboxScenario();
 
-    $otherTopic = Topic::factory()->create([
+    $otherLesson = Lesson::factory()->create([
         'subject_id' => $scenario['subject']->id,
         'name' => 'Geometry',
         'slug' => 'geometry',
@@ -71,7 +71,7 @@ it('shows only requests that match the teacher topics and availability', functio
 
     TutoringRequest::factory()->create([
         'subject_id' => $scenario['subject']->id,
-        'topic_id' => $otherTopic->id,
+        'lesson_id' => $otherLesson->id,
         'description' => 'Unrelated geometry question about circles and tangents.',
     ]);
 
@@ -198,7 +198,7 @@ it('declines a request and keeps it open for other teachers', function () {
     Notification::assertSentTo($scenario['student'], RequestResponseDeclined::class);
 });
 
-it('stops teachers from responding to topics they do not teach', function () {
+it('stops teachers from responding to lessons they do not teach', function () {
     $scenario = teacherInboxScenario();
 
     $outsider = TeacherProfile::factory()->approved()->create(['timezone' => 'UTC']);

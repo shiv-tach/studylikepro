@@ -22,7 +22,8 @@ class TutoringRequest extends Model
     protected $fillable = [
         'student_id',
         'subject_id',
-        'topic_id',
+        'grade_id',
+        'lesson_id',
         'description',
         'classification_status',
         'ai_confidence',
@@ -58,9 +59,14 @@ class TutoringRequest extends Model
         return $this->belongsTo(Subject::class);
     }
 
-    public function topic(): BelongsTo
+    public function grade(): BelongsTo
     {
-        return $this->belongsTo(Topic::class);
+        return $this->belongsTo(Grade::class);
+    }
+
+    public function lesson(): BelongsTo
+    {
+        return $this->belongsTo(Lesson::class);
     }
 
     public function attachments(): HasMany
@@ -84,7 +90,7 @@ class TutoringRequest extends Model
     public function scopeMatchable(Builder $query): Builder
     {
         return $query->where('status', RequestStatus::Open->value)
-            ->whereNotNull('topic_id');
+            ->whereNotNull('lesson_id');
     }
 
     public function scopeAwaitingClassification(Builder $query): Builder
@@ -121,7 +127,7 @@ class TutoringRequest extends Model
 
     public function isMatchable(): bool
     {
-        return $this->status === RequestStatus::Open && $this->topic_id !== null;
+        return $this->status === RequestStatus::Open && $this->lesson_id !== null;
     }
 
     public function isOpen(): bool

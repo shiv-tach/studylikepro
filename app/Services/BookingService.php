@@ -71,9 +71,9 @@ class BookingService
     /**
      * The price a student pays for a lesson of this length, in minor units.
      */
-    public function priceMinor(TeacherProfile $teacher, ?Subject $subject, int $durationMinutes): int
+    public function priceMinor(TeacherProfile $teacher, ?Subject $subject, int $durationMinutes, ?int $gradeId = null): int
     {
-        return (int) round($teacher->effectiveRateFor($subject) * $durationMinutes / 60);
+        return (int) round($teacher->effectiveRateFor($subject, $gradeId) * $durationMinutes / 60);
     }
 
     /**
@@ -131,7 +131,7 @@ class BookingService
                 ]);
             }
 
-            $price = $draft->priceMinor ?? $this->priceMinor($draft->teacher, $draft->subject, $duration);
+            $price = $draft->priceMinor ?? $this->priceMinor($draft->teacher, $draft->subject, $duration, $draft->learnerGradeId);
 
             // The student-facing fee is snapshotted here, together with the
             // special offer that shaped it, so checkout never re-prices a hold.
@@ -142,14 +142,14 @@ class BookingService
                 'teacher_profile_id' => $draft->teacher->id,
                 'tutoring_request_id' => $draft->tutoringRequest?->id,
                 'subject_id' => $draft->subject?->id,
-                'topic_id' => $draft->topic?->id,
+                'lesson_id' => $draft->lesson?->id,
                 'starts_at' => $startsAt,
                 'ends_at' => $endsAt,
                 'status' => BookingStatus::PendingPayment,
                 'price_minor' => $price,
                 'currency' => (string) config('studylikepro.currency'),
                 'learner_name' => $draft->learnerName,
-                'learner_grade' => $draft->learnerGrade,
+                'learner_grade_id' => $draft->learnerGradeId,
                 'expires_at' => now()->addMinutes($this->settings->int('hold_ttl_minutes')),
                 ...$this->feeBreakdown($price),
                 'booking_fee_minor' => $fee['booking_fee_minor'],

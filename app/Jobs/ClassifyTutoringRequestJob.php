@@ -2,10 +2,10 @@
 
 namespace App\Jobs;
 
-use App\Contracts\TopicClassifier;
+use App\Contracts\LessonClassifier;
 use App\Enums\ClassificationStatus;
+use App\Models\Lesson;
 use App\Models\Subject;
-use App\Models\Topic;
 use App\Models\TutoringRequest;
 use App\Notifications\RequestPublished;
 use App\Services\RequestMatcher;
@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
- * Asks the classifier for a subject/topic and publishes the request to matching teachers.
+ * Asks the classifier for a subject/lesson and publishes the request to matching teachers.
  */
 class ClassifyTutoringRequestJob implements ShouldQueue
 {
@@ -29,7 +29,7 @@ class ClassifyTutoringRequestJob implements ShouldQueue
 
     public function __construct(public readonly int $tutoringRequestId) {}
 
-    public function handle(TopicClassifier $classifier, RequestMatcher $matcher): void
+    public function handle(LessonClassifier $classifier, RequestMatcher $matcher): void
     {
         $request = TutoringRequest::query()->with('attachments')->find($this->tutoringRequestId);
 
@@ -37,13 +37,13 @@ class ClassifyTutoringRequestJob implements ShouldQueue
             return;
         }
 
-        $cacheKey = $request->image_hash ? "ai:classification:{$request->image_hash}" : null;
+        $cacheKey = $request->image_hash ? "ai:classification:{$request->grade_id}:{$request->image_hash}" : null;
         $cached = $cacheKey ? Cache::get($cacheKey) : null;
 
         if (is_array($cached)) {
             $this->apply($request, new ClassificationResult(
                 subject: Subject::find($cached['subject_id'] ?? null),
-                topic: Topic::find($cached['topic_id'] ?? null),
+                lesson: Lesson::find($cached['lesson_id'] ?? null),
                 confidence: (float) ($cached['confidence'] ?? 0),
                 raw: ['cached' => true],
             ), $matcher);
@@ -64,10 +64,10 @@ class ClassifyTutoringRequestJob implements ShouldQueue
             return;
         }
 
-        if ($cacheKey && ! $result->failed && $result->topic && $result->subject) {
+        if ($cacheKey && ! $result->failed && $result->lesson && $result->subject) {
             Cache::put($cacheKey, [
                 'subject_id' => $result->subject->id,
-                'topic_id' => $result->topic->id,
+                'lesson_id' => $result->lesson->id,
                 'confidence' => $result->confidence,
             ], now()->addMinutes((int) config('studylikepro.ai.cache_ttl_minutes')));
         }
@@ -77,7 +77,12 @@ class ClassifyTutoringRequestJob implements ShouldQueue
 
     private function apply(TutoringRequest $request, ClassificationResult $result, RequestMatcher $matcher): void
     {
-        $confident = $result->isConfident();
+        // Never publish a lesson that contradicts the grade the student told us.
+        $gradeMismatch = $result->lesson !== null
+            && $request->grade_id !== null
+            && (int) $result->lesson->grade_id !== (int) $request->grade_id;
+
+        $confident = $result->isConfident() && ! $gradeMismatch;
 
         $request->update([
             'classification_status' => match (true) {
@@ -88,7 +93,8 @@ class ClassifyTutoringRequestJob implements ShouldQueue
             'ai_confidence' => $result->confidence,
             'ai_payload' => $result->toPayload(),
             'subject_id' => $confident ? $result->subject->id : null,
-            'topic_id' => $confident ? $result->topic->id : null,
+            'lesson_id' => $confident ? $result->lesson->id : null,
+            'grade_id' => $confident ? $result->lesson->grade_id : $request->grade_id,
         ]);
 
         if (! $confident) {

@@ -21,7 +21,11 @@ class AvailabilityController extends Controller
     public function index(Request $request, SlotService $slots): View
     {
         $profile = $request->user()->teacherProfile;
-        $profile->load(['availabilitySlots', 'timeOff', 'subjects']);
+        $profile->load([
+            'availabilitySlots',
+            'timeOff',
+            'subjects.educationLevel.grades' => fn ($query) => $query->where('is_active', true)->ordered(),
+        ]);
 
         return view('teacher.availability', [
             'profile' => $profile,

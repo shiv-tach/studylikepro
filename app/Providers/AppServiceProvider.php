@@ -2,13 +2,14 @@
 
 namespace App\Providers;
 
+use App\Contracts\LessonClassifier;
 use App\Contracts\MeetingProvider;
 use App\Contracts\PaymentGateway;
-use App\Contracts\TopicClassifier;
+use App\Models\EducationLevel;
+use App\Models\Lesson;
 use App\Models\Subject;
-use App\Models\Topic;
 use App\Services\ActivityLogger;
-use App\Services\AI\OpenAITopicClassifier;
+use App\Services\AI\OpenAILessonClassifier;
 use App\Services\CatalogService;
 use App\Services\ConversationService;
 use App\Services\Meetings\DailyMeetingProvider;
@@ -33,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
         // audit middleware picks that description up on the way out.
         $this->app->singleton(ActivityLogger::class);
 
-        $this->app->bind(TopicClassifier::class, OpenAITopicClassifier::class);
+        $this->app->bind(LessonClassifier::class, OpenAILessonClassifier::class);
 
         $this->app->bind(PaymentGateway::class, function () {
             return match (config('studylikepro.payments.gateway')) {
@@ -118,7 +119,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $flush = fn () => app(CatalogService::class)->flush();
 
-        foreach ([Subject::class, Topic::class] as $model) {
+        foreach ([EducationLevel::class, Subject::class, Lesson::class] as $model) {
             $model::saved($flush);
             $model::deleted($flush);
         }

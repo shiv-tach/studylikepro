@@ -78,8 +78,8 @@
                         <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Subject') }}</dt>
                         <dd class="mt-1 text-sm text-slate-700 dark:text-slate-200">
                             {{ $booking->subject?->name ?? '—' }}
-                            @if ($booking->topic)
-                                <p class="text-xs text-slate-400">{{ $booking->topic->name }}</p>
+                            @if ($booking->lesson)
+                                <p class="text-xs text-slate-400">{{ $booking->lesson->name }}</p>
                             @endif
                         </dd>
                     </div>

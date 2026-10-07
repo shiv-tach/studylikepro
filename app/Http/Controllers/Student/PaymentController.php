@@ -39,7 +39,7 @@ class PaymentController extends Controller
     {
         Gate::authorize('view', $payment);
 
-        $payment->load(['booking.teacherProfile.user', 'booking.subject', 'booking.topic', 'booking.bookingFeePromotion']);
+        $payment->load(['booking.teacherProfile.user', 'booking.subject', 'booking.lesson', 'booking.bookingFeePromotion']);
 
         return view('student.checkout.show', [
             'payment' => $payment,

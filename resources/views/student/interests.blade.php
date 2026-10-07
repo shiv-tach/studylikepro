@@ -5,7 +5,7 @@
 @endphp
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('Subjects & topics') }}</h2>
+        <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('Subjects & lessons') }}</h2>
     </x-slot>
 
     <div class="mx-auto max-w-4xl space-y-6">
@@ -21,7 +21,11 @@
                 <div>
                     <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">What do you want help with?</h3>
                     <p class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                        Pick your subjects first, then the specific topics inside them. This shapes your AI question matching and teacher suggestions.
+                        @if ($grade)
+                            {{ __('These are the :level subjects and the :grade lessons. Pick your subjects first, then the specific lessons inside them — this shapes your AI question matching and teacher suggestions.', ['level' => $grade->educationLevel?->name ?? __('your level'), 'grade' => $grade->label]) }}
+                        @else
+                            {{ __('Pick your subjects first, then the specific lessons inside them. This shapes your AI question matching and teacher suggestions.') }}
+                        @endif
                     </p>
                 </div>
             </div>
@@ -48,23 +52,26 @@
             </div>
 
             @foreach ($subjects as $subject)
-                @if ($subject->topics->isEmpty())
+                @if ($subject->lessons->isEmpty())
                     @continue
                 @endif
 
                 <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
                     <div class="flex items-center gap-3">
                         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-base">{{ $subject->icon ?? '📘' }}</span>
-                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ $subject->name }} topics</h3>
+                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ $subject->name }} lessons</h3>
+                        @if ($grade)
+                            <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">{{ $grade->label }}</span>
+                        @endif
                         <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">optional</span>
                     </div>
 
                     <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                        @foreach ($subject->topics as $topic)
+                        @foreach ($subject->lessons as $lesson)
                             <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200/80 px-3 py-2 text-sm text-slate-700 transition-colors hover:border-primary/40 dark:border-slate-800 dark:text-slate-300">
-                                <input type="checkbox" name="topics[]" value="{{ $topic->id }}"
-                                       @checked(in_array($topic->id, $selectedTopics, true)) class="{{ $checkboxClasses }}" />
-                                {{ $topic->name }}
+                                <input type="checkbox" name="lessons[]" value="{{ $lesson->id }}"
+                                       @checked(in_array($lesson->id, $selectedLessons, true)) class="{{ $checkboxClasses }}" />
+                                {{ $grade === null && $lesson->grade?->label ? $lesson->grade->label.' · ' : '' }}{{ $lesson->name }}
                             </label>
                         @endforeach
                     </div>

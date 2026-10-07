@@ -13,9 +13,9 @@ enum ClassificationStatus: string
     {
         return match ($this) {
             self::Pending => 'Reading your question',
-            self::Completed => 'Topic identified',
-            self::LowConfidence => 'Almost — please confirm the topic',
-            self::Failed => 'Pick the topic yourself',
+            self::Completed => 'Lesson identified',
+            self::LowConfidence => 'Almost — please confirm the lesson',
+            self::Failed => 'Pick the lesson yourself',
         };
     }
 

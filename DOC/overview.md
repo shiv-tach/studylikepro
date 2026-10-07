@@ -2,7 +2,7 @@ Student
 •	Registration 
 •	Parent/student profile 
 •	Subject selection 
-•	Topic selection 
+• Grade & lesson selection (Sri Lankan grades 1–13)
 •	Create tutoring request 
 •	Browse teachers 
 •	Teacher profile 
@@ -16,9 +16,9 @@ Teacher
 •	Registration 
 •	Verification 
 •	Subjects 
-•	Topics 
+• Grades & lessons (auto-assigned from the curriculum)
 •	Availability 
-•	Pricing 
+•	Pricing (base rate, per-subject and per-grade rates) 
 •	Requests 
 •	Accept/reject 
 •	Live lesson 
@@ -33,6 +33,6 @@ Admin
 •	Refunds 
 •	Commission 
 •	Reports 
-•	Subject/topic management 
+• Curriculum management: education levels, grades, subjects & per-grade lessons
 That's enough for V1.
-📷 Upload question → 🤖 identify topic → 👨‍🏫 find matching verified teacher → 🕐 choose available time → 💳 pay → 🎥 live lesson → ⭐ review 
+📷 Upload question → 🤖 identify lesson → 👨‍🏫 find matching verified teacher → 🕐 choose available time → 💳 pay → 🎥 live lesson → ⭐ review 

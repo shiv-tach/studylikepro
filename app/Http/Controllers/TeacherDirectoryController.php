@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\TeacherSearchRequest;
+use App\Models\Subject;
 use App\Models\TeacherProfile;
 use App\Services\CatalogService;
 use App\Services\SlotService;
@@ -19,6 +20,7 @@ class TeacherDirectoryController extends Controller
     {
         $filters = $request->validated();
         $teachers = $search->paginate($filters);
+        $levels = $catalog->levels();
 
         $nextSlots = [];
 
@@ -31,6 +33,8 @@ class TeacherDirectoryController extends Controller
             'nextSlots' => $nextSlots,
             'filters' => $filters,
             'subjects' => $catalog->subjects(),
+            'levels' => $levels,
+            'gradesById' => $levels->flatMap(fn ($level) => $level->grades)->keyBy('id'),
             'sort' => $request->sort(),
         ]);
     }
@@ -44,13 +48,18 @@ class TeacherDirectoryController extends Controller
 
         $teacherProfile->load([
             'user',
-            'subjects' => fn ($relation) => $relation->where('subjects.is_active', true),
-            'topics',
+            'subjects' => fn ($relation) => $relation->where('subjects.is_active', true)->with([
+                'educationLevel.grades' => fn ($query) => $query->where('is_active', true)->ordered(),
+            ]),
+            'lessons.grade',
         ]);
 
         return view('teachers.show', [
             'teacher' => $teacherProfile,
-            'topicsBySubject' => $teacherProfile->topics->groupBy('subject_id'),
+            'lessonsBySubject' => $teacherProfile->lessons->groupBy('subject_id'),
+            'gradesById' => $teacherProfile->subjects
+                ->flatMap(fn (Subject $subject) => $subject->educationLevel?->grades ?? collect())
+                ->keyBy('id'),
             'availability' => $slots->upcoming($teacherProfile, 14, 40, excludeBookings: true),
             'reviews' => $teacherProfile->visibleReviews()->with('student')->limit(5)->get(),
             'breakdown' => $stats->ratingBreakdown($teacherProfile),

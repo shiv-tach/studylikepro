@@ -29,7 +29,7 @@ class ConversationController extends Controller
 
         $conversations = Conversation::query()
             ->forUser($user)
-            ->with(['teacherProfile.user', 'student', 'latestMessage', 'booking.subject', 'booking.topic'])
+            ->with(['teacherProfile.user', 'student', 'latestMessage', 'booking.subject', 'booking.lesson'])
             ->latestFirst()
             ->paginate(15);
 
@@ -52,7 +52,7 @@ class ConversationController extends Controller
 
         $conversation->load([
             'booking.subject',
-            'booking.topic',
+            'booking.lesson',
             'booking.teacherProfile.user',
             'student',
             'teacherProfile.user',

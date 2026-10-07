@@ -1,6 +1,6 @@
 # Studylikepro
 
-Tutoring marketplace MVP — a student uploads a question, AI identifies the topic, the platform matches a verified teacher, the student books and pays for a live 1-on-1 lesson, and both sides rate and track the outcome.
+Tutoring marketplace MVP — a student uploads a question, AI identifies the lesson, the platform matches a verified teacher, the student books and pays for a live 1-on-1 lesson, and both sides rate and track the outcome.
 
 Built with Laravel 12, Blade, Alpine.js, Tailwind CSS, Vite, and Pest.
 
@@ -8,11 +8,11 @@ Built with Laravel 12, Blade, Alpine.js, Tailwind CSS, Vite, and Pest.
 
 | Role | Capabilities |
 | --- | --- |
-| Student | Registration, profile, subject/topic selection, tutoring requests with question uploads, teacher discovery, booking, payment, live classes, chat, ratings, lesson history |
-| Teacher | Invite-only registration, verification, subjects/topics, availability, pricing, requests, accept/reject, live lessons, earnings, reviews |
-| Admin | Teacher verification, student/booking/payment management, disputes, refunds, commission, reports, subject/topic management |
+| Student | Registration, profile with learner grade, subject/lesson selection for that grade, tutoring requests with question uploads, teacher discovery, booking, payment, live classes, chat, ratings, lesson history |
+| Teacher | Invite-only registration, verification, subjects with grades & lessons, availability, pricing, requests, accept/reject, live lessons, earnings, reviews |
+| Admin | Teacher verification, student/booking/payment management, disputes, refunds, commission, reports, curriculum management (levels, grades, subjects, lessons) |
 
-Core flow: 📷 Upload question → 🤖 AI identifies topic → 👨‍🏫 Find matching verified teacher → 🕐 Choose available time → 💳 Pay → 🎥 Live lesson → ⭐ Review
+Core flow: 📷 Upload question → 🤖 AI identifies the lesson → 👨‍🏫 Find matching verified teacher → 🕐 Choose available time → 💳 Pay → 🎥 Live lesson → ⭐ Review
 
 ## Getting started
 
@@ -40,9 +40,13 @@ Local demo accounts (created by the demo seeder in the `local` environment):
 - `vendor/bin/pint` — format the codebase.
 - Vite binds to `127.0.0.1` (`npm run dev`), which is what the Content-Security-Policy allows in local development; if you move it to another host, add that origin to the policy in `SecurityHeaders`.
 
-### AI topic matching
+### Curriculum & grades
 
-Requests are classified on the queue (`ClassifyTutoringRequestJob`), so a worker must be running — `composer dev` starts one, or use `php artisan queue:work --stop-when-empty` for a one-off drain. Set `OPENAI_API_KEY` to enable classification; with no key (or on any API failure) the job marks the request `failed` and the student picks the subject/topic manually, so the flow never blocks.
+The catalog follows the Sri Lankan structure: **Primary** (Grades 1–5), **O/L** (Grades 6–11), **A/L** (Grades 12–13) and **Other**. A subject belongs to one level and has a lesson list **per grade** (e.g. O/L Mathematics: 12 lessons in Grade 6, 10 in Grade 7), curated by admins on the grade-tab matrix in `/admin/curriculum` → subject editor. Choosing a subject as a teacher auto-assigns its grades and lessons, and students only ever see the subjects of their level and the lessons of their grade — in interests, the request form, the AI suggestion (the classifier prompt is scoped to the student's grade) and the booking page. New rows come from `CatalogSeeder`, which ships placeholder lesson names until the real syllabus names are entered in the matrix.
+
+### AI lesson matching
+
+Requests are classified on the queue (`ClassifyTutoringRequestJob`), so a worker must be running — `composer dev` starts one, or use `php artisan queue:work --stop-when-empty` for a one-off drain. Set `OPENAI_API_KEY` to enable classification; with no key (or on any API failure) the job marks the request `failed` and the student picks the subject/lesson manually, so the flow never blocks.
 
 ### Bookings
 
@@ -126,4 +130,4 @@ Tests that keep it honest: `tests/Feature/Security/` (headers, rate limits, secr
 
 ## Roadmap
 
-The phased build plan lives in [DOC/implementation-plan.md](DOC/implementation-plan.md). Current status: **Phase 11 — Hardening, UAT & Launch** complete. See [DOC/deployment.md](DOC/deployment.md) for the deployment runbook (environments, queue worker, scheduler, backups, monitoring, rollback) and [DOC/uat-checklist.md](DOC/uat-checklist.md) for the acceptance run.
+The phased build plan lives in [DOC/implementation-plan.md](DOC/implementation-plan.md). Current status: **Phase 11 — Hardening, UAT & Launch** and **Phase 12 — Sri Lankan Curriculum, Grades & Lessons** complete (see the companion plan [DOC/curriculum-and-grade-plan.md](DOC/curriculum-and-grade-plan.md)). See [DOC/deployment.md](DOC/deployment.md) for the deployment runbook (environments, queue worker, scheduler, backups, monitoring, rollback) and [DOC/uat-checklist.md](DOC/uat-checklist.md) for the acceptance run.

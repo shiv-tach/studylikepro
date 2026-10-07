@@ -20,7 +20,7 @@ class EarningsController extends Controller
             'teacher' => $profile,
             'totals' => $earnings->totalsFor($profile),
             'ledger' => $profile->earnings()
-                ->with(['booking.subject', 'booking.topic', 'booking.student', 'payout'])
+                ->with(['booking.subject', 'booking.lesson', 'booking.student', 'payout'])
                 ->latest()
                 ->paginate(15),
             'payouts' => $profile->payouts()->limit(10)->get(),

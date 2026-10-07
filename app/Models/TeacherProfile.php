@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class TeacherProfile extends Model
@@ -62,13 +63,13 @@ class TeacherProfile extends Model
     {
         return $this->belongsToMany(Subject::class, 'teacher_subjects')
             ->using(TeacherSubject::class)
-            ->withPivot(['grade_levels', 'rate_per_hour_minor'])
+            ->withPivot(['grade_levels', 'rate_per_hour_minor', 'grade_rates'])
             ->withTimestamps();
     }
 
-    public function topics(): BelongsToMany
+    public function lessons(): BelongsToMany
     {
-        return $this->belongsToMany(Topic::class, 'teacher_topics')->withTimestamps();
+        return $this->belongsToMany(Lesson::class, 'teacher_lessons')->withTimestamps();
     }
 
     public function availabilitySlots(): HasMany
@@ -143,16 +144,26 @@ class TeacherProfile extends Model
     }
 
     /**
-     * The rate a student pays for this subject, in minor units.
+     * The rate a student pays for this subject and grade, in minor units:
+     * an explicit grade rate wins, then the subject override, then the base rate.
      */
-    public function effectiveRateFor(?Subject $subject = null): int
+    public function effectiveRateFor(?Subject $subject = null, ?int $gradeId = null): int
     {
         if ($subject) {
-            $pivotRate = $this->subjects
-                ->firstWhere('id', $subject->id)?->pivot->rate_per_hour_minor;
+            $pivot = $this->subjects->firstWhere('id', $subject->id)?->pivot;
 
-            if ($pivotRate) {
-                return (int) $pivotRate;
+            if ($pivot) {
+                if ($gradeId !== null) {
+                    $gradeRate = static::gradeRatesFrom($pivot)[$gradeId] ?? null;
+
+                    if ($gradeRate !== null) {
+                        return $gradeRate;
+                    }
+                }
+
+                if ($pivot->rate_per_hour_minor) {
+                    return (int) $pivot->rate_per_hour_minor;
+                }
             }
         }
 
@@ -160,18 +171,167 @@ class TeacherProfile extends Model
     }
 
     /**
-     * The cheapest rate across the base rate and per-subject overrides.
+     * The price for every grade this teacher covers on a subject, in grade
+     * order, so public pages can show one rate per grade.
+     *
+     * @param  Collection<int, Grade>|null  $grades  preloaded grades keyed by id
+     * @return Collection<int, array{grade: Grade, rate_minor: int}>
      */
-    public function startingRateMinor(): int
+    public function gradeRatesFor(Subject $subject, ?Collection $grades = null): Collection
     {
-        $overrides = $this->subjects
-            ->map(fn (Subject $subject) => $subject->pivot->rate_per_hour_minor)
-            ->filter()
-            ->map(fn ($rate) => (int) $rate);
+        $ids = static::gradeIdsFrom($this->subjects->firstWhere('id', $subject->id)?->pivot);
 
-        return $overrides->isEmpty()
-            ? (int) $this->hourly_rate_minor
-            : min((int) $this->hourly_rate_minor, $overrides->min());
+        if ($ids === []) {
+            return collect();
+        }
+
+        return $this->resolveGrades($ids, $grades)->map(fn (Grade $grade) => [
+            'grade' => $grade,
+            'rate_minor' => $this->effectiveRateFor($subject, (int) $grade->id),
+        ])->values();
+    }
+
+    /**
+     * The grades behind a set of ids, ordered. Falls back to the database when
+     * the preloaded collection does not hold every id (e.g. a subject moved to
+     * another level after the teacher picked its grades).
+     *
+     * @param  array<int, int>  $ids
+     * @param  Collection<int, Grade>|null  $grades  preloaded grades keyed by id
+     * @return Collection<int, Grade>
+     */
+    private function resolveGrades(array $ids, ?Collection $grades): Collection
+    {
+        $resolved = $grades?->only($ids)->values()->sortBy('sort_order')->values();
+
+        if ($resolved !== null && $resolved->count() === count($ids)) {
+            return $resolved;
+        }
+
+        return Grade::query()->whereIn('id', $ids)->ordered()->get();
+    }
+
+    /**
+     * The cheapest rate this teacher charges, in minor units: the cheapest
+     * grade rate or override across their subjects, or the base rate when no
+     * subject is set up. With a grade id, only subjects that cover that grade
+     * count.
+     */
+    public function startingRateMinor(?int $gradeId = null): int
+    {
+        if ($gradeId !== null) {
+            $covering = $this->subjects->filter(
+                fn (Subject $subject) => in_array($gradeId, static::gradeIdsFrom($subject->pivot), true)
+            );
+
+            return $covering->isEmpty()
+                ? (int) $this->hourly_rate_minor
+                : (int) $covering->map(fn (Subject $subject) => $this->effectiveRateFor($subject, $gradeId))->min();
+        }
+
+        if ($this->subjects->isEmpty()) {
+            return (int) $this->hourly_rate_minor;
+        }
+
+        return (int) $this->subjects
+            ->map(fn (Subject $subject) => $this->cheapestRateFor($subject))
+            ->min();
+    }
+
+    /**
+     * The cheapest rate inside one subject, in minor units: its grade rates
+     * when it has any, otherwise the subject override, otherwise the base rate.
+     */
+    public function cheapestRateFor(Subject $subject): int
+    {
+        $gradeIds = static::gradeIdsFrom($this->subjects->firstWhere('id', $subject->id)?->pivot);
+
+        if ($gradeIds === []) {
+            return $this->effectiveRateFor($subject);
+        }
+
+        return (int) collect($gradeIds)
+            ->map(fn (int $gradeId) => $this->effectiveRateFor($subject, $gradeId))
+            ->min();
+    }
+
+    /**
+     * Explicit per-grade rates on a pivot row, keyed by grade id.
+     *
+     * @return array<int, int>
+     */
+    private static function gradeRatesFrom(mixed $pivot): array
+    {
+        return collect((array) ($pivot?->grade_rates ?? []))
+            ->mapWithKeys(fn ($rate, $gradeId) => [(int) $gradeId => (int) $rate])
+            ->filter(fn (int $rate) => $rate > 0)
+            ->all();
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private static function gradeIdsFrom(mixed $pivot): array
+    {
+        return array_values(array_unique(array_map('intval', (array) ($pivot?->grade_levels ?? []))));
+    }
+
+    /**
+     * The grades this teacher covers for a subject, as a label: a contiguous
+     * run collapses to "Grades 6-9", gaps fall back to the grade labels.
+     *
+     * @param  Collection<int, Grade>|null  $grades  preloaded grades keyed by id
+     */
+    public function gradeScopeLabelFor(Subject $subject, ?Collection $grades = null): ?string
+    {
+        return $this->gradeScopeLabelFromIds((array) ($subject->pivot->grade_levels ?? []), $grades);
+    }
+
+    /**
+     * Every grade this teacher covers across all subjects, as one label.
+     *
+     * @param  Collection<int, Grade>|null  $grades  preloaded grades keyed by id
+     */
+    public function gradeScopeLabel(?Collection $grades = null): ?string
+    {
+        $ids = $this->subjects
+            ->flatMap(fn (Subject $subject) => (array) ($subject->pivot->grade_levels ?? []))
+            ->all();
+
+        return $this->gradeScopeLabelFromIds($ids, $grades);
+    }
+
+    /**
+     * @param  array<int, mixed>  $ids
+     * @param  Collection<int, Grade>|null  $grades
+     */
+    private function gradeScopeLabelFromIds(array $ids, ?Collection $grades = null): ?string
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+
+        if ($ids === []) {
+            return null;
+        }
+
+        $grades = $this->resolveGrades($ids, $grades);
+
+        if ($grades->isEmpty()) {
+            return null;
+        }
+
+        $numbers = $grades
+            ->filter(fn (Grade $grade) => $grade->number !== null)
+            ->map(fn (Grade $grade) => (int) $grade->number)
+            ->sort()
+            ->values();
+
+        if ($numbers->count() === $grades->count()
+            && $numbers->count() >= 2
+            && $numbers->last() - $numbers->first() === $numbers->count() - 1) {
+            return "Grades {$numbers->first()}-{$numbers->last()}";
+        }
+
+        return $grades->pluck('label')->implode(', ');
     }
 
     public function isComplete(): bool

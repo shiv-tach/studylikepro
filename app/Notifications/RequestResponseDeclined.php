@@ -20,7 +20,7 @@ class RequestResponseDeclined extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject($teacher->name.' cannot take your request')
             ->greeting('Hi '.$notifiable->name.',')
-            ->line($teacher->name.' is not available for '.$this->response->tutoringRequest->topic->name.' right now.')
+            ->line($teacher->name.' is not available for '.$this->response->tutoringRequest->lesson->name.' right now.')
             ->when($this->response->message, fn (MailMessage $mail) => $mail->line('Message: '.$this->response->message))
             ->line('We will keep matching your request with other verified teachers.')
             ->action('View your request', route('student.requests.show', $this->response->tutoring_request_id));
@@ -33,7 +33,7 @@ class RequestResponseDeclined extends Notification implements ShouldQueue
     {
         return [
             'title' => $this->response->teacherProfile->user->name.' declined your request',
-            'body' => 'Still looking for a teacher for '.$this->response->tutoringRequest->topic->name.'.',
+            'body' => 'Still looking for a teacher for '.$this->response->tutoringRequest->lesson->name.'.',
             'url' => route('student.requests.show', $this->response->tutoring_request_id),
         ];
     }

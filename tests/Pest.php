@@ -2,6 +2,7 @@
 
 use App\Enums\BookingStatus;
 use App\Models\Booking;
+use App\Models\Grade;
 use App\Models\Payment;
 use App\Models\Subject;
 use App\Models\TeacherAvailabilitySlot;
@@ -71,6 +72,15 @@ function something()
 function makeTeacherInvite(?int $expiresInDays = 7): array
 {
     return TeacherInvite::createWithToken($expiresInDays, null);
+}
+
+/**
+ * The id of the seeded grade with this number (1-13). The migrations seed the
+ * Sri Lankan levels and grades, so tests can rely on them being present.
+ */
+function gradeId(int $number): int
+{
+    return (int) Grade::query()->where('number', $number)->value('id');
 }
 
 /**
@@ -187,7 +197,7 @@ function bookingFeeScenario(): array
         'hourly_rate_minor' => 60000,
         'lesson_duration_minutes' => 60,
     ]);
-    $teacher->subjects()->attach($subject->id, ['grade_levels' => ['high_school']]);
+    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) gradeId(11)]]);
 
     $day = CarbonImmutable::now('UTC')->addDays(2)->startOfDay();
     TeacherAvailabilitySlot::factory()

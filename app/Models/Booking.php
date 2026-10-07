@@ -29,7 +29,7 @@ class Booking extends Model
         'teacher_profile_id',
         'tutoring_request_id',
         'subject_id',
-        'topic_id',
+        'lesson_id',
         'starts_at',
         'ends_at',
         'status',
@@ -42,7 +42,7 @@ class Booking extends Model
         'booking_fee_promotion_id',
         'currency',
         'learner_name',
-        'learner_grade',
+        'learner_grade_id',
         'expires_at',
         'confirmed_at',
         'started_at',
@@ -149,9 +149,14 @@ class Booking extends Model
         return $this->belongsTo(Subject::class);
     }
 
-    public function topic(): BelongsTo
+    public function lesson(): BelongsTo
     {
-        return $this->belongsTo(Topic::class);
+        return $this->belongsTo(Lesson::class);
+    }
+
+    public function learnerGrade(): BelongsTo
+    {
+        return $this->belongsTo(Grade::class, 'learner_grade_id');
     }
 
     /**

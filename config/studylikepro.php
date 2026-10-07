@@ -181,7 +181,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | AI topic classification
+    | AI lesson classification
     |--------------------------------------------------------------------------
     */
 
@@ -202,12 +202,22 @@ return [
         0 => 'Sunday',
     ],
 
-    'grade_levels' => [
-        'primary' => 'Primary school',
-        'middle_school' => 'Middle school',
-        'high_school' => 'High school',
-        'college' => 'College / University',
-        'adult' => 'Adult learner',
+    /*
+    |--------------------------------------------------------------------------
+    | Sri Lankan Education Structure
+    |--------------------------------------------------------------------------
+    |
+    | Bootstrap definition of the four education levels. The rows live in the
+    | `education_levels` and `grades` tables (seeded by EducationLevelSeeder);
+    | this config is the reference the seeder and the backfill read.
+    |
+    */
+
+    'education_levels' => [
+        'primary' => ['name' => 'Primary', 'grade_min' => 1, 'grade_max' => 5, 'icon' => '🎒'],
+        'ol' => ['name' => 'O/L (Ordinary Level)', 'grade_min' => 6, 'grade_max' => 11, 'icon' => '📘'],
+        'al' => ['name' => 'A/L (Advanced Level)', 'grade_min' => 12, 'grade_max' => 13, 'icon' => '🎓'],
+        'other' => ['name' => 'Other', 'grade_min' => null, 'grade_max' => null, 'icon' => '🧭'],
     ],
 
     'languages' => [

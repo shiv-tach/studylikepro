@@ -18,16 +18,16 @@ Automated equivalent: `tests/Feature/Acceptance/CoreFlowTest.php` (runs in CI).
 | # | Step | Expected | ✅ |
 | --- | --- | --- | --- |
 | A1 | Register as a student | Lands on the student dashboard, onboarding prompt shown | ☐ |
-| A2 | Complete the learning profile (grade, goals) | Dashboard unlocks, "Profile complete" status | ☐ |
-| A3 | Pick a subject and a topic | Choices persist after a reload | ☐ |
-| A4 | Create a request with a question photo attached | Request page shows *Classifying…* then the subject, topic and confidence | ☐ |
+| A2 | Complete the learning profile (grade, goals) | Grade picker groups grades under Primary · O/L · A/L · Other; dashboard unlocks, "Profile complete" status | ☐ |
+| A3 | Pick a subject and a lesson | Only your level's subjects and your grade's lessons are offered; choices persist after a reload | ☐ |
+| A4 | Create a request with a question photo attached | Request page shows *Classifying…* then the subject, lesson and confidence | ☐ |
 | A5 | Trust the AI suggestion | Request status becomes Open; matching teachers notified | ☐ |
-| A6 | Override the suggestion on another request | The chosen subject/topic replaces the guess | ☐ |
+| A6 | Override the suggestion on another request | The chosen subject/lesson replaces the guess; only lessons of the request's grade are offered | ☐ |
 | A7 | Register as a teacher, complete the teaching profile | Step 1 is marked completed in the 2-step progress; verification page opens | ☐ |
 | A8 | Try the dashboard or another teacher page before submitting verification | Redirected back to verification; step 2 shows as in progress | ☐ |
 | A9 | Upload a government ID and submit for review | Terms checkbox required; status Pending and the teacher area unlocks with both steps completed | ☐ |
 | A10 | Admin approves the application | Teacher sees "Approved"; appears in `/teachers` | ☐ |
-| A11 | Teacher adds subjects, topics, rate and availability | Subject chips and weekly slots appear | ☐ |
+| A11 | Teacher adds subjects (grades and lessons auto-assign), sets a rate per grade and availability | Subject panels show grade chips with a rate input each and lesson checkboxes pre-selected; weekly slots appear | ☐ |
 | A12 | Teacher opens the request inbox | The student's question and photo are visible | ☐ |
 | A13 | Teacher accepts with a slot | A booking hold exists; the student is notified | ☐ |
 | A14 | Student pays from the checkout page (test mode) | Booking confirmed, "Payment received", receipt available | ☐ |
@@ -111,6 +111,26 @@ Automated equivalent: `tests/Feature/Acceptance/CoreFlowTest.php` (runs in CI).
 
 ---
 
+## G. Curriculum, grades & lessons
+
+Automated equivalents: `tests/Feature/CatalogTest.php`, `tests/Feature/Admin/CurriculumLevelTest.php`, `tests/Feature/Admin/GradeLessonTest.php`,
+`tests/Feature/Teacher/GradeLessonAssignmentTest.php`, `tests/Feature/Student/GradeScopedCatalogTest.php`,
+`tests/Feature/Matching/GradeMatchTest.php`, `tests/Feature/TeacherDiscoveryTest.php`.
+
+| # | Step | Expected | ✅ |
+| --- | --- | --- | --- |
+| G1 | Admin opens `/admin/curriculum` | The four levels (Primary, O/L, A/L, Other) with their active subject, grade and lesson counts | ☐ |
+| G2 | Admin edits **O/L Mathematics** and reads the Grade 6 tab | The real lesson list (12 lessons in Grade 6, 10 in Grade 7, …); add, copy-to-grade, bulk-activate and move-lesson tools all work; the change is visible on the student side after a reload | ☐ |
+| G3 | Teacher selects **O/L Mathematics** while setting up subjects | Grades 6–11 and every lesson are auto-assigned; unchecking Grade 10 detaches its lessons when saved | ☐ |
+| G4 | Teacher opens the request inbox with a Grade 8 request pending | Only requests for grades the teacher covers appear, each with its grade chip; the nav badge count matches | ☐ |
+| G5 | Grade 8 student opens interests, the request form and the booking page | Only O/L subjects and Grade 8 lessons are offered; a Grade 11 lesson cannot be submitted, confirmed or booked | ☐ |
+| G6 | Grade 8 request where the lesson is only taught by a Grade 11-only teacher | That teacher is neither notified nor shown the request in the inbox | ☐ |
+| G7 | Admin renames lessons in the matrix | Teacher and student pickers show the new names (catalog cache flushed), and directory cards show "Grades 6-11 · N lessons" | ☐ |
+| G8 | Visitor opens `/subjects` | The four levels (Primary, O/L, A/L, Other) are offered; picking a level reveals its grades; picking a grade lists only the subjects that run in it (e.g. Commerce for Grade 10–11, not Grade 6), each with the grade's lesson count; opening one lists that grade's lessons with a "View all grades" link | ☐ |
+| G9 | Visitor opens a subject (e.g. `/subjects/english?grade=6`) | Verified teachers for that subject and grade are listed with their hourly rate for the selected grade, teaching scope and next availability; "See all N teachers" opens the directory pre-filtered; each card opens the teacher profile to book | ☐ |
+
+---
+
 ## Sign-off
 
 | Area | Run by | Date | Result | Notes / issues |
@@ -121,3 +141,4 @@ Automated equivalent: `tests/Feature/Acceptance/CoreFlowTest.php` (runs in CI).
 | D. Admin console | | | | |
 | E. Cross-cutting | | | | |
 | F. Live-mode smoke | | | | |
+| G. Curriculum & grades | | | | |

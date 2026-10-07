@@ -28,7 +28,7 @@
             @php
                 $unread = $unread[$conversation->id] ?? 0;
                 $lesson = $conversation->booking;
-                $title = $lesson?->topic?->name ?? $lesson?->subject?->name ?? __('Tutoring lesson');
+                $title = $lesson?->lesson?->name ?? $lesson?->subject?->name ?? __('Tutoring lesson');
                 $latest = $conversation->latestMessage;
                 $counterpart = $conversation->counterpartName(auth()->user());
             @endphp

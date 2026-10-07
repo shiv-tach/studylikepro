@@ -9,13 +9,14 @@ use App\Enums\RequestStatus;
 use App\Enums\VerificationStatus;
 use App\Models\Booking;
 use App\Models\Dispute;
+use App\Models\EducationLevel;
+use App\Models\Lesson;
 use App\Models\Payment;
 use App\Models\Refund;
 use App\Models\Review;
 use App\Models\Subject;
 use App\Models\TeacherEarning;
 use App\Models\TeacherProfile;
-use App\Models\Topic;
 use App\Models\TutoringRequest;
 use App\Models\User;
 use App\Notifications\DisputeResolved;
@@ -31,7 +32,7 @@ use Illuminate\Support\Str;
 
 /**
  * The launch acceptance run from section 11 of the plan, executed against the
- * real routes: a student uploads a question, the AI picks the topic, a verified
+ * real routes: a student uploads a question, the AI picks the lesson, a verified
  * teacher takes the lesson, the money moves, the lesson happens, the review
  * lands — and support can refund and resolve afterwards.
  *
@@ -41,10 +42,15 @@ use Illuminate\Support\Str;
 beforeEach(function () {
     Http::preventStrayRequests();
 
-    // A tiny catalog: one subject, one topic, and the model is told to pick it.
-    $this->subject = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'mathematics']);
-    $this->topic = Topic::factory()->create([
+    // A tiny catalog: one O/L subject, one lesson, and the model is told to pick it.
+    $this->subject = Subject::factory()->create([
+        'name' => 'Mathematics',
+        'slug' => 'mathematics',
+        'education_level_id' => EducationLevel::query()->where('key', 'ol')->value('id'),
+    ]);
+    $this->lesson = Lesson::factory()->create([
         'subject_id' => $this->subject->id,
+        'grade_id' => gradeId(11),
         'name' => 'Algebra',
         'slug' => 'algebra',
     ]);
@@ -57,7 +63,7 @@ beforeEach(function () {
             'choices' => [[
                 'message' => ['content' => json_encode([
                     'subject' => 'Mathematics',
-                    'topic' => 'Algebra',
+                    'lesson' => 'Algebra',
                     'confidence' => 0.93,
                     'alternates' => [],
                 ])],
@@ -126,7 +132,7 @@ function payForBooking(Booking $booking, User $student): Payment
  * A verified teacher with the catalog attached and an evening availability
  * window, ready to answer requests. Returns the user; the profile is on it.
  */
-function verifiedTeacher(Subject $subject, Topic $topic, CarbonImmutable $windowStart): User
+function verifiedTeacher(Subject $subject, Lesson $lesson, CarbonImmutable $windowStart): User
 {
     $teacherUser = signUp(User::ROLE_TEACHER, ['name' => 'Verified Tutor']);
 
@@ -177,8 +183,8 @@ function verifiedTeacher(Subject $subject, Topic $topic, CarbonImmutable $window
     $teacherUser->refresh()->unsetRelation('teacherProfile');
 
     test()->actingAs($teacherUser)->post(route('teacher.subjects.update', $subject), [
-        'topics' => [$topic->id],
-        'grade_levels' => ['high_school'],
+        'lessons' => [$lesson->id],
+        'grades' => [gradeId(11)],
         'rate_per_hour' => 800,
     ])->assertRedirect();
 
@@ -196,17 +202,17 @@ it('runs the core flow from question photo to review', function () {
     $student = signUp(User::ROLE_STUDENT, ['name' => 'Aarav Mehta']);
 
     $this->actingAs($student)->put(route('student.profile.update'), [
-        'grade_level' => 'high_school',
+        'grade_id' => gradeId(11),
         'learning_goals' => 'Board exams in two months.',
     ])->assertRedirect();
 
     $this->actingAs($student)->put(route('student.interests.update'), [
         'subjects' => [$this->subject->id],
-        'topics' => [$this->topic->id],
+        'lessons' => [$this->lesson->id],
     ])->assertRedirect();
 
     // 2. A teacher applies, uploads ID, accepts the terms and gets verified.
-    $teacherUser = verifiedTeacher($this->subject, $this->topic, $this->windowStart);
+    $teacherUser = verifiedTeacher($this->subject, $this->lesson, $this->windowStart);
 
     // 3. The student uploads the question photo; the AI classifies it inline.
     $this->actingAs($student)->post(route('student.requests.store'), [
@@ -224,7 +230,7 @@ it('runs the core flow from question photo to review', function () {
 
     expect($request->classification_status)->toBe(ClassificationStatus::Completed)
         ->and($request->subject_id)->toBe($this->subject->id)
-        ->and($request->topic_id)->toBe($this->topic->id)
+        ->and($request->lesson_id)->toBe($this->lesson->id)
         ->and($request->status)->toBe(RequestStatus::Open)
         ->and($request->attachments()->count())->toBe(1);
 
@@ -363,7 +369,7 @@ it('lets support refund a lesson and settle a dispute', function () {
     // The student reports the problem from the chat.
     $this->actingAs($student)->post(route('messages.report', $conversation), [
         'reason' => Dispute::REASON_QUALITY,
-        'details' => 'The lesson stopped after twenty minutes and we never covered the topic.',
+        'details' => 'The lesson stopped after twenty minutes and we never covered the lesson.',
     ])->assertRedirect();
 
     $dispute = Dispute::query()->firstOrFail();

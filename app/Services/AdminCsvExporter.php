@@ -57,7 +57,7 @@ class AdminCsvExporter
     private function headers(string $type): array
     {
         return match ($type) {
-            'bookings' => ['Reference', 'Status', 'Starts at', 'Student', 'Teacher', 'Subject', 'Topic', 'Price', 'Platform fee', 'Teacher payout', 'Booking fee', 'Fee discount', 'Currency', 'Payment status', 'Created at'],
+            'bookings' => ['Reference', 'Status', 'Starts at', 'Student', 'Teacher', 'Subject', 'Lesson', 'Price', 'Platform fee', 'Teacher payout', 'Booking fee', 'Fee discount', 'Currency', 'Payment status', 'Created at'],
             'payments' => ['Payment', 'Gateway', 'Order id', 'Status', 'Amount', 'Refunded', 'Currency', 'Method', 'Captured at', 'Student', 'Booking'],
             'refunds' => ['Refund', 'Booking', 'Payment', 'Amount', 'Percent', 'Initiated by', 'Reason', 'Status', 'Created at'],
             'payouts' => ['Reference', 'Teacher', 'Lessons', 'Amount', 'Currency', 'Status', 'Paid at', 'Notes'],
@@ -82,7 +82,7 @@ class AdminCsvExporter
     private function bookings(CarbonInterface $from, CarbonInterface $to): Generator
     {
         $query = Booking::query()
-            ->with(['student', 'teacherProfile.user', 'subject', 'topic', 'payment'])
+            ->with(['student', 'teacherProfile.user', 'subject', 'lesson', 'payment'])
             ->whereBetween('starts_at', [$from, $to])
             ->orderBy('starts_at');
 
@@ -94,7 +94,7 @@ class AdminCsvExporter
                 $booking->student->name,
                 $booking->teacherProfile->user->name,
                 $booking->subject?->name,
-                $booking->topic?->name,
+                $booking->lesson?->name,
                 $this->money($booking->price_minor),
                 $this->money($booking->platform_fee_minor),
                 $this->money($booking->teacher_payout_minor),
