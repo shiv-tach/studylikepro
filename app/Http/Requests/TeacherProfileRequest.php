@@ -21,7 +21,6 @@ class TeacherProfileRequest extends FormRequest
             'education' => ['required', 'string', 'max:255'],
             'languages' => ['required', 'array', 'min:1'],
             'languages.*' => ['string', Rule::in(config('studylikepro.languages'))],
-            'timezone' => ['required', Rule::in(array_keys(config('studylikepro.timezones')))],
             'hourly_rate' => ['required', 'numeric', 'min:100', 'max:100000'],
             'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=2048,max_height=2048'],
         ];

@@ -37,6 +37,9 @@ class Booking extends Model
         'commission_percent',
         'platform_fee_minor',
         'teacher_payout_minor',
+        'booking_fee_minor',
+        'booking_fee_discount_minor',
+        'booking_fee_promotion_id',
         'currency',
         'learner_name',
         'learner_grade',
@@ -78,6 +81,8 @@ class Booking extends Model
             'commission_percent' => 'integer',
             'platform_fee_minor' => 'integer',
             'teacher_payout_minor' => 'integer',
+            'booking_fee_minor' => 'integer',
+            'booking_fee_discount_minor' => 'integer',
         ];
     }
 
@@ -89,6 +94,11 @@ class Booking extends Model
     public function teacherProfile(): BelongsTo
     {
         return $this->belongsTo(TeacherProfile::class);
+    }
+
+    public function bookingFeePromotion(): BelongsTo
+    {
+        return $this->belongsTo(BookingFeePromotion::class);
     }
 
     public function tutoringRequest(): BelongsTo
@@ -212,6 +222,28 @@ class Booking extends Model
     public function durationMinutes(): int
     {
         return (int) $this->starts_at->diffInMinutes($this->ends_at);
+    }
+
+    /**
+     * The student booking fee after any special-offer discount.
+     */
+    public function netBookingFeeMinor(): int
+    {
+        return max(0, $this->booking_fee_minor - $this->booking_fee_discount_minor);
+    }
+
+    public function hasBookingFeeDiscount(): bool
+    {
+        return $this->booking_fee_discount_minor > 0;
+    }
+
+    /**
+     * What the student is charged at checkout: the lesson plus the booking fee.
+     * The teacher payout is unaffected — commission is settled on the price.
+     */
+    public function totalMinor(): int
+    {
+        return $this->price_minor + $this->netBookingFeeMinor();
     }
 
     /**

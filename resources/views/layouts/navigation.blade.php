@@ -57,7 +57,14 @@
         $navItems[] = ['label' => 'Find a teacher', 'url' => route('teachers.index'), 'active' => request()->routeIs('teachers.*'), 'icon' => 'search', 'badge' => null];
     }
 
-    if ($user->isTeacher()) {
+    if ($user->isTeacher() && ! $user->hasCompletedOnboarding()) {
+        // During onboarding only the two setup steps are reachable, so the sidebar
+        // shows them instead of workspace links that would bounce back here.
+        $navItems = [
+            ['label' => 'Teaching profile', 'url' => route('teacher.profile'), 'active' => request()->routeIs('teacher.profile'), 'icon' => 'user', 'badge' => null],
+            ['label' => 'Verification', 'url' => route('teacher.verification'), 'active' => request()->routeIs('teacher.verification*'), 'icon' => 'shield', 'badge' => null],
+        ];
+    } elseif ($user->isTeacher()) {
         $navItems[] = ['label' => 'Subjects & topics', 'url' => route('teacher.subjects.index'), 'active' => request()->routeIs('teacher.subjects*'), 'icon' => 'book', 'badge' => null];
         $navItems[] = ['label' => 'Availability', 'url' => route('teacher.availability.index'), 'active' => request()->routeIs('teacher.availability*'), 'icon' => 'calendar', 'badge' => null];
         $navItems[] = ['label' => 'Requests', 'url' => route('teacher.requests.index'), 'active' => request()->routeIs('teacher.requests*'), 'icon' => 'doc', 'badge' => $openRequestMatches ?: null];
@@ -70,6 +77,7 @@
     if ($user->isAdmin()) {
         $navItems[] = ['label' => 'Reports', 'url' => route('admin.reports.index'), 'active' => request()->routeIs('admin.reports*'), 'icon' => 'chart', 'badge' => null];
         $navItems[] = ['label' => 'Users', 'url' => route('admin.users.index'), 'active' => request()->routeIs('admin.users*'), 'icon' => 'user', 'badge' => null];
+        $navItems[] = ['label' => 'Invite teachers', 'url' => route('admin.invites.index'), 'active' => request()->routeIs('admin.invites*'), 'icon' => 'invite', 'badge' => null];
         $navItems[] = ['label' => 'Disputes', 'url' => route('admin.disputes.index'), 'active' => request()->routeIs('admin.disputes*'), 'icon' => 'shield', 'badge' => $openDisputes ?: null];
         $navItems[] = ['label' => 'Moderation', 'url' => route('admin.moderation.index'), 'active' => request()->routeIs('admin.moderation*'), 'icon' => 'flag', 'badge' => $flaggedReviews ?: null];
         $navItems[] = ['label' => 'Verification', 'url' => route('admin.verifications.index'), 'active' => request()->routeIs('admin.verifications*'), 'icon' => 'shield', 'badge' => $pendingVerifications ?: null];
@@ -77,6 +85,7 @@
         $navItems[] = ['label' => 'Bookings', 'url' => route('admin.bookings.index'), 'active' => request()->routeIs('admin.bookings*'), 'icon' => 'calendar', 'badge' => null];
         $navItems[] = ['label' => 'Payments', 'url' => route('admin.payments.index'), 'active' => request()->routeIs('admin.payments*'), 'icon' => 'card', 'badge' => null];
         $navItems[] = ['label' => 'Payouts', 'url' => route('admin.payouts.index'), 'active' => request()->routeIs('admin.payouts*'), 'icon' => 'wallet', 'badge' => null];
+        $navItems[] = ['label' => 'Special offers', 'url' => route('admin.offers.index'), 'active' => request()->routeIs('admin.offers*'), 'icon' => 'tag', 'badge' => null];
         $navItems[] = ['label' => 'Activity log', 'url' => route('admin.activity.index'), 'active' => request()->routeIs('admin.activity*'), 'icon' => 'clock', 'badge' => null];
         $navItems[] = ['label' => 'Settings', 'url' => route('admin.settings.edit'), 'active' => request()->routeIs('admin.settings*'), 'icon' => 'cog', 'badge' => null];
     }
@@ -172,6 +181,9 @@
                         @case('user')
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             @break
+                        @case('invite')
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m.758-10.556a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.1-1.1" />
+                            @break
                         @case('cog')
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -181,6 +193,9 @@
                             @break
                         @case('flag')
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                            @break
+                        @case('tag')
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z" />
                             @break
                     @endswitch
                 </svg>

@@ -30,9 +30,27 @@ return [
 
     'currency_symbol' => env('PLATFORM_CURRENCY_SYMBOL', 'RS:'),
 
-    'default_display_timezone' => 'Asia/Kolkata',
+    // Users are never asked for a timezone; lessons are booked and shown in Sri Lanka time.
+    'default_display_timezone' => 'Asia/Colombo',
 
     'commission_percent' => (int) env('PLATFORM_COMMISSION_PERCENT', 15),
+
+    // Student-facing booking fee added to every lesson at checkout, in minor
+    // units (Rs 100 = 10000). Admins can retune it or waive it via a special
+    // offer; both live in the platform settings / offers console.
+    'booking_fee_minor' => (int) env('PLATFORM_BOOKING_FEE_MINOR', 10000),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Teacher onboarding invites
+    |--------------------------------------------------------------------------
+    |
+    | How long an admin-issued onboarding link stays valid. Teacher accounts
+    | can only be created through such a link.
+    |
+    */
+
+    'teacher_invite_expiry_days' => (int) env('TEACHER_INVITE_EXPIRY_DAYS', 7),
 
     /*
     |--------------------------------------------------------------------------
@@ -47,7 +65,7 @@ return [
     'support' => [
         'email' => env('SUPPORT_EMAIL', env('ADMIN_EMAIL', 'support@studylikepro.test')),
         'phone' => env('SUPPORT_PHONE', '+91 90000 00000'),
-        'hours' => 'Mon–Sat, 9:00–21:00 IST',
+        'hours' => 'Mon–Sat, 9:00–21:00 (Sri Lanka time)',
         'policy_version' => env('POLICY_VERSION', '2026-10-01'),
     ],
 
@@ -192,41 +210,8 @@ return [
         'adult' => 'Adult learner',
     ],
 
-    'timezones' => [
-        'Asia/Kolkata' => 'India (IST, UTC+5:30)',
-        'Asia/Dubai' => 'Gulf (GST, UTC+4)',
-        'Asia/Karachi' => 'Pakistan (PKT, UTC+5)',
-        'Asia/Dhaka' => 'Bangladesh (BST, UTC+6)',
-        'Asia/Kathmandu' => 'Nepal (NPT, UTC+5:45)',
-        'Asia/Colombo' => 'Sri Lanka (UTC+5:30)',
-        'Asia/Singapore' => 'Singapore (UTC+8)',
-        'Asia/Kuala_Lumpur' => 'Malaysia (UTC+8)',
-        'Asia/Jakarta' => 'Indonesia (UTC+7)',
-        'Asia/Manila' => 'Philippines (UTC+8)',
-        'Asia/Hong_Kong' => 'Hong Kong (UTC+8)',
-        'Asia/Shanghai' => 'China (UTC+8)',
-        'Asia/Tokyo' => 'Japan (UTC+9)',
-        'Asia/Seoul' => 'South Korea (UTC+9)',
-        'Australia/Sydney' => 'Australia (Sydney)',
-        'Europe/London' => 'United Kingdom (UTC+0)',
-        'Europe/Paris' => 'Central Europe (UTC+1)',
-        'Europe/Berlin' => 'Germany (UTC+1)',
-        'Europe/Moscow' => 'Moscow (UTC+3)',
-        'Africa/Cairo' => 'Egypt (UTC+2)',
-        'Africa/Lagos' => 'Nigeria (UTC+1)',
-        'Africa/Nairobi' => 'Kenya (UTC+3)',
-        'America/New_York' => 'US East (UTC-5)',
-        'America/Chicago' => 'US Central (UTC-6)',
-        'America/Denver' => 'US Mountain (UTC-7)',
-        'America/Los_Angeles' => 'US West (UTC-8)',
-        'America/Sao_Paulo' => 'Brazil (UTC-3)',
-        'UTC' => 'UTC',
-    ],
-
     'languages' => [
-        'English', 'Hindi', 'Tamil', 'Telugu', 'Malayalam', 'Kannada',
-        'Marathi', 'Bengali', 'Gujarati', 'Punjabi', 'Urdu', 'Arabic',
-        'Spanish', 'French', 'German', 'Mandarin',
+        'Sinhala', 'English', 'Tamil',
     ],
 
     'verification_document_types' => [

@@ -24,7 +24,7 @@ class AdminCsvExporter
     /** @var list<string> */
     public const TYPES = ['bookings', 'payments', 'refunds', 'payouts', 'teachers'];
 
-    private string $timezone = 'Asia/Kolkata';
+    private string $timezone = 'Asia/Colombo';
 
     public function download(string $type, CarbonInterface $from, CarbonInterface $to): StreamedResponse
     {
@@ -57,7 +57,7 @@ class AdminCsvExporter
     private function headers(string $type): array
     {
         return match ($type) {
-            'bookings' => ['Reference', 'Status', 'Starts at', 'Student', 'Teacher', 'Subject', 'Topic', 'Price', 'Platform fee', 'Teacher payout', 'Currency', 'Payment status', 'Created at'],
+            'bookings' => ['Reference', 'Status', 'Starts at', 'Student', 'Teacher', 'Subject', 'Topic', 'Price', 'Platform fee', 'Teacher payout', 'Booking fee', 'Fee discount', 'Currency', 'Payment status', 'Created at'],
             'payments' => ['Payment', 'Gateway', 'Order id', 'Status', 'Amount', 'Refunded', 'Currency', 'Method', 'Captured at', 'Student', 'Booking'],
             'refunds' => ['Refund', 'Booking', 'Payment', 'Amount', 'Percent', 'Initiated by', 'Reason', 'Status', 'Created at'],
             'payouts' => ['Reference', 'Teacher', 'Lessons', 'Amount', 'Currency', 'Status', 'Paid at', 'Notes'],
@@ -98,6 +98,8 @@ class AdminCsvExporter
                 $this->money($booking->price_minor),
                 $this->money($booking->platform_fee_minor),
                 $this->money($booking->teacher_payout_minor),
+                $this->money($booking->netBookingFeeMinor()),
+                $this->money($booking->booking_fee_discount_minor),
                 $booking->currency,
                 $booking->payment?->status->label(),
                 $this->date($booking->created_at),

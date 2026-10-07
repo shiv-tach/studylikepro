@@ -16,9 +16,21 @@
     </x-slot>
 
     <div class="mx-auto max-w-3xl space-y-6">
-        @if (session('status') === 'document-uploaded')
+        @if (session('status') === 'profile-completed')
             <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                Document uploaded.
+                Step 1 complete — your teaching profile is saved. Upload your documents below, then submit them for review.
+            </div>
+        @elseif (session('status') === 'complete-your-verification')
+            <div class="rounded-2xl border border-amber-200/80 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+                Finish your verification to unlock your dashboard and the rest of the teacher area.
+            </div>
+        @elseif (session('status') === 'document-uploaded')
+            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                @if ($hasIdProof)
+                    Document uploaded. Your documents are ready — submit your application below.
+                @else
+                    Document uploaded. Upload your government ID to unlock submission.
+                @endif
             </div>
         @elseif (session('status') === 'document-removed')
             <div class="rounded-2xl border border-slate-200/80 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800/80 dark:bg-slate-900/60 dark:text-slate-300">
@@ -34,7 +46,7 @@
             </div>
         @endif
 
-        <x-input-error :messages="$errors->get('document')" class="mt-2" />
+        <x-teacher-onboarding-steps :current="2" />
 
         <!-- Status overview -->
         <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
@@ -64,6 +76,27 @@
                 </p>
             @endif
         </div>
+
+        @if ($status->isSubmitted())
+            <!-- Step 2 is done: the rest of the teacher area is unlocked. -->
+            <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-start gap-3">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-xl dark:bg-emerald-900/30">✅</span>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">Onboarding complete</h3>
+                            <p class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                                You can use your dashboard while our team reviews your application, or update your documents if we ask for changes.
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{{ route('teacher.dashboard') }}" class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all duration-200 hover:bg-primary/90 hover:shadow-lg active:scale-[0.98]">
+                        {{ __('Go to dashboard') }}
+                        <span aria-hidden="true">→</span>
+                    </a>
+                </div>
+            </div>
+        @endif
 
         <!-- Documents -->
         <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
@@ -106,10 +139,18 @@
         </div>
 
         @if ($canEditDocuments)
-            <!-- Upload -->
-            <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-                <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Upload a document</h3>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">PDF, JPG, PNG or WebP — up to 5 MB. A government ID is required to submit.</p>
+            <!-- Step 1: uploads save immediately; nothing is sent to the team until the teacher submits below. -->
+            <div id="upload-documents" class="{{ $cardBase }} scroll-mt-24" :class="{{ $cardTheme }}">
+                <div class="flex items-start gap-3">
+                    <span aria-hidden="true" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-300">1</span>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Upload your documents</h3>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            PDF, JPG, PNG or WebP — up to 5 MB. A government ID is required to submit.
+                            Files are saved as a draft right away — your application is only sent to our team when you submit it below.
+                        </p>
+                    </div>
+                </div>
 
                 <form method="POST" action="{{ route('teacher.verification.documents.store') }}" enctype="multipart/form-data" class="mt-5 space-y-5">
                     @csrf
@@ -129,45 +170,69 @@
                             <x-input-label for="document" :value="__('File')" />
                             <input id="document" name="document" type="file" accept="application/pdf,image/jpeg,image/png,image/webp"
                                    class="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:rounded-xl file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/20 dark:text-slate-400" />
+                            <x-input-error :messages="$errors->get('document')" class="mt-2" />
                         </div>
                     </div>
 
                     <div class="flex justify-end">
-                        <x-primary-button>{{ __('Upload document') }}</x-primary-button>
+                        <x-secondary-button type="submit">{{ __('Upload document') }}</x-secondary-button>
                     </div>
                 </form>
             </div>
 
-            <!-- Submit for review -->
-            <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-                <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Submit for review</h3>
+            <!-- Step 2: the final, locking action — visually distinct from uploading. -->
+            <div class="{{ $cardBase }}" :class="{{ $cardTheme }}" x-data="{ agree: {{ old('agree') ? 'true' : 'false' }} }">
+                <div class="flex items-start gap-3">
+                    <span aria-hidden="true" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">2</span>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Submit for review</h3>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            Nothing reaches our team until you submit below. After that your documents are locked while we review — usually 1–2 business days.
+                        </p>
+                    </div>
+                </div>
 
-                <ul class="mt-4 space-y-3 text-sm">
+                <ul class="mt-5 space-y-3 text-sm">
                     <li class="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                        <svg class="h-5 w-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="h-5 w-5 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         Teaching profile completed
                     </li>
-                    <li class="flex items-center gap-2 {{ $hasIdProof ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' }}">
+                    <li class="flex items-center gap-2 {{ $hasIdProof ? 'text-slate-600 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400' }}">
                         @if ($hasIdProof)
-                            <svg class="h-5 w-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="h-5 w-5 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         @else
-                            <svg class="h-5 w-5 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="h-5 w-5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         @endif
-                        Government ID uploaded
+                        <span class="flex flex-wrap items-center gap-x-2">
+                            {{ $hasIdProof ? __('Government ID uploaded') : __('Government ID required') }}
+                            @unless ($hasIdProof)
+                                <a href="#upload-documents" class="font-semibold text-primary hover:underline">{{ __('Upload now') }}</a>
+                            @endunless
+                        </span>
+                    </li>
+                    <li class="flex items-center gap-2" :class="agree ? 'text-slate-600 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400'">
+                        <svg x-show="agree" x-cloak class="h-5 w-5 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <svg x-show="! agree" x-cloak class="h-5 w-5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Terms and policies accepted
                     </li>
                 </ul>
 
-                <form method="POST" action="{{ route('teacher.verification.submit') }}" class="mt-5 space-y-4">
+                <form method="POST" action="{{ route('teacher.verification.submit') }}" class="mt-5 space-y-4"
+                      x-on:submit.prevent="$dispatch('open-modal', 'confirm-verification-submit')">
                     @csrf
 
                     <label class="flex items-start gap-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-800/40 dark:text-slate-300">
-                        <input type="checkbox" name="agree" value="1" required @checked(old('agree'))
+                        <input type="checkbox" name="agree" value="1" required x-model="agree" @checked(old('agree'))
                                class="mt-0.5 rounded border-slate-300 text-primary shadow-sm focus:ring-primary dark:border-slate-600 dark:bg-slate-900">
                         <span>
                             {{ __('I have read and accept the') }}
@@ -181,10 +246,38 @@
                         <p class="text-xs text-rose-500">{{ $message }}</p>
                     @enderror
 
-                    <div class="flex items-center justify-end">
-                        <x-primary-button>{{ __('Submit for review') }}</x-primary-button>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div id="submit-requirements" class="space-y-1 text-xs">
+                            @unless ($hasIdProof)
+                                <p class="text-amber-600 dark:text-amber-400">{{ __('Upload your government ID above to enable submission.') }}</p>
+                            @endunless
+                            <p x-show="! agree && {{ $hasIdProof ? 'true' : 'false' }}" x-cloak class="text-slate-400 dark:text-slate-500">{{ __('Tick the terms box to enable submission.') }}</p>
+                            <p x-show="agree && {{ $hasIdProof ? 'true' : 'false' }}" x-cloak class="text-emerald-600 dark:text-emerald-400">{{ __('All requirements met — you can submit now.') }}</p>
+                        </div>
+                        <x-primary-button x-bind:disabled="{{ $hasIdProof ? '! agree' : 'true' }}" aria-describedby="submit-requirements"
+                                          class="shrink-0 disabled:cursor-not-allowed disabled:opacity-50">
+                            {{ __('Submit for review') }}
+                        </x-primary-button>
                     </div>
                 </form>
+
+                <!-- Deliberate confirmation for the final, locking action. -->
+                <x-modal name="confirm-verification-submit" focusable>
+                    <form method="POST" action="{{ route('teacher.verification.submit') }}" class="p-6">
+                        @csrf
+                        <input type="hidden" name="agree" :value="agree ? '1' : ''">
+
+                        <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ __('Submit your application for review?') }}</h2>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            {{ __('Your documents will be locked while our team reviews them, so please make sure they are clear and correct first. Reviews usually take 1–2 business days and you will be notified once your profile is approved.') }}
+                        </p>
+
+                        <div class="mt-6 flex justify-end gap-3">
+                            <x-secondary-button x-on:click="$dispatch('close')">{{ __('Not yet') }}</x-secondary-button>
+                            <x-primary-button>{{ __('Yes, submit for review') }}</x-primary-button>
+                        </div>
+                    </form>
+                </x-modal>
             </div>
         @endif
     </div>

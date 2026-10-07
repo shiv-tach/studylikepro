@@ -19,6 +19,8 @@ class PlatformSetting extends Model
     {
         return match ($this->type) {
             'int' => $this->value === null ? null : (int) $this->value,
+            // Money settings are stored in minor units, like every other amount.
+            'money' => $this->value === null ? null : (int) $this->value,
             'float' => $this->value === null ? null : (float) $this->value,
             'bool' => filter_var($this->value, FILTER_VALIDATE_BOOL),
             default => $this->value,

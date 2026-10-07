@@ -7,9 +7,9 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Runtime-tunable marketplace settings (commission, hold TTL, refund policy)
- * stored in `platform_settings`, falling back to the values in config when a
- * row has not been seeded yet.
+ * Runtime-tunable marketplace settings (commission, booking fee, hold TTL,
+ * refund policy) stored in `platform_settings`, falling back to the values in
+ * config when a row has not been seeded yet.
  */
 class PlatformSettings
 {
@@ -29,6 +29,13 @@ class PlatformSettings
                 'group' => 'money',
                 'label' => 'Platform commission (%)',
                 'description' => 'Withheld from every lesson payment before the teacher payout.',
+            ],
+            'booking_fee_minor' => [
+                'default' => (int) config('studylikepro.booking_fee_minor'),
+                'type' => 'money',
+                'group' => 'money',
+                'label' => 'Student booking fee',
+                'description' => 'Charged to the student on top of the lesson price at checkout. Running special offers can discount or waive it — set 0 to drop it entirely.',
             ],
             'currency' => [
                 'default' => (string) config('studylikepro.currency'),

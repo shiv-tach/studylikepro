@@ -47,7 +47,6 @@ it('rate limits uploads', function () {
 
     $update = fn () => $this->actingAs($student)->put(route('student.profile.update'), [
         'grade_level' => 'high_school',
-        'timezone' => 'Asia/Kolkata',
         'avatar' => UploadedFile::fake()->image('avatar.jpg', 200, 200),
     ]);
 

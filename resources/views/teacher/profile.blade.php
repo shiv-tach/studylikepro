@@ -3,7 +3,6 @@
     $profile = $profile ?? null;
     $cardBase = 'rounded-2xl border p-6';
     $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
-    $selectClasses = 'mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900';
     $textareaClasses = 'mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900';
 @endphp
 <x-app-layout>
@@ -31,6 +30,8 @@
             </div>
         @endif
 
+        <x-teacher-onboarding-steps :current="1" />
+
         @unless ($profile?->isComplete())
             <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
                 <div class="flex items-start gap-3">
@@ -44,6 +45,26 @@
                 </div>
             </div>
         @endunless
+
+        @if ($profile?->isComplete() && ! $profile->hasSubmittedVerification())
+            <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-start gap-3">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xl">🪪</span>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">Step 1 complete — next: verification</h3>
+                            <p class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                                Upload your documents and submit them for review to unlock your dashboard.
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{{ route('teacher.verification') }}" class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all duration-200 hover:bg-primary/90 hover:shadow-lg active:scale-[0.98]">
+                        {{ __('Continue to verification') }}
+                        <span aria-hidden="true">→</span>
+                    </a>
+                </div>
+            </div>
+        @endif
 
         <form method="POST" action="{{ route('teacher.profile.update') }}" enctype="multipart/form-data" class="space-y-6">
             @csrf
@@ -99,28 +120,16 @@
                     <x-input-error :messages="$errors->get('languages')" class="mt-2" />
                 </div>
 
-                <div class="mt-5 grid gap-5 sm:grid-cols-2">
-                    <div>
-                        <x-input-label for="timezone" :value="__('Timezone')" />
-                        <select id="timezone" name="timezone" class="{{ $selectClasses }}">
-                            @foreach (config('studylikepro.timezones') as $value => $label)
-                                <option value="{{ $value }}" @selected(old('timezone', $profile?->timezone ?? 'Asia/Kolkata') === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        <x-input-error :messages="$errors->get('timezone')" class="mt-2" />
+                <div class="mt-5">
+                    <x-input-label for="hourly_rate" :value="__('Hourly rate')" />
+                    <div class="relative mt-1">
+                        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-slate-400">{{ platform_settings()->currencySymbol() }}</span>
+                        <input id="hourly_rate" name="hourly_rate" type="number" min="100" max="100000" step="1"
+                               class="block w-full rounded-xl border-slate-300 bg-white pl-8 text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900"
+                               value="{{ old('hourly_rate', $profile ? (int) $profile->hourlyRate() : '') }}" />
                     </div>
-
-                    <div>
-                        <x-input-label for="hourly_rate" :value="__('Hourly rate')" />
-                        <div class="relative mt-1">
-                            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-slate-400">{{ platform_settings()->currencySymbol() }}</span>
-                            <input id="hourly_rate" name="hourly_rate" type="number" min="100" max="100000" step="1"
-                                   class="block w-full rounded-xl border-slate-300 bg-white pl-8 text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900"
-                                   value="{{ old('hourly_rate', $profile ? (int) $profile->hourlyRate() : '') }}" />
-                        </div>
-                        <p class="mt-1 text-xs text-slate-400">Students see this per 60-minute lesson before commission.</p>
-                        <x-input-error :messages="$errors->get('hourly_rate')" class="mt-2" />
-                    </div>
+                    <p class="mt-1 text-xs text-slate-400">Students see this per 60-minute lesson before commission.</p>
+                    <x-input-error :messages="$errors->get('hourly_rate')" class="mt-2" />
                 </div>
             </div>
 

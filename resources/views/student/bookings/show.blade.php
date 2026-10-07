@@ -105,10 +105,16 @@
                         </div>
                     </div>
                     <div class="text-right">
-                        <p class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ $money($booking->price_minor) }}</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            {{ __('Lesson :price', ['price' => $money($booking->price_minor)]) }}
+                            @if ($booking->booking_fee_minor > 0)
+                                · {{ __('booking fee :fee', ['fee' => $money($booking->netBookingFeeMinor())]) }}
+                            @endif
+                        </p>
+                        <p class="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">{{ $money($booking->totalMinor()) }}</p>
                         <form method="POST" action="{{ route('student.bookings.checkout', $booking) }}" class="mt-2">
                             @csrf
-                            <x-primary-button>{{ __('Pay :amount', ['amount' => $money($booking->price_minor)]) }}</x-primary-button>
+                            <x-primary-button>{{ __('Pay :amount', ['amount' => $money($booking->totalMinor())]) }}</x-primary-button>
                         </form>
                         <p class="mt-2 text-[11px] text-amber-700 dark:text-amber-400">
                             {{ __('Secure checkout · the slot stays yours until :time', ['time' => $booking->expires_at?->copy()->setTimezone($timezone)->format('H:i') ?? __('you pay')]) }}
@@ -196,8 +202,33 @@
                 <span class="text-sm font-semibold text-slate-600 dark:text-slate-300">
                     {{ $booking->status === BookingStatus::Completed ? __('Paid') : __('Lesson total') }}
                 </span>
-                <span class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{{ $money($booking->price_minor) }}</span>
+                <span class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{{ $money($booking->totalMinor()) }}</span>
             </div>
+
+            @if ($booking->booking_fee_minor > 0)
+                <dl class="mt-3 space-y-1 border-t border-slate-200 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                    <div class="flex items-center justify-between gap-3">
+                        <dt>{{ __('Lesson') }}</dt>
+                        <dd>{{ $money($booking->price_minor) }}</dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <dt>
+                            {{ __('Platform booking fee') }}
+                            @if ($booking->bookingFeePromotion)
+                                <span class="text-emerald-600 dark:text-emerald-400">· {{ $booking->bookingFeePromotion->name }}</span>
+                            @endif
+                        </dt>
+                        <dd class="{{ $booking->hasBookingFeeDiscount() ? 'text-emerald-600 dark:text-emerald-400' : '' }}">
+                            @if ($booking->hasBookingFeeDiscount())
+                                {{ $money($booking->netBookingFeeMinor()) }}
+                                <span class="ml-1 text-slate-400 line-through">{{ $money($booking->booking_fee_minor) }}</span>
+                            @else
+                                {{ $money($booking->booking_fee_minor) }}
+                            @endif
+                        </dd>
+                    </div>
+                </dl>
+            @endif
 
             @if ($payment)
                 <dl class="mt-4 space-y-2 border-t border-slate-200 pt-4 text-sm dark:border-slate-800">

@@ -179,6 +179,21 @@ class TeacherProfile extends Model
         return $this->completed_at !== null;
     }
 
+    public function hasSubmittedVerification(): bool
+    {
+        // Null only for an in-memory profile that has not been reloaded yet,
+        // e.g. straight after firstOrNew() in the onboarding controller.
+        return (bool) $this->verification_status?->isSubmitted();
+    }
+
+    /**
+     * Both onboarding steps are done: profile saved and documents submitted.
+     */
+    public function hasCompletedOnboarding(): bool
+    {
+        return $this->isComplete() && $this->hasSubmittedVerification();
+    }
+
     public function isApproved(): bool
     {
         return $this->verification_status === VerificationStatus::Approved;

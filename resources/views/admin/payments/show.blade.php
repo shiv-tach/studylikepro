@@ -92,7 +92,13 @@
                         </p>
                         <p class="text-xs text-slate-500 dark:text-slate-400">{{ $booking->starts_at->copy()->setTimezone($timezone)->format('d M Y, H:i') }}</p>
                         <p class="mt-2 text-xs text-slate-400">
-                            {{ __('Fee :fee · payout :payout', [
+                            {{ __('Lesson :price · booking fee :booking_fee', [
+                                'price' => $money($booking->price_minor),
+                                'booking_fee' => $money($booking->netBookingFeeMinor()),
+                            ]) }}
+                        </p>
+                        <p class="text-xs text-slate-400">
+                            {{ __('Commission :fee · payout :payout', [
                                 'fee' => $money($booking->platform_fee_minor),
                                 'payout' => $money($booking->teacher_payout_minor),
                             ]) }}

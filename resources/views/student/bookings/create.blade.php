@@ -5,6 +5,9 @@
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);
     $gradeLevels = config('studylikepro.grade_levels');
     $ratePerHour = $teacher->effectiveRateFor($subject);
+    $feeGross = $bookingFee['booking_fee_minor'];
+    $feeNet = $bookingFee['net_minor'];
+    $totalMinor = $priceMinor + $feeNet;
 @endphp
 
 <x-app-layout>
@@ -123,7 +126,8 @@
 
                     <div class="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-6 dark:border-slate-800">
                         <p class="text-sm text-slate-500 dark:text-slate-400">
-                            {{ __('Total') }} <span class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ $money($priceMinor) }}</span>
+                            {{ __('Total') }} <span class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ $money($totalMinor) }}</span>
+                            <span class="ml-1 text-xs text-slate-400">{{ __('includes the :amount booking fee', ['amount' => $money($feeNet)]) }}</span>
                         </p>
                         <x-primary-button :disabled="$slotsByDate === []">
                             {{ __('Reserve this slot') }}
@@ -153,11 +157,32 @@
                             <span class="text-slate-500 dark:text-slate-400">{{ __('Rate') }}</span>
                             <span class="font-semibold text-slate-800 dark:text-slate-100">{{ $money($ratePerHour) }}/{{ __('hour') }}</span>
                         </div>
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="text-slate-500 dark:text-slate-400">{{ __('Lesson :minutes min', ['minutes' => $duration]) }}</span>
+                            <span class="font-semibold text-slate-800 dark:text-slate-100">{{ $money($priceMinor) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="text-slate-500 dark:text-slate-400">{{ __('Booking fee') }}</span>
+                            <span class="font-semibold {{ $feeNet < $feeGross ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100' }}">
+                                @if ($feeNet === 0 && $feeGross > 0)
+                                    {{ __('Free') }} <span class="text-xs font-normal text-slate-400 line-through">{{ $money($feeGross) }}</span>
+                                @elseif ($feeNet < $feeGross)
+                                    {{ $money($feeNet) }} <span class="text-xs font-normal text-slate-400 line-through">{{ $money($feeGross) }}</span>
+                                @else
+                                    {{ $money($feeNet) }}
+                                @endif
+                            </span>
+                        </div>
                     </div>
                     <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
                         <span class="text-sm font-semibold text-slate-600 dark:text-slate-300">{{ __('You pay') }}</span>
-                        <span class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{{ $money($priceMinor) }}</span>
+                        <span class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{{ $money($totalMinor) }}</span>
                     </div>
+                    @if ($bookingFee['promotion'])
+                        <p class="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                            {{ __(':offer — the booking fee is discounted at checkout.', ['offer' => $bookingFee['promotion']->name]) }}
+                        </p>
+                    @endif
                     <p class="mt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                         {{ __('Cancellation is free up to :hours hours before the lesson starts.', ['hours' => platform_settings()->int('student_cancel_window_hours')]) }}
                     </p>

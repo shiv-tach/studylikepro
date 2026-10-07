@@ -61,7 +61,7 @@ it('filters teachers by grade level and language', function () {
     $college = User::factory()->teacher()->create(['name' => 'College Tutor']);
     $collegeProfile = TeacherProfile::factory()->approved()->create([
         'user_id' => $college->id,
-        'languages' => ['Hindi'],
+        'languages' => ['Tamil'],
     ]);
     $collegeProfile->subjects()->attach($maths->id, ['grade_levels' => ['college']]);
 
@@ -70,7 +70,7 @@ it('filters teachers by grade level and language', function () {
         ->assertSee('High School Tutor')
         ->assertDontSee('College Tutor');
 
-    $this->get(route('teachers.index', ['language' => 'Hindi']))
+    $this->get(route('teachers.index', ['language' => 'Tamil']))
         ->assertOk()
         ->assertSee('College Tutor')
         ->assertDontSee('High School Tutor');
@@ -155,8 +155,8 @@ it('shows an approved teacher profile with rates and availability', function () 
     $profile = approvedTeacher('Priya Verma', [
         'headline' => 'CBSE Mathematics specialist',
         'hourly_rate_minor' => 70000,
-        'languages' => ['English', 'Hindi'],
-        'timezone' => 'Asia/Kolkata',
+        'languages' => ['English', 'Sinhala'],
+        'timezone' => 'Asia/Colombo',
     ]);
     $profile->subjects()->attach($maths->id, ['grade_levels' => ['high_school'], 'rate_per_hour_minor' => 80000]);
     TeacherAvailabilitySlot::factory()->on(1, '18:00', '20:00')->create(['teacher_profile_id' => $profile->id]);
@@ -168,7 +168,7 @@ it('shows an approved teacher profile with rates and availability', function () 
         ->assertSee('CBSE Mathematics specialist')
         ->assertSee(platform_settings()->formatMinor(80000))
         ->assertSee('High school')
-        ->assertSee('Your time (Asia/Kolkata)')
+        ->assertSee('Your time (Asia/Colombo)')
         ->assertSee('18:00');
 });
 

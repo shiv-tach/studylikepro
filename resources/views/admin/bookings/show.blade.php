@@ -120,6 +120,27 @@
                         <dt class="text-slate-500 dark:text-slate-400">{{ __('Teacher payout') }}</dt>
                         <dd class="text-slate-700 dark:text-slate-200">{{ $money($booking->teacher_payout_minor) }}</dd>
                     </div>
+                    @if ($booking->booking_fee_minor > 0)
+                        <div class="flex items-center justify-between">
+                            <dt class="text-slate-500 dark:text-slate-400">{{ __('Student booking fee') }}</dt>
+                            <dd class="text-slate-700 dark:text-slate-200">{{ $money($booking->booking_fee_minor) }}</dd>
+                        </div>
+                        @if ($booking->hasBookingFeeDiscount())
+                            <div class="flex items-center justify-between">
+                                <dt class="text-slate-500 dark:text-slate-400">
+                                    {{ __('Special offer') }}
+                                    @if ($booking->bookingFeePromotion)
+                                        <span class="text-emerald-600 dark:text-emerald-400">· {{ $booking->bookingFeePromotion->name }}</span>
+                                    @endif
+                                </dt>
+                                <dd class="font-semibold text-emerald-600 dark:text-emerald-400">−{{ $money($booking->booking_fee_discount_minor) }}</dd>
+                            </div>
+                        @endif
+                        <div class="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
+                            <dt class="font-semibold text-slate-600 dark:text-slate-300">{{ __('Student pays') }}</dt>
+                            <dd class="font-bold text-slate-900 dark:text-slate-100">{{ $money($booking->totalMinor()) }}</dd>
+                        </div>
+                    @endif
                 </dl>
 
                 @if ($payment)

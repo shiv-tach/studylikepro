@@ -47,7 +47,7 @@ it('creates an open request, converts windows to utc, and queues classification'
 
     [$start, $end] = $request->windows()[0];
 
-    // 18:00–20:00 in the student's Asia/Kolkata timezone is 12:30–14:30 UTC.
+    // 18:00–20:00 in the student's Asia/Colombo timezone is 12:30–14:30 UTC.
     expect($start->format('H:i'))->toBe('12:30')
         ->and($end->format('H:i'))->toBe('14:30');
 

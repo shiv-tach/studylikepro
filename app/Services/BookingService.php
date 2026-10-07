@@ -23,6 +23,7 @@ class BookingService
     public function __construct(
         private readonly SlotService $slots,
         private readonly PlatformSettings $settings,
+        private readonly BookingFeeService $fees,
     ) {}
 
     /**
@@ -132,6 +133,10 @@ class BookingService
 
             $price = $draft->priceMinor ?? $this->priceMinor($draft->teacher, $draft->subject, $duration);
 
+            // The student-facing fee is snapshotted here, together with the
+            // special offer that shaped it, so checkout never re-prices a hold.
+            $fee = $this->fees->quote();
+
             return Booking::query()->create([
                 'student_id' => $draft->student->id,
                 'teacher_profile_id' => $draft->teacher->id,
@@ -147,6 +152,9 @@ class BookingService
                 'learner_grade' => $draft->learnerGrade,
                 'expires_at' => now()->addMinutes($this->settings->int('hold_ttl_minutes')),
                 ...$this->feeBreakdown($price),
+                'booking_fee_minor' => $fee['booking_fee_minor'],
+                'booking_fee_discount_minor' => $fee['discount_minor'],
+                'booking_fee_promotion_id' => $fee['promotion']?->id,
             ]);
         });
 

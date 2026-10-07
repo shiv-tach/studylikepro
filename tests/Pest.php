@@ -3,12 +3,17 @@
 use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Models\Subject;
+use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherEarning;
+use App\Models\TeacherInvite;
 use App\Models\TeacherProfile;
 use App\Models\User;
 use App\Services\BookingService;
 use App\Services\Meetings\MeetingService;
 use App\Services\Payments\EarningsService;
+use App\Support\BookingDraft;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -56,6 +61,28 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Create a usable teacher onboarding invite and return the plaintext token.
+ *
+ * @return array{0: TeacherInvite, 1: string}
+ */
+function makeTeacherInvite(?int $expiresInDays = 7): array
+{
+    return TeacherInvite::createWithToken($expiresInDays, null);
+}
+
+/**
+ * A teacher who finished step 1 only: the profile is complete but the verification
+ * documents have not been submitted, so the teacher area stays locked.
+ */
+function onboardingTeacher(): User
+{
+    $user = User::factory()->teacher()->create();
+    TeacherProfile::factory()->for($user)->create();
+
+    return $user;
 }
 
 /**
@@ -141,4 +168,54 @@ function classroomScenario(int $minutesFromNow = 5, int $durationMinutes = 45, a
     }
 
     return compact('student', 'teacherUser', 'teacher', 'booking');
+}
+
+/**
+ * An approved maths teacher with an evening window two days out and an onboarded
+ * student, ready to reserve a slot at Rs 600 per hour. Used by the booking-fee
+ * suites, which care about the student-facing platform fee.
+ *
+ * @return array{subject: Subject, teacher: TeacherProfile, teacherUser: User, student: User, day: CarbonImmutable, slot: CarbonImmutable}
+ */
+function bookingFeeScenario(): array
+{
+    $subject = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'mathematics']);
+    $teacherUser = User::factory()->teacher()->create();
+    $teacher = TeacherProfile::factory()->approved()->create([
+        'user_id' => $teacherUser->id,
+        'timezone' => 'UTC',
+        'hourly_rate_minor' => 60000,
+        'lesson_duration_minutes' => 60,
+    ]);
+    $teacher->subjects()->attach($subject->id, ['grade_levels' => ['high_school']]);
+
+    $day = CarbonImmutable::now('UTC')->addDays(2)->startOfDay();
+    TeacherAvailabilitySlot::factory()
+        ->on($day->dayOfWeek, '18:00', '21:00')
+        ->create(['teacher_profile_id' => $teacher->id]);
+
+    return [
+        'subject' => $subject,
+        'teacher' => $teacher,
+        'teacherUser' => $teacherUser,
+        'student' => User::factory()->student()->onboarded()->create(),
+        'day' => $day,
+        'slot' => $day->setTime(18, 0),
+    ];
+}
+
+/**
+ * Reserve a slot of the booking-fee scenario as a pending-payment hold.
+ *
+ * @param  array{student: User, teacher: TeacherProfile, subject: Subject, day: CarbonImmutable}  $scenario
+ */
+function reserveFeeBooking(array $scenario, int $hour = 18): Booking
+{
+    return app(BookingService::class)->reserve(new BookingDraft(
+        student: $scenario['student'],
+        teacher: $scenario['teacher'],
+        startsAt: $scenario['day']->setTime($hour, 0),
+        endsAt: $scenario['day']->setTime($hour + 1, 0),
+        subject: $scenario['subject'],
+    ));
 }

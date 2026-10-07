@@ -121,7 +121,8 @@ V1 assumptions to confirm (see Section 5): single market, single currency, Engli
 | `teacher_availability_slots` | weekly recurring ranges (day of week, start, end) |
 | `teacher_time_off` | date ranges excluded from availability |
 | `tutoring_requests` + `request_attachments` + `request_responses` | student question, AI classification, teacher accept/reject |
-| `bookings` | student, teacher, subject/topic, UTC start/end, status, price/commission snapshot, learner name/grade, meeting fields, cancellation fields |
+| `bookings` | student, teacher, subject/topic, UTC start/end, status, price/commission/booking-fee snapshot, learner name/grade, meeting fields, cancellation fields |
+| `booking_fee_promotions` | admin special offers that waive or discount the student booking fee for a window |
 | `payments` / `refunds` | gateway ids, amounts, statuses, idempotency keys |
 | `teacher_earnings` + `payouts` | ledger entries per completed booking; manual payout batches |
 | `conversations` + `messages` | one thread per booking; text/image/system messages |
@@ -149,7 +150,8 @@ Rules:
 
 - On payment capture: `platform_fee = round(price × commission%)`, `teacher_payout = price − platform_fee`; commission % is snapshotted onto the booking.
 - Default commission: 15% (editable in admin, P10).
-- Refund defaults: teacher cancellation → 100%; student cancellation ≥ 24 h before start → 100%; inside window → no automatic refund (admin can override via dispute).
+- Student booking fee: `booking_fee_minor` (default Rs 100, editable in admin, P10) is added to the lesson price at checkout and snapshotted onto the booking with any discount. Admin **special offers** (`booking_fee_promotions`) waive or discount the fee for a set window — evaluated when the slot is reserved, most generous offer wins. The fee is platform revenue: the teacher payout is untouched.
+- Refund defaults: teacher cancellation → 100%; student cancellation ≥ 24 h before start → 100%; inside window → no automatic refund (admin can override via dispute). Refund percentages apply to the full captured amount, booking fee included.
 - Teacher payouts are manual in V1: admin marks a batch as paid (P10); the ledger is automated.
 
 ### 4.6 External integrations (all behind contracts)
@@ -371,7 +373,7 @@ Each has a locked recommendation so implementation can proceed; changing a recom
 
 **DoD:** against Razorpay test mode, a booking can be paid, confirmed, refunded, and both sides see correct money.
 
-**Status (shipped):** ✅ money schema (`payments`, `refunds`, `teacher_earnings` ledger, `payouts`, `platform_settings`, `payment_webhook_events`); `PaymentGateway` contract with a `RazorpayGateway` (orders, payment fetch, refunds, HMAC webhook verification, hosted checkout payload) and an offline `FakePaymentGateway` selected by `PAYMENTS_GATEWAY`; checkout page (provider widget in production, signed-webhook demo panel locally), CSRF-exempt `POST /webhooks/payments/{gateway}` that verifies the signature over the exact payload and stores each event id once, plus a return-URL/browser-return path and `payments:reconcile` for stuck orders; capture → booking confirmed → earning row created `pending` → `eligible` on delivery; commission arithmetic in integer minor units with the `fee + payout = price` invariant tested across a range of prices and snapshotted onto the booking; refund engine driven by `platform_settings` (teacher cancel 100%, student outside the window 100%, admin override with 25/50/75/100 presets) that reverses the matching share of the teacher's earning; teacher Earnings page (available / pending / paid, full ledger with reversals, payout history); printable student receipt with refund lines; admin Payments console (totals, filters, refunds), Payouts console (batch available earnings, mark paid with a transfer reference) and a Settings page for commission, hold TTL, cancellation window, refund percentages and policy copy. **Razorpay test-mode verification still needs live sandbox keys** — the gateway itself is covered by HTTP-faked tests, and the full flow runs offline through the fake gateway.
+**Status (shipped):** ✅ money schema (`payments`, `refunds`, `teacher_earnings` ledger, `payouts`, `platform_settings`, `payment_webhook_events`); `PaymentGateway` contract with a `RazorpayGateway` (orders, payment fetch, refunds, HMAC webhook verification, hosted checkout payload) and an offline `FakePaymentGateway` selected by `PAYMENTS_GATEWAY`; checkout page (provider widget in production, signed-webhook demo panel locally), CSRF-exempt `POST /webhooks/payments/{gateway}` that verifies the signature over the exact payload and stores each event id once, plus a return-URL/browser-return path and `payments:reconcile` for stuck orders; capture → booking confirmed → earning row created `pending` → `eligible` on delivery; commission arithmetic in integer minor units with the `fee + payout = price` invariant tested across a range of prices and snapshotted onto the booking; a student-facing platform booking fee (default Rs 100, editable in admin settings) added to every checkout total, snapshotted onto the hold with any special-offer discount and shown on the booking, checkout, receipt and admin pages; refund engine driven by `platform_settings` (teacher cancel 100%, student outside the window 100%, admin override with 25/50/75/100 presets) that reverses the matching share of the teacher's earning; teacher Earnings page (available / pending / paid, full ledger with reversals, payout history); printable student receipt with booking-fee and refund lines; admin Payments console (totals, filters, refunds), Payouts console (batch available earnings, mark paid with a transfer reference) and a Settings page for commission, booking fee, hold TTL, cancellation window, refund percentages and policy copy. **Razorpay test-mode verification still needs live sandbox keys** — the gateway itself is covered by HTTP-faked tests, and the full flow runs offline through the fake gateway.
 
 ---
 
@@ -448,7 +450,7 @@ Each has a locked recommendation so implementation can proceed; changing a recom
 3. **Payments:** transaction list + filters, detail, full/partial refunds, refund history, CSV export.
 4. **Payouts:** group eligible earnings by teacher, create payout batch, mark paid with reference + note, email receipt.
 5. **Disputes:** parties open from booking/chat (reason, description, evidence); admin queue → detail (booking, payments, chat, evidence) → resolutions (refund full/partial, dismiss, warn/suspend) → notify + audit.
-6. **Commission & settings:** edit commission %, currency, cancellation window, hold TTL, AI confidence threshold, policy text — with validation + audit log.
+6. **Commission & settings:** edit commission %, currency, booking fee, cancellation window, hold TTL, AI confidence threshold, policy text — with validation + audit log.
 7. **Reports:** KPIs (revenue, commission, bookings by status, new users, active teachers), 30-day trends, exportable tables (bookings, payments, refunds, payouts, teacher performance), date-range filter.
 8. **Moderation queues:** flagged reviews, verification resubmissions.
 9. **Audit log:** every admin action recorded (`activity_log`) and filterable.

@@ -18,7 +18,7 @@ class StudentProfileFactory extends Factory
         return [
             'user_id' => User::factory()->student(),
             'grade_level' => 'high_school',
-            'timezone' => 'Asia/Kolkata',
+            'timezone' => 'Asia/Colombo',
             'learning_goals' => fake()->optional()->sentence(),
             'guardian_name' => null,
             'guardian_phone' => null,

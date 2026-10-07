@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedTinyInteger('experience_years')->default(0);
             $table->string('education');
             $table->json('languages');
-            $table->string('timezone')->default('Asia/Kolkata');
+            $table->string('timezone')->default('Asia/Colombo');
             $table->unsignedInteger('hourly_rate_minor');
             $table->string('verification_status')->default('draft');
             $table->text('verification_notes')->nullable();

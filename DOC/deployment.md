@@ -269,6 +269,7 @@ Smoke test after every deploy (five minutes, in order):
 | Suspend an account | Admin → Users → the person → *Suspend account* with a reason. The session ends on their next request. |
 | Re-verify a teacher | Admin → Users → the teacher → *Send back for verification*. |
 | Change commission or the refund policy | Admin → Settings (audited; the refund policy page reads the same numbers). |
+| Run a fee-free promo or discount the booking fee | Admin → Special offers → *New offer* with the window and discount (audited; bookings keep the fee snapshot they were priced with). |
 | Rotate a provider key | Update `.env`, then `php artisan optimize:clear && php artisan optimize && php artisan queue:restart`. |
 | Reset an admin password | `php artisan tinker` → `User::where('email', '…')->first()->update(['password' => Hash::make('…')]);` |
 

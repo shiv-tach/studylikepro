@@ -19,9 +19,12 @@
 
 <x-app-layout>
     <x-slot name="header">
-        <div>
-            <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('Platform settings') }}</h2>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Commission, holds and the refund policy the marketplace runs on.') }}</p>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('Platform settings') }}</h2>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Commission, fees, holds and the refund policy the marketplace runs on.') }}</p>
+            </div>
+            <a href="{{ route('admin.offers.index') }}" class="text-xs font-semibold text-primary hover:underline">{{ __('Special offers') }} &rarr;</a>
         </div>
     </x-slot>
 
@@ -42,19 +45,30 @@
 
                     <div class="mt-4 space-y-5">
                         @foreach ($items as $key => $definition)
+                            @php
+                                $rawValue = old($key, $values[$key] ?? '');
+                                $inputValue = $definition['type'] === 'money'
+                                    ? number_format(((int) $rawValue) / 100, 2, '.', '')
+                                    : $rawValue;
+                            @endphp
                             <div>
                                 <x-input-label :for="'setting-'.$key" :value="$definition['label']" />
                                 @if ($definition['type'] === 'text')
                                     <textarea id="setting-{{ $key }}" name="{{ $key }}" rows="3"
-                                              class="mt-1 block w-full {{ $fieldClasses }}">{{ old($key, $values[$key] ?? '') }}</textarea>
+                                              class="mt-1 block w-full {{ $fieldClasses }}">{{ $rawValue }}</textarea>
                                 @else
                                     <x-text-input :id="'setting-'.$key" :name="$key"
                                                   :type="$definition['type'] === 'string' ? 'text' : 'number'"
-                                                  :step="$definition['type'] === 'float' ? '0.01' : null"
+                                                  :step="in_array($definition['type'], ['float', 'money'], true) ? '0.01' : null"
                                                   class="mt-1 block w-full"
-                                                  :value="old($key, $values[$key] ?? '')" />
+                                                  :value="$inputValue" />
                                 @endif
-                                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $definition['description'] }}</p>
+                                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    {{ $definition['description'] }}
+                                    @if ($definition['type'] === 'money')
+                                        · {{ __('in :currency', ['currency' => platform_settings()->currencySymbol()]) }}
+                                    @endif
+                                </p>
                                 <x-input-error :messages="$errors->get($key)" class="mt-2" />
                             </div>
                         @endforeach

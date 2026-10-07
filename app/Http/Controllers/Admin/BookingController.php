@@ -84,6 +84,7 @@ class BookingController extends Controller
             'review',
             'conversation.messages.sender',
             'disputes',
+            'bookingFeePromotion',
         ]);
 
         return view('admin.bookings.show', [

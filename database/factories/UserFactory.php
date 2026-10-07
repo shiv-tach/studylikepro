@@ -70,7 +70,8 @@ class UserFactory extends Factory
     }
 
     /**
-     * Create a completed profile matching the user's role.
+     * Create a completed profile matching the user's role. Teachers also have
+     * their verification submitted, i.e. they can reach the teacher area.
      */
     public function onboarded(): static
     {
@@ -80,7 +81,7 @@ class UserFactory extends Factory
             }
 
             if ($user->isTeacher()) {
-                TeacherProfile::factory()->for($user)->create();
+                TeacherProfile::factory()->pending()->for($user)->create();
             }
         });
     }

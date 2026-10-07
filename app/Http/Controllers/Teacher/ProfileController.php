@@ -33,6 +33,7 @@ class ProfileController extends Controller
 
         $profile = $user->teacherProfile()->firstOrNew([]);
         $profile->fill($request->safe()->except(['avatar', 'hourly_rate']));
+        $profile->timezone = config('studylikepro.default_display_timezone');
         $profile->hourly_rate_minor = (int) round(((float) $request->input('hourly_rate')) * 100);
         $profile->completed_at ??= now();
         $profile->save();

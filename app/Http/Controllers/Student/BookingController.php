@@ -10,6 +10,7 @@ use App\Models\Booking;
 use App\Models\Subject;
 use App\Models\TeacherProfile;
 use App\Models\Topic;
+use App\Services\BookingFeeService;
 use App\Services\BookingService;
 use App\Services\BookingTransitionService;
 use App\Services\Payments\PaymentService;
@@ -81,7 +82,7 @@ class BookingController extends Controller
     /**
      * Pick subject, length and slot for a direct booking.
      */
-    public function create(Request $request, TeacherProfile $teacherProfile): View
+    public function create(Request $request, TeacherProfile $teacherProfile, BookingFeeService $fees): View
     {
         Gate::authorize('create', [Booking::class, $teacherProfile]);
 
@@ -121,6 +122,7 @@ class BookingController extends Controller
             'duration' => $duration,
             'slotsByDate' => $this->bookings->availableSlots($teacherProfile, $duration, $timezone),
             'priceMinor' => $this->bookings->priceMinor($teacherProfile, $subject, $duration),
+            'bookingFee' => $fees->quote(),
             'timezone' => $timezone,
         ]);
     }
@@ -192,7 +194,7 @@ class BookingController extends Controller
     {
         Gate::authorize('view', $booking);
 
-        $booking->load(['teacherProfile.user', 'subject', 'topic', 'tutoringRequest', 'review', 'conversation']);
+        $booking->load(['teacherProfile.user', 'subject', 'topic', 'tutoringRequest', 'review', 'conversation', 'bookingFeePromotion']);
 
         return view('student.bookings.show', [
             'booking' => $booking,

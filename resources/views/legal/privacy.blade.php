@@ -16,7 +16,7 @@
             <div class="{{ $body }}">
                 <ul class="list-disc space-y-2 pl-5">
                     <li>{{ __('Account details: your name, email address and a securely hashed password.') }}</li>
-                    <li>{{ __('Profile details: for students, grade level, timezone, learning goals and the subjects and topics you pick; for teachers, headline, experience, education, languages, subjects, topics, availability and rates.') }}</li>
+                    <li>{{ __('Profile details: for students, grade level, learning goals and the subjects and topics you pick; for teachers, headline, experience, education, languages, subjects, topics, availability and rates.') }}</li>
                     <li>{{ __('Lesson content: the questions and photos you upload, your messages in lesson chats, and the details of every booking.') }}</li>
                     <li>{{ __('Payment records: amounts, currency, status and the payment provider\'s reference. Card and UPI details are handled by the payment provider — they never reach our servers.') }}</li>
                     <li>{{ __('Technical data: IP address and request metadata, kept for security and abuse prevention.') }}</li>

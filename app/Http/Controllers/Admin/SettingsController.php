@@ -25,6 +25,9 @@ class SettingsController extends Controller
 
         foreach (PlatformSettings::definitions() as $key => $definition) {
             $rules[$key] = match ($definition['type']) {
+                // Money settings are entered in whole currency units (Rs), so the
+                // same bounds as the other numeric fields apply.
+                'money' => ['nullable', 'numeric', 'min:0', 'max:100000'],
                 'int' => ['nullable', 'integer', 'min:0', 'max:100000'],
                 'float' => ['nullable', 'numeric', 'min:0', 'max:1'],
                 default => ['nullable', 'string', 'max:500'],
@@ -42,6 +45,7 @@ class SettingsController extends Controller
             }
 
             $typed = match ($definition['type']) {
+                'money' => (int) round(((float) $value) * 100),
                 'int' => (int) $value,
                 'float' => (float) $value,
                 default => (string) $value,

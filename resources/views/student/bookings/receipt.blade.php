@@ -77,8 +77,25 @@
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
                     <tr>
                         <td class="py-3 text-slate-600 dark:text-slate-300">{{ __('Lesson fee') }}</td>
-                        <td class="py-3 text-right font-semibold text-slate-800 dark:text-slate-100">{{ platform_settings()->formatMinor($payment->amount_minor) }}</td>
+                        <td class="py-3 text-right font-semibold text-slate-800 dark:text-slate-100">{{ platform_settings()->formatMinor($booking->price_minor) }}</td>
                     </tr>
+                    @if ($booking->booking_fee_minor > 0)
+                        <tr>
+                            <td class="py-3 text-slate-600 dark:text-slate-300">{{ __('Platform booking fee') }}</td>
+                            <td class="py-3 text-right font-semibold text-slate-800 dark:text-slate-100">{{ platform_settings()->formatMinor($booking->booking_fee_minor) }}</td>
+                        </tr>
+                    @endif
+                    @if ($booking->hasBookingFeeDiscount())
+                        <tr>
+                            <td class="py-3 text-slate-600 dark:text-slate-300">
+                                {{ __('Special offer') }}
+                                @if ($booking->bookingFeePromotion)
+                                    <span class="block text-xs text-emerald-600 dark:text-emerald-400">{{ $booking->bookingFeePromotion->name }}</span>
+                                @endif
+                            </td>
+                            <td class="py-3 text-right font-semibold text-emerald-600 dark:text-emerald-400">−{{ platform_settings()->formatMinor($booking->booking_fee_discount_minor) }}</td>
+                        </tr>
+                    @endif
                     @foreach ($refunds as $refund)
                         <tr>
                             <td class="py-3 text-slate-600 dark:text-slate-300">

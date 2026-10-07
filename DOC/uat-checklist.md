@@ -18,22 +18,23 @@ Automated equivalent: `tests/Feature/Acceptance/CoreFlowTest.php` (runs in CI).
 | # | Step | Expected | ✅ |
 | --- | --- | --- | --- |
 | A1 | Register as a student | Lands on the student dashboard, onboarding prompt shown | ☐ |
-| A2 | Complete the learning profile (grade, timezone, goals) | Dashboard unlocks, "Profile complete" status | ☐ |
+| A2 | Complete the learning profile (grade, goals) | Dashboard unlocks, "Profile complete" status | ☐ |
 | A3 | Pick a subject and a topic | Choices persist after a reload | ☐ |
 | A4 | Create a request with a question photo attached | Request page shows *Classifying…* then the subject, topic and confidence | ☐ |
 | A5 | Trust the AI suggestion | Request status becomes Open; matching teachers notified | ☐ |
 | A6 | Override the suggestion on another request | The chosen subject/topic replaces the guess | ☐ |
-| A7 | Register as a teacher, complete the teaching profile | Verification page opens | ☐ |
-| A8 | Upload a government ID and submit for review | Status Pending; terms checkbox was required | ☐ |
-| A9 | Admin approves the application | Teacher sees "Approved"; appears in `/teachers` | ☐ |
-| A10 | Teacher adds subjects, topics, rate and availability | Subject chips and weekly slots appear | ☐ |
-| A11 | Teacher opens the request inbox | The student's question and photo are visible | ☐ |
-| A12 | Teacher accepts with a slot | A booking hold exists; the student is notified | ☐ |
-| A13 | Student pays from the checkout page (test mode) | Booking confirmed, "Payment received", receipt available | ☐ |
-| A14 | Both open **Join** in the classroom | Classroom page loads with the lesson countdown and the correct join link per role | ☐ |
-| A15 | Both exchange chat messages | Messages appear without a reload (5s poll), unread badges behave | ☐ |
-| A16 | Teacher starts and completes the lesson | Status Completed; earnings row becomes available; system message in the chat | ☐ |
-| A17 | Student leaves a review | Rating appears on the teacher profile; history shows the lesson | ☐ |
+| A7 | Register as a teacher, complete the teaching profile | Step 1 is marked completed in the 2-step progress; verification page opens | ☐ |
+| A8 | Try the dashboard or another teacher page before submitting verification | Redirected back to verification; step 2 shows as in progress | ☐ |
+| A9 | Upload a government ID and submit for review | Terms checkbox required; status Pending and the teacher area unlocks with both steps completed | ☐ |
+| A10 | Admin approves the application | Teacher sees "Approved"; appears in `/teachers` | ☐ |
+| A11 | Teacher adds subjects, topics, rate and availability | Subject chips and weekly slots appear | ☐ |
+| A12 | Teacher opens the request inbox | The student's question and photo are visible | ☐ |
+| A13 | Teacher accepts with a slot | A booking hold exists; the student is notified | ☐ |
+| A14 | Student pays from the checkout page (test mode) | Booking confirmed, "Payment received", receipt available | ☐ |
+| A15 | Both open **Join** in the classroom | Classroom page loads with the lesson countdown and the correct join link per role | ☐ |
+| A16 | Both exchange chat messages | Messages appear without a reload (5s poll), unread badges behave | ☐ |
+| A17 | Teacher starts and completes the lesson | Status Completed; earnings row becomes available; system message in the chat | ☐ |
+| A18 | Student leaves a review | Rating appears on the teacher profile; history shows the lesson | ☐ |
 
 ---
 
@@ -79,8 +80,9 @@ Automated equivalent: `tests/Feature/Acceptance/CoreFlowTest.php` (runs in CI).
 | D4 | Regenerate a failed classroom link | New join links; the classroom page works for both sides | ☐ |
 | D5 | Reports: change the date range | KPIs, chart and teacher table follow the range | ☐ |
 | D6 | Export each CSV (bookings, payments, refunds, payouts, teachers) | Files download and open cleanly in a spreadsheet | ☐ |
-| D7 | Settings: change commission and the cancellation window | New values apply to new bookings; refund policy page shows them | ☐ |
-| D8 | Activity log | Every action above is listed with who, what, when and the sanitised input | ☐ |
+| D7 | Settings: change commission, the booking fee and the cancellation window | New values apply to new bookings; the booking page, checkout and receipt show the new fee; refund policy page shows the new window | ☐ |
+| D8 | Special offers: create a waiver offer running now, then reserve a slot as a student | Checkout total drops by the fee; the receipt shows the offer; bookings made outside the window keep paying the fee | ☐ |
+| D9 | Activity log | Every action above is listed with who, what, when and the sanitised input | ☐ |
 
 ---
 

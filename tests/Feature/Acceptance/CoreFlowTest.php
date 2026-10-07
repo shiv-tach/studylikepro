@@ -49,8 +49,8 @@ beforeEach(function () {
         'slug' => 'algebra',
     ]);
 
-    // The evening slot the whole story hangs on: two days out, 18:00–20:00 UTC.
-    $this->windowStart = CarbonImmutable::now('UTC')->addDays(2)->setTime(18, 0);
+    // The evening slot the whole story hangs on: two days out, 18:00–20:00 Sri Lanka time.
+    $this->windowStart = CarbonImmutable::now('Asia/Colombo')->addDays(2)->setTime(18, 0);
 
     Http::fake([
         '*/chat/completions' => Http::response([
@@ -80,13 +80,19 @@ function signUp(string $role, array $overrides = []): User
     // Registering signs the new account in; the next sign-up needs a clean guest.
     Auth::logout();
 
-    test()->post('/register', [
+    $payload = [
         'name' => $overrides['name'] ?? 'Test '.ucfirst($role),
         'email' => $email,
         'password' => 'password',
         'password_confirmation' => 'password',
         'role' => $role,
-    ])->assertRedirect();
+    ];
+
+    if ($role === User::ROLE_TEACHER) {
+        [, $payload['invite']] = makeTeacherInvite();
+    }
+
+    test()->post('/register', $payload)->assertRedirect();
 
     $user = User::query()->where('email', $email)->firstOrFail();
     $user->markEmailAsVerified();
@@ -130,8 +136,7 @@ function verifiedTeacher(Subject $subject, Topic $topic, CarbonImmutable $window
             'bio' => 'Ten years of board-exam coaching with weekly progress notes.',
             'experience_years' => 10,
             'education' => 'M.Sc. Mathematics, University of Delhi',
-            'languages' => ['English', 'Hindi'],
-            'timezone' => 'UTC',
+            'languages' => ['English', 'Sinhala'],
             'hourly_rate' => 800,
         ])
         ->assertRedirect();
@@ -192,7 +197,6 @@ it('runs the core flow from question photo to review', function () {
 
     $this->actingAs($student)->put(route('student.profile.update'), [
         'grade_level' => 'high_school',
-        'timezone' => 'UTC',
         'learning_goals' => 'Board exams in two months.',
     ])->assertRedirect();
 

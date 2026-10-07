@@ -185,7 +185,7 @@
                     </div>
                     <div class="text-right">
                         <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $booking->status->badgeClasses() }}">{{ $booking->status->label() }}</span>
-                        <p class="mt-2 text-lg font-bold text-slate-800 dark:text-slate-100">{{ $money($booking->price_minor) }}</p>
+                        <p class="mt-2 text-lg font-bold text-slate-800 dark:text-slate-100">{{ $money($booking->totalMinor()) }}</p>
                         <a href="{{ route('student.bookings.show', $booking) }}"
                            class="mt-2 inline-flex items-center rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary/90">
                             {{ $isHold ? __('Complete payment') : __('View lesson') }}

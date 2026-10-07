@@ -44,28 +44,16 @@
             <!-- About you -->
             <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
                 <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">About you</h3>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">This helps teachers understand how to help and keeps lesson times in your timezone.</p>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">This helps teachers understand how to help. All lesson times are shown in Sri Lanka time.</p>
 
-                <div class="mt-5 grid gap-5 sm:grid-cols-2">
-                    <div>
-                        <x-input-label for="grade_level" :value="__('Grade level')" />
-                        <select id="grade_level" name="grade_level" class="{{ $selectClasses }}">
-                            @foreach (config('studylikepro.grade_levels') as $value => $label)
-                                <option value="{{ $value }}" @selected(old('grade_level', $profile?->grade_level) === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        <x-input-error :messages="$errors->get('grade_level')" class="mt-2" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="timezone" :value="__('Timezone')" />
-                        <select id="timezone" name="timezone" class="{{ $selectClasses }}">
-                            @foreach (config('studylikepro.timezones') as $value => $label)
-                                <option value="{{ $value }}" @selected(old('timezone', $profile?->timezone ?? 'Asia/Kolkata') === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        <x-input-error :messages="$errors->get('timezone')" class="mt-2" />
-                    </div>
+                <div class="mt-5">
+                    <x-input-label for="grade_level" :value="__('Grade level')" />
+                    <select id="grade_level" name="grade_level" class="{{ $selectClasses }}">
+                        @foreach (config('studylikepro.grade_levels') as $value => $label)
+                            <option value="{{ $value }}" @selected(old('grade_level', $profile?->grade_level) === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <x-input-error :messages="$errors->get('grade_level')" class="mt-2" />
                 </div>
 
                 <div class="mt-5">

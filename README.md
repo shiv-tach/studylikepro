@@ -9,7 +9,7 @@ Built with Laravel 12, Blade, Alpine.js, Tailwind CSS, Vite, and Pest.
 | Role | Capabilities |
 | --- | --- |
 | Student | Registration, profile, subject/topic selection, tutoring requests with question uploads, teacher discovery, booking, payment, live classes, chat, ratings, lesson history |
-| Teacher | Registration, verification, subjects/topics, availability, pricing, requests, accept/reject, live lessons, earnings, reviews |
+| Teacher | Invite-only registration, verification, subjects/topics, availability, pricing, requests, accept/reject, live lessons, earnings, reviews |
 | Admin | Teacher verification, student/booking/payment management, disputes, refunds, commission, reports, subject/topic management |
 
 Core flow: 📷 Upload question → 🤖 AI identifies topic → 👨‍🏫 Find matching verified teacher → 🕐 Choose available time → 💳 Pay → 🎥 Live lesson → ⭐ Review
@@ -97,9 +97,10 @@ Lesson history filters round out the trust loop: *My lessons* filters by status,
 
 ### Admin console
 
-The console runs the marketplace without touching the database: `/admin` with **Reports**, **Users**, **Disputes**, **Moderation**, **Verification**, **Subjects**, **Bookings**, **Payments**, **Payouts**, **Activity log** and **Settings**.
+The console runs the marketplace without touching the database: `/admin` with **Reports**, **Users**, **Invite teachers**, **Disputes**, **Moderation**, **Verification**, **Subjects**, **Bookings**, **Payments**, **Payouts**, **Activity log** and **Settings**.
 
 - **People** (`/admin/users`) — searchable list of students and teachers, each opening on a detail page with their lessons, payments, reviews, disputes and notification history. Suspend (with a reason), reactivate, send an approved teacher back through verification, or resend the last notification. A suspension blocks the next sign-in *and* kills the live session — `EnsureUserIsNotSuspended` logs the user out on their next request.
+- **Invite teachers** (`/admin/invites`) — teacher accounts are created only through a single-use onboarding link issued here. Creating an invite shows the link once (`/register?invite=…`, hashed at rest, expiring after `TEACHER_INVITE_EXPIRY_DAYS` days) and unused invites can be revoked; public registration always creates a student account — the teacher role is granted only through a valid invite link — and the separate teacher verification flow still gates who may teach.
 - **Bookings** (`/admin/bookings`) — filters for status, teacher, student, learner name and date range; the detail page shows the parties, the timeline, the money split, the classroom state (with **Regenerate link** when provisioning failed), the review, any disputes and a read-only copy of the lesson chat. Support can **Cancel** a live lesson with a reason or **Force complete** one that was delivered but never closed.
 - **Payments** (`/admin/payments`) — filters for status, gateway, student/reference and date range, one detail page per transaction (references, captured/failed timestamps, gateway payload, refund history) and a refund form with 25/50/75/100% presets. Everything is exportable as CSV.
 - **Disputes** (`/admin/disputes`) — the desk for reports raised from the lesson chat. Each case opens with the report itself, the reporter and the reported party, the lesson, its payment and the conversation as evidence. Pick it up (*in review*) or close it with one of five resolutions — full refund, partial refund, dismiss, warn, or suspend the reported account — and both parties are notified (`DisputeResolved`) with the decision recorded on the dispute and in the audit log.

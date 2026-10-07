@@ -25,8 +25,7 @@ test('teachers can complete their profile', function () {
         'bio' => 'I focus on building strong fundamentals.',
         'experience_years' => 5,
         'education' => 'M.Sc. Mathematics, Delhi University',
-        'languages' => ['English', 'Hindi'],
-        'timezone' => 'Asia/Kolkata',
+        'languages' => ['English', 'Sinhala'],
         'hourly_rate' => 750,
     ]);
 
@@ -37,10 +36,14 @@ test('teachers can complete their profile', function () {
     expect($profile)->not->toBeNull()
         ->and($profile->completed_at)->not->toBeNull()
         ->and($profile->hourly_rate_minor)->toBe(75000)
-        ->and($profile->languages)->toBe(['English', 'Hindi'])
+        ->and($profile->languages)->toBe(['English', 'Sinhala'])
+        ->and($profile->timezone)->toBe('Asia/Colombo')
         ->and($profile->verification_status->value)->toBe('draft');
 
-    $this->get(route('teacher.dashboard'))->assertOk();
+    // Step 2 is still open, so the teacher area stays locked until the documents are submitted.
+    $this->get(route('teacher.dashboard'))
+        ->assertRedirect(route('teacher.verification'))
+        ->assertSessionHas('status', 'complete-your-verification');
 });
 
 test('updating an existing profile redirects back to the profile', function () {
@@ -52,7 +55,6 @@ test('updating an existing profile redirects back to the profile', function () {
             'experience_years' => 8,
             'education' => 'B.Tech',
             'languages' => ['English'],
-            'timezone' => 'Asia/Kolkata',
             'hourly_rate' => 900,
         ])
         ->assertRedirect(route('teacher.profile'));
@@ -68,10 +70,9 @@ test('teacher profile validation rejects bad input', function () {
             'headline' => '',
             'experience_years' => -2,
             'languages' => [],
-            'timezone' => 'Mars/Olympus',
             'hourly_rate' => 50,
         ])
-        ->assertSessionHasErrors(['headline', 'experience_years', 'languages', 'timezone', 'hourly_rate']);
+        ->assertSessionHasErrors(['headline', 'experience_years', 'languages', 'hourly_rate']);
 });
 
 test('teachers can upload an avatar', function () {
@@ -85,7 +86,6 @@ test('teachers can upload an avatar', function () {
             'experience_years' => 3,
             'education' => 'B.Sc. Chemistry',
             'languages' => ['English'],
-            'timezone' => 'Asia/Kolkata',
             'hourly_rate' => 500,
             'avatar' => UploadedFile::fake()->image('photo.png', 300, 300),
         ])

@@ -95,7 +95,7 @@
                     </div>
                 </div>
                 <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">My learning profile</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Grade, timezone, goals and photo.</p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Grade, goals and photo.</p>
             </a>
 
             <a href="{{ route('settings.theme') }}" class="group {{ $cardBase }}"

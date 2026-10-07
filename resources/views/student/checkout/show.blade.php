@@ -50,6 +50,35 @@
                 </div>
             </div>
 
+            <dl class="mt-5 space-y-2 border-t border-slate-200 pt-5 text-sm dark:border-slate-800">
+                <div class="flex items-center justify-between gap-3">
+                    <dt class="text-slate-500 dark:text-slate-400">{{ __('Lesson') }}</dt>
+                    <dd class="font-semibold text-slate-800 dark:text-slate-100">{{ platform_settings()->formatMinor($booking->price_minor) }}</dd>
+                </div>
+                @if ($booking->booking_fee_minor > 0)
+                    <div class="flex items-center justify-between gap-3">
+                        <dt class="text-slate-500 dark:text-slate-400">
+                            {{ __('Platform booking fee') }}
+                            @if ($booking->bookingFeePromotion)
+                                <span class="text-emerald-600 dark:text-emerald-400">· {{ $booking->bookingFeePromotion->name }}</span>
+                            @endif
+                        </dt>
+                        <dd class="{{ $booking->hasBookingFeeDiscount() ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'font-semibold text-slate-800 dark:text-slate-100' }}">
+                            @if ($booking->hasBookingFeeDiscount())
+                                {{ platform_settings()->formatMinor($booking->netBookingFeeMinor()) }}
+                                <span class="ml-1 text-xs font-normal text-slate-400 line-through">{{ platform_settings()->formatMinor($booking->booking_fee_minor) }}</span>
+                            @else
+                                {{ platform_settings()->formatMinor($booking->booking_fee_minor) }}
+                            @endif
+                        </dd>
+                    </div>
+                @endif
+                <div class="flex items-center justify-between gap-3 border-t border-slate-100 pt-2 dark:border-slate-800">
+                    <dt class="font-semibold text-slate-600 dark:text-slate-300">{{ __('Total due') }}</dt>
+                    <dd class="text-base font-bold text-slate-900 dark:text-slate-100">{{ platform_settings()->formatMinor($payment->amount_minor) }}</dd>
+                </div>
+            </dl>
+
             <dl class="mt-5 grid gap-3 border-t border-slate-200 pt-5 text-sm sm:grid-cols-2 dark:border-slate-800">
                 <div class="flex items-center justify-between gap-3">
                     <dt class="text-slate-500 dark:text-slate-400">{{ __('Order') }}</dt>

@@ -16,7 +16,6 @@ class StudentProfileRequest extends FormRequest
     {
         return [
             'grade_level' => ['required', Rule::in(array_keys(config('studylikepro.grade_levels')))],
-            'timezone' => ['required', Rule::in(array_keys(config('studylikepro.timezones')))],
             'learning_goals' => ['nullable', 'string', 'max:1000'],
             'guardian_name' => ['nullable', 'string', 'max:120'],
             'guardian_phone' => ['nullable', 'string', 'max:32'],

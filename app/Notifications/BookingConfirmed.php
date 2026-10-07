@@ -29,7 +29,7 @@ class BookingConfirmed extends Notification implements ShouldQueue
 
         if ($isStudent) {
             $message->line('Teacher: '.$this->booking->teacherProfile->user->name)
-                ->line('Paid: '.platform_settings()->formatMinor($this->booking->price_minor))
+                ->line('Paid: '.platform_settings()->formatMinor($this->booking->totalMinor()))
                 ->line('Your receipt is ready any time: '.route('receipts.show', $this->booking));
         } else {
             $message->line('Student: '.$this->booking->learner_name ?? $this->booking->student->name)

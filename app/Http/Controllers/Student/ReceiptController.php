@@ -22,7 +22,7 @@ class ReceiptController extends Controller
 
         abort_if($payment === null, 404);
 
-        $payment->load(['refunds', 'booking.teacherProfile.user', 'booking.subject', 'booking.topic']);
+        $payment->load(['refunds', 'booking.teacherProfile.user', 'booking.subject', 'booking.topic', 'booking.bookingFeePromotion']);
 
         return view('student.bookings.receipt', [
             'booking' => $booking,

@@ -15,7 +15,7 @@ test('the verification page redirects until the profile is complete', function (
 test('teachers can upload a verification document', function () {
     Storage::fake('local');
 
-    $user = User::factory()->teacher()->onboarded()->create();
+    $user = onboardingTeacher();
 
     $this->actingAs($user)
         ->post(route('teacher.verification.documents.store'), [
@@ -36,7 +36,7 @@ test('teachers can upload a verification document', function () {
 test('invalid document uploads are rejected', function () {
     Storage::fake('local');
 
-    $user = User::factory()->teacher()->onboarded()->create();
+    $user = onboardingTeacher();
 
     $this->actingAs($user)
         ->post(route('teacher.verification.documents.store'), [
@@ -68,7 +68,7 @@ test('documents cannot be uploaded while the application is pending review', fun
 test('teachers can remove their documents before submission', function () {
     Storage::fake('local');
 
-    $user = User::factory()->teacher()->onboarded()->create();
+    $user = onboardingTeacher();
     $document = TeacherVerificationDocument::factory()->for($user->teacherProfile)->create();
     Storage::disk('local')->put($document->path, 'file-contents');
 
@@ -83,10 +83,10 @@ test('teachers can remove their documents before submission', function () {
 test('teachers cannot delete another teachers document', function () {
     Storage::fake('local');
 
-    $owner = User::factory()->teacher()->onboarded()->create();
+    $owner = onboardingTeacher();
     $document = TeacherVerificationDocument::factory()->for($owner->teacherProfile)->create();
 
-    $other = User::factory()->teacher()->onboarded()->create();
+    $other = onboardingTeacher();
 
     $this->actingAs($other)
         ->delete(route('teacher.verification.documents.destroy', $document))
@@ -108,7 +108,7 @@ test('documents are locked after the application is submitted', function () {
 });
 
 test('submitting without a government ID fails', function () {
-    $user = User::factory()->teacher()->onboarded()->create();
+    $user = onboardingTeacher();
 
     $this->actingAs($user)
         ->post(route('teacher.verification.submit'), ['agree' => '1'])
@@ -118,7 +118,7 @@ test('submitting without a government ID fails', function () {
 });
 
 test('submitting without accepting the terms fails', function () {
-    $user = User::factory()->teacher()->onboarded()->create();
+    $user = onboardingTeacher();
     TeacherVerificationDocument::factory()->for($user->teacherProfile)->create();
 
     $this->actingAs($user)
@@ -129,7 +129,7 @@ test('submitting without accepting the terms fails', function () {
 });
 
 test('teachers can submit their application for review', function () {
-    $user = User::factory()->teacher()->onboarded()->create();
+    $user = onboardingTeacher();
     TeacherVerificationDocument::factory()->for($user->teacherProfile)->create();
 
     $this->actingAs($user)
@@ -158,6 +158,29 @@ test('rejected teachers can resubmit their application', function () {
 
     expect($profile->verification_status->value)->toBe('pending')
         ->and($profile->verification_notes)->toBeNull();
+});
+
+test('the verification page points teachers to upload an ID before they can submit', function () {
+    $user = onboardingTeacher();
+
+    $this->actingAs($user)
+        ->get(route('teacher.verification'))
+        ->assertOk()
+        ->assertSee('Government ID required')
+        ->assertSee('Upload now')
+        ->assertSee('Upload your government ID above to enable submission.');
+});
+
+test('the verification page shows the submission checklist and confirmation once the ID is uploaded', function () {
+    $user = onboardingTeacher();
+    TeacherVerificationDocument::factory()->for($user->teacherProfile)->create();
+
+    $this->actingAs($user)
+        ->get(route('teacher.verification'))
+        ->assertOk()
+        ->assertSee('Government ID uploaded')
+        ->assertDontSee('Government ID required')
+        ->assertSee('Submit your application for review?');
 });
 
 test('students cannot access teacher verification routes', function () {

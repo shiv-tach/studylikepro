@@ -18,7 +18,11 @@
         default => __('with :name', ['name' => $booking->teacherProfile->user->name]),
     };
 
-    $amount = $perspective === 'teacher' ? $booking->teacher_payout_minor : $booking->price_minor;
+    $amount = match ($perspective) {
+        'teacher' => $booking->teacher_payout_minor,
+        'admin' => $booking->price_minor,
+        default => $booking->totalMinor(),
+    };
     $amountLabel = $perspective === 'teacher' ? __('You earn') : ($perspective === 'admin' ? __('Price') : __('Total'));
 @endphp
 

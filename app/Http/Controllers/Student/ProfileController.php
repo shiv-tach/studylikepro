@@ -36,6 +36,7 @@ class ProfileController extends Controller
 
         $profile = $user->studentProfile()->firstOrNew([]);
         $profile->fill($request->safe()->except('avatar'));
+        $profile->timezone = config('studylikepro.default_display_timezone');
         $profile->completed_at ??= now();
         $profile->save();
 

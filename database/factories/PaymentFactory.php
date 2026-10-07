@@ -27,7 +27,7 @@ class PaymentFactory extends Factory
             'gateway_order_id' => 'order_'.Str::lower(Str::random(12)),
             'gateway_payment_id' => 'pay_'.Str::lower(Str::random(12)),
             'amount_minor' => fn (array $attributes) => Booking::query()
-                ->findOrFail($attributes['booking_id'])->price_minor,
+                ->findOrFail($attributes['booking_id'])->totalMinor(),
             'currency' => fn (array $attributes) => Booking::query()
                 ->findOrFail($attributes['booking_id'])->currency,
             'status' => PaymentStatus::Captured,

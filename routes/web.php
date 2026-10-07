@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ActivityController as AdminActivityController;
 use App\Http\Controllers\Admin\BookingController as AdminBookingController;
+use App\Http\Controllers\Admin\BookingFeePromotionController as AdminBookingFeePromotionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DisputeController as AdminDisputeController;
 use App\Http\Controllers\Admin\ModerationController as AdminModerationController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Admin\PayoutController as AdminPayoutController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\SubjectController as AdminSubjectController;
+use App\Http\Controllers\Admin\TeacherInviteController as AdminTeacherInviteController;
 use App\Http\Controllers\Admin\TeacherVerificationController as AdminTeacherVerificationController;
 use App\Http\Controllers\Admin\TopicController as AdminTopicController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -185,6 +187,10 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended'
         Route::post('/verifications/{teacherProfile}/approve', [AdminTeacherVerificationController::class, 'approve'])->name('verifications.approve');
         Route::post('/verifications/{teacherProfile}/reject', [AdminTeacherVerificationController::class, 'reject'])->name('verifications.reject');
 
+        Route::get('/invites', [AdminTeacherInviteController::class, 'index'])->name('invites.index');
+        Route::post('/invites', [AdminTeacherInviteController::class, 'store'])->name('invites.store');
+        Route::delete('/invites/{teacherInvite}', [AdminTeacherInviteController::class, 'revoke'])->name('invites.revoke');
+
         Route::get('/moderation', [AdminModerationController::class, 'index'])->name('moderation.index');
         Route::post('/moderation/reviews/{review}/hide', [AdminModerationController::class, 'hideReview'])->name('moderation.reviews.hide');
         Route::post('/moderation/reviews/{review}/dismiss', [AdminModerationController::class, 'dismissReview'])->name('moderation.reviews.dismiss');
@@ -202,6 +208,12 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended'
         Route::post('/subjects/{subject}/topics', [AdminTopicController::class, 'store'])->name('subjects.topics.store');
         Route::put('/subjects/{subject}/topics/{topic}', [AdminTopicController::class, 'update'])->scopeBindings()->name('subjects.topics.update');
         Route::delete('/subjects/{subject}/topics/{topic}', [AdminTopicController::class, 'destroy'])->scopeBindings()->name('subjects.topics.destroy');
+
+        Route::get('/offers', [AdminBookingFeePromotionController::class, 'index'])->name('offers.index');
+        Route::post('/offers', [AdminBookingFeePromotionController::class, 'store'])->name('offers.store');
+        Route::get('/offers/{offer}/edit', [AdminBookingFeePromotionController::class, 'edit'])->name('offers.edit');
+        Route::put('/offers/{offer}', [AdminBookingFeePromotionController::class, 'update'])->name('offers.update');
+        Route::delete('/offers/{offer}', [AdminBookingFeePromotionController::class, 'destroy'])->name('offers.destroy');
 
         Route::get('/bookings', [AdminBookingController::class, 'index'])->name('bookings.index');
         Route::get('/bookings/{booking}', [AdminBookingController::class, 'show'])->name('bookings.show');

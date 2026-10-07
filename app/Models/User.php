@@ -194,7 +194,7 @@ class User extends Authenticatable
     {
         return match (true) {
             $this->isStudent() => (bool) $this->studentProfile?->completed_at,
-            $this->isTeacher() => (bool) $this->teacherProfile?->completed_at,
+            $this->isTeacher() => (bool) $this->teacherProfile?->hasCompletedOnboarding(),
             default => true,
         };
     }

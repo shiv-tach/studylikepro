@@ -29,6 +29,9 @@ class PaymentService
 
     /**
      * Open (or reuse) a checkout attempt for a booking that is still awaiting payment.
+     *
+     * The order covers the lesson price plus the booking-fee snapshot taken when
+     * the slot was reserved — a hold is always charged what it quoted.
      */
     public function startCheckout(Booking $booking): Payment
     {
@@ -54,7 +57,7 @@ class PaymentService
 
         $existing = $booking->payments()
             ->where('status', PaymentStatus::Created->value)
-            ->where('amount_minor', $booking->price_minor)
+            ->where('amount_minor', $booking->totalMinor())
             ->latest()
             ->first();
 
@@ -62,7 +65,7 @@ class PaymentService
             return $existing;
         }
 
-        $order = $this->gateway->createOrder($booking, $booking->price_minor, $booking->currency);
+        $order = $this->gateway->createOrder($booking, $booking->totalMinor(), $booking->currency);
 
         return Payment::query()->create([
             'booking_id' => $booking->id,

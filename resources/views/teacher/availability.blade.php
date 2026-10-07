@@ -28,7 +28,7 @@
                 <div>
                     <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Lesson length & pricing</h3>
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        Slots are generated in your timezone ({{ $profile->timezone }}) and shown to students in theirs.
+                        Slots are generated and displayed in Sri Lanka time ({{ $profile->timezone }}).
                     </p>
                 </div>
                 <span class="{{ $chip }}">{{ $profile->timezone }}</span>

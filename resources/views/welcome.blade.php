@@ -73,7 +73,7 @@
                         <a href="{{ route('register', ['role' => 'student']) }}" class="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90">
                             I need a tutor
                         </a>
-                        <a href="{{ route('register', ['role' => 'teacher']) }}" class="rounded-xl border border-slate-200/80 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-primary/40 hover:text-primary dark:border-slate-800/80 dark:bg-slate-900 dark:text-slate-300">
+                        <a href="{{ route('legal.contact') }}" class="rounded-xl border border-slate-200/80 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-primary/40 hover:text-primary dark:border-slate-800/80 dark:bg-slate-900 dark:text-slate-300">
                             I want to teach
                         </a>
                     </div>
@@ -152,13 +152,13 @@
             <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-primary/90 to-purple-600 p-10 text-center text-white shadow-xl shadow-primary/20">
                 <div class="pointer-events-none absolute -top-10 right-10 h-40 w-40 rounded-full bg-white/10 blur-2xl"></div>
                 <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">Ready to learn like a pro?</h2>
-                <p class="mx-auto mt-3 max-w-xl text-sm text-white/90">Join as a student to get help with your questions, or apply as a teacher to share what you know and earn on your schedule.</p>
+                <p class="mx-auto mt-3 max-w-xl text-sm text-white/90">Join as a student to get help with your questions. Teachers are onboarded by invitation — reach out and we'll send you a link.</p>
                 <div class="mt-8 flex flex-wrap justify-center gap-3">
                     <a href="{{ route('register', ['role' => 'student']) }}" class="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-primary shadow-md transition hover:bg-slate-100">
                         Get started as a student
                     </a>
-                    <a href="{{ route('register', ['role' => 'teacher']) }}" class="rounded-xl border border-white/40 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20">
-                        Apply as a teacher
+                    <a href="{{ route('legal.contact') }}" class="rounded-xl border border-white/40 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20">
+                        Apply for a teacher invite
                     </a>
                 </div>
             </div>

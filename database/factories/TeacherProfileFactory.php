@@ -23,7 +23,7 @@ class TeacherProfileFactory extends Factory
             'experience_years' => fake()->numberBetween(1, 15),
             'education' => 'M.Sc.',
             'languages' => ['English'],
-            'timezone' => 'Asia/Kolkata',
+            'timezone' => 'Asia/Colombo',
             'hourly_rate_minor' => 50000,
             'verification_status' => VerificationStatus::Draft,
             'completed_at' => now(),

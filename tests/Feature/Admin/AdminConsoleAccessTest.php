@@ -36,6 +36,7 @@ it('turns every admin screen away from students and teachers', function () {
         route('admin.payments.export'),
         route('admin.payments.show', $scenario['payment']),
         route('admin.activity.index'),
+        route('admin.offers.index'),
         route('admin.settings.edit'),
     ];
 

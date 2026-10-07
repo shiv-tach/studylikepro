@@ -22,7 +22,6 @@ test('students can complete their profile', function () {
 
     $response = $this->actingAs($user)->put(route('student.profile.update'), [
         'grade_level' => 'high_school',
-        'timezone' => 'Asia/Kolkata',
         'learning_goals' => 'Prepare for board exams',
         'guardian_name' => 'Priya Sharma',
         'guardian_phone' => '+91 98765 43210',
@@ -35,6 +34,7 @@ test('students can complete their profile', function () {
     expect($profile)->not->toBeNull()
         ->and($profile->completed_at)->not->toBeNull()
         ->and($profile->grade_level)->toBe('high_school')
+        ->and($profile->timezone)->toBe('Asia/Colombo')
         ->and($profile->guardian_name)->toBe('Priya Sharma');
 
     $this->get(route('student.dashboard'))->assertOk();
@@ -46,9 +46,8 @@ test('completing the profile validates its inputs', function () {
     $this->actingAs($user)
         ->put(route('student.profile.update'), [
             'grade_level' => 'not-a-grade',
-            'timezone' => 'Mars/Olympus',
         ])
-        ->assertSessionHasErrors(['grade_level', 'timezone']);
+        ->assertSessionHasErrors(['grade_level']);
 
     expect($user->fresh()->studentProfile)->toBeNull();
 });
@@ -59,7 +58,6 @@ test('students can update their profile after onboarding', function () {
     $this->actingAs($user)
         ->put(route('student.profile.update'), [
             'grade_level' => 'college',
-            'timezone' => 'Asia/Dubai',
             'learning_goals' => 'Calculus and linear algebra',
         ])
         ->assertRedirect(route('student.profile'));
@@ -76,7 +74,6 @@ test('students can upload an avatar and the old file is removed', function () {
     $this->actingAs($user)
         ->put(route('student.profile.update'), [
             'grade_level' => 'high_school',
-            'timezone' => 'Asia/Kolkata',
             'avatar' => UploadedFile::fake()->image('avatar.jpg', 200, 200),
         ])
         ->assertRedirect(route('student.profile'));
@@ -96,7 +93,6 @@ test('avatar uploads are validated', function () {
     $this->actingAs($user)
         ->put(route('student.profile.update'), [
             'grade_level' => 'high_school',
-            'timezone' => 'Asia/Kolkata',
             'avatar' => UploadedFile::fake()->create('document.pdf', 100, 'application/pdf'),
         ])
         ->assertSessionHasErrors('avatar');

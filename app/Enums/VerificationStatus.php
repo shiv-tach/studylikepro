@@ -39,4 +39,12 @@ enum VerificationStatus: string
     {
         return in_array($this, [self::Draft, self::Rejected], true);
     }
+
+    /**
+     * The teacher has sent the application in for review at least once.
+     */
+    public function isSubmitted(): bool
+    {
+        return $this !== self::Draft;
+    }
 }

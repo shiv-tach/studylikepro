@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
             $table->string('grade_level');
-            $table->string('timezone')->default('Asia/Kolkata');
+            $table->string('timezone')->default('Asia/Colombo');
             $table->text('learning_goals')->nullable();
             $table->string('guardian_name')->nullable();
             $table->string('guardian_phone', 32)->nullable();

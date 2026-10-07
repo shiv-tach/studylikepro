@@ -13,7 +13,7 @@ beforeEach(function () {
 
 it('converts weekly ranges from the teacher timezone into utc slots', function () {
     $teacher = TeacherProfile::factory()->approved()->create([
-        'timezone' => 'Asia/Kolkata',
+        'timezone' => 'Asia/Colombo',
         'lesson_duration_minutes' => 60,
     ]);
 
@@ -130,13 +130,13 @@ it('keeps slots unique and offset-correct across a dst change', function () {
 
 it('answers whether a specific instant is inside a weekly range', function () {
     $teacher = TeacherProfile::factory()->approved()->create([
-        'timezone' => 'Asia/Kolkata',
+        'timezone' => 'Asia/Colombo',
         'lesson_duration_minutes' => 60,
     ]);
 
     TeacherAvailabilitySlot::factory()->on(1, '18:00', '21:00')->create(['teacher_profile_id' => $teacher->id]);
 
-    // 18:30 IST on Monday.
+    // 18:30 Sri Lanka time on Monday.
     expect($this->service->isAvailableAt($teacher, CarbonImmutable::parse('2026-06-01 13:00', 'UTC')))->toBeTrue()
         ->and($this->service->isAvailableAt($teacher, CarbonImmutable::parse('2026-06-01 16:00', 'UTC')))->toBeFalse()
         ->and($this->service->isAvailableAt($teacher, CarbonImmutable::parse('2026-06-02 13:00', 'UTC')))->toBeFalse();

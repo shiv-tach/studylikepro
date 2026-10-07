@@ -21,6 +21,7 @@ use App\Models\User;
 use App\Notifications\BookingConfirmed;
 use App\Notifications\LessonCompleted;
 use App\Notifications\LessonReminder;
+use App\Services\BookingFeeService;
 use App\Services\BookingService;
 use App\Services\ConversationService;
 use App\Services\DisputeService;
@@ -49,7 +50,7 @@ class DemoDataSeeder extends Seeder
             ['user_id' => $student->id],
             [
                 'grade_level' => 'high_school',
-                'timezone' => 'Asia/Kolkata',
+                'timezone' => 'Asia/Colombo',
                 'learning_goals' => 'Improve maths and physics for board exams.',
                 'completed_at' => now(),
             ]
@@ -63,8 +64,8 @@ class DemoDataSeeder extends Seeder
                 'bio' => '10+ years helping students build strong fundamentals and exam confidence.',
                 'experience_years' => 10,
                 'education' => 'M.Sc. Physics, University of Delhi',
-                'languages' => ['English', 'Hindi'],
-                'timezone' => 'Asia/Kolkata',
+                'languages' => ['English', 'Sinhala'],
+                'timezone' => 'Asia/Colombo',
                 'hourly_rate_minor' => 80000,
                 'verification_status' => VerificationStatus::Draft,
                 'completed_at' => now(),
@@ -100,8 +101,8 @@ class DemoDataSeeder extends Seeder
                 'bio' => 'Patient, exam-focused coaching for algebra, geometry and calculus.',
                 'experience_years' => 7,
                 'education' => 'M.Sc. Mathematics, IIT Bombay',
-                'languages' => ['English', 'Hindi', 'Marathi'],
-                'timezone' => 'Asia/Kolkata',
+                'languages' => ['English', 'Sinhala', 'Tamil'],
+                'timezone' => 'Asia/Colombo',
                 'hourly_rate_minor' => 70000,
                 'verification_status' => VerificationStatus::Approved,
                 'submitted_at' => now()->subWeek(),
@@ -129,7 +130,7 @@ class DemoDataSeeder extends Seeder
                 'experience_years' => 5,
                 'education' => 'B.Tech Biotechnology, Anna University',
                 'languages' => ['English', 'Tamil'],
-                'timezone' => 'Asia/Kolkata',
+                'timezone' => 'Asia/Colombo',
                 'hourly_rate_minor' => 60000,
                 'verification_status' => VerificationStatus::Approved,
                 'submitted_at' => now()->subDays(3),
@@ -234,7 +235,7 @@ class DemoDataSeeder extends Seeder
         }
 
         $bookings = app(BookingService::class);
-        $timezone = 'Asia/Kolkata';
+        $timezone = 'Asia/Colombo';
         $mathematics = Subject::query()->where('slug', 'mathematics')->first();
         $chemistry = Subject::query()->where('slug', 'chemistry')->first();
 
@@ -256,6 +257,7 @@ class DemoDataSeeder extends Seeder
                 'learner_grade' => 'high_school',
                 'confirmed_at' => now()->subDay(),
                 ...$bookings->feeBreakdown($price),
+                ...$this->bookingFee(),
             ]);
         }
 
@@ -278,6 +280,7 @@ class DemoDataSeeder extends Seeder
                 'learner_grade' => 'high_school',
                 'expires_at' => now()->addMinutes((int) platform_settings()->int('hold_ttl_minutes')),
                 ...$bookings->feeBreakdown($price),
+                ...$this->bookingFee(),
             ]);
 
             $deliveredAt = CarbonImmutable::now($timezone)->subDays(6)->setTime(7, 30);
@@ -299,6 +302,7 @@ class DemoDataSeeder extends Seeder
                 'started_at' => $deliveredAt->utc(),
                 'completed_at' => $deliveredAt->addHour()->utc(),
                 ...$bookings->feeBreakdown($price),
+                ...$this->bookingFee(),
             ]);
 
             $this->seedCapturedPayment($confirmed);
@@ -437,12 +441,12 @@ class DemoDataSeeder extends Seeder
                 ['user_id' => $pastStudent->id],
                 [
                     'grade_level' => 'high_school',
-                    'timezone' => 'Asia/Kolkata',
+                    'timezone' => 'Asia/Colombo',
                     'completed_at' => now(),
                 ]
             );
 
-            $startsAt = CarbonImmutable::now('Asia/Kolkata')->subDays($entry['days_ago'])->setTime(17, 0);
+            $startsAt = CarbonImmutable::now('Asia/Colombo')->subDays($entry['days_ago'])->setTime(17, 0);
             $price = $bookings->priceMinor($mathematicsTeacher, $mathematics, 45);
 
             $lesson = Booking::query()->create([
@@ -461,6 +465,7 @@ class DemoDataSeeder extends Seeder
                 'started_at' => $startsAt->utc(),
                 'completed_at' => $startsAt->addMinutes(45)->utc(),
                 ...$bookings->feeBreakdown($price),
+                ...$this->bookingFee(),
             ]);
 
             $this->seedCapturedPayment($lesson);
@@ -492,6 +497,22 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
+     * The student booking fee snapshot for a demo booking, offer included.
+     *
+     * @return array<string, mixed>
+     */
+    private function bookingFee(): array
+    {
+        $fee = app(BookingFeeService::class)->quote();
+
+        return [
+            'booking_fee_minor' => $fee['booking_fee_minor'],
+            'booking_fee_discount_minor' => $fee['discount_minor'],
+            'booking_fee_promotion_id' => $fee['promotion']?->id,
+        ];
+    }
+
+    /**
      * A settled payment plus the teacher's ledger row, mirroring what the
      * gateway webhook would have produced.
      */
@@ -503,7 +524,7 @@ class DemoDataSeeder extends Seeder
             'gateway' => 'fake',
             'gateway_order_id' => 'order_demo_'.$booking->id,
             'gateway_payment_id' => 'pay_demo_'.$booking->id,
-            'amount_minor' => $booking->price_minor,
+            'amount_minor' => $booking->totalMinor(),
             'currency' => $booking->currency,
             'status' => PaymentStatus::Captured,
             'method' => 'upi',
@@ -545,7 +566,7 @@ class DemoDataSeeder extends Seeder
             return;
         }
 
-        $timezone = 'Asia/Kolkata';
+        $timezone = 'Asia/Colombo';
         $windowStart = null;
 
         for ($days = 1; $days <= 8; $days++) {

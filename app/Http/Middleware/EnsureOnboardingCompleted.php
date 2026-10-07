@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureOnboardingCompleted
 {
     /**
-     * Send users who have not finished their profile to the onboarding form.
+     * Send users who have not finished onboarding to the step they still owe.
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -22,9 +22,11 @@ class EnsureOnboardingCompleted
         }
 
         if ($user->isTeacher() && ! $user->hasCompletedOnboarding()) {
-            return redirect()
-                ->route('teacher.profile')
-                ->with('status', 'complete-your-profile');
+            // Step 1 is the teaching profile; step 2 is verification. Teachers who
+            // saved their profile but never submitted documents are sent to step 2.
+            return $user->teacherProfile?->isComplete()
+                ? redirect()->route('teacher.verification')->with('status', 'complete-your-verification')
+                : redirect()->route('teacher.profile')->with('status', 'complete-your-profile');
         }
 
         return $next($request);
