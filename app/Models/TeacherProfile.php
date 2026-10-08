@@ -171,6 +171,16 @@ class TeacherProfile extends Model
     }
 
     /**
+     * The grade ids this teacher covers on one subject, read from its pivot.
+     *
+     * @return list<int>
+     */
+    public function gradeIdsFor(Subject $subject): array
+    {
+        return static::gradeIdsFrom($this->subjects->firstWhere('id', $subject->id)?->pivot);
+    }
+
+    /**
      * The price for every grade this teacher covers on a subject, in grade
      * order, so public pages can show one rate per grade.
      *

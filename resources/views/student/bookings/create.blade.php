@@ -12,7 +12,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div>
-            <a href="{{ route('teachers.show', $teacher) }}" class="text-xs font-semibold text-slate-400 transition-colors hover:text-primary">&larr; {{ $teacher->user->name }}</a>
+            <a href="{{ route('student.teachers.show', $teacher) }}" class="text-xs font-semibold text-slate-400 transition-colors hover:text-primary">&larr; {{ $teacher->user->name }}</a>
             <h2 class="mt-1 font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('Book a lesson') }}</h2>
         </div>
     </x-slot>
@@ -23,7 +23,6 @@
                 <!-- Lesson choice -->
                 <form method="GET" action="{{ route('student.bookings.create', $teacher) }}" id="booking-filter-form"
                       class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-                    <input type="hidden" name="learner_grade_id" value="{{ $learnerGradeId }}">
                     <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ __('1. What do you need help with?') }}</h3>
                     <div class="mt-4 grid gap-4 sm:grid-cols-3">
                         <div>
@@ -117,21 +116,17 @@
                                 <x-input-error :messages="$errors->get('learner_name')" class="mt-2" />
                             </div>
                             <div>
-                                <x-input-label for="learner_grade_id" :value="__('Grade')" />
-                                <select id="learner_grade_id" name="learner_grade_id" class="mt-1 block w-full {{ $fieldClasses }}"
-                                        onchange="const filter = document.getElementById('booking-filter-form'); filter.learner_grade_id.value = this.value; filter.submit();">
-                                    @foreach ($levels as $level)
-                                        <optgroup label="{{ $level->name }}">
-                                            @foreach ($level->grades as $grade)
-                                                <option value="{{ $grade->id }}" @selected((int) old('learner_grade_id', $learnerGradeId) === $grade->id)>{{ $grade->label }}</option>
-                                            @endforeach
-                                        </optgroup>
-                                    @endforeach
-                                </select>
-                                <x-input-error :messages="$errors->get('learner_grade_id')" class="mt-2" />
+                                <x-input-label :value="__('Grade')" />
+                                <p class="mt-1 rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                                    {{ $learnerGrade?->label ?? __('Not set') }}
+                                </p>
+                                <p class="mt-1 text-xs text-slate-400">
+                                    {{ __('From your learning profile.') }}
+                                    <a href="{{ route('student.profile') }}" class="font-semibold text-primary hover:underline">{{ __('Change grade') }}</a>
+                                </p>
                             </div>
                         </div>
-                        <p class="mt-3 text-xs text-slate-400">{{ __('Booked for someone else? Put their name and grade here — changing the grade reloads the page and offers that grade\'s lessons above.') }}</p>
+                        <p class="mt-3 text-xs text-slate-400">{{ __('Booked for someone else? Put their name here — the lesson always follows your learning profile grade.') }}</p>
                     </div>
 
                     <div class="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-6 dark:border-slate-800">

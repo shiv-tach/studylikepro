@@ -284,14 +284,16 @@ Current two-step flow in [teacher/subjects.blade.php](../resources/views/teacher
 
 [Student/TutoringRequestController.php](../app/Http/Controllers/Student/TutoringRequestController.php) + [TutoringRequest.php](../app/Models/TutoringRequest.php):
 
-- `grade_id` defaults to the profile grade; editable per request (parents booking for a different learner — same pattern as `learner_grade` today).
+- `grade_id` is locked to the student's profile grade — the form shows it read-only with a change-grade link, and any posted `grade_id` is ignored (the same lock as `learner_grade_id` on bookings), so every request is matched at the registered grade.
 - Subject dropdown limited to the request grade's level; **lesson dropdown limited to that grade** — the student physically cannot pick a Grade 11 lesson for a Grade 8 request.
 - AI classification (step 1 of the flow) is constrained to the same scope.
 
 ### 7.4 Booking & directory
 
-- [student/bookings/create.blade.php](../resources/views/student/bookings/create.blade.php): lesson picker filtered by the teacher's lessons **for the learner's grade**; `learner_grade_id` defaults from profile.
+- [student/bookings/create.blade.php](../resources/views/student/bookings/create.blade.php): lesson picker filtered by the teacher's lessons **for the learner's grade**; `learner_grade_id` is locked to the student profile — the page shows it read-only with a change-grade link and ignores any `learner_grade_id` in the request.
 - Teacher directory ([teachers/](../resources/views/teachers/)): filters become Level → Grade → Subject → Lesson, cascading; URL query filters match [TeacherSearch.php](../app/Services/TeacherSearch.php).
+- Signed-in students get a grade-matched finder ([student/find-teacher.blade.php](../resources/views/student/find-teacher.blade.php), `/student/find-a-teacher`) that always scopes to the profile grade and keeps the filters simple: subject, language and a concrete date plus time window. "Earliest availability" sorts by the next bookable slot, computed through [SlotService.php](../app/Services/SlotService.php) (weekly ranges, time off and live holds included).
+- The public teacher profile ([teachers/show.blade.php](../resources/views/teachers/show.blade.php)) stays for guests and other roles; students are redirected into the workspace copy ([student/teacher.blade.php](../resources/views/student/teacher.blade.php), `/student/teachers/{teacher}`) where subjects, lessons and rates are scoped to their profile grade ("Grade X lessons & rates", booking CTAs beside the availability list, notice + finder link when the teacher does not take the grade). No student workspace view links out to the public pages.
 - Teacher cards show "Teaches Grade 6–9 · 45 lessons" so a student skimming the directory immediately sees relevance.
 
 ---

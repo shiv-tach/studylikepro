@@ -54,7 +54,7 @@
         $navItems[] = ['label' => 'My requests', 'url' => route('student.requests.index'), 'active' => request()->routeIs('student.requests*'), 'icon' => 'doc', 'badge' => null];
         $navItems[] = ['label' => 'My lessons', 'url' => route('student.bookings.index'), 'active' => request()->routeIs('student.bookings*'), 'icon' => 'calendar', 'badge' => $upcomingLessons ?: null];
         $navItems[] = ['label' => 'Messages', 'url' => route('messages.index'), 'active' => request()->routeIs('messages.*'), 'icon' => 'chat', 'badge' => ($unreadMessageCount ?? 0) ?: null];
-        $navItems[] = ['label' => 'Find a teacher', 'url' => route('teachers.index'), 'active' => request()->routeIs('teachers.*'), 'icon' => 'search', 'badge' => null];
+        $navItems[] = ['label' => 'Find a teacher', 'url' => route('student.teachers.index'), 'active' => request()->routeIs('student.teachers*', 'teachers.*'), 'icon' => 'search', 'badge' => null];
     }
 
     if ($user->isTeacher() && ! $user->hasCompletedOnboarding()) {

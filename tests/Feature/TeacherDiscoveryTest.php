@@ -263,5 +263,6 @@ it('links students to the teacher directory from their dashboard navigation', fu
     $this->actingAs($student)
         ->get(route('student.dashboard'))
         ->assertOk()
-        ->assertSee('Find a teacher');
+        ->assertSee('Find a teacher')
+        ->assertSee(route('student.teachers.index'), false);
 });

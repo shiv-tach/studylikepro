@@ -27,7 +27,6 @@ class StoreBookingRequest extends FormRequest
             'duration' => ['required', 'integer', 'in:'.implode(',', config('studylikepro.lesson_durations'))],
             'starts_at' => ['required', 'date'],
             'learner_name' => ['nullable', 'string', 'max:120'],
-            'learner_grade_id' => ['nullable', 'integer', 'exists:grades,id'],
         ];
     }
 

@@ -115,7 +115,8 @@ Automated equivalent: `tests/Feature/Acceptance/CoreFlowTest.php` (runs in CI).
 
 Automated equivalents: `tests/Feature/CatalogTest.php`, `tests/Feature/Admin/CurriculumLevelTest.php`, `tests/Feature/Admin/GradeLessonTest.php`,
 `tests/Feature/Admin/SubjectBasketTest.php`, `tests/Feature/Teacher/GradeLessonAssignmentTest.php`, `tests/Feature/Student/GradeScopedCatalogTest.php`,
-`tests/Feature/Student/BasketSubjectsTest.php`, `tests/Feature/Matching/GradeMatchTest.php`, `tests/Feature/TeacherDiscoveryTest.php`.
+`tests/Feature/Student/BasketSubjectsTest.php`, `tests/Feature/Matching/GradeMatchTest.php`, `tests/Feature/TeacherDiscoveryTest.php`,
+`tests/Feature/Student/StudentTeacherFinderTest.php`.
 
 | # | Step | Expected | ✅ |
 | --- | --- | --- | --- |
@@ -137,6 +138,10 @@ Automated equivalents: `tests/Feature/CatalogTest.php`, `tests/Feature/Admin/Cur
 | G16 | Visitor opens `/subjects?level=ol&grade=10` | Step 3 shows *Compulsory subjects* first, then 🎨 Category I, 🛠️ Category II and 📚 Category III, each with a "pick one" chip and its one-line description; the note explains the exam rule | ☐ |
 | G17 | Visitor opens `/subjects?level=ol&grade=6` | The grid stays flat with the note "Every subject below is compulsory in Grade 6; the optional O/L baskets … begin in Grades 10–11" — never a "pick one" chip | ☐ |
 | G18 | Admin renames/describes a basket, then reloads `/subjects?level=ol&grade=10` | The new name and description appear immediately (catalog cache flushed on the basket write) | ☐ |
+| G19 | Grade 8 student opens *Find a teacher* from the dashboard | The page lists only verified teachers who take Grade 8 (their Grade 8 hourly rate shown); the subject picker offers Grade 8 subjects; picking a date and time window keeps only teachers genuinely free then; "Earliest availability" puts the soonest open slot first; the `grade` query parameter cannot widen the list | ☐ |
+| G20 | Grade 8 student opens a teacher from the finder | The profile opens inside the student area (`/student/teachers/…`) showing only Grade 8 subjects, lessons and rates ("Grade 8 lessons & rates"); *Book a slot* opens the booking page; the student is redirected from `/teachers` and `/teachers/{id}`; a guest still gets the full public profile with the log-in CTA; a teacher who does not take Grade 8 gets a notice linking back to *Find a teacher* | ☐ |
+| G21 | Grade 8 student opens `/student/lessons/book/{teacher}` | The grade shows as a read-only value taken from the learning profile (no grade picker); adding `?learner_grade_id=…` to the URL or posting one leaves the lessons and the rate at Grade 8; *Change grade* opens the learning profile, and the page then follows the new grade | ☐ |
+| G22 | Grade 8 student opens `/student/requests/create` | The learner grade shows read-only from the learning profile (no grade picker); posting another `grade_id` still stores the request at Grade 8, so matching and the AI lesson scope stay at that grade | ☐ |
 
 ---
 

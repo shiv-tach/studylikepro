@@ -139,11 +139,10 @@
                             </div>
                             @auth
                                 @can('create', [App\Models\Booking::class, $teacher])
-                                    <a href="{{ route('student.bookings.create', array_filter([
+                                    <a href="{{ route('student.bookings.create', [
                                             'teacherProfile' => $teacher,
                                             'subject_id' => $subject->id,
-                                            'learner_grade_id' => $grade?->id,
-                                        ])) }}"
+                                        ]) }}"
                                        class="relative z-10 inline-flex shrink-0 items-center gap-1 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary/20 transition hover:bg-primary/90">
                                         Book now
                                     </a>

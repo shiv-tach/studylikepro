@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\ReviewFlagged;
 use App\Services\ReviewService;
 use App\Services\TeacherStatsService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -189,6 +190,10 @@ it('shows the reviews on the public teacher profile and hides hidden ones', func
 
     $this->actingAs($scenario['student'])
         ->post(route('student.reviews.store', $scenario['booking']), ['rating' => 5, 'comment' => 'Best chemistry lesson I have had.']);
+
+    // Students read teacher profiles inside their workspace, so the public
+    // page is checked as a guest.
+    Auth::logout();
 
     $this->get(route('teachers.show', $scenario['teacher']))
         ->assertOk()

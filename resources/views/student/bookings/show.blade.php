@@ -140,7 +140,7 @@
                         <span class="italic">“{{ $booking->cancellation_reason }}”</span>
                     @endif
                 </p>
-                <a href="{{ route('teachers.index') }}"
+                <a href="{{ route('student.teachers.index') }}"
                    class="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     {{ __('Find another teacher') }}
                 </a>
@@ -157,7 +157,7 @@
                 </div>
                 <div class="text-right">
                     <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Teacher') }}</p>
-                    <a href="{{ route('teachers.show', $booking->teacher_profile_id) }}" class="mt-1 block text-sm font-bold text-primary hover:underline">{{ $teacherUser->name }}</a>
+                    <a href="{{ route('student.teachers.show', $booking->teacher_profile_id) }}" class="mt-1 block text-sm font-bold text-primary hover:underline">{{ $teacherUser->name }}</a>
                     <p class="text-xs text-slate-400">{{ $booking->subject?->name }}@if ($booking->lesson) · {{ $booking->lesson->name }}@endif</p>
                 </div>
             </div>

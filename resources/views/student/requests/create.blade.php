@@ -51,18 +51,14 @@
                 <x-input-error :messages="$errors->get('description')" class="mt-2" />
 
                 <div class="mt-5 sm:max-w-xs">
-                    <x-input-label for="grade_id" :value="__('Learner grade')" />
-                    <select id="grade_id" name="grade_id" class="mt-1 block w-full {{ $fieldClasses }}">
-                        @foreach ($levels as $level)
-                            <optgroup label="{{ $level->name }}">
-                                @foreach ($level->grades as $grade)
-                                    <option value="{{ $grade->id }}" @selected((int) old('grade_id', $defaultGradeId) === $grade->id)>{{ $grade->label }}</option>
-                                @endforeach
-                            </optgroup>
-                        @endforeach
-                    </select>
-                    <x-input-error :messages="$errors->get('grade_id')" class="mt-2" />
-                    <p class="mt-1 text-xs text-slate-400">{{ __('We only offer lessons for this grade — change it if you are asking for someone else.') }}</p>
+                    <x-input-label :value="__('Learner grade')" />
+                    <p class="mt-1 rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                        {{ $learnerGrade?->label ?? __('Not set') }}
+                    </p>
+                    <p class="mt-1 text-xs text-slate-400">
+                        {{ __('From your learning profile — we only match lessons for this grade.') }}
+                        <a href="{{ route('student.profile') }}" class="font-semibold text-primary hover:underline">{{ __('Change grade') }}</a>
+                    </p>
                 </div>
             </div>
 

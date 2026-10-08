@@ -33,6 +33,8 @@ use App\Http\Controllers\Student\PaymentController as StudentPaymentController;
 use App\Http\Controllers\Student\ProfileController as StudentProfileController;
 use App\Http\Controllers\Student\ReceiptController;
 use App\Http\Controllers\Student\ReviewController as StudentReviewController;
+use App\Http\Controllers\Student\TeacherFinderController;
+use App\Http\Controllers\Student\TeacherProfileController as StudentTeacherProfileController;
 use App\Http\Controllers\Student\TutoringRequestController;
 use App\Http\Controllers\Teacher\AvailabilityController as TeacherAvailabilityController;
 use App\Http\Controllers\Teacher\BookingController as TeacherBookingController;
@@ -105,6 +107,11 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_STUDENT, 'not-suspende
 
         Route::get('/interests', [StudentInterestsController::class, 'edit'])->middleware('onboarded')->name('interests.edit');
         Route::put('/interests', [StudentInterestsController::class, 'update'])->middleware('onboarded')->name('interests.update');
+
+        // Teacher discovery matched to the student's profile grade, with the
+        // student workspace around it. The public directory stays at /teachers.
+        Route::get('/find-a-teacher', TeacherFinderController::class)->middleware('onboarded')->name('teachers.index');
+        Route::get('/teachers/{teacherProfile}', StudentTeacherProfileController::class)->middleware('onboarded')->name('teachers.show');
 
         Route::get('/requests', [TutoringRequestController::class, 'index'])->middleware('onboarded')->name('requests.index');
         Route::get('/requests/create', [TutoringRequestController::class, 'create'])->middleware('onboarded')->name('requests.create');

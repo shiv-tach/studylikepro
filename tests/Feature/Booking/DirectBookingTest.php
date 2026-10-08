@@ -88,7 +88,6 @@ it('reserves the chosen slot as a pending payment hold with the commission snaps
             'duration' => 60,
             'starts_at' => $scenario['slot']->toIso8601String(),
             'learner_name' => 'Riya Sharma',
-            'learner_grade_id' => gradeId(11),
         ])
         ->assertSessionHasNoErrors();
 
@@ -190,7 +189,7 @@ it('rejects a lesson that belongs to another subject', function () {
     expect(Booking::query()->count())->toBe(0);
 });
 
-it('offers only the learner grade lessons on the booking page', function () {
+it('keeps the booking page pinned to the registered grade even with a grade parameter', function () {
     $scenario = directBookingScenario();
 
     $otherGrade = Grade::factory()->create(['education_level_id' => $scenario['subject']->education_level_id]);
@@ -206,16 +205,19 @@ it('offers only the learner grade lessons on the booking page', function () {
         ->get(route('student.bookings.create', $scenario['teacher']))
         ->assertOk()
         ->assertSee('Algebra')
-        ->assertDontSee('Trigonometry');
+        ->assertDontSee('Trigonometry')
+        ->assertSee('Grade 11')
+        ->assertDontSee('name="learner_grade_id"', false);
 
+    // The learner grade always comes from the learning profile.
     $this->actingAs($scenario['student'])
         ->get(route('student.bookings.create', [
             'teacherProfile' => $scenario['teacher'],
             'learner_grade_id' => $otherGrade->id,
         ]))
         ->assertOk()
-        ->assertSee('Trigonometry')
-        ->assertDontSee('Algebra');
+        ->assertSee('Algebra')
+        ->assertDontSee('Trigonometry');
 });
 
 it('rejects a lesson that is not for the learner grade', function () {
@@ -236,7 +238,6 @@ it('rejects a lesson that is not for the learner grade', function () {
             'lesson_id' => $otherLesson->id,
             'duration' => 60,
             'starts_at' => $scenario['slot']->toIso8601String(),
-            'learner_grade_id' => gradeId(11),
         ])
         ->assertSessionHasErrors('lesson_id');
 

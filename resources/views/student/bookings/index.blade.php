@@ -16,7 +16,7 @@
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('My lessons') }}</h2>
-            <a href="{{ route('teachers.index') }}"
+            <a href="{{ route('student.teachers.index') }}"
                class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90">
                 {{ __('Find a teacher') }}
             </a>
@@ -108,7 +108,7 @@
                         : __('Completed, cancelled and expired lessons will show up here.') }}
                 </p>
                 @if ($tab === 'upcoming')
-                    <a href="{{ route('teachers.index') }}"
+                    <a href="{{ route('student.teachers.index') }}"
                        class="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90">
                         {{ __('Browse teachers') }}
                     </a>

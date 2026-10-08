@@ -42,10 +42,16 @@ class TutoringRequestController extends Controller
      */
     public function create(Request $request): View
     {
+        // The learner grade is locked to the student's registered grade, so the
+        // page shows it read-only instead of offering a picker.
+        $gradeId = (int) $request->user()->studentProfile?->grade_id ?: null;
+        $levels = $this->catalog->levels();
+
         return view('student.requests.create', [
             'subjects' => $this->catalog->subjects(),
-            'levels' => $this->catalog->levels(),
-            'defaultGradeId' => $request->user()->studentProfile?->grade_id,
+            'learnerGrade' => $gradeId !== null
+                ? $levels->flatMap(fn ($level) => $level->grades)->firstWhere('id', $gradeId)
+                : null,
             'maxAttachments' => (int) config('studylikepro.requests.max_attachments'),
         ]);
     }
@@ -59,7 +65,8 @@ class TutoringRequestController extends Controller
 
         $tutoringRequest = DB::transaction(function () use ($request, $user) {
             $created = $user->tutoringRequests()->create([
-                'grade_id' => $request->validated('grade_id') ?: $user->studentProfile?->grade_id,
+                // The grade is locked to the profile; a posted grade_id is ignored.
+                'grade_id' => $user->studentProfile?->grade_id,
                 'description' => $request->validated('description'),
                 'budget_minor' => filled($request->validated('budget'))
                     ? (int) round(((float) $request->validated('budget')) * 100)

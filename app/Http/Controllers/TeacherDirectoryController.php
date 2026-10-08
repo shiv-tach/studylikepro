@@ -9,15 +9,22 @@ use App\Services\CatalogService;
 use App\Services\SlotService;
 use App\Services\TeacherSearch;
 use App\Services\TeacherStatsService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class TeacherDirectoryController extends Controller
 {
     /**
-     * Public teacher listing with filters and sorting.
+     * Public teacher listing with filters and sorting. Students browse through
+     * their own grade-matched finder instead.
      */
-    public function index(TeacherSearchRequest $request, TeacherSearch $search, SlotService $slots, CatalogService $catalog): View
+    public function index(TeacherSearchRequest $request, TeacherSearch $search, SlotService $slots, CatalogService $catalog): View|RedirectResponse
     {
+        if ($request->user()?->isStudent()) {
+            return redirect()->route('student.teachers.index');
+        }
+
         $filters = $request->validated();
         $teachers = $search->paginate($filters);
         $levels = $catalog->levels();
@@ -41,10 +48,16 @@ class TeacherDirectoryController extends Controller
 
     /**
      * Public teacher profile with availability preview and recent reviews.
+     * Students read the same profile inside their workspace, scoped to the
+     * grade on their learning profile.
      */
-    public function show(TeacherProfile $teacherProfile, SlotService $slots, TeacherStatsService $stats): View
+    public function show(Request $request, TeacherProfile $teacherProfile, SlotService $slots, TeacherStatsService $stats): View|RedirectResponse
     {
         abort_unless($teacherProfile->isApproved(), 404);
+
+        if ($request->user()?->isStudent()) {
+            return redirect()->route('student.teachers.show', $teacherProfile);
+        }
 
         $teacherProfile->load([
             'user',

@@ -270,7 +270,7 @@
                                     <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">{{ substr($teacher->user->name, 0, 2) }}</span>
                                 @endif
                                 <div>
-                                    <a href="{{ route('teachers.show', $teacher) }}" class="text-sm font-bold text-slate-800 transition-colors hover:text-primary dark:text-slate-100">{{ $teacher->user->name }}</a>
+                                    <a href="{{ route('student.teachers.show', $teacher) }}" class="text-sm font-bold text-slate-800 transition-colors hover:text-primary dark:text-slate-100">{{ $teacher->user->name }}</a>
                                     <p class="mt-0.5 text-xs text-slate-400">
                                         {{ $teacher->headline ?: $teacher->subjects->pluck('name')->join(' · ') }}
                                     </p>

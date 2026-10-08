@@ -213,26 +213,26 @@ it('keeps teachers and guests out of the student request routes', function () {
         ->assertForbidden();
 });
 
-it('stores the learner grade, defaulting to the profile grade', function () {
+it('locks the request grade to the learning profile', function () {
     Queue::fake();
 
     $student = User::factory()->student()->onboarded()->create();
-    $profileGradeId = $student->studentProfile->grade_id;
+    $profileGrade = $student->studentProfile->grade;
     $otherGrade = Grade::factory()->create([
-        'education_level_id' => $student->studentProfile->grade->education_level_id,
+        'education_level_id' => $profileGrade->education_level_id,
     ]);
+
+    $this->actingAs($student)
+        ->get(route('student.requests.create'))
+        ->assertOk()
+        ->assertSee($profileGrade->label)
+        ->assertDontSee('name="grade_id"', false);
 
     $this->actingAs($student)
         ->post(route('student.requests.store'), studentRequestPayload(['grade_id' => $otherGrade->id]))
         ->assertRedirect();
 
-    expect(TutoringRequest::query()->latest('id')->firstOrFail()->grade_id)->toBe($otherGrade->id);
-
-    $this->actingAs($student)
-        ->post(route('student.requests.store'), studentRequestPayload())
-        ->assertRedirect();
-
-    expect(TutoringRequest::query()->latest('id')->firstOrFail()->grade_id)->toBe($profileGradeId);
+    expect(TutoringRequest::query()->latest('id')->firstOrFail()->grade_id)->toBe($profileGrade->id);
 });
 
 it('shows the pending state while the classification is running', function () {

@@ -126,13 +126,13 @@
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Tell us what you want help with.</p>
             </a>
 
-            <a href="{{ route('teachers.index') }}" class="group {{ $cardBase }}" :class="{{ $cardTheme }}">
+            <a href="{{ route('student.teachers.index') }}" class="group {{ $cardBase }}" :class="{{ $cardTheme }}">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Tutors</span>
-                    <span class="{{ $chip }}">Directory</span>
+                    <span class="{{ $chip }}">{{ $gradeLabel ?? 'Directory' }}</span>
                 </div>
                 <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">Find a teacher</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Browse verified tutors by subject and price.</p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Verified tutors who take your grade — filter by subject, language and lesson times.</p>
             </a>
         </div>
 

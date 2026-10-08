@@ -210,7 +210,7 @@ test('teacher cards on a subject page offer booking for the shown grade', functi
         ->assertDontSee('View profile')
         ->assertSee(route('register', ['role' => 'student']));
 
-    // Signed-in students jump straight into booking with the grade preselected.
+    // Signed-in students jump straight into booking with the subject preselected.
     $this->actingAs(User::factory()->student()->onboarded()->create())
         ->get($url)
         ->assertOk()
@@ -218,7 +218,6 @@ test('teacher cards on a subject page offer booking for the shown grade', functi
         ->assertSee(route('student.bookings.create', [
             'teacherProfile' => $teacher,
             'subject_id' => $subject->id,
-            'learner_grade_id' => $grade7->id,
         ]));
 
     // Teachers cannot book lessons, so they keep the profile CTA.

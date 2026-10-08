@@ -96,9 +96,10 @@ class BookingController extends Controller
 
         $levels = $this->catalog->levels();
 
-        // The lessons on offer are the teacher's lessons for the learner's
-        // grade (defaults to the student's own profile grade).
-        $learnerGradeId = (int) ($request->integer('learner_grade_id') ?: $request->user()->studentProfile?->grade_id) ?: null;
+        // The learner grade is locked to the student's registered grade: it is
+        // never read from the request, so the lessons and rate on this page
+        // always match their learning profile.
+        $learnerGradeId = (int) $request->user()->studentProfile?->grade_id ?: null;
         $learnerGrade = $learnerGradeId !== null
             ? $levels->flatMap(fn ($level) => $level->grades)->firstWhere('id', $learnerGradeId)
             : null;
@@ -125,7 +126,6 @@ class BookingController extends Controller
             'teacher' => $teacherProfile,
             'subjects' => $subjects,
             'lessons' => $lessons,
-            'levels' => $levels,
             'learnerGradeId' => $learnerGradeId,
             'learnerGrade' => $learnerGrade,
             'subject' => $subject,
@@ -158,7 +158,8 @@ class BookingController extends Controller
         }
 
         $student = $request->user();
-        $learnerGradeId = (int) ($request->validated('learner_grade_id') ?: $student->studentProfile?->grade_id) ?: null;
+        // Locked to the registered grade; a posted learner_grade_id is ignored.
+        $learnerGradeId = (int) $student->studentProfile?->grade_id ?: null;
 
         $lessonId = $request->integer('lesson_id') ?: null;
         $lesson = null;
