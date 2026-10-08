@@ -17,8 +17,8 @@ class EnsureOnboardingCompleted
 
         if ($user->isStudent() && ! $user->hasCompletedOnboarding()) {
             return redirect()
-                ->route('student.profile')
-                ->with('status', 'complete-your-profile');
+                ->route('student.onboarding.show')
+                ->with('status', 'complete-your-onboarding');
         }
 
         if ($user->isTeacher() && ! $user->hasCompletedOnboarding()) {

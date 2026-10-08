@@ -4,41 +4,50 @@ use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
-test('new students are redirected to their profile from the dashboard', function () {
+test('new students are sent to the onboarding wizard from the dashboard', function () {
     $this->actingAs(User::factory()->student()->create())
         ->get(route('student.dashboard'))
-        ->assertRedirect(route('student.profile'));
+        ->assertRedirect(route('student.onboarding.show'));
 });
 
-test('the profile page shows the onboarding form for new students', function () {
+test('the learning profile is for students who finished onboarding', function () {
     $this->actingAs(User::factory()->student()->create())
         ->get(route('student.profile'))
+        ->assertRedirect(route('student.onboarding.show'));
+
+    $this->actingAs(User::factory()->student()->onboarded()->create())
+        ->get(route('student.profile'))
         ->assertOk()
-        ->assertSee('Complete your profile');
+        ->assertSee('My Learning Profile');
 });
 
-test('students can complete their profile', function () {
-    $user = User::factory()->student()->create();
-    $grade = gradeId(11);
+test('students can update their profile after onboarding', function () {
+    $user = User::factory()->student()->onboarded()->create();
 
-    $response = $this->actingAs($user)->put(route('student.profile.update'), [
-        'grade_id' => $grade,
-        'learning_goals' => 'Prepare for board exams',
-        'guardian_name' => 'Priya Sharma',
-        'guardian_phone' => '+91 98765 43210',
-    ]);
-
-    $response->assertRedirect(route('student.dashboard'));
+    $this->actingAs($user)
+        ->put(route('student.profile.update'), [
+            'grade_id' => gradeId(13),
+            'learning_language' => 'English',
+            'learning_goals' => 'Calculus and linear algebra',
+        ])
+        ->assertRedirect(route('student.profile'));
 
     $profile = $user->fresh()->studentProfile;
 
-    expect($profile)->not->toBeNull()
-        ->and($profile->completed_at)->not->toBeNull()
-        ->and($profile->grade_id)->toBe($grade)
-        ->and($profile->timezone)->toBe('Asia/Colombo')
-        ->and($profile->guardian_name)->toBe('Priya Sharma');
+    expect($profile->grade_id)->toBe(gradeId(13))
+        ->and($profile->learning_language)->toBe('English')
+        ->and($profile->learning_goals)->toBe('Calculus and linear algebra');
+});
 
-    $this->get(route('student.dashboard'))->assertOk();
+test('the profile rejects a learning language the platform does not teach in', function () {
+    $user = User::factory()->student()->onboarded()->create();
+
+    $this->actingAs($user)
+        ->put(route('student.profile.update'), [
+            'grade_id' => gradeId(11),
+            'learning_language' => 'Tamil',
+        ])
+        ->assertSessionHasErrors('learning_language');
 });
 
 test('completing the profile validates its inputs', function () {
@@ -51,19 +60,6 @@ test('completing the profile validates its inputs', function () {
         ->assertSessionHasErrors(['grade_id']);
 
     expect($user->fresh()->studentProfile)->toBeNull();
-});
-
-test('students can update their profile after onboarding', function () {
-    $user = User::factory()->student()->onboarded()->create();
-
-    $this->actingAs($user)
-        ->put(route('student.profile.update'), [
-            'grade_id' => gradeId(13),
-            'learning_goals' => 'Calculus and linear algebra',
-        ])
-        ->assertRedirect(route('student.profile'));
-
-    expect($user->fresh()->studentProfile->grade_id)->toBe(gradeId(13));
 });
 
 test('students can upload an avatar and the old file is removed', function () {

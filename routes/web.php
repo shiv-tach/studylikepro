@@ -29,6 +29,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Student\BookingController as StudentBookingController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\InterestsController as StudentInterestsController;
+use App\Http\Controllers\Student\OnboardingController as StudentOnboardingController;
 use App\Http\Controllers\Student\PaymentController as StudentPaymentController;
 use App\Http\Controllers\Student\ProfileController as StudentProfileController;
 use App\Http\Controllers\Student\ReceiptController;
@@ -100,6 +101,11 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_STUDENT, 'not-suspende
     ->prefix('student')
     ->name('student.')
     ->group(function () {
+        // Level → grade → O/L baskets → learning language, in one wizard. Every
+        // student starts here; the workspace links stay gated until it is done.
+        Route::get('/onboarding', [StudentOnboardingController::class, 'show'])->name('onboarding.show');
+        Route::post('/onboarding', [StudentOnboardingController::class, 'store'])->name('onboarding.store');
+
         Route::get('/dashboard', StudentDashboardController::class)->middleware('onboarded')->name('dashboard');
 
         Route::get('/profile', [StudentProfileController::class, 'edit'])->name('profile');

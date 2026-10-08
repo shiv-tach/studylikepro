@@ -8,32 +8,14 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">
-            {{ $isOnboarding ? __('Complete your profile') : __('My Learning Profile') }}
+            {{ __('My Learning Profile') }}
         </h2>
     </x-slot>
 
     <div class="mx-auto max-w-3xl space-y-6">
-        @if (session('status') === 'complete-your-profile')
-            <div class="rounded-2xl border border-amber-200/80 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
-                Finish setting up your profile to unlock your dashboard and the rest of Studylikepro.
-            </div>
-        @elseif (session('status') === 'profile-updated')
+        @if (session('status') === 'profile-updated')
             <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
                 Your profile has been updated.
-            </div>
-        @endif
-
-        @if ($isOnboarding)
-            <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-                <div class="flex items-start gap-3">
-                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xl">👋</span>
-                    <div>
-                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">Welcome to Studylikepro!</h3>
-                        <p class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                            Tell us a little about yourself so we can match the right tutors and lesson times. You can update this anytime from your profile.
-                        </p>
-                    </div>
-                </div>
             </div>
         @endif
 
@@ -46,19 +28,33 @@
                 <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">About you</h3>
                 <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">This helps teachers understand how to help. All lesson times are shown in Sri Lanka time.</p>
 
-                <div class="mt-5">
-                    <x-input-label for="grade_id" :value="__('Grade')" />
-                    <select id="grade_id" name="grade_id" class="{{ $selectClasses }}">
-                        <option value="">{{ __('Select your grade') }}</option>
-                        @foreach ($levels as $level)
-                            <optgroup label="{{ $level->name }}">
-                                @foreach ($level->grades as $grade)
-                                    <option value="{{ $grade->id }}" @selected((int) old('grade_id', $profile?->grade_id) === $grade->id)>{{ $grade->label }}</option>
-                                @endforeach
-                            </optgroup>
-                        @endforeach
-                    </select>
-                    <x-input-error :messages="$errors->get('grade_id')" class="mt-2" />
+                <div class="mt-5 grid gap-5 sm:grid-cols-2">
+                    <div>
+                        <x-input-label for="grade_id" :value="__('Grade')" />
+                        <select id="grade_id" name="grade_id" class="{{ $selectClasses }}">
+                            <option value="">{{ __('Select your grade') }}</option>
+                            @foreach ($levels as $level)
+                                <optgroup label="{{ $level->name }}">
+                                    @foreach ($level->grades as $grade)
+                                        <option value="{{ $grade->id }}" @selected((int) old('grade_id', $profile?->grade_id) === $grade->id)>{{ $grade->label }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endforeach
+                        </select>
+                        <x-input-error :messages="$errors->get('grade_id')" class="mt-2" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="learning_language" :value="__('Learning language')" />
+                        <select id="learning_language" name="learning_language" class="{{ $selectClasses }}">
+                            <option value="">{{ __('Select a language') }}</option>
+                            @foreach (config('studylikepro.student_learning_languages') as $language)
+                                <option value="{{ $language }}" @selected(old('learning_language', $profile?->learning_language) === $language)>{{ $language }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-xs text-slate-400">{{ __('The language your lessons are taught in.') }}</p>
+                        <x-input-error :messages="$errors->get('learning_language')" class="mt-2" />
+                    </div>
                 </div>
 
                 <div class="mt-5">
@@ -110,7 +106,7 @@
 
             <div class="flex items-center justify-end">
                 <x-primary-button>
-                    {{ $isOnboarding ? __('Complete profile & continue') : __('Save changes') }}
+                    {{ __('Save changes') }}
                 </x-primary-button>
             </div>
         </form>

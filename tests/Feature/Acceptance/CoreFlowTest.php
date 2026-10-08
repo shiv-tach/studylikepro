@@ -198,13 +198,14 @@ function verifiedTeacher(Subject $subject, Lesson $lesson, CarbonImmutable $wind
 }
 
 it('runs the core flow from question photo to review', function () {
-    // 1. Student signs up, completes the profile and picks what they need help with.
+    // 1. Student signs up, finishes the onboarding wizard and picks what they need help with.
     $student = signUp(User::ROLE_STUDENT, ['name' => 'Aarav Mehta']);
 
-    $this->actingAs($student)->put(route('student.profile.update'), [
+    $this->actingAs($student)->post(route('student.onboarding.store'), [
+        'level_id' => EducationLevel::query()->where('key', 'ol')->value('id'),
         'grade_id' => gradeId(11),
-        'learning_goals' => 'Board exams in two months.',
-    ])->assertRedirect();
+        'learning_language' => 'English',
+    ])->assertRedirect(route('student.dashboard'));
 
     $this->actingAs($student)->put(route('student.interests.update'), [
         'subjects' => [$this->subject->id],

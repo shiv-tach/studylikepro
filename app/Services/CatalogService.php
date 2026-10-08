@@ -206,6 +206,32 @@ class CatalogService
     }
 
     /**
+     * The subject baskets a grade chooses from - each carrying only the
+     * subjects that actually run in that grade - in basket order. Empty for
+     * every grade without a basket choice (all except O/L 10-11).
+     *
+     * @return Collection<int, array{basket: SubjectBasket, subjects: Collection<int, Subject>}>
+     */
+    public function basketGroupsForGrade(Grade $grade): Collection
+    {
+        $level = $grade->educationLevel;
+
+        if ($level === null || ! $level->requiresBasketSelection($grade)) {
+            return collect();
+        }
+
+        $subjects = $this->subjectsForGrade($grade);
+
+        return $this->basketsFor($level)
+            ->map(fn (SubjectBasket $basket) => [
+                'basket' => $basket,
+                'subjects' => $subjects->where('basket_id', $basket->id)->values(),
+            ])
+            ->filter(fn (array $group) => $group['subjects']->isNotEmpty())
+            ->values();
+    }
+
+    /**
      * Subjects grouped by the basket they belong to, baskets in their own
      * order, prefixed with the group of compulsory subjects (the ones outside
      * every basket) - the shape the subject pickers render. Baskets that offer

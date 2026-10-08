@@ -16,6 +16,9 @@ class StudentProfileRequest extends FormRequest
     {
         return [
             'grade_id' => ['required', 'integer', Rule::exists('grades', 'id')->where('is_active', true)],
+            // Asked by the onboarding wizard; kept optional here so profiles
+            // made before the wizard can still save their other changes.
+            'learning_language' => ['nullable', 'string', Rule::in(config('studylikepro.student_learning_languages'))],
             'learning_goals' => ['nullable', 'string', 'max:1000'],
             'guardian_name' => ['nullable', 'string', 'max:120'],
             'guardian_phone' => ['nullable', 'string', 'max:32'],

@@ -13,6 +13,11 @@ use Symfony\Component\HttpFoundation\Response;
  * blocking everything else. Alpine and the theme bootstrap script need inline
  * and eval'd JavaScript, so those stay allowed for scripts; everything else is
  * restricted to our own origin.
+ *
+ * Pages belonging to a signed-in user are also marked no-store: the browser's
+ * back/forward cache would otherwise hand back a page whose form tokens died
+ * with the session, and would show the previous user's workspace after a
+ * logout.
  */
 class SecurityHeaders
 {
@@ -41,6 +46,13 @@ class SecurityHeaders
 
         if (config('studylikepro.security.csp_enabled')) {
             $response->headers->set('Content-Security-Policy', $this->policy());
+        }
+
+        // A signed-in page must not survive in the browser's back/forward
+        // cache: its form tokens die with the session, and the workspace would
+        // otherwise reappear on screen after the user logs out.
+        if ($request->user() !== null) {
+            $response->headers->set('Cache-Control', 'no-store, private');
         }
 
         return $response;

@@ -25,7 +25,7 @@ function studentWithGradeSubjectAndLesson(): array
 test('the interests page requires onboarding', function () {
     $this->actingAs(User::factory()->student()->create())
         ->get(route('student.interests.edit'))
-        ->assertRedirect(route('student.profile'));
+        ->assertRedirect(route('student.onboarding.show'));
 });
 
 test('students can save subject and lesson interests', function () {

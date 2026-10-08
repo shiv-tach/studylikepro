@@ -57,7 +57,7 @@ test('the finder is only for signed-in onboarded students', function () {
 
     $this->actingAs(User::factory()->student()->create())
         ->get(route('student.teachers.index'))
-        ->assertRedirect(route('student.profile'));
+        ->assertRedirect(route('student.onboarding.show'));
 });
 
 test('only approved teachers who take the student grade are listed', function () {

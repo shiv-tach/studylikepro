@@ -270,7 +270,24 @@ Current two-step flow in [teacher/subjects.blade.php](../resources/views/teacher
 
 ### 7.1 Onboarding
 
-[StudentProfileController/Request/View](../resources/views/student/profile.blade.php): replace the single bucket select with a cascading **Level → Grade** picker (Primary → 1–5, O/L → 6–11, A/L → 12–13, Other). Store `grade_id`. The onboarding gate (`onboarded` middleware) already exists; `grade_id` becomes required to complete onboarding.
+The gate is a wizard of its own, not the profile form: registering lands a student on
+`/student/onboarding` (level → grade → O/L baskets → learning language → summary) and the
+`onboarded` middleware keeps every workspace page behind it.
+
+- [Student/OnboardingController.php](../app/Http/Controllers/Student/OnboardingController.php) +
+  [student/onboarding.blade.php](../resources/views/student/onboarding.blade.php) +
+  [StudentOnboardingRequest](../app/Http/Requests/StudentOnboardingRequest.php): one page, one
+  submit, Alpine steps. Level and grade cascade (only the chosen level's grades are offered and
+  the grade must belong to it), the basket step appears only for a grade that chooses from
+  baskets and needs one subject from every basket, the language is Sinhala or English, and the
+  summary repeats every answer with an Edit link back to its step. A failed submit returns the
+  student to the step that owns the error, with the answers kept.
+- Finishing writes `student_profiles` (`grade_id`, `learning_language`, `completed_at`) and syncs
+  the basket picks into the student's interests, then sends them to the dashboard.
+- [student/profile.blade.php](../resources/views/student/profile.blade.php) is the post-onboarding
+  place to change the grade, the learning language, the goals, the guardian details and the photo
+  ([StudentProfileRequest](../app/Http/Requests/StudentProfileRequest.php) keeps `grade_id`
+  required).
 
 ### 7.2 Interests
 
@@ -698,3 +715,47 @@ Step 3 of `/subjects` (after level and grade) groups the subject cards for the O
 `tests/Feature/Student/BasketSubjectsTest.php` (grouping above/below Grade 10, one-per-basket save, second pick in a basket rejected, reminder for an incomplete choice), `tests/Feature/Admin/SubjectBasketTest.php` (basket listing, rename/reorder/description/toggle, subject assignment, cross-level basket rejected, non-admin forbidden, and a basket edit reaching the public catalog immediately — the cache flush) and `tests/Feature/CatalogTest.php` (basket subjects seeded into Grades 10-11 only, existing subjects mapped, seeder idempotent, step 3 grouped for Grade 10 and flat with the "baskets begin" note for Grade 6, category chip on a basket subject page). On the MySQL dev database `migrate` creates the three baskets and `db:seed --class=CatalogSeeder` adds the 35 basket subjects (11 · 11 · 13).
 
 Browser verification on the seeded catalog (`CACHE_STORE=database`) surfaced a real bug: with every lesson included, the cached catalog serialized to ~2 MB and the cache write died with `1153 Got a packet bigger than 'max_allowed_packet' bytes` (the local MySQL allows 1 MB), so the interests page returned a 500. `CatalogService` now caches raw attribute rows and rehydrates the models on read — same API, ~350 KB per entry — and the page works again.
+
+---
+
+## 14. Student onboarding wizard (addendum)
+
+**Status:** implemented. The profile form used to double as onboarding: a new student was
+dropped on it with a single grade select, and nothing asked for the rest of the answers the
+rest of the product assumes. Onboarding is now its own guided flow, and the profile area is
+what it claims to be — the place to change those answers later.
+
+```
+Register  →  /student/onboarding  →  level → grade → [O/L baskets] → learning language → summary  →  dashboard
+             (the `onboarded` middleware sends every un-onboarded student back here)
+```
+
+| Artifact | Change |
+| --- | --- |
+| `student_profiles.learning_language` | New nullable `string(32)` (Sinhala / English) — `2026_10_08_000015`; the wizard requires it, the profile page edits it ([config/studylikepro.php](../config/studylikepro.php) `student_learning_languages` is the one list both validate against) |
+| [Student/OnboardingController](../app/Http/Controllers/Student/OnboardingController.php) | `show()` builds the wizard (levels with their grades and each basket grade's baskets, plus the submitted-answer prefill); `store()` writes the profile, syncs the basket picks into the student's interests and completes onboarding. Both redirect an already-onboarded student to the dashboard |
+| [StudentOnboardingRequest](../app/Http/Requests/StudentOnboardingRequest.php) | The grade must live in the chosen level, every basket of that grade needs one of its own subjects, a grade without baskets must not send any, and the language must be one the platform teaches in |
+| [student/onboarding.blade.php](../resources/views/student/onboarding.blade.php) | One page, one submit: Alpine drives the steps (the basket step exists only for a basket grade, so a Grade 8 student sees four steps and a Grade 10 student five), real radio inputs so the browser, keyboard and server all agree, and a summary that repeats every answer with an Edit link back to its step. Theme-aware cards/badges, no hardcoded accent colours |
+| [CatalogService::basketGroupsForGrade()](../app/Services/CatalogService.php) | The baskets a grade chooses from, each carrying only the subjects that actually run in that grade — empty when a grade has no basket choice, so a partially catalogued level never demands a pick from an empty basket |
+| [EnsureOnboardingCompleted](../app/Http/Middleware/EnsureOnboardingCompleted.php) | Students now go to `student.onboarding.show` (teachers are unchanged) |
+| [ProfileController](../app/Http/Controllers/Student/ProfileController.php) | `edit()` sends an un-onboarded student to the wizard; `update()` is a plain edit — completing onboarding is the wizard's job only |
+| [layouts/navigation.blade.php](../resources/views/layouts/navigation.blade.php) | A student mid-onboarding sees a single **Get started** item instead of workspace links that would bounce back to the wizard (the teacher equivalent already existed) |
+
+### 14.1 Verified
+
+`tests/Feature/Student/StudentOnboardingTest.php`: the dashboard and the profile page both send a
+new student to the wizard; levels, grades, basket subjects and languages are all offered; a full
+Grade 10 submit stores the grade, the language, the timezone, `completed_at` and all three basket
+picks as interests, and unlocks the dashboard; a grade outside the chosen level, a missing basket,
+a subject filed under the wrong basket and a language the platform does not teach are all
+rejected; a grade without baskets finishes without any; a failed submit keeps the answers and
+returns to the wizard; an onboarded student skips the wizard; guests, teachers and admins are kept
+out. Updated for the new gate: `Student/StudentProfileTest`, `Student/InterestsTest`,
+`Student/StudentTeacherFinderTest` and the `CoreFlowTest` acceptance run.
+
+Browser walk-through on the MySQL dev database (register → wizard → dashboard → profile →
+interests) confirmed the flow end to end, and caught one real bug the tests could not: the summary
+showed the wrong subject names because `Collection::flatMap()` renumbers integer keys, so the
+`id → name` map the client looked up was a positional list. The payload now sends `[id, name]`
+pairs that the view loads into a `Map`.
+

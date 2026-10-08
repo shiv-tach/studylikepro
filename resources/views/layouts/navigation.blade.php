@@ -49,7 +49,13 @@
         ['label' => 'Dashboard', 'url' => $dashboardUrl, 'active' => $onDashboard, 'icon' => 'dashboard', 'badge' => null],
     ];
 
-    if ($user->isStudent()) {
+    if ($user->isStudent() && ! $user->hasCompletedOnboarding()) {
+        // The wizard is the only page a new student can reach, so the sidebar
+        // shows that one step instead of links that would bounce back here.
+        $navItems = [
+            ['label' => 'Get started', 'url' => route('student.onboarding.show'), 'active' => request()->routeIs('student.onboarding*'), 'icon' => 'user', 'badge' => null],
+        ];
+    } elseif ($user->isStudent()) {
         $navItems[] = ['label' => 'Subjects & lessons', 'url' => route('student.interests.edit'), 'active' => request()->routeIs('student.interests*'), 'icon' => 'book', 'badge' => null];
         $navItems[] = ['label' => 'My requests', 'url' => route('student.requests.index'), 'active' => request()->routeIs('student.requests*'), 'icon' => 'doc', 'badge' => null];
         $navItems[] = ['label' => 'My lessons', 'url' => route('student.bookings.index'), 'active' => request()->routeIs('student.bookings*'), 'icon' => 'calendar', 'badge' => $upcomingLessons ?: null];

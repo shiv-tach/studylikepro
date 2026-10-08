@@ -249,8 +249,15 @@ return [
         'other' => ['name' => 'Other', 'grade_min' => null, 'grade_max' => null, 'icon' => '🧭'],
     ],
 
+    // The languages a teacher can teach in.
     'languages' => [
         'Sinhala', 'English', 'Tamil',
+    ],
+
+    // The medium of instruction a student follows. Asked in the student
+    // onboarding wizard and editable from the learning profile.
+    'student_learning_languages' => [
+        'Sinhala', 'English',
     ],
 
     'verification_document_types' => [

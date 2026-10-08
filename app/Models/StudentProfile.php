@@ -14,6 +14,7 @@ class StudentProfile extends Model
 
     protected $fillable = [
         'grade_id',
+        'learning_language',
         'timezone',
         'learning_goals',
         'guardian_name',

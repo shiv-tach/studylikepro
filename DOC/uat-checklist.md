@@ -17,8 +17,14 @@ Automated equivalent: `tests/Feature/Acceptance/CoreFlowTest.php` (runs in CI).
 
 | # | Step | Expected | ✅ |
 | --- | --- | --- | --- |
-| A1 | Register as a student | Lands on the student dashboard, onboarding prompt shown | ☐ |
-| A2 | Complete the learning profile (grade, goals) | Grade picker groups grades under Primary · O/L · A/L · Other; dashboard unlocks, "Profile complete" status | ☐ |
+| A1 | Register as a student | Lands on the **Set up your learning** wizard (`/student/onboarding`), not the dashboard; the sidebar shows only *Get started*, and the dashboard/profile URLs bounce back to the wizard | ☐ |
+| A1a | Step 1 — pick the education level (e.g. O/L) | Only that level's grades are offered next; the progress list starts at 4 steps (Level · Grade · Language · Finish) | ☐ |
+| A1b | Step 2 — pick Grade 10 | The list grows to 5 steps and a **Subjects** step appears (Grades 10-11 choose from the O/L baskets); picking a grade below 10 keeps 4 steps | ☐ |
+| A1c | Step 3 — pick one subject from each basket (Category I, II, III) | The counter reaches 3/3 and Continue enables; a second subject in the same basket cannot be selected; each basket shows its description and a *chosen* marker | ☐ |
+| A1d | Step 4 — pick the learning language | Only Sinhala and English are offered | ☐ |
+| A1e | Step 5 — check the summary and **Finish setup** | Summary repeats level, grade, the basket subjects and the language, each with an Edit link back to its step; the dashboard then opens with "Your profile is complete" | ☐ |
+| A1f | Open *Subjects & lessons* after finishing | The basket picks are already ticked, and the wizard is no longer reachable | ☐ |
+| A2 | Change the learning profile (grade, language, goals) | Grade picker groups grades under Primary · O/L · A/L · Other; the language select keeps the wizard's answer; saving returns to the profile | ☐ |
 | A3 | Pick a subject and a lesson | Only your level's subjects and your grade's lessons are offered; choices persist after a reload | ☐ |
 | A4 | Create a request with a question photo attached | Request page shows *Classifying…* then the subject, lesson and confidence | ☐ |
 | A5 | Trust the AI suggestion | Request status becomes Open; matching teachers notified | ☐ |

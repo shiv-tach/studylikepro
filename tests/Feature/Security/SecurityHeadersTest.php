@@ -22,6 +22,17 @@ it('sends the hardening headers on signed-in pages too', function () {
         ->assertHeader('X-Frame-Options', 'SAMEORIGIN');
 });
 
+it('keeps signed-in pages out of the browser back/forward cache', function () {
+    $this->actingAs(User::factory()->student()->onboarded()->create())
+        ->get(route('student.dashboard'))
+        ->assertOk()
+        ->assertHeader('Cache-Control', 'no-store, private');
+});
+
+it('leaves public pages cacheable', function () {
+    expect($this->get('/')->headers->get('Cache-Control'))->not->toContain('no-store');
+});
+
 it('only advertises HSTS over https', function () {
     $this->get('/')->assertHeaderMissing('Strict-Transport-Security');
 

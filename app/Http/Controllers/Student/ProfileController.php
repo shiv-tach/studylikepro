@@ -17,42 +17,38 @@ class ProfileController extends Controller
     public function __construct(private readonly CatalogService $catalog) {}
 
     /**
-     * Show the learning profile form (doubles as onboarding).
+     * Show the learning profile. New students are sent through the onboarding
+     * wizard first; this page is the place to change those answers later.
      */
-    public function edit(Request $request): View
+    public function edit(Request $request): View|RedirectResponse
     {
         $profile = $request->user()->studentProfile;
+
+        if (! $profile?->isComplete()) {
+            return redirect()->route('student.onboarding.show');
+        }
 
         return view('student.profile', [
             'profile' => $profile,
             'levels' => $this->catalog->levels(),
-            'isOnboarding' => ! $profile?->isComplete(),
         ]);
     }
 
     /**
-     * Create or update the student profile.
+     * Update the learning profile of an existing student.
      */
     public function update(StudentProfileRequest $request): RedirectResponse
     {
         $user = $request->user();
-        $wasIncomplete = ! $user->studentProfile?->isComplete();
 
         $profile = $user->studentProfile()->firstOrNew([]);
         $profile->fill($request->safe()->except('avatar'));
         $profile->timezone = config('studylikepro.default_display_timezone');
-        $profile->completed_at ??= now();
         $profile->save();
 
         $user->setRelation('studentProfile', $profile);
 
         $this->updateAvatar($request, $user);
-
-        if ($wasIncomplete) {
-            return redirect()
-                ->route('student.dashboard')
-                ->with('status', 'profile-completed');
-        }
 
         return redirect()
             ->route('student.profile')
