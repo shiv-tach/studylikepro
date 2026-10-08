@@ -12,6 +12,9 @@
             @unless ($subject->is_active)
                 <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">Inactive</span>
             @endunless
+            @if ($subject->basket)
+                <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">{{ $subject->basket->icon }} {{ $subject->basket->name }}</span>
+            @endif
         </div>
     </x-slot>
 
@@ -78,6 +81,25 @@
                             <x-input-error :messages="$errors->get('sort_order')" class="mt-2" />
                         </div>
                     </div>
+
+                    @if ($baskets->isNotEmpty())
+                        <div>
+                            <x-input-label for="basket_id" :value="__('Subject basket')" />
+                            <select id="basket_id" name="basket_id"
+                                    class="mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                                <option value="">{{ __('None — not a basket subject') }}</option>
+                                @foreach ($baskets as $basket)
+                                    <option value="{{ $basket->id }}" @selected((int) old('basket_id', $subject->basket_id) === $basket->id)>
+                                        {{ trim(($basket->icon ?? '').' '.$basket->name) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                                {{ __('Optional subjects a student picks one of (normally Grades :grades); leave as "None" for mandatory subjects.', ['grades' => implode('–', $subject->educationLevel?->basketGradeNumbers() ?? [])]) }}
+                            </p>
+                            <x-input-error :messages="$errors->get('basket_id')" class="mt-2" />
+                        </div>
+                    @endif
 
                     <div>
                         <x-input-label for="description" :value="__('Description')" />

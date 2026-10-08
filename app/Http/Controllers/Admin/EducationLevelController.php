@@ -20,7 +20,10 @@ class EducationLevelController extends Controller
     {
         $levels = EducationLevel::query()
             ->ordered()
-            ->with(['grades' => fn ($query) => $query->ordered()])
+            ->with([
+                'grades' => fn ($query) => $query->ordered(),
+                'subjectBaskets' => fn ($query) => $query->ordered()->withCount('subjects'),
+            ])
             ->withCount('subjects')
             ->get();
 

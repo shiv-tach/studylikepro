@@ -17,6 +17,7 @@ class Subject extends Model
 
     protected $fillable = [
         'education_level_id',
+        'basket_id',
         'name',
         'slug',
         'icon',
@@ -40,6 +41,15 @@ class Subject extends Model
     public function educationLevel(): BelongsTo
     {
         return $this->belongsTo(EducationLevel::class);
+    }
+
+    /**
+     * The optional-subject basket this subject belongs to (O/L Categories I, II
+     * and III), or null when the subject is not part of a basket.
+     */
+    public function basket(): BelongsTo
+    {
+        return $this->belongsTo(SubjectBasket::class, 'basket_id');
     }
 
     public function lessons(): HasMany

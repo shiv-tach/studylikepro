@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\PayoutController as AdminPayoutController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
+use App\Http\Controllers\Admin\SubjectBasketController as AdminSubjectBasketController;
 use App\Http\Controllers\Admin\SubjectController as AdminSubjectController;
 use App\Http\Controllers\Admin\TeacherInviteController as AdminTeacherInviteController;
 use App\Http\Controllers\Admin\TeacherVerificationController as AdminTeacherVerificationController;
@@ -203,11 +204,13 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended'
 
         Route::get('/curriculum', [AdminEducationLevelController::class, 'index'])->name('curriculum.index');
         Route::put('/curriculum/levels/{level}', [AdminEducationLevelController::class, 'update'])->name('curriculum.levels.update');
+        Route::put('/curriculum/baskets/{basket}', [AdminSubjectBasketController::class, 'update'])->name('curriculum.baskets.update');
 
         Route::get('/subjects', [AdminSubjectController::class, 'index'])->name('subjects.index');
         Route::post('/subjects', [AdminSubjectController::class, 'store'])->name('subjects.store');
         Route::get('/subjects/{subject}/edit', [AdminSubjectController::class, 'edit'])->name('subjects.edit');
         Route::put('/subjects/{subject}', [AdminSubjectController::class, 'update'])->name('subjects.update');
+        Route::delete('/subjects/{subject}', [AdminSubjectController::class, 'destroy'])->name('subjects.destroy');
 
         Route::post('/subjects/{subject}/lessons', [AdminLessonController::class, 'store'])->name('subjects.lessons.store');
         Route::post('/subjects/{subject}/lessons/copy', [AdminLessonController::class, 'copy'])->name('subjects.lessons.copy');

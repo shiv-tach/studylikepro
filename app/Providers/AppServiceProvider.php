@@ -8,6 +8,7 @@ use App\Contracts\PaymentGateway;
 use App\Models\EducationLevel;
 use App\Models\Lesson;
 use App\Models\Subject;
+use App\Models\SubjectBasket;
 use App\Services\ActivityLogger;
 use App\Services\AI\OpenAILessonClassifier;
 use App\Services\CatalogService;
@@ -119,7 +120,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $flush = fn () => app(CatalogService::class)->flush();
 
-        foreach ([EducationLevel::class, Subject::class, Lesson::class] as $model) {
+        foreach ([EducationLevel::class, SubjectBasket::class, Subject::class, Lesson::class] as $model) {
             $model::saved($flush);
             $model::deleted($flush);
         }

@@ -108,6 +108,7 @@ composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 
 php artisan migrate --force                        # never --seed in production
+php artisan db:seed --class=CatalogSeeder --force  # only when the release adds curriculum rows (idempotent)
 php artisan optimize:clear && php artisan optimize
 php artisan queue:restart                          # workers pick up the new code
 php artisan up

@@ -12,12 +12,12 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-        <!-- Blocking theme script: prevents flash of light theme on page load -->
+        <!-- Blocking theme script: public pages load light unless dark was chosen explicitly -->
         <script>
             (function() {
-                const mode = localStorage.getItem('themeMode') || 'system';
-                const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-                if (isDark) document.documentElement.classList.add('dark');
+                if (localStorage.getItem('themeMode') === 'dark') {
+                    document.documentElement.classList.add('dark');
+                }
             })();
         </script>
 

@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use Database\Factories\GradeFactory;
+use Database\Factories\SubjectBasketFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,17 +10,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * A grade inside an education level: 1-13, or the single "Other" grade.
+ * A basket of optional subjects inside one education level - the O/L has three
+ * (Categories I, II and III) and a Grade 10-11 student picks one subject from
+ * each. A subject belongs to at most one basket.
  */
-class Grade extends Model
+class SubjectBasket extends Model
 {
-    /** @use HasFactory<GradeFactory> */
+    /** @use HasFactory<SubjectBasketFactory> */
     use HasFactory;
 
     protected $fillable = [
         'education_level_id',
-        'number',
-        'label',
+        'key',
+        'name',
+        'description',
+        'icon',
         'sort_order',
         'is_active',
     ];
@@ -37,22 +41,13 @@ class Grade extends Model
         return $this->belongsTo(EducationLevel::class);
     }
 
-    public function lessons(): HasMany
+    public function subjects(): HasMany
     {
-        return $this->hasMany(Lesson::class);
+        return $this->hasMany(Subject::class, 'basket_id');
     }
 
     /**
-     * True in the O/L basket years (Grades 10-11), where a student picks one
-     * optional subject from each basket.
-     */
-    public function requiresBasketSelection(): bool
-    {
-        return $this->educationLevel?->requiresBasketSelection($this) ?? false;
-    }
-
-    /**
-     * @param  Builder<Grade>  $query
+     * @param  Builder<SubjectBasket>  $query
      */
     public function scopeActive(Builder $query): Builder
     {
@@ -60,10 +55,10 @@ class Grade extends Model
     }
 
     /**
-     * @param  Builder<Grade>  $query
+     * @param  Builder<SubjectBasket>  $query
      */
     public function scopeOrdered(Builder $query): Builder
     {
-        return $query->orderBy('sort_order')->orderBy('number');
+        return $query->orderBy('sort_order')->orderBy('id');
     }
 }

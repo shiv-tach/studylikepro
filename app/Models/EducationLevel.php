@@ -48,6 +48,33 @@ class EducationLevel extends Model
         return $this->hasMany(Subject::class);
     }
 
+    public function subjectBaskets(): HasMany
+    {
+        return $this->hasMany(SubjectBasket::class);
+    }
+
+    /**
+     * The grade numbers where this level's students pick one subject from each
+     * basket (O/L: Grades 10-11). Empty for levels without baskets.
+     *
+     * @return list<int>
+     */
+    public function basketGradeNumbers(): array
+    {
+        $numbers = config("studylikepro.education_levels.{$this->key}.basket_grades", []);
+
+        return array_map('intval', (array) $numbers);
+    }
+
+    /**
+     * Whether a student in this grade picks one subject per basket.
+     */
+    public function requiresBasketSelection(Grade $grade): bool
+    {
+        return $grade->number !== null
+            && in_array($grade->number, $this->basketGradeNumbers(), true);
+    }
+
     /**
      * Human label for the grade span, e.g. "Grades 6-11".
      */

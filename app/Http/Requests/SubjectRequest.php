@@ -33,12 +33,20 @@ class SubjectRequest extends FormRequest
     public function rules(): array
     {
         $subject = $this->route('subject');
+        $levelId = $subject?->education_level_id ?? $this->input('education_level_id');
 
         return [
             'education_level_id' => [
                 $subject === null ? 'required' : 'nullable',
                 'integer',
                 Rule::exists('education_levels', 'id'),
+            ],
+            'basket_id' => [
+                'nullable',
+                'integer',
+                // A subject only ever joins a basket of its own level (the O/L
+                // Categories I, II and III belong to the O/L subjects).
+                Rule::exists('subject_baskets', 'id')->where('education_level_id', $levelId),
             ],
             'name' => ['required', 'string', 'max:100'],
             'slug' => [

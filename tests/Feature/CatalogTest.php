@@ -4,6 +4,7 @@ use App\Models\EducationLevel;
 use App\Models\Grade;
 use App\Models\Lesson;
 use App\Models\Subject;
+use App\Models\SubjectBasket;
 use App\Models\TeacherProfile;
 use App\Models\User;
 use Database\Seeders\CatalogSeeder;
@@ -190,6 +191,44 @@ test('the subject page links to the directory filtered by subject and grade', fu
         ->assertSee(route('teachers.index', ['subject' => 'english', 'grade' => $grade6->id]));
 });
 
+test('teacher cards on a subject page offer booking for the shown grade', function () {
+    $level = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade7 = Grade::query()->where('education_level_id', $level->id)->where('number', 7)->firstOrFail();
+
+    $subject = Subject::factory()->create(['name' => 'English', 'slug' => 'english', 'education_level_id' => $level->id]);
+    Lesson::factory()->for($subject)->create(['grade_id' => $grade7->id]);
+
+    $teacher = TeacherProfile::factory()->approved()->create();
+    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) $grade7->id]]);
+
+    $url = route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade7->id]);
+
+    // Guests are sent to the create-account action instead of the profile.
+    $this->get($url)
+        ->assertOk()
+        ->assertSee('Book now')
+        ->assertDontSee('View profile')
+        ->assertSee(route('register', ['role' => 'student']));
+
+    // Signed-in students jump straight into booking with the grade preselected.
+    $this->actingAs(User::factory()->student()->onboarded()->create())
+        ->get($url)
+        ->assertOk()
+        ->assertSee('Book now')
+        ->assertSee(route('student.bookings.create', [
+            'teacherProfile' => $teacher,
+            'subject_id' => $subject->id,
+            'learner_grade_id' => $grade7->id,
+        ]));
+
+    // Teachers cannot book lessons, so they keep the profile CTA.
+    $this->actingAs(User::factory()->teacher()->create())
+        ->get($url)
+        ->assertOk()
+        ->assertDontSee('Book now')
+        ->assertSee('View profile');
+});
+
 test('inactive subjects are not publicly accessible', function () {
     $subject = Subject::factory()->inactive()->create();
 
@@ -201,13 +240,47 @@ test('the catalog seeder is idempotent', function () {
 
     $subjects = Subject::query()->count();
     $lessons = Lesson::query()->count();
+    $baskets = SubjectBasket::query()->count();
 
     $this->seed(CatalogSeeder::class);
 
     expect(Subject::query()->count())->toBe($subjects)
         ->and(Lesson::query()->count())->toBe($lessons)
+        ->and(SubjectBasket::query()->count())->toBe($baskets)
         ->and($subjects)->toBeGreaterThan(0)
         ->and($lessons)->toBeGreaterThan(0);
+});
+
+test('the catalog seeder builds the o/l basket subjects', function () {
+    $this->seed(CatalogSeeder::class);
+
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade6 = Grade::query()->where('number', 6)->firstOrFail();
+    $grade10 = Grade::query()->where('number', 10)->firstOrFail();
+
+    $baskets = SubjectBasket::query()
+        ->where('education_level_id', $ol->id)
+        ->ordered()
+        ->pluck('id', 'key');
+
+    expect($baskets->keys()->all())->toBe(['category_1', 'category_2', 'category_3']);
+
+    // A basket subject runs in Grades 10-11 only, so it carries lessons in the
+    // grade the choice happens in and none below it.
+    $art = Subject::query()->where('slug', 'art')->first();
+
+    expect($art)->not->toBeNull()
+        ->and($art->basket_id)->toBe($baskets['category_1'])
+        ->and($art->lessons()->where('grade_id', $grade10->id)->count())->toBeGreaterThan(0)
+        ->and($art->lessons()->where('grade_id', $grade6->id)->count())->toBe(0);
+
+    // Existing O/L subjects map onto their basket, and mandatory subjects stay
+    // outside every basket.
+    expect(Subject::query()->where('slug', 'geography')->firstOrFail()->basket_id)->toBe($baskets['category_3'])
+        ->and(Subject::query()->where('slug', 'ict')->firstOrFail()->basket_id)->toBe($baskets['category_2'])
+        ->and(Subject::query()->where('slug', 'health-physical-education')->firstOrFail()->basket_id)->toBe($baskets['category_2'])
+        ->and(Subject::query()->where('slug', 'commerce')->firstOrFail()->basket_id)->toBe($baskets['category_3'])
+        ->and(Subject::query()->where('slug', 'ol-mathematics')->firstOrFail()->basket_id)->toBeNull();
 });
 
 test('the catalog seeder builds the grade by grade curriculum', function () {
@@ -234,4 +307,44 @@ test('the catalog seeder builds the grade by grade curriculum', function () {
         ->count();
 
     expect($duplicateSlugs)->toBe(0);
+});
+
+test('the catalog step three groups a basket grade by basket', function () {
+    $this->seed(CatalogSeeder::class);
+
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade10 = Grade::query()->where('education_level_id', $ol->id)->where('number', 10)->firstOrFail();
+    $grade6 = Grade::query()->where('education_level_id', $ol->id)->where('number', 6)->firstOrFail();
+
+    $this->get(route('catalog.subjects.index', ['level' => 'ol', 'grade' => $grade10->id]))
+        ->assertOk()
+        ->assertSee('Compulsory subjects')
+        ->assertSee('Category I')
+        ->assertSee('Category II')
+        ->assertSee('Category III')
+        ->assertSee('pick one')
+        ->assertSee('Aesthetic, music, dancing, literature and drama subjects')
+        ->assertSee('Art')
+        ->assertSee('Mathematics');
+
+    // Below Grade 10 nothing is optional yet: the same subjects are simply
+    // compulsory, so the grid stays flat and a note says when the baskets begin.
+    $this->get(route('catalog.subjects.index', ['level' => 'ol', 'grade' => $grade6->id]))
+        ->assertOk()
+        ->assertSee('Every subject below is compulsory in Grade 6')
+        ->assertSee('begin in Grades 10–11')
+        ->assertSee('ICT')
+        ->assertDontSee('Compulsory subjects')
+        ->assertDontSee('pick one');
+});
+
+test('a basket subject page shows its category', function () {
+    $this->seed(CatalogSeeder::class);
+
+    $art = Subject::query()->where('slug', 'art')->firstOrFail();
+
+    $this->get(route('catalog.subjects.show', $art))
+        ->assertOk()
+        ->assertSee('Category I')
+        ->assertSee('pick one');
 });

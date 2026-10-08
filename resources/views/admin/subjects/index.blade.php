@@ -13,6 +13,10 @@
             <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
                 Subject created — add its lessons below.
             </div>
+        @elseif (session('status') === 'subject-deleted')
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                {{ __('Subject deleted — its lessons and teacher/student selections were removed with it.') }}
+            </div>
         @endif
 
         <div class="flex flex-wrap items-center justify-between gap-3">
@@ -74,12 +78,26 @@
                     </div>
                 </div>
 
-                <div class="grid gap-5 sm:grid-cols-3">
+                <div class="grid gap-5 sm:grid-cols-4">
                     <div>
                         <x-input-label for="icon" :value="__('Icon (emoji)')" />
                         <x-text-input id="icon" name="icon" type="text" class="mt-1 block w-full" :value="old('icon', '📘')" maxlength="4" />
                         <x-input-error :messages="$errors->get('icon')" class="mt-2" />
                     </div>
+                    @if ($baskets->isNotEmpty())
+                        <div>
+                            <x-input-label for="create-basket_id" :value="__('Basket (optional)')" />
+                            <select id="create-basket_id" name="basket_id" class="{{ $selectClasses }}">
+                                <option value="">{{ __('None') }}</option>
+                                @foreach ($baskets as $basket)
+                                    <option value="{{ $basket->id }}" @selected((int) old('basket_id') === $basket->id)>
+                                        {{ $basket->educationLevel?->name }} · {{ $basket->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('basket_id')" class="mt-2" />
+                        </div>
+                    @endif
                     <div>
                         <x-input-label for="sort_order" :value="__('Sort order')" />
                         <x-text-input id="sort_order" name="sort_order" type="number" min="0" max="999" class="mt-1 block w-full" :value="old('sort_order', 0)" />
@@ -127,6 +145,9 @@
                                         @unless ($subject->is_active)
                                             <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">Inactive</span>
                                         @endunless
+                                        @if ($subject->basket)
+                                            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">{{ $subject->basket->name }}</span>
+                                        @endif
                                     </div>
                                     <p class="truncate font-mono text-xs text-slate-400">/{{ $subject->slug }}</p>
                                 </div>
@@ -140,6 +161,15 @@
                                    class="rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20">
                                     Edit & lessons
                                 </a>
+                                <form method="POST" action="{{ route('admin.subjects.destroy', $subject) }}"
+                                      onsubmit="return confirm('{{ __('Delete this subject? Its lessons and any teacher/student selections for it will also be removed.') }}');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit"
+                                            class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 transition-colors hover:border-rose-300 hover:text-rose-600 dark:border-slate-700 dark:text-slate-400 dark:hover:border-rose-800 dark:hover:text-rose-400">
+                                        Delete
+                                    </button>
+                                </form>
                             </div>
                         </li>
                     @endforeach

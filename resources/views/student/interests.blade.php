@@ -12,6 +12,11 @@
         @if (session('status') === 'interests-updated')
             <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
                 Your interests are saved — we will use them to suggest tutors and match your questions.
+                @if (session('basketReminder'))
+                    <p class="mt-2 font-medium">
+                        {{ __('Reminder: Grade 10–11 students usually study one subject from each O/L basket. You have not picked a subject from: :baskets.', ['baskets' => implode(', ', session('basketReminder'))]) }}
+                    </p>
+                @endif
             </div>
         @endif
 
@@ -36,14 +41,53 @@
             @method('PUT')
 
             <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-                <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Subjects</h3>
-                <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    @foreach ($subjects as $subject)
-                        <label class="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors hover:border-primary/40 {{ in_array($subject->id, $selectedSubjects, true) ? 'border-primary/50 bg-primary/5' : 'border-slate-200/80 dark:border-slate-800' }}">
-                            <input type="checkbox" name="subjects[]" value="{{ $subject->id }}" @checked(in_array($subject->id, $selectedSubjects, true)) class="{{ $checkboxClasses }}" />
-                            <span class="text-lg">{{ $subject->icon ?? '📘' }}</span>
-                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ $subject->name }}</span>
-                        </label>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Subjects</h3>
+                    @if ($baskets->isNotEmpty())
+                        <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                            {{ __('One subject per basket') }}
+                        </span>
+                    @endif
+                </div>
+
+                @if ($baskets->isNotEmpty())
+                    <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                        {{ __('In Grades 10–11 you pick one subject from each O/L basket — Category I, Category II and Category III. Tick the subjects you want help with: your basket choices and any compulsory subjects.') }}
+                    </p>
+                @endif
+
+                <div class="mt-4 space-y-6">
+                    @foreach ($subjectGroups as $group)
+                        <div @if ($group['basket']) data-basket-group @endif>
+                            @if ($baskets->isNotEmpty())
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                        {{ $group['basket'] === null ? __('Compulsory subjects') : trim(($group['basket']->icon ?? '').' '.$group['basket']->name) }}
+                                    </h4>
+                                    <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {{ $group['basket'] === null ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' : 'bg-primary/10 text-primary' }}">
+                                        {{ $group['basket'] === null ? __('all students') : __('pick one') }}
+                                    </span>
+                                </div>
+                                @if ($group['basket']?->description)
+                                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $group['basket']->description }}</p>
+                                @endif
+                            @endif
+
+                            <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                @foreach ($group['subjects'] as $subject)
+                                    <label class="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors hover:border-primary/40 {{ in_array($subject->id, $selectedSubjects, true) ? 'border-primary/50 bg-primary/5' : 'border-slate-200/80 dark:border-slate-800' }}">
+                                        <input type="checkbox" name="subjects[]" value="{{ $subject->id }}"
+                                               @checked(in_array($subject->id, $selectedSubjects, true))
+                                               @if ($group['basket'])
+                                                   @change="if ($event.target.checked) { $event.target.closest('[data-basket-group]').querySelectorAll('input[type=checkbox]').forEach((box) => { if (box !== $event.target) box.checked = false; }); }"
+                                               @endif
+                                               class="{{ $checkboxClasses }}" />
+                                        <span class="text-lg">{{ $subject->icon ?? '📘' }}</span>
+                                        <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ $subject->name }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
                     @endforeach
                 </div>
                 @error('subjects')

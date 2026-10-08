@@ -97,6 +97,22 @@ To prevent the brief flash of the light/default theme during page reloads, a blo
 </script>
 ```
 
+### Logged-out Pages Default to Light
+The public entry points — [welcome.blade.php](file:///d:/Github/studylikepro/resources/views/welcome.blade.php), [public-layout.blade.php](file:///d:/Github/studylikepro/resources/views/components/public-layout.blade.php) (catalog, teachers, legal) and [guest.blade.php](file:///d:/Github/studylikepro/resources/views/layouts/guest.blade.php) (login/register) — deliberately do **not** follow the operating system preference. They load the light palette unless the visitor explicitly picked **Dark** in Theme Settings (which is the only value that writes a dark `themeMode` to `localStorage`):
+
+```html
+<!-- Blocking theme script: public pages load light unless dark was chosen explicitly -->
+<script>
+    (function() {
+        if (localStorage.getItem('themeMode') === 'dark') {
+            document.documentElement.classList.add('dark');
+        }
+    })();
+</script>
+```
+
+`system` (or an unset value) resolves to light here, so the marketing, catalog, legal and auth screens always render light by default, while the signed-in shell keeps honouring the stored `light` / `dark` / `system` mode.
+
 ### Flow Method: AlpineJS Live Preview
 Theme adjustments on the settings page update the UI instantly using AlpineJS component state and a custom window event (`theme-changed`):
 1. **User interaction:** User clicks a preset/accent in [edit.blade.php](file:///d:/Github/studylikepro/resources/views/settings/edit.blade.php).

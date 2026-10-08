@@ -2,7 +2,7 @@
 
 **Companion to:** [overview.md](./overview.md) · [implementation-plan.md](./implementation-plan.md)
 **Design rules:** [DESIGN_SYSTEM_AND_THEMING_GUIDE.md](../DESIGN_SYSTEM_AND_THEMING_GUIDE.md)
-**Status:** Phases A–F implemented (taxonomy foundation, admin curriculum management, teacher assignment, grade-aware student side, grade-scoped matching/AI/search, and the legacy-column cleanup + docs/UAT sweep).
+**Status:** Phases A–F implemented (taxonomy foundation, admin curriculum management, teacher assignment, grade-aware student side, grade-scoped matching/AI/search, and the legacy-column cleanup + docs/UAT sweep), plus the O/L basket categories (§13).
 
 **Goal in one sentence:** Replace the flat subject→topic catalog with the Sri Lankan education structure — *Primary (Grades 1–5), O/L (Grades 6–11), A/L (Grades 12–13), Other* — where every subject belongs to a level and has a **grade-by-grade lesson list** (e.g. O/L Mathematics: Grade 6 → 12 lessons, Grade 7 → 10 lessons), so that admins curate the curriculum once, teachers pick "O/L Mathematics" and instantly inherit its grades + lessons, and students are shown only the subjects and lessons that exist for *their* grade.
 
@@ -44,7 +44,7 @@
 | Level key | Name | Grades | Notes |
 | --- | --- | --- | --- |
 | `primary` | Primary | 1, 2, 3, 4, 5 | |
-| `ol` | Ordinary Level (O/L) | 6, 7, 8, 9, 10, 11 | |
+| `ol` | Ordinary Level (O/L) | 6, 7, 8, 9, 10, 11 | Grades 10-11 add the three **basket** categories; a candidate picks one optional subject from each (see §13) |
 | `al` | Advanced Level (A/L) | 12, 13 | Streams exist but are **out of scope for V1**; subjects themselves differ per stream is a future extension |
 | `other` | Other | — (no numbered grade) | Adult learners, hobby, professional help |
 
@@ -56,7 +56,9 @@
 ```
 EducationLevel (primary | ol | al | other)
    ├── hasMany Grade            (level "ol" → grades 6..11; "other" → single grade row, number = null)
+   ├── hasMany SubjectBasket    (level "ol" → Category I, II, III; see §13)
    └── hasMany Subject          (a subject lives in exactly one level)
+          ├── belongsTo SubjectBasket  (nullable: mandatory subjects have no basket)
           └── hasMany Lesson    (a lesson belongs to subject + one grade)
 ```
 
@@ -641,3 +643,56 @@ Each phase ends with the full Pest suite green (current standard: suite in `test
 - National exam support (O/L 2026 intake labels, exam-topic tagging, past-paper linking).
 - CSV/bulk syllabus import into the matrix editor.
 - Student year-group promotion (auto-advancing a student from Grade 8 to 9 each January).
+
+---
+
+## 13. O/L basket subjects — Categories I, II & III (addendum)
+
+**Status:** implemented. Alongside the mandatory subjects, an O/L candidate in Grades 10-11
+takes **one optional subject from each of the three baskets** ("baskets"/categories) the
+Department of Examinations defines.
+
+| Basket | Key | Starter catalog |
+| --- | --- | --- |
+| Category I | `category_1` | Art · Eastern, Western and Carnatic Music · Eastern and Bharatha Dancing · English, Sinhala, Tamil and Arabic Literature · Drama & Theatre |
+| Category II | `category_2` | ICT · Agriculture & Food Technology · Aquatic Bioresources Technology · Arts & Crafts · Home Economics · Health & Physical Education · Communication & Media Studies · Design & Construction, Mechanical, Electrical & Electronic Technology · Electronic Writing & Shorthand |
+| Category III | `category_3` | Commerce (the Business & Accounting Studies slot) · Geography · Civic Education · Entrepreneurship Studies · Second Language Sinhala/Tamil · Pali · Sanskrit · French · German · Hindi · Japanese · Arabic |
+
+### 13.1 Data model
+
+```
+EducationLevel
+   ├── hasMany SubjectBasket        (level "ol" → the three categories)
+   └── hasMany Subject ──belongsTo── SubjectBasket   (nullable: mandatory subjects have none)
+```
+
+| Artifact | Change |
+| --- | --- |
+| `subject_baskets` | New table: `education_level_id`, `key`, `name`, `description`, `icon`, `sort_order`, `is_active`; unique `(education_level_id, key)` — `2026_10_08_000011` (description added by `2026_10_08_000014`, which also backfills the seeded text — the baskets are created before that column exists) |
+| `subjects.basket_id` | Nullable FK → `subject_baskets`, `nullOnDelete` (deleting a basket detaches, never deletes, its subjects) — `2026_10_08_000012` |
+| `2026_10_08_000013_backfill_subject_baskets` | Creates the baskets of every level that defines them and maps the O/L subjects that already existed: `ict`, `health-physical-education` → II; `geography`, `commerce` → III |
+| [config/studylikepro.php](../config/studylikepro.php) | `education_levels.ol.baskets` (keys, names, the one-line descriptions students see, icons) and `education_levels.ol.basket_grades` = `[10, 11]` — the config stays the reference the seeder and the backfill read |
+| [SubjectBasketSeeder](../database/seeders/SubjectBasketSeeder.php) | Inserts missing baskets from config and leaves admin renames alone; safe to re-run |
+| [CatalogSeeder](../database/seeders/CatalogSeeder.php) | Ships the official basket subject list (Grades 10-11, placeholder lessons), assigns each subject to its basket, and never overwrites an admin's basket choice |
+| [CatalogService](../app/Services/CatalogService.php) | Levels payload carries `subjectBaskets`, subjects payload carries `basket`; `groupByBasket()` is the one grouping the public catalog and the student interests page both render; the cache stores plain attribute rows that are rehydrated on read (the seeded catalog was ~2 MB as serialized models — more than a database cache store can write where MySQL keeps the legacy 1 MB `max_allowed_packet` — and a few hundred KB as rows); cache keys bumped to `v6`, and `AppServiceProvider` flushes the cache on `SubjectBasket` writes like it already did for levels, subjects and lessons |
+
+### 13.2 Admin
+
+- **Curriculum page** (`/admin/curriculum`): a level with baskets lists each one with its subject count and an inline form (name, description shown to students, icon, sort order, active) — `SubjectBasketController@update`, `SubjectBasketRequest`.
+- **Subject create/edit forms**: a "Subject basket" select limited to the subject's own level (`SubjectRequest` rejects a basket of another level); the catalog list shows the basket as a chip. "None" keeps the subject mandatory.
+
+### 13.3 Public catalog
+
+Step 3 of `/subjects` (after level and grade) groups the subject cards for the O/L basket grades: **Compulsory subjects** (chip *all students*) first, then **🎨 Category I · 🛠️ Category II · 📚 Category III** (chip *pick one*, each with its description), plus a line explaining the exam rule. Below Grade 10 the subjects are simply compulsory, so the grid stays flat and a note says in which grades the baskets begin — the same subject (e.g. ICT) is therefore never presented as a choice before the choice exists. A basket subject's own page carries a "Category II · pick one" chip.
+
+### 13.4 Student
+
+- The interests page groups a Grade 10-11 student's subjects into **Category I · Category II · Category III · Compulsory subjects** (the same order and chips as the catalog); checking a subject unchecks its basket siblings (Alpine) and the card explains the rule.
+- Saving is limited server-side to **one subject per basket** (`InterestsRequest`); the remaining subjects stay free to choose. An empty basket never blocks the save — the page then shows a reminder naming the baskets left empty.
+- Below Grade 10, and in levels without baskets, nothing changes: one flat list, no limit.
+
+### 13.5 Verified
+
+`tests/Feature/Student/BasketSubjectsTest.php` (grouping above/below Grade 10, one-per-basket save, second pick in a basket rejected, reminder for an incomplete choice), `tests/Feature/Admin/SubjectBasketTest.php` (basket listing, rename/reorder/description/toggle, subject assignment, cross-level basket rejected, non-admin forbidden, and a basket edit reaching the public catalog immediately — the cache flush) and `tests/Feature/CatalogTest.php` (basket subjects seeded into Grades 10-11 only, existing subjects mapped, seeder idempotent, step 3 grouped for Grade 10 and flat with the "baskets begin" note for Grade 6, category chip on a basket subject page). On the MySQL dev database `migrate` creates the three baskets and `db:seed --class=CatalogSeeder` adds the 35 basket subjects (11 · 11 · 13).
+
+Browser verification on the seeded catalog (`CACHE_STORE=database`) surfaced a real bug: with every lesson included, the cached catalog serialized to ~2 MB and the cache write died with `1153 Got a packet bigger than 'max_allowed_packet' bytes` (the local MySQL allows 1 MB), so the interests page returned a 500. `CatalogService` now caches raw attribute rows and rehydrates the models on read — same API, ~350 KB per entry — and the page works again.

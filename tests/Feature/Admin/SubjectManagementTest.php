@@ -19,6 +19,10 @@ test('non admins cannot manage the catalog', function () {
     $this->actingAs(User::factory()->student()->create())
         ->post(route('admin.subjects.store'), ['name' => 'Hacked'])
         ->assertForbidden();
+
+    $this->actingAs(User::factory()->student()->create())
+        ->delete(route('admin.subjects.destroy', Subject::factory()->create()))
+        ->assertForbidden();
 });
 
 test('admins can list subjects with usage counts', function () {
@@ -168,6 +172,19 @@ test('admins can update a subject and deactivate it', function () {
 
     expect($subject->name)->toBe('New name')
         ->and($subject->is_active)->toBeFalse();
+});
+
+test('admins can delete a subject and its lessons', function () {
+    $subject = Subject::factory()->create(['name' => 'Obsolete Subject']);
+    Lesson::factory()->for($subject)->count(2)->create();
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->delete(route('admin.subjects.destroy', $subject))
+        ->assertRedirect(route('admin.subjects.index'))
+        ->assertSessionHas('status', 'subject-deleted');
+
+    expect(Subject::find($subject->id))->toBeNull()
+        ->and(Lesson::query()->where('subject_id', $subject->id)->count())->toBe(0);
 });
 
 test('admins can add, update and delete lessons', function () {

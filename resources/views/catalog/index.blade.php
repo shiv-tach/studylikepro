@@ -68,29 +68,59 @@
                         <p class="text-slate-500 dark:text-slate-400">No subjects for {{ $level->name }} {{ $grade->label }} yet — check back soon!</p>
                     </div>
                 @else
-                    <div class="mt-3 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                        @foreach ($subjects as $subject)
-                            <a href="{{ route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade->id]) }}"
-                               class="group rounded-2xl border border-slate-200/80 bg-white p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 dark:border-slate-800/80 dark:bg-slate-900 dark:hover:border-primary/40">
-                                <div class="flex items-start justify-between">
-                                    <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-2xl transition-colors group-hover:bg-primary group-hover:text-white">
-                                        {{ $subject->icon ?? '📘' }}
-                                    </span>
-                                    <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                                        {{ $subject->lessons->count() }} {{ Str::plural('lesson', $subject->lessons->count()) }}
-                                    </span>
-                                </div>
-                                <h3 class="mt-4 text-base font-bold text-slate-800 dark:text-slate-100">{{ $subject->name }}</h3>
-                                @if ($subject->description)
-                                    <p class="mt-1.5 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{{ $subject->description }}</p>
+                    @if ($groupedByBasket)
+                        <p class="mt-3 max-w-3xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                            {{ __('For the O/L exam students take the compulsory subjects and pick one subject from each basket (:baskets). Pick a subject to see its lessons and teachers.', ['baskets' => $baskets->pluck('name')->implode(', ')]) }}
+                        </p>
+                    @elseif ($baskets->isNotEmpty())
+                        <p class="mt-3 max-w-3xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                            {{ __('Every subject below is compulsory in :grade; the optional O/L baskets (:baskets) begin in Grades :grades.', ['grade' => $grade->label, 'baskets' => $baskets->pluck('name')->implode(', '), 'grades' => implode('–', $level->basketGradeNumbers())]) }}
+                        </p>
+                    @endif
+
+                    <div class="{{ $groupedByBasket ? 'mt-6 space-y-8' : 'mt-3' }}">
+                        @foreach ($subjectGroups as $group)
+                            <div>
+                                @if ($groupedByBasket)
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">
+                                            {{ $group['basket'] === null ? __('Compulsory subjects') : trim(($group['basket']->icon ?? '').' '.$group['basket']->name) }}
+                                        </h3>
+                                        <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide {{ $group['basket'] === null ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' : 'bg-primary/10 text-primary' }}">
+                                            {{ $group['basket'] === null ? __('all students') : __('pick one') }}
+                                        </span>
+                                    </div>
+                                    @if ($group['basket']?->description)
+                                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $group['basket']->description }}</p>
+                                    @endif
                                 @endif
-                                <span class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary">
-                                    View lessons
-                                    <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </span>
-                            </a>
+
+                                <div class="mt-3 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                                    @foreach ($group['subjects'] as $subject)
+                                        <a href="{{ route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade->id]) }}"
+                                           class="group rounded-2xl border border-slate-200/80 bg-white p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 dark:border-slate-800/80 dark:bg-slate-900 dark:hover:border-primary/40">
+                                            <div class="flex items-start justify-between">
+                                                <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-2xl transition-colors group-hover:bg-primary group-hover:text-white">
+                                                    {{ $subject->icon ?? '📘' }}
+                                                </span>
+                                                <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                                    {{ $subject->lessons->count() }} {{ Str::plural('lesson', $subject->lessons->count()) }}
+                                                </span>
+                                            </div>
+                                            <h3 class="mt-4 text-base font-bold text-slate-800 dark:text-slate-100">{{ $subject->name }}</h3>
+                                            @if ($subject->description)
+                                                <p class="mt-1.5 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{{ $subject->description }}</p>
+                                            @endif
+                                            <span class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                                                View lessons
+                                                <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                                </svg>
+                                            </span>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </div>
                         @endforeach
                     </div>
                 @endif

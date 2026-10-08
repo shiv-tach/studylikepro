@@ -211,11 +211,40 @@ return [
     | `education_levels` and `grades` tables (seeded by EducationLevelSeeder);
     | this config is the reference the seeder and the backfill read.
     |
+    | `baskets` groups the optional subjects of a level the way the examination
+    | does - in the O/L a Grade 10-11 candidate picks one subject from each of
+    | the three categories - and `basket_grades` lists the grades where that
+    | choice happens. The basket rows live in `subject_baskets` (seeded by
+    | SubjectBasketSeeder), and every subject points at its basket.
+    |
     */
 
     'education_levels' => [
         'primary' => ['name' => 'Primary', 'grade_min' => 1, 'grade_max' => 5, 'icon' => '🎒'],
-        'ol' => ['name' => 'O/L (Ordinary Level)', 'grade_min' => 6, 'grade_max' => 11, 'icon' => '📘'],
+        'ol' => [
+            'name' => 'O/L (Ordinary Level)',
+            'grade_min' => 6,
+            'grade_max' => 11,
+            'icon' => '📘',
+            'basket_grades' => [10, 11],
+            'baskets' => [
+                'category_1' => [
+                    'name' => 'Category I',
+                    'icon' => '🎨',
+                    'description' => 'Aesthetic, music, dancing, literature and drama subjects',
+                ],
+                'category_2' => [
+                    'name' => 'Category II',
+                    'icon' => '🛠️',
+                    'description' => 'Technical, practical and technology subjects',
+                ],
+                'category_3' => [
+                    'name' => 'Category III',
+                    'icon' => '📚',
+                    'description' => 'Academic, commerce and second-language subjects',
+                ],
+            ],
+        ],
         'al' => ['name' => 'A/L (Advanced Level)', 'grade_min' => 12, 'grade_max' => 13, 'icon' => '🎓'],
         'other' => ['name' => 'Other', 'grade_min' => null, 'grade_max' => null, 'icon' => '🧭'],
     ],

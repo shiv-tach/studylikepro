@@ -114,8 +114,8 @@ Automated equivalent: `tests/Feature/Acceptance/CoreFlowTest.php` (runs in CI).
 ## G. Curriculum, grades & lessons
 
 Automated equivalents: `tests/Feature/CatalogTest.php`, `tests/Feature/Admin/CurriculumLevelTest.php`, `tests/Feature/Admin/GradeLessonTest.php`,
-`tests/Feature/Teacher/GradeLessonAssignmentTest.php`, `tests/Feature/Student/GradeScopedCatalogTest.php`,
-`tests/Feature/Matching/GradeMatchTest.php`, `tests/Feature/TeacherDiscoveryTest.php`.
+`tests/Feature/Admin/SubjectBasketTest.php`, `tests/Feature/Teacher/GradeLessonAssignmentTest.php`, `tests/Feature/Student/GradeScopedCatalogTest.php`,
+`tests/Feature/Student/BasketSubjectsTest.php`, `tests/Feature/Matching/GradeMatchTest.php`, `tests/Feature/TeacherDiscoveryTest.php`.
 
 | # | Step | Expected | ✅ |
 | --- | --- | --- | --- |
@@ -128,6 +128,15 @@ Automated equivalents: `tests/Feature/CatalogTest.php`, `tests/Feature/Admin/Cur
 | G7 | Admin renames lessons in the matrix | Teacher and student pickers show the new names (catalog cache flushed), and directory cards show "Grades 6-11 · N lessons" | ☐ |
 | G8 | Visitor opens `/subjects` | The four levels (Primary, O/L, A/L, Other) are offered; picking a level reveals its grades; picking a grade lists only the subjects that run in it (e.g. Commerce for Grade 10–11, not Grade 6), each with the grade's lesson count; opening one lists that grade's lessons with a "View all grades" link | ☐ |
 | G9 | Visitor opens a subject (e.g. `/subjects/english?grade=6`) | Verified teachers for that subject and grade are listed with their hourly rate for the selected grade, teaching scope and next availability; "See all N teachers" opens the directory pre-filtered; each card opens the teacher profile to book | ☐ |
+| G10 | Admin opens `/admin/curriculum` | The O/L card lists the three baskets (Category I, II, III) with subject counts and inline name/description/icon/order/active forms | ☐ |
+| G11 | Admin edits an O/L subject (e.g. Art) and changes its **Subject basket**, then opens `/subjects?level=ol&grade=10` | The subject appears under the new basket; a basket of another level is rejected with a validation error | ☐ |
+| G12 | Grade 10 student opens interests | Subjects are grouped Compulsory subjects · Category I · Category II · Category III; checking a Category I subject unchecks the other Category I choices | ☐ |
+| G13 | Grade 10 student saves two subjects of the same basket (e.g. by disabling JS) | The save is rejected with "Pick one subject from each O/L basket …" | ☐ |
+| G14 | Grade 10 student saves with one basket still empty | The interests are saved and the confirmation names the empty basket as a reminder | ☐ |
+| G15 | Grade 9 (or Primary) student opens interests | The flat subject list stays as before — no basket groups, no limit | ☐ |
+| G16 | Visitor opens `/subjects?level=ol&grade=10` | Step 3 shows *Compulsory subjects* first, then 🎨 Category I, 🛠️ Category II and 📚 Category III, each with a "pick one" chip and its one-line description; the note explains the exam rule | ☐ |
+| G17 | Visitor opens `/subjects?level=ol&grade=6` | The grid stays flat with the note "Every subject below is compulsory in Grade 6; the optional O/L baskets … begin in Grades 10–11" — never a "pick one" chip | ☐ |
+| G18 | Admin renames/describes a basket, then reloads `/subjects?level=ol&grade=10` | The new name and description appear immediately (catalog cache flushed on the basket write) | ☐ |
 
 ---
 

@@ -24,10 +24,17 @@
                 @if ($subject->description)
                     <p class="mt-1.5 max-w-2xl text-slate-600 dark:text-slate-400">{{ $subject->description }}</p>
                 @endif
-                @if ($grade)
+                @if ($subject->basket || $grade)
                     <div class="mt-3 flex flex-wrap items-center gap-3">
-                        <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{{ $level->name }} · {{ $grade->label }}</span>
-                        <a href="{{ route('catalog.subjects.show', $subject) }}" class="text-xs font-semibold text-slate-400 transition-colors hover:text-primary">View all grades</a>
+                        @if ($subject->basket)
+                            <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                                {{ trim(($subject->basket->icon ?? '').' '.$subject->basket->name) }} · {{ __('pick one') }}
+                            </span>
+                        @endif
+                        @if ($grade)
+                            <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{{ $level->name }} · {{ $grade->label }}</span>
+                            <a href="{{ route('catalog.subjects.show', $subject) }}" class="text-xs font-semibold text-slate-400 transition-colors hover:text-primary">View all grades</a>
+                        @endif
                     </div>
                 @endif
             </div>
@@ -68,8 +75,10 @@
             <div class="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($teachers as $teacher)
                     @php $nextSlot = $nextSlots[$teacher->id] ?? null; @endphp
-                    <a href="{{ route('teachers.show', $teacher) }}"
-                       class="group flex flex-col rounded-2xl border border-slate-200/80 bg-white p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 dark:border-slate-800/80 dark:bg-slate-900 dark:hover:border-primary/40">
+                    <div class="group relative flex flex-col rounded-2xl border border-slate-200/80 bg-white p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 dark:border-slate-800/80 dark:bg-slate-900 dark:hover:border-primary/40">
+                        <a href="{{ route('teachers.show', $teacher) }}" class="absolute inset-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                            <span class="sr-only">{{ $teacher->user->name }}</span>
+                        </a>
                         <div class="flex items-start gap-3">
                             @if ($teacher->user->avatarUrl())
                                 <img src="{{ $teacher->user->avatarUrl() }}" alt="{{ $teacher->user->name }}" class="h-12 w-12 rounded-xl object-cover" />
@@ -128,14 +137,32 @@
                                     @endif
                                 </p>
                             </div>
-                            <span class="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary">
-                                View profile
-                                <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </span>
+                            @auth
+                                @can('create', [App\Models\Booking::class, $teacher])
+                                    <a href="{{ route('student.bookings.create', array_filter([
+                                            'teacherProfile' => $teacher,
+                                            'subject_id' => $subject->id,
+                                            'learner_grade_id' => $grade?->id,
+                                        ])) }}"
+                                       class="relative z-10 inline-flex shrink-0 items-center gap-1 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary/20 transition hover:bg-primary/90">
+                                        Book now
+                                    </a>
+                                @else
+                                    <span class="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary">
+                                        View profile
+                                        <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </span>
+                                @endcan
+                            @else
+                                <a href="{{ route('register', ['role' => 'student']) }}"
+                                   class="relative z-10 inline-flex shrink-0 items-center gap-1 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary/20 transition hover:bg-primary/90">
+                                    Book now
+                                </a>
+                            @endauth
                         </div>
-                    </a>
+                    </div>
                 @endforeach
             </div>
         @endif

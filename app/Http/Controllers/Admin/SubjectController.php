@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\SubjectRequest;
 use App\Models\EducationLevel;
 use App\Models\Subject;
+use App\Models\SubjectBasket;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,7 +25,7 @@ class SubjectController extends Controller
         ]);
 
         $subjects = Subject::query()
-            ->with('educationLevel')
+            ->with(['educationLevel', 'basket'])
             ->when($filters['level'] ?? null, fn ($query, string $key) => $query->forLevel($key))
             ->withCount(['lessons', 'teacherProfiles'])
             ->ordered()
@@ -33,6 +34,7 @@ class SubjectController extends Controller
         return view('admin.subjects.index', [
             'subjects' => $subjects,
             'levels' => EducationLevel::query()->ordered()->withCount('subjects')->get(),
+            'baskets' => SubjectBasket::query()->with('educationLevel')->ordered()->get(),
             'filters' => $filters,
         ]);
     }
@@ -44,6 +46,7 @@ class SubjectController extends Controller
     {
         $subject = Subject::query()->create([
             'education_level_id' => $request->validated('education_level_id'),
+            'basket_id' => $request->validated('basket_id'),
             'name' => $request->validated('name'),
             'slug' => $request->validated('slug') ?: Str::slug($request->validated('name')),
             'icon' => $request->validated('icon'),
@@ -66,6 +69,7 @@ class SubjectController extends Controller
     {
         $subject->load([
             'educationLevel',
+            'basket',
             'lessons' => fn ($query) => $query->ordered()->with('grade'),
         ]);
 
@@ -75,6 +79,7 @@ class SubjectController extends Controller
         return view('admin.subjects.edit', [
             'subject' => $subject,
             'grades' => $grades,
+            'baskets' => $subject->educationLevel?->subjectBaskets()->ordered()->get() ?? collect(),
             'lessonsByGrade' => $subject->lessons->groupBy('grade_id'),
             'selectedGradeId' => $grades->contains('id', $requested) ? $requested : null,
         ]);
@@ -88,6 +93,7 @@ class SubjectController extends Controller
         $subject->update([
             'name' => $request->validated('name'),
             'slug' => $request->validated('slug') ?: Str::slug($request->validated('name')),
+            'basket_id' => $request->validated('basket_id'),
             'icon' => $request->validated('icon'),
             'description' => $request->validated('description'),
             'sort_order' => (int) $request->validated('sort_order'),
@@ -99,5 +105,24 @@ class SubjectController extends Controller
         return redirect()
             ->route('admin.subjects.edit', $subject)
             ->with('status', 'subject-updated');
+    }
+
+    /**
+     * Delete a subject. Its lessons, teacher selections and student interests
+     * cascade away; tutoring requests and bookings detach via their nullOnDelete
+     * foreign keys so their history survives.
+     */
+    public function destroy(Subject $subject, ActivityLogger $activity): RedirectResponse
+    {
+        $name = $subject->name;
+        $level = $subject->educationLevel?->name;
+
+        $subject->delete();
+
+        $activity->describe('Deleted the subject "'.$name.'"'.($level !== null ? ' ('.$level.')' : ''));
+
+        return redirect()
+            ->route('admin.subjects.index')
+            ->with('status', 'subject-deleted');
     }
 }
