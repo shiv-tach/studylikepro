@@ -10,14 +10,16 @@ use App\Events\PaymentFailed;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Services\BookingTransitionService;
+use App\Services\PurchaseService;
 use App\Support\Payments\GatewayEvent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Owns the payment lifecycle for a booking: opening a provider order, applying
- * the provider's answer (webhook, return URL or reconcile) and keeping the
- * booking, the payment row and the earnings ledger in step.
+ * Owns the payment lifecycle for a booking or a service purchase: opening a
+ * provider order, applying the provider's answer (webhook, return URL or
+ * reconcile) and keeping the booking/purchase, the payment row and the
+ * earnings ledger in step.
  */
 class PaymentService
 {
@@ -25,6 +27,7 @@ class PaymentService
         private readonly PaymentGateway $gateway,
         private readonly BookingTransitionService $transitions,
         private readonly EarningsService $earnings,
+        private readonly PurchaseService $purchases,
     ) {}
 
     /**
@@ -157,12 +160,21 @@ class PaymentService
                 'gateway_payload' => $payload ?: $payment->gateway_payload,
             ])->save();
 
-            $booking = $payment->booking;
+            if ($payment->booking_id !== null) {
+                $booking = $payment->booking;
 
-            // Confirming is idempotent, so a retried webhook is harmless.
-            $this->transitions->confirm($booking);
+                // Confirming is idempotent, so a retried webhook is harmless.
+                $this->transitions->confirm($booking);
 
-            $this->earnings->recordForBooking($booking->refresh(), $payment);
+                $this->earnings->recordForBooking($booking->refresh(), $payment);
+            }
+
+            if ($payment->service_purchase_id !== null) {
+                // Activation is idempotent, so a retried webhook is harmless.
+                $purchase = $this->purchases->activate($payment->purchase);
+
+                $this->earnings->recordForPurchase($purchase->refresh(), $payment);
+            }
         });
 
         PaymentCaptured::dispatch($payment->refresh());

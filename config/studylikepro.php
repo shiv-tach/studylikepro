@@ -192,6 +192,35 @@ return [
 
     'lesson_durations' => [30, 45, 60, 90],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Service catalog (lesson plans, summaries, paper marking, Q&A)
+    |--------------------------------------------------------------------------
+    |
+    | Defaults for the teacher-managed service catalog. Teachers override the
+    | price, scope and session options per offering; these values only act as
+    | platform-wide bounds and fallbacks.
+    |
+    */
+
+    'services' => [
+        // Lesson plans: a purchased allocation must be consumed before this.
+        'plan_expiry_days' => (int) env('SERVICES_PLAN_EXPIRY_DAYS', 90),
+        // Prorated refund of the unused balance when a plan expires.
+        'refund_unused_balance_on_expiry' => (bool) env('SERVICES_REFUND_UNUSED_BALANCE', true),
+        // Fallback session length when an offering does not define one.
+        'default_session_minutes' => (int) env('SERVICES_DEFAULT_SESSION_MINUTES', 60),
+        // Hard cap on sessions per plan (protects the availability engine).
+        'max_sessions_per_plan' => (int) env('SERVICES_MAX_SESSIONS_PER_PLAN', 20),
+        // Paper marking SLA fallback and upload limits.
+        'marking_default_turnaround_hours' => (int) env('SERVICES_MARKING_TURNAROUND_HOURS', 72),
+        'marking_max_files' => (int) env('SERVICES_MARKING_MAX_FILES', 10),
+        'marking_default_max_pages' => (int) env('SERVICES_MARKING_MAX_PAGES', 20),
+        // Summary delivery promise.
+        'summary_delivery_days' => (int) env('SERVICES_SUMMARY_DELIVERY_DAYS', 7),
+        // Q&A sessions reuse the standard lesson durations.
+    ],
+
     'weekdays' => [
         1 => 'Monday',
         2 => 'Tuesday',

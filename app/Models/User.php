@@ -190,6 +190,11 @@ class User extends Authenticatable
         return $this->hasMany(Booking::class, 'student_id')->latest('starts_at');
     }
 
+    public function servicePurchases(): HasMany
+    {
+        return $this->hasMany(ServicePurchase::class, 'student_id')->latest();
+    }
+
     public function hasCompletedOnboarding(): bool
     {
         return match (true) {

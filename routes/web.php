@@ -8,9 +8,12 @@ use App\Http\Controllers\Admin\DisputeController as AdminDisputeController;
 use App\Http\Controllers\Admin\EducationLevelController as AdminEducationLevelController;
 use App\Http\Controllers\Admin\LessonController as AdminLessonController;
 use App\Http\Controllers\Admin\ModerationController as AdminModerationController;
+use App\Http\Controllers\Admin\PaperMarkingController as AdminPaperMarkingController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\PayoutController as AdminPayoutController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Admin\ServiceController as AdminServiceController;
+use App\Http\Controllers\Admin\ServicePurchaseController as AdminServicePurchaseController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\SubjectBasketController as AdminSubjectBasketController;
 use App\Http\Controllers\Admin\SubjectController as AdminSubjectController;
@@ -30,10 +33,15 @@ use App\Http\Controllers\Student\BookingController as StudentBookingController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\InterestsController as StudentInterestsController;
 use App\Http\Controllers\Student\OnboardingController as StudentOnboardingController;
+use App\Http\Controllers\Student\PaperMarkingController as StudentPaperMarkingController;
 use App\Http\Controllers\Student\PaymentController as StudentPaymentController;
 use App\Http\Controllers\Student\ProfileController as StudentProfileController;
+use App\Http\Controllers\Student\PurchaseCheckoutController as StudentPurchaseCheckoutController;
+use App\Http\Controllers\Student\PurchaseController as StudentPurchaseController;
+use App\Http\Controllers\Student\PurchaseSessionController as StudentPurchaseSessionController;
 use App\Http\Controllers\Student\ReceiptController;
 use App\Http\Controllers\Student\ReviewController as StudentReviewController;
+use App\Http\Controllers\Student\SummaryController as StudentSummaryController;
 use App\Http\Controllers\Student\TeacherFinderController;
 use App\Http\Controllers\Student\TeacherProfileController as StudentTeacherProfileController;
 use App\Http\Controllers\Student\TutoringRequestController;
@@ -41,10 +49,14 @@ use App\Http\Controllers\Teacher\AvailabilityController as TeacherAvailabilityCo
 use App\Http\Controllers\Teacher\BookingController as TeacherBookingController;
 use App\Http\Controllers\Teacher\DashboardController as TeacherDashboardController;
 use App\Http\Controllers\Teacher\EarningsController as TeacherEarningsController;
+use App\Http\Controllers\Teacher\PaperMarkingController as TeacherPaperMarkingController;
+use App\Http\Controllers\Teacher\PlanController as TeacherPlanController;
 use App\Http\Controllers\Teacher\ProfileController as TeacherProfileController;
 use App\Http\Controllers\Teacher\RequestInboxController as TeacherRequestInboxController;
 use App\Http\Controllers\Teacher\ReviewController as TeacherReviewController;
+use App\Http\Controllers\Teacher\ServiceOfferingController as TeacherServiceOfferingController;
 use App\Http\Controllers\Teacher\SubjectsController as TeacherSubjectsController;
+use App\Http\Controllers\Teacher\SummaryController as TeacherSummaryController;
 use App\Http\Controllers\Teacher\VerificationController as TeacherVerificationController;
 use App\Http\Controllers\TeacherDirectoryController;
 use App\Http\Controllers\VerificationDocumentController;
@@ -139,6 +151,32 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_STUDENT, 'not-suspende
 
         Route::post('/lessons/{booking}/checkout', [StudentPaymentController::class, 'checkout'])->middleware(['onboarded', 'throttle:checkout'])->name('bookings.checkout');
         Route::get('/payments/{payment}', [StudentPaymentController::class, 'show'])->middleware('onboarded')->name('payments.checkout');
+
+        // Service catalog: lesson plans, summaries, paper marking, discussions & Q&A.
+        Route::get('/purchases', [StudentPurchaseController::class, 'index'])->middleware('onboarded')->name('purchases.index');
+        Route::get('/purchases/{purchase}', [StudentPurchaseController::class, 'show'])->middleware('onboarded')->name('purchases.show');
+        Route::post('/offerings/{offering}/purchase', [StudentPurchaseController::class, 'store'])->middleware(['onboarded', 'throttle:checkout'])->name('purchases.store');
+        Route::post('/purchases/{purchase}/cancel', [StudentPurchaseController::class, 'cancel'])->middleware('onboarded')->name('purchases.cancel');
+
+        Route::post('/purchases/{purchase}/checkout', [StudentPurchaseCheckoutController::class, 'checkout'])->middleware(['onboarded', 'throttle:checkout'])->name('purchases.checkout');
+        Route::get('/purchase-payments/{payment}', [StudentPurchaseCheckoutController::class, 'show'])->middleware('onboarded')->name('purchases.checkout.show');
+        Route::get('/purchase-payments/{payment}/return', [StudentPurchaseCheckoutController::class, 'return'])->middleware('onboarded')->name('purchases.checkout.return');
+
+        // Sessions booked against a purchased plan or single-session service.
+        Route::get('/purchases/{purchase}/sessions/create', [StudentPurchaseSessionController::class, 'create'])->middleware('onboarded')->name('purchase-sessions.create');
+        Route::post('/purchases/{purchase}/sessions', [StudentPurchaseSessionController::class, 'store'])->middleware('onboarded')->name('purchase-sessions.store');
+        Route::post('/purchase-sessions/{booking}/cancel', [StudentPurchaseSessionController::class, 'cancel'])->middleware('onboarded')->name('purchase-sessions.cancel');
+
+        // Lesson summaries (student side).
+        Route::get('/purchases/{purchase}/summary', [StudentSummaryController::class, 'show'])->middleware('onboarded')->name('summaries.show');
+
+        // Paper marking (student side).
+        Route::get('/marking/{offering}/create', [StudentPaperMarkingController::class, 'create'])->middleware('onboarded')->name('marking.create');
+        Route::post('/marking/{offering}', [StudentPaperMarkingController::class, 'store'])->middleware(['onboarded', 'throttle:uploads'])->name('marking.store');
+        Route::get('/marking-orders/{order}', [StudentPaperMarkingController::class, 'show'])->middleware('onboarded')->name('marking-orders.show');
+        Route::post('/marking-orders/{order}/accept', [StudentPaperMarkingController::class, 'accept'])->middleware('onboarded')->name('marking-orders.accept');
+        Route::post('/marking-orders/{order}/dispute', [StudentPaperMarkingController::class, 'dispute'])->middleware('onboarded')->name('marking-orders.dispute');
+        Route::get('/marking-orders/{order}/files/{kind}/{index}', [StudentPaperMarkingController::class, 'download'])->middleware('onboarded')->name('marking-orders.download');
     });
 
 Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspended'])
@@ -179,6 +217,30 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
         Route::get('/earnings', [TeacherEarningsController::class, 'index'])->middleware('onboarded')->name('earnings.index');
         Route::get('/reviews', [TeacherReviewController::class, 'index'])->middleware('onboarded')->name('reviews.index');
         Route::post('/reviews/{review}/flag', [TeacherReviewController::class, 'flag'])->middleware('onboarded')->name('reviews.flag');
+
+        // Services & pricing: lesson plans, summaries, paper marking,
+        // paper discussions and Q&A offerings.
+        Route::get('/services', [TeacherServiceOfferingController::class, 'index'])->middleware('onboarded')->name('services.index');
+        Route::post('/services', [TeacherServiceOfferingController::class, 'store'])->middleware('onboarded')->name('services.store');
+        Route::put('/services/{offering}', [TeacherServiceOfferingController::class, 'update'])->middleware('onboarded')->name('services.update');
+        Route::delete('/services/{offering}', [TeacherServiceOfferingController::class, 'destroy'])->middleware('onboarded')->name('services.destroy');
+        Route::post('/services/{offering}/toggle', [TeacherServiceOfferingController::class, 'toggle'])->middleware('onboarded')->name('services.toggle');
+
+        // Purchased plans and their sessions.
+        Route::get('/plans', [TeacherPlanController::class, 'index'])->middleware('onboarded')->name('plans.index');
+        Route::get('/plans/{purchase}', [TeacherPlanController::class, 'show'])->middleware('onboarded')->name('plans.show');
+
+        // Lesson summaries console.
+        Route::get('/summaries', [TeacherSummaryController::class, 'index'])->middleware('onboarded')->name('summaries.index');
+        Route::get('/summaries/{summary}', [TeacherSummaryController::class, 'edit'])->middleware('onboarded')->name('summaries.edit');
+        Route::put('/summaries/{summary}', [TeacherSummaryController::class, 'update'])->middleware('onboarded')->name('summaries.update');
+        Route::post('/summaries/{summary}/deliver', [TeacherSummaryController::class, 'deliver'])->middleware('onboarded')->name('summaries.deliver');
+
+        // Paper marking inbox.
+        Route::get('/marking', [TeacherPaperMarkingController::class, 'index'])->middleware('onboarded')->name('marking.index');
+        Route::get('/marking/{order}', [TeacherPaperMarkingController::class, 'show'])->middleware('onboarded')->name('marking.show');
+        Route::post('/marking/{order}/mark', [TeacherPaperMarkingController::class, 'mark'])->middleware(['onboarded', 'throttle:uploads'])->name('marking.mark');
+        Route::get('/marking/{order}/files/{kind}/{index}', [TeacherPaperMarkingController::class, 'download'])->middleware('onboarded')->name('marking.download');
     });
 
 Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended', LogAdminActivity::class])
@@ -251,6 +313,20 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended'
         Route::get('/payouts', [AdminPayoutController::class, 'index'])->name('payouts.index');
         Route::post('/payouts', [AdminPayoutController::class, 'store'])->name('payouts.store');
         Route::post('/payouts/{payout}/mark-paid', [AdminPayoutController::class, 'markPaid'])->name('payouts.mark-paid');
+
+        // Service catalog management.
+        Route::get('/services', [AdminServiceController::class, 'index'])->name('services.index');
+        Route::delete('/services/{offering}', [AdminServiceController::class, 'destroy'])->name('services.destroy');
+
+        Route::get('/purchases', [AdminServicePurchaseController::class, 'index'])->name('purchases.index');
+        Route::get('/purchases/{purchase}', [AdminServicePurchaseController::class, 'show'])->name('purchases.show');
+        Route::post('/purchases/{purchase}/refund', [AdminServicePurchaseController::class, 'refund'])->name('purchases.refund');
+        Route::post('/purchases/{purchase}/cancel', [AdminServicePurchaseController::class, 'cancel'])->name('purchases.cancel');
+
+        Route::get('/marking-orders', [AdminPaperMarkingController::class, 'index'])->name('marking.index');
+        Route::get('/marking-orders/{order}', [AdminPaperMarkingController::class, 'show'])->name('marking.show');
+        Route::post('/marking-orders/{order}/resolve', [AdminPaperMarkingController::class, 'resolve'])->name('marking.resolve');
+        Route::post('/marking-orders/{order}/refund', [AdminPaperMarkingController::class, 'refund'])->name('marking.refund');
 
         Route::get('/activity', [AdminActivityController::class, 'index'])->name('activity.index');
 

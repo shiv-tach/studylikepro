@@ -2,7 +2,6 @@
 
 namespace App\Contracts;
 
-use App\Models\Booking;
 use App\Models\Payment;
 use App\Support\Payments\GatewayEvent;
 use App\Support\Payments\GatewayOrder;
@@ -19,7 +18,7 @@ interface PaymentGateway
     /**
      * Register an order with the provider for the amount the student owes.
      */
-    public function createOrder(Booking $booking, int $amountMinor, string $currency): GatewayOrder;
+    public function createOrder(Payable $subject, int $amountMinor, string $currency): GatewayOrder;
 
     /**
      * Read the provider's current view of a payment (used on return and by reconcile).

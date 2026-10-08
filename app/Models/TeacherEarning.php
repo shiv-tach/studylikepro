@@ -21,6 +21,7 @@ class TeacherEarning extends Model
     protected $fillable = [
         'teacher_profile_id',
         'booking_id',
+        'service_purchase_id',
         'payment_id',
         'payout_id',
         'amount_minor',
@@ -50,6 +51,11 @@ class TeacherEarning extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    public function servicePurchase(): BelongsTo
+    {
+        return $this->belongsTo(ServicePurchase::class, 'service_purchase_id');
     }
 
     public function payment(): BelongsTo

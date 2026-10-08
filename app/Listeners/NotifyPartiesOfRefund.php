@@ -13,6 +13,9 @@ class NotifyPartiesOfRefund
 
         $refund->payment->student->notify(new LessonRefundProcessed($refund));
 
-        $refund->booking->teacherProfile->user->notify(new LessonRefundProcessed($refund));
+        $teacherUser = $refund->booking?->teacherProfile?->user
+            ?? $refund->payment?->purchase?->teacherProfile?->user;
+
+        $teacherUser?->notify(new LessonRefundProcessed($refund));
     }
 }

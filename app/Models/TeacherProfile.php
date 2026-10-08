@@ -94,6 +94,16 @@ class TeacherProfile extends Model
         return $this->hasMany(Booking::class)->latest('starts_at');
     }
 
+    public function offerings(): HasMany
+    {
+        return $this->hasMany(ServiceOffering::class);
+    }
+
+    public function serviceOfferings(): HasMany
+    {
+        return $this->offerings();
+    }
+
     public function earnings(): HasMany
     {
         return $this->hasMany(TeacherEarning::class)->latest();

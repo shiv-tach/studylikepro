@@ -30,6 +30,10 @@
             <div class="rounded-2xl border border-amber-200/80 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
                 {{ __('Slot reserved. Complete the payment before the hold lapses and the lesson is confirmed.') }}
             </div>
+        @elseif (session('status') === 'session-booked')
+            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                {{ __('Session booked — it is already paid for from your purchase.') }}
+            </div>
         @elseif (session('status') === 'booking-confirmed')
             <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
                 {{ __('Payment received — your lesson is confirmed.') }}
@@ -204,6 +208,15 @@
                 </span>
                 <span class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{{ $money($booking->totalMinor()) }}</span>
             </div>
+
+            @if ($booking->isPurchaseSession())
+                <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    {{ __('This session is covered by your purchase — no payment is needed.') }}
+                    <a href="{{ route('student.purchases.show', $booking->service_purchase_id) }}" class="font-semibold text-primary hover:underline">
+                        {{ __('View the purchase') }}
+                    </a>
+                </p>
+            @endif
 
             @if ($booking->booking_fee_minor > 0)
                 <dl class="mt-3 space-y-1 border-t border-slate-200 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">

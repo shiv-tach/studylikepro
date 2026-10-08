@@ -107,7 +107,6 @@
                     <!-- Subjects & lessons, scoped to the student's grade -->
                     <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
                         <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('Subjects & lessons') }}</h2>
-
                         @forelse ($teacher->subjects as $subject)
                             @php
                                 $subjectRate = $teacher->effectiveRateFor($subject, $scopeGradeId);
@@ -139,6 +138,61 @@
                         @empty
                             <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">{{ __('This teacher is still setting up their subjects.') }}</p>
                         @endforelse
+                    </div>
+                @endif
+
+                <!-- Service catalog -->
+                @if ($offerings->isNotEmpty())
+                    <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('Services & pricing') }}</h2>
+                            <span class="{{ $chip }}">{{ __('prices set by the teacher') }}</span>
+                        </div>
+
+                        <div class="mt-4 space-y-4">
+                            @foreach ($offerings as $type => $items)
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-primary">{{ $type->icon() }} {{ $type->label() }}</p>
+                                    <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                                        @foreach ($items as $offering)
+                                            <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 p-3 dark:border-slate-800">
+                                                <div class="min-w-0">
+                                                    <p class="truncate text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                                        {{ $offering->lesson?->name ?? $offering->subject?->name ?? $offering->title }}
+                                                    </p>
+                                                    <p class="mt-0.5 text-xs text-slate-400">
+                                                        @if ($offering->type() === \App\Enums\ServiceType::Lesson && $offering->allocation_minutes)
+                                                            {{ __(':minutes minutes, split into sessions', ['minutes' => $offering->allocation_minutes]) }}
+                                                        @elseif ($offering->type() === \App\Enums\ServiceType::PaperMarking)
+                                                            {{ __('per paper · back within :hours h', ['hours' => $offering->turnaround_hours ?? config('studylikepro.services.marking_default_turnaround_hours')]) }}
+                                                        @elseif ($offering->default_session_minutes)
+                                                            {{ __(':minutes-minute live session', ['minutes' => $offering->default_session_minutes]) }}
+                                                        @endif
+                                                    </p>
+                                                </div>
+                                                <div class="shrink-0 text-right">
+                                                    <p class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ $money($offering->price_minor) }}</p>
+                                                    @if ($offering->type() === \App\Enums\ServiceType::PaperMarking)
+                                                        <a href="{{ route('student.marking.create', $offering) }}"
+                                                           class="mt-1 inline-block rounded-lg bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary hover:text-white">
+                                                            {{ __('Submit paper') }}
+                                                        </a>
+                                                    @else
+                                                        <form method="POST" action="{{ route('student.purchases.store', $offering) }}" class="mt-1">
+                                                            @csrf
+                                                            <button type="submit"
+                                                                    class="rounded-lg bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary hover:text-white">
+                                                                {{ __('Buy') }}
+                                                            </button>
+                                                        </form>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
                 @endif
 

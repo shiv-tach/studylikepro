@@ -50,6 +50,12 @@ class TeacherProfileController extends Controller
         return view('student.teacher', [
             'teacher' => $teacherProfile,
             'lessonsBySubject' => $teacherProfile->lessons->groupBy('subject_id'),
+            'offerings' => $teacherProfile->offerings()
+                ->active()
+                ->ordered()
+                ->with(['subject', 'lesson'])
+                ->get()
+                ->groupBy('service_type'),
             'availability' => $slots->upcoming($teacherProfile, 14, 40, excludeBookings: true),
             'reviews' => $teacherProfile->visibleReviews()->with('student')->limit(5)->get(),
             'breakdown' => $stats->ratingBreakdown($teacherProfile),

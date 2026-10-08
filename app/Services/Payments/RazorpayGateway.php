@@ -2,9 +2,9 @@
 
 namespace App\Services\Payments;
 
+use App\Contracts\Payable;
 use App\Contracts\PaymentGateway;
 use App\Exceptions\UnsupportedCurrencyException;
-use App\Models\Booking;
 use App\Models\Payment;
 use App\Support\Payments\GatewayEvent;
 use App\Support\Payments\GatewayOrder;
@@ -30,17 +30,17 @@ class RazorpayGateway implements PaymentGateway
         return 'razorpay';
     }
 
-    public function createOrder(Booking $booking, int $amountMinor, string $currency): GatewayOrder
+    public function createOrder(Payable $subject, int $amountMinor, string $currency): GatewayOrder
     {
         $this->assertCurrencySupported($currency);
 
         $response = $this->client()->post($this->url('/orders'), [
             'amount' => $amountMinor,
             'currency' => $currency,
-            'receipt' => 'booking_'.$booking->id,
+            'receipt' => $subject->payableType().'_'.$subject->getId(),
             'notes' => [
-                'booking_id' => (string) $booking->id,
-                'teacher_profile_id' => (string) $booking->teacher_profile_id,
+                $subject->payableType().'_id' => (string) $subject->getId(),
+                'teacher_profile_id' => (string) ($subject->teacherProfileId() ?? ''),
             ],
         ]);
 

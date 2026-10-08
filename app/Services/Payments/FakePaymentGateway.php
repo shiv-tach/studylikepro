@@ -2,8 +2,8 @@
 
 namespace App\Services\Payments;
 
+use App\Contracts\Payable;
 use App\Contracts\PaymentGateway;
-use App\Models\Booking;
 use App\Models\Payment;
 use App\Support\Payments\GatewayEvent;
 use App\Support\Payments\GatewayOrder;
@@ -64,13 +64,13 @@ class FakePaymentGateway implements PaymentGateway
         self::$refunds = [];
     }
 
-    public function createOrder(Booking $booking, int $amountMinor, string $currency): GatewayOrder
+    public function createOrder(Payable $subject, int $amountMinor, string $currency): GatewayOrder
     {
         return new GatewayOrder(
             id: 'order_fake_'.Str::lower(Str::random(14)),
             amountMinor: $amountMinor,
             currency: $currency,
-            payload: ['gateway' => 'fake', 'booking_id' => $booking->id],
+            payload: ['gateway' => 'fake', $subject->payableType().'_id' => $subject->getId()],
         );
     }
 

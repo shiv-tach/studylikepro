@@ -86,6 +86,20 @@ class PlatformSettings
                 'label' => 'AI confidence threshold',
                 'description' => 'Below this score the student confirms the subject/lesson themselves (0.30–0.95).',
             ],
+            'plan_expiry_days' => [
+                'default' => (int) config('studylikepro.services.plan_expiry_days'),
+                'type' => 'int',
+                'group' => 'services',
+                'label' => 'Lesson plan validity (days)',
+                'description' => 'How long a purchased lesson allocation stays usable. Unused time is refunded when it expires.',
+            ],
+            'max_sessions_per_plan' => [
+                'default' => (int) config('studylikepro.services.max_sessions_per_plan'),
+                'type' => 'int',
+                'group' => 'services',
+                'label' => 'Maximum sessions per plan',
+                'description' => 'Hard cap on how many sessions a single lesson plan can be split into.',
+            ],
         ];
     }
 

@@ -4,8 +4,10 @@ namespace App\Services\Payments;
 
 use App\Enums\BookingStatus;
 use App\Enums\EarningStatus;
+use App\Enums\PurchaseStatus;
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Models\ServicePurchase;
 use App\Models\TeacherEarning;
 use App\Models\TeacherProfile;
 use Illuminate\Support\Collection;
@@ -74,6 +76,77 @@ class EarningsService
     public function reverseForRefund(Booking $booking, int $percent): ?TeacherEarning
     {
         $earning = $booking->earning;
+
+        if ($earning === null || $percent <= 0) {
+            return $earning;
+        }
+
+        $reversed = (int) round($earning->amount_minor * min(100, $percent) / 100);
+
+        $earning->forceFill([
+            'reversed_minor' => min($earning->amount_minor, $earning->reversed_minor + $reversed),
+        ]);
+
+        if ($earning->reversed_minor >= $earning->amount_minor) {
+            $earning->status = EarningStatus::Reversed;
+        }
+
+        $earning->save();
+
+        return $earning;
+    }
+
+    /**
+     * Record the payout a captured service purchase owes the teacher. The row
+     * stays pending until the service is delivered (plan completed, summary
+     * delivered, paper returned), mirroring booking earnings. Idempotent.
+     */
+    public function recordForPurchase(ServicePurchase $purchase, ?Payment $payment = null): TeacherEarning
+    {
+        $delivered = $purchase->status->isFinal() && $purchase->status !== PurchaseStatus::Cancelled
+            && $purchase->status !== PurchaseStatus::Expired;
+
+        return TeacherEarning::query()->updateOrCreate(
+            ['service_purchase_id' => $purchase->id],
+            [
+                'teacher_profile_id' => $purchase->teacher_profile_id,
+                'payment_id' => $payment?->id,
+                'amount_minor' => $purchase->teacher_payout_minor,
+                'currency' => $purchase->currency,
+                'status' => $delivered ? EarningStatus::Eligible : EarningStatus::Pending,
+                'available_at' => $delivered ? now() : null,
+            ],
+        );
+    }
+
+    /**
+     * The service was delivered, so the purchase payout stops being provisional.
+     */
+    public function markEligibleForPurchase(ServicePurchase $purchase): ?TeacherEarning
+    {
+        $earning = $purchase->earning;
+
+        if ($earning === null || $earning->status === EarningStatus::Reversed) {
+            return $earning;
+        }
+
+        if ($earning->status === EarningStatus::Pending) {
+            $earning->forceFill([
+                'status' => EarningStatus::Eligible,
+                'available_at' => now(),
+            ])->save();
+        }
+
+        return $earning;
+    }
+
+    /**
+     * Reverse the teacher's share of a refunded purchase. A full refund marks
+     * the row reversed; a partial refund just reduces what the row is worth.
+     */
+    public function reverseForPurchase(ServicePurchase $purchase, int $percent): ?TeacherEarning
+    {
+        $earning = $purchase->earning;
 
         if ($earning === null || $percent <= 0) {
             return $earning;

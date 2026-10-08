@@ -10,6 +10,7 @@ Artisan::command('inspire', function () {
 
 Schedule::command('studylikepro:expire-requests')->everyTenMinutes();
 Schedule::command('studylikepro:expire-holds')->everyMinute();
+Schedule::command('studylikepro:expire-service-purchases')->everyTenMinutes();
 Schedule::command('studylikepro:complete-lessons')->everyTenMinutes();
 Schedule::command('studylikepro:send-lesson-reminders')->everyFiveMinutes();
 Schedule::command('studylikepro:send-daily-digest')->dailyAt('07:00');

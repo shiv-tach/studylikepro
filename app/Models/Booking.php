@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Contracts\Payable;
 use App\Enums\BookingStatus;
 use App\Enums\MeetingStatus;
 use Carbon\CarbonInterface;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class Booking extends Model
+class Booking extends Model implements Payable
 {
     /** @use HasFactory<BookingFactory> */
     use HasFactory;
@@ -30,6 +31,8 @@ class Booking extends Model
         'tutoring_request_id',
         'subject_id',
         'lesson_id',
+        'service_purchase_id',
+        'service_type',
         'starts_at',
         'ends_at',
         'status',
@@ -154,6 +157,20 @@ class Booking extends Model
         return $this->belongsTo(Lesson::class);
     }
 
+    public function servicePurchase(): BelongsTo
+    {
+        return $this->belongsTo(ServicePurchase::class, 'service_purchase_id');
+    }
+
+    /**
+     * Whether this booking is a session of a service purchase (already paid at
+     * the purchase level; the booking itself carries no money).
+     */
+    public function isPurchaseSession(): bool
+    {
+        return $this->service_purchase_id !== null;
+    }
+
     public function learnerGrade(): BelongsTo
     {
         return $this->belongsTo(Grade::class, 'learner_grade_id');
@@ -249,6 +266,36 @@ class Booking extends Model
     public function totalMinor(): int
     {
         return $this->price_minor + $this->netBookingFeeMinor();
+    }
+
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
+    public function getCurrency(): string
+    {
+        return $this->currency;
+    }
+
+    public function studentId(): ?int
+    {
+        return $this->student_id;
+    }
+
+    public function teacherProfileId(): ?int
+    {
+        return $this->teacher_profile_id;
+    }
+
+    public function payableType(): string
+    {
+        return 'booking';
+    }
+
+    public function payableLabel(): string
+    {
+        return 'Lesson #'.$this->id;
     }
 
     /**

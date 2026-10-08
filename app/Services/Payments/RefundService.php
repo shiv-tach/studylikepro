@@ -107,7 +107,13 @@ class RefundService
                 'refunded_at' => now(),
             ])->save();
 
-            $this->earnings->reverseForRefund($payment->booking, $percent);
+            // Reverse the teacher share of a refunded payment — bookings and
+            // service purchases each keep their own ledger row.
+            if ($payment->booking_id !== null) {
+                $this->earnings->reverseForRefund($payment->booking, $percent);
+            } elseif ($payment->service_purchase_id !== null) {
+                $this->earnings->reverseForPurchase($payment->purchase, $percent);
+            }
 
             return $refund;
         });
