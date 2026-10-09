@@ -41,20 +41,47 @@
       x-data="{
         gradeId: '{{ old('grade_id', $offering?->grade_id ?? '') }}',
         subjectId: '{{ old('subject_id', $offering?->subject_id ?? '') }}',
-        lessonId: {{ (int) old('lesson_id', $offering?->lesson_id ?? 0) }},
+        lessonId: '{{ old('lesson_id', $offering?->lesson_id ?? '') }}',
         hours: {{ $hours }},
         minutes: {{ $minutes }},
-        grades: @json($gradeOptions),
-        subjects: @json($subjectOptions),
-        lessons: @json($lessonOptions),
-        subjectsForGrade() {
-            return this.subjects.filter((s) => ! this.gradeId || s.grades.length === 0 || s.grades.includes(parseInt(this.gradeId)));
+        init() {
+            this.applyScopeFilters();
+            this.$watch('gradeId', () => this.applyScopeFilters());
+            this.$watch('subjectId', () => this.applyScopeFilters());
         },
-        lessonsForSubject() {
-            return this.lessons.filter((l) => l.subject_id == this.subjectId && (! this.gradeId || l.grade_id == this.gradeId));
-        },
-        lessonsForGrade() {
-            return this.lessons.filter((l) => ! this.gradeId || l.grade_id == this.gradeId);
+        applyScopeFilters() {
+            const gid = this.gradeId ? parseInt(this.gradeId) : null;
+            const sid = this.subjectId ? parseInt(this.subjectId) : null;
+
+            const subjects = this.$refs.subjectSelect;
+            if (subjects) {
+                let keepSubject = ! this.subjectId;
+                Array.from(subjects.options).forEach((option) => {
+                    if (! option.dataset.grades) return;
+                    const grades = (option.dataset.grades || '').split(',').filter(Boolean).map(Number);
+                    const visible = ! gid || grades.length === 0 || grades.includes(gid);
+                    option.hidden = ! visible;
+                    option.disabled = ! visible;
+                    if (visible && option.value && parseInt(option.value) === sid) keepSubject = true;
+                });
+                if (! keepSubject) this.subjectId = '';
+            }
+
+            const lessons = this.$refs.lessonSelect;
+            if (lessons) {
+                const currentSubject = this.subjectId ? parseInt(this.subjectId) : null;
+                let keepLesson = ! this.lessonId;
+                Array.from(lessons.options).forEach((option) => {
+                    if (! option.dataset.subject) return;
+                    const subject = parseInt(option.dataset.subject);
+                    const grade = parseInt(option.dataset.grade);
+                    const visible = (! currentSubject || subject === currentSubject) && (! gid || grade === gid);
+                    option.hidden = ! visible;
+                    option.disabled = ! visible;
+                    if (visible && option.value && option.value === this.lessonId) keepLesson = true;
+                });
+                if (! keepLesson) this.lessonId = '';
+            }
         },
     }">
     @csrf
@@ -69,9 +96,9 @@
             <x-input-label :value="__('Grade')" />
             <select name="grade_id" x-model="gradeId" class="mt-1 block w-full {{ $fieldClasses }}">
                 <option value="">{{ $type->requiresLesson() ? __('Pick a grade') : __('All grades') }}</option>
-                <template x-for="g in grades" :key="g.id">
-                    <option :value="g.id" :selected="g.id == gradeId" x-text="g.label"></option>
-                </template>
+                @foreach ($gradeOptions as $grade)
+                    <option value="{{ $grade['id'] }}" @selected((int) old('grade_id', $offering?->grade_id ?? 0) === $grade['id'])>{{ $grade['label'] }}</option>
+                @endforeach
             </select>
             <p class="mt-1 text-xs text-slate-400">
                 {{ $type->requiresLesson() ? __('Required — lessons are per grade.') : __('Optional — narrows the subjects below.') }}
@@ -81,15 +108,19 @@
 
         <div>
             <x-input-label :value="__('Subject')" />
-            <select name="subject_id" x-model="subjectId" class="mt-1 block w-full {{ $fieldClasses }}">
+            <select name="subject_id" x-model="subjectId" x-ref="subjectSelect" class="mt-1 block w-full {{ $fieldClasses }}">
                 @if ($type->allowsLessonOrSubject())
                     <option value="">{{ __('No subject — lesson only') }}</option>
                 @else
                     <option value="">{{ __('Pick a subject') }}</option>
                 @endif
-                <template x-for="s in subjectsForGrade()" :key="s.id">
-                    <option :value="s.id" :selected="s.id == subjectId" x-text="s.level_name ? s.name + ' — ' + s.level_name : s.name"></option>
-                </template>
+                @foreach ($subjectOptions as $subject)
+                    <option value="{{ $subject['id'] }}"
+                            data-grades="{{ implode(',', $subject['grades']) }}"
+                            @selected((int) old('subject_id', $offering?->subject_id ?? 0) === $subject['id'])>
+                        {{ $subject['name'] }}{{ $subject['level_name'] ? ' — '.$subject['level_name'] : '' }}
+                    </option>
+                @endforeach
             </select>
             <x-input-error :messages="$errors->get('subject_id')" class="mt-2" />
         </div>
@@ -97,11 +128,16 @@
         @if ($type->requiresLesson() || $type->allowsLessonOrSubject())
             <div>
                 <x-input-label :value="__('Lesson')" />
-                <select name="lesson_id" x-model="lessonId" class="mt-1 block w-full {{ $fieldClasses }}">
+                <select name="lesson_id" x-model="lessonId" x-ref="lessonSelect" class="mt-1 block w-full {{ $fieldClasses }}">
                     <option value="">{{ $type->allowsLessonOrSubject() ? __('Whole subject') : __('Pick a lesson') }}</option>
-                    <template x-for="l in (subjectId ? lessonsForSubject() : lessonsForGrade())" :key="l.id">
-                        <option :value="l.id" :selected="l.id == lessonId" x-text="l.name"></option>
-                    </template>
+                    @foreach ($lessonOptions as $lesson)
+                        <option value="{{ $lesson['id'] }}"
+                                data-subject="{{ $lesson['subject_id'] }}"
+                                data-grade="{{ $lesson['grade_id'] }}"
+                                @selected((int) old('lesson_id', $offering?->lesson_id ?? 0) === $lesson['id'])>
+                            {{ $lesson['name'] }}
+                        </option>
+                    @endforeach
                 </select>
                 <x-input-error :messages="$errors->get('lesson_id')" class="mt-2" />
             </div>

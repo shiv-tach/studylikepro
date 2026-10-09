@@ -19,7 +19,7 @@ beforeEach(function () {
     $this->profile->lessons()->attach($this->lesson->id);
 });
 
-it('shows the services manager to the teacher', function () {
+it('shows the services manager with server-rendered grade, subject and lesson options', function () {
     ServiceOffering::factory()->create([
         'teacher_profile_id' => $this->profile->id,
         'subject_id' => $this->subject->id,
@@ -34,7 +34,18 @@ it('shows the services manager to the teacher', function () {
         ->assertSee('Paper marking')
         ->assertSee('Q&A sessions')
         ->assertSee('Grade')
-        ->assertSee('Pick a grade');
+        ->assertSee('Pick a grade')
+        // The cascade options are rendered server-side so the selects are never
+        // empty, with data attributes for the Alpine visibility filter.
+        ->assertSee('>'.$this->lesson->grade->label.'<', false)
+        ->assertSee($this->subject->name)
+        ->assertSee($this->lesson->name)
+        ->assertSee('data-grades=', false)
+        ->assertSee('data-subject=', false)
+        ->assertSee('name="grade_id"', false)
+        ->assertSee('x-ref="subjectSelect"', false)
+        ->assertSee('x-ref="lessonSelect"', false)
+        ->assertDontSee('x-for="g in grades"', false);
 });
 
 it('creates every service type and converts rupees to minor units', function () {
