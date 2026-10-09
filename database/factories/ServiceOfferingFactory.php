@@ -22,6 +22,7 @@ class ServiceOfferingFactory extends Factory
             'service_type' => ServiceType::Summary,
             'subject_id' => Subject::factory(),
             'lesson_id' => null,
+            'grade_id' => null,
             'title' => fake()->sentence(3),
             'description' => null,
             'price_minor' => fake()->numberBetween(1000, 20000),
@@ -34,6 +35,21 @@ class ServiceOfferingFactory extends Factory
             'is_active' => true,
             'sort_order' => 0,
         ];
+    }
+
+    /**
+     * Lesson-scoped offerings imply their lesson's grade; keep the stored
+     * grade_id consistent for factory-built rows.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (ServiceOffering $offering) {
+            if ($offering->grade_id === null && $offering->lesson_id !== null) {
+                $offering->forceFill([
+                    'grade_id' => $offering->lesson?->grade_id,
+                ])->saveQuietly();
+            }
+        });
     }
 
     public function forType(ServiceType $type): static

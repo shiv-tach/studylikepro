@@ -68,8 +68,9 @@
 
                     @include('teacher.services._form', [
                         'type' => $type,
-                        'subjects' => $subjects,
-                        'lessons' => $lessons,
+                        'gradeOptions' => $gradeOptions,
+                        'subjectOptions' => $subjectOptions,
+                        'lessonOptions' => $lessonOptions,
                         'durations' => $durations,
                         'offering' => null,
                     ])
@@ -88,6 +89,9 @@
                                             </div>
 
                                             <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                                                @if ($offering->grade)
+                                                    <span class="{{ $chip }}">🎓 {{ $offering->grade->label }}</span>
+                                                @endif
                                                 @if ($offering->subject)
                                                     <span class="{{ $chip }}">{{ $offering->subject->icon ?? '📘' }} {{ $offering->subject->name }}</span>
                                                 @endif
@@ -122,8 +126,9 @@
                                             <div class="mt-3">
                                                 @include('teacher.services._form', [
                                                     'type' => $type,
-                                                    'subjects' => $subjects,
-                                                    'lessons' => $lessons,
+                                                    'gradeOptions' => $gradeOptions,
+                                                    'subjectOptions' => $subjectOptions,
+                                                    'lessonOptions' => $lessonOptions,
                                                     'durations' => $durations,
                                                     'offering' => $offering,
                                                 ])

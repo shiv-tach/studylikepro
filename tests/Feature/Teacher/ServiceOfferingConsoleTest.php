@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Grade;
 use App\Models\Lesson;
 use App\Models\ServiceOffering;
 use App\Models\ServicePurchase;
@@ -12,6 +13,7 @@ beforeEach(function () {
 
     $this->subject = Subject::factory()->create();
     $this->lesson = Lesson::factory()->create(['subject_id' => $this->subject->id]);
+    $this->gradeId = (int) $this->lesson->grade_id;
 
     $this->profile->subjects()->attach($this->subject->id);
     $this->profile->lessons()->attach($this->lesson->id);
@@ -30,7 +32,9 @@ it('shows the services manager to the teacher', function () {
         ->assertSee('Services & pricing')
         ->assertSee('Lesson plans')
         ->assertSee('Paper marking')
-        ->assertSee('Q&A sessions');
+        ->assertSee('Q&A sessions')
+        ->assertSee('Grade')
+        ->assertSee('Pick a grade');
 });
 
 it('creates every service type and converts rupees to minor units', function () {
@@ -42,6 +46,7 @@ it('creates every service type and converts rupees to minor units', function () 
                 'price' => '8000',
                 'subject_id' => $this->subject->id,
                 'lesson_id' => $this->lesson->id,
+                'grade_id' => $this->gradeId,
                 'allocation_minutes' => 240,
                 'default_session_minutes' => 60,
                 'max_sessions' => 8,
@@ -53,6 +58,7 @@ it('creates every service type and converts rupees to minor units', function () 
                 'default_session_minutes' => 60,
                 'max_sessions' => 8,
                 'lesson_id' => $this->lesson->id,
+                'grade_id' => $this->gradeId,
             ],
         ],
         [
@@ -62,12 +68,14 @@ it('creates every service type and converts rupees to minor units', function () 
                 'price' => '1500',
                 'subject_id' => $this->subject->id,
                 'lesson_id' => $this->lesson->id,
+                'grade_id' => $this->gradeId,
             ],
             [
                 'service_type' => 'summary',
                 'price_minor' => 150000,
                 'allocation_minutes' => null,
                 'max_sessions' => null,
+                'grade_id' => $this->gradeId,
             ],
         ],
         [
@@ -163,9 +171,44 @@ it('requires a lesson for a lesson plan', function () {
             'title' => 'Missing lesson',
             'price' => '8000',
             'subject_id' => $this->subject->id,
+            'grade_id' => $this->gradeId,
             'allocation_minutes' => 240,
         ])
         ->assertSessionHasErrors('lesson_id');
+
+    expect(ServiceOffering::count())->toBe(0);
+});
+
+it('requires a grade for a lesson plan', function () {
+    $this->actingAs($this->teacher)
+        ->post(route('teacher.services.store'), [
+            'service_type' => 'lesson',
+            'title' => 'Missing grade',
+            'price' => '8000',
+            'subject_id' => $this->subject->id,
+            'lesson_id' => $this->lesson->id,
+            'allocation_minutes' => 240,
+        ])
+        ->assertSessionHasErrors('grade_id');
+
+    expect(ServiceOffering::count())->toBe(0);
+});
+
+it('rejects a lesson from a different grade than the one picked', function () {
+    $otherLesson = Lesson::factory()->create(['subject_id' => $this->subject->id]);
+    $this->profile->lessons()->attach($otherLesson->id);
+
+    $this->actingAs($this->teacher)
+        ->post(route('teacher.services.store'), [
+            'service_type' => 'lesson',
+            'title' => 'Grade mismatch',
+            'price' => '8000',
+            'subject_id' => $this->subject->id,
+            'lesson_id' => $otherLesson->id,
+            'grade_id' => $this->gradeId,
+            'allocation_minutes' => 240,
+        ])
+        ->assertSessionHasErrors('grade_id');
 
     expect(ServiceOffering::count())->toBe(0);
 });
@@ -178,6 +221,7 @@ it('rejects a lesson plan allocation under 30 minutes', function () {
             'price' => '8000',
             'subject_id' => $this->subject->id,
             'lesson_id' => $this->lesson->id,
+            'grade_id' => $this->gradeId,
             'allocation_minutes' => 10,
         ])
         ->assertSessionHasErrors('allocation_minutes');
@@ -215,6 +259,7 @@ it('rejects a duplicate offering for the same type and scope', function () {
         'teacher_profile_id' => $this->profile->id,
         'subject_id' => $this->subject->id,
         'lesson_id' => $this->lesson->id,
+        'grade_id' => $this->gradeId,
     ]);
 
     $this->actingAs($this->teacher)
@@ -224,10 +269,44 @@ it('rejects a duplicate offering for the same type and scope', function () {
             'price' => '1200',
             'subject_id' => $this->subject->id,
             'lesson_id' => $this->lesson->id,
+            'grade_id' => $this->gradeId,
         ])
         ->assertSessionHasErrors('service_type');
 
     expect(ServiceOffering::count())->toBe(1);
+});
+
+it('allows the same subject service at two different grades', function () {
+    $gradeTwo = Grade::factory()->create();
+    $otherLesson = Lesson::factory()->create([
+        'subject_id' => $this->subject->id,
+        'grade_id' => $gradeTwo->id,
+    ]);
+    $this->profile->lessons()->attach($otherLesson->id);
+
+    $this->actingAs($this->teacher)
+        ->post(route('teacher.services.store'), [
+            'service_type' => 'paper_marking',
+            'title' => 'Grade A marking',
+            'price' => '500',
+            'subject_id' => $this->subject->id,
+            'grade_id' => $this->gradeId,
+            'turnaround_hours' => 72,
+        ])
+        ->assertSessionHasNoErrors();
+
+    $this->actingAs($this->teacher)
+        ->post(route('teacher.services.store'), [
+            'service_type' => 'paper_marking',
+            'title' => 'Grade B marking',
+            'price' => '700',
+            'subject_id' => $this->subject->id,
+            'grade_id' => $gradeTwo->id,
+            'turnaround_hours' => 72,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect(ServiceOffering::where('service_type', 'paper_marking')->count())->toBe(2);
 });
 
 it('updates an offering', function () {
@@ -244,6 +323,7 @@ it('updates an offering', function () {
             'price' => '2500',
             'subject_id' => $this->subject->id,
             'lesson_id' => $this->lesson->id,
+            'grade_id' => $this->gradeId,
         ])
         ->assertRedirect(route('teacher.services.index'))
         ->assertSessionHasNoErrors();
@@ -252,6 +332,7 @@ it('updates an offering', function () {
         'id' => $offering->id,
         'title' => 'Renamed summary',
         'price_minor' => 250000,
+        'grade_id' => $this->gradeId,
     ]);
 });
 
@@ -303,6 +384,9 @@ it('forbids another teacher from updating or deleting an offering', function () 
     $offering = ServiceOffering::factory()->create(['teacher_profile_id' => $this->profile->id]);
 
     $intruder = User::factory()->teacher()->onboarded()->create();
+    // Valid input for a teacher who teaches the scope — only the policy stands in the way.
+    $intruder->teacherProfile->subjects()->attach($this->subject->id);
+    $intruder->teacherProfile->lessons()->attach($this->lesson->id);
 
     $this->actingAs($intruder)
         ->put(route('teacher.services.update', $offering), [
@@ -311,6 +395,7 @@ it('forbids another teacher from updating or deleting an offering', function () 
             'price' => '100',
             'subject_id' => $this->subject->id,
             'lesson_id' => $this->lesson->id,
+            'grade_id' => $this->gradeId,
         ])
         ->assertForbidden();
 

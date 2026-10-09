@@ -53,7 +53,7 @@ class TeacherProfileController extends Controller
             'offerings' => $teacherProfile->offerings()
                 ->active()
                 ->ordered()
-                ->with(['subject', 'lesson'])
+                ->with(['subject', 'lesson', 'grade'])
                 ->get()
                 ->groupBy('service_type'),
             'availability' => $slots->upcoming($teacherProfile, 14, 40, excludeBookings: true),

@@ -160,7 +160,11 @@
                                                     <p class="truncate text-sm font-semibold text-slate-700 dark:text-slate-200">
                                                         {{ $offering->lesson?->name ?? $offering->subject?->name ?? $offering->title }}
                                                     </p>
+                                                    @php $gradeLabel = $offering->grade?->label ?? $offering->lesson?->grade?->label; @endphp
                                                     <p class="mt-0.5 text-xs text-slate-400">
+                                                        @if ($gradeLabel)
+                                                            <span class="font-semibold text-slate-500 dark:text-slate-400">{{ __('Grade :grade', ['grade' => $gradeLabel]) }} · </span>
+                                                        @endif
                                                         @if ($offering->type() === \App\Enums\ServiceType::Lesson && $offering->allocation_minutes)
                                                             {{ __(':minutes minutes, split into sessions', ['minutes' => $offering->allocation_minutes]) }}
                                                         @elseif ($offering->type() === \App\Enums\ServiceType::PaperMarking)

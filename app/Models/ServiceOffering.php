@@ -23,6 +23,7 @@ class ServiceOffering extends Model
         'service_type',
         'subject_id',
         'lesson_id',
+        'grade_id',
         'title',
         'description',
         'price_minor',
@@ -63,6 +64,11 @@ class ServiceOffering extends Model
     public function lesson(): BelongsTo
     {
         return $this->belongsTo(Lesson::class);
+    }
+
+    public function grade(): BelongsTo
+    {
+        return $this->belongsTo(Grade::class);
     }
 
     public function purchases(): HasMany
