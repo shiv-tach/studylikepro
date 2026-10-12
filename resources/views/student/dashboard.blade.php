@@ -119,11 +119,11 @@
                     @if ($interestsCount > 0)
                         <span class="{{ $chip }}">{{ $interestsCount }} {{ Str::plural('subject', $interestsCount) }}</span>
                     @else
-                        <span class="{{ $chip }}">Pick lessons</span>
+                        <span class="{{ $chip }}">Browse subjects</span>
                     @endif
                 </div>
-                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">Subjects & lessons</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Tell us what you want help with.</p>
+                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">My subjects</h3>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Your compulsory and picked subjects — open one to explore lessons, teachers and services.</p>
             </a>
 
             <a href="{{ route('student.teachers.index') }}" class="group {{ $cardBase }}" :class="{{ $cardTheme }}">

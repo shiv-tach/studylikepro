@@ -59,7 +59,7 @@
                     <option value="">Any subject</option>
                     @foreach ($subjectOptions as $subject)
                         <option value="{{ $subject->slug }}" @selected(($filters['subject'] ?? '') === $subject->slug)>
-                            {{ $subject->icon }} {{ $subject->name }}@if (! $selectedLevel) — {{ $subject->educationLevel->name }}@endif
+                            {{ $subject->icon }} {{ $subject->name }}@if (! $selectedLevel && $subject->educationLevel) — {{ $subject->educationLevel->name }}@endif
                         </option>
                     @endforeach
                 </select>
@@ -70,7 +70,7 @@
                 <select id="filter-lesson" name="lesson" class="mt-1 {{ $fieldClasses }}">
                     <option value="">Any lesson</option>
                     @foreach ($lessonGroups as $group)
-                        <optgroup label="{{ $group['subject']->name }}@if (! $selectedLevel) — {{ $group['subject']->educationLevel->name }}@endif">
+                        <optgroup label="{{ $group['subject']->name }}@if (! $selectedLevel && $group['subject']->educationLevel) — {{ $group['subject']->educationLevel->name }}@endif">
                             @foreach ($group['lessons'] as $lesson)
                                 <option value="{{ $lesson->id }}" @selected((string) ($filters['lesson'] ?? '') === (string) $lesson->id)>
                                     {{ $lesson->name }}@if ($lesson->grade) · {{ $lesson->grade->label }}@endif

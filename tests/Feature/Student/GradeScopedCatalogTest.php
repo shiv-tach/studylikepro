@@ -31,14 +31,14 @@ function gradeScopedStudent(): array
     return [$user->fresh(), $grade, $subject, $lesson];
 }
 
-test('the interests page only offers the student level and grade lessons', function () {
+test('the interests page shows only the student level and grade subjects as cards', function () {
     [$student, $grade, $subject, $lesson] = gradeScopedStudent();
 
     $al = EducationLevel::query()->where('key', 'al')->firstOrFail();
     $alSubject = Subject::factory()->create(['name' => 'Real A/L Physics', 'education_level_id' => $al->id]);
 
     $otherGrade = Grade::factory()->create(['education_level_id' => $grade->education_level_id]);
-    $otherGradeLesson = Lesson::factory()->for($subject)->create([
+    Lesson::factory()->for($subject)->create([
         'grade_id' => $otherGrade->id,
         'name' => 'Grade nine geometry',
     ]);
@@ -47,9 +47,12 @@ test('the interests page only offers the student level and grade lessons', funct
         ->get(route('student.interests.edit'))
         ->assertOk()
         ->assertSee($subject->name)
-        ->assertSee($lesson->name)
+        // The card opens the dedicated student subject page scoped to the grade.
+        ->assertSee(route('student.subjects.show', ['subject' => $subject->slug, 'grade' => $grade->id]))
         ->assertDontSee($alSubject->name)
-        ->assertDontSee($otherGradeLesson->name);
+        // Lesson names live on the subject page now, not on the interests page.
+        ->assertDontSee($lesson->name)
+        ->assertDontSee('Grade nine geometry');
 });
 
 test('the request page only offers the request grade subjects and lessons', function () {

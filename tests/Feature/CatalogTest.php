@@ -1,8 +1,10 @@
 <?php
 
+use App\Enums\ServiceType;
 use App\Models\EducationLevel;
 use App\Models\Grade;
 use App\Models\Lesson;
+use App\Models\ServiceOffering;
 use App\Models\Subject;
 use App\Models\SubjectBasket;
 use App\Models\TeacherProfile;
@@ -210,9 +212,16 @@ test('teacher cards on a subject page offer booking for the shown grade', functi
         ->assertDontSee('View profile')
         ->assertSee(route('register', ['role' => 'student']));
 
-    // Signed-in students jump straight into booking with the subject preselected.
-    $this->actingAs(User::factory()->student()->onboarded()->create())
+    // Signed-in students are kept off the public page: their workspace page
+    // offers booking with the subject preselected.
+    $student = User::factory()->student()->onboarded()->create();
+
+    $this->actingAs($student)
         ->get($url)
+        ->assertRedirect(route('student.subjects.show', ['subject' => $subject->slug, 'grade' => $grade7->id]));
+
+    $this->actingAs($student)
+        ->get(route('student.subjects.show', ['subject' => $subject, 'grade' => $grade7->id]))
         ->assertOk()
         ->assertSee('Book now')
         ->assertSee(route('student.bookings.create', [
@@ -346,4 +355,210 @@ test('a basket subject page shows its category', function () {
         ->assertOk()
         ->assertSee('Category I')
         ->assertSee('pick one');
+});
+
+test('the interests page shows compulsory subjects and only the picked basket subjects', function () {
+    $this->seed(CatalogSeeder::class);
+
+    $grade10 = Grade::query()->where('number', 10)->firstOrFail();
+    $art = Subject::query()->where('slug', 'art')->firstOrFail();
+    $ict = Subject::query()->where('slug', 'ict')->firstOrFail();
+
+    $student = User::factory()->student()->onboarded()->create();
+    $student->studentProfile->update(['grade_id' => $grade10->id]);
+    $student->interestedSubjects()->sync([$art->id]);
+
+    $this->actingAs($student)
+        ->get(route('student.interests.edit'))
+        ->assertOk()
+        ->assertSee('Compulsory subjects')
+        ->assertSee('Category I')
+        ->assertSee('View lessons & teachers')
+        // Compulsory subjects and the picked basket subject open the student's
+        // dedicated subject page, scoped to the student's own grade.
+        ->assertSee(route('student.subjects.show', ['subject' => 'ol-mathematics', 'grade' => $grade10->id]))
+        ->assertSee(route('student.subjects.show', ['subject' => 'art', 'grade' => $grade10->id]))
+        // Only the picked basket subjects appear — the unpicked options stay
+        // off this page.
+        ->assertDontSee('Category II')
+        ->assertDontSee($ict->name)
+        // The page is no longer a picker: no checkboxes or lesson list.
+        ->assertDontSee('name="subjects"', false)
+        ->assertDontSee('name="lessons"', false);
+});
+
+test('a subject page sells the services teachers offer for it', function () {
+    $level = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade9 = Grade::query()->where('education_level_id', $level->id)->where('number', 9)->firstOrFail();
+
+    $subject = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'ol-mathematics', 'education_level_id' => $level->id]);
+    $lesson = Lesson::factory()->for($subject)->create(['grade_id' => $grade9->id, 'name' => 'Algebra']);
+
+    $teacher = TeacherProfile::factory()->approved()->create([
+        'user_id' => User::factory()->teacher()->create(['name' => 'Nimal Silva'])->id,
+    ]);
+    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) $grade9->id]]);
+
+    ServiceOffering::factory()->for($teacher, 'teacherProfile')->forType(ServiceType::Lesson)->create([
+        'subject_id' => $subject->id,
+        'lesson_id' => $lesson->id,
+        'grade_id' => $grade9->id,
+        'title' => 'Algebra booster plan',
+        'price_minor' => 125000,
+    ]);
+
+    ServiceOffering::factory()->for($teacher, 'teacherProfile')->forType(ServiceType::PaperMarking)->create([
+        'subject_id' => $subject->id,
+        'title' => 'Mark my past paper',
+        'price_minor' => 30000,
+    ]);
+
+    $this->get(route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade9->id]))
+        ->assertOk()
+        ->assertSee('Services for Mathematics in Grade 9')
+        ->assertSee('Lesson plans')
+        ->assertSee('Algebra booster plan')
+        ->assertSee('Mark my past paper')
+        ->assertSee(platform_settings()->formatMinor(125000))
+        ->assertSee(platform_settings()->formatMinor(30000))
+        ->assertSee('Nimal Silva');
+});
+
+test('subject services hide other grades, inactive offers and unapproved teachers', function () {
+    $level = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade9 = Grade::query()->where('education_level_id', $level->id)->where('number', 9)->firstOrFail();
+    $grade10 = Grade::query()->where('education_level_id', $level->id)->where('number', 10)->firstOrFail();
+
+    $subject = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'ol-mathematics', 'education_level_id' => $level->id]);
+    $grade9Lesson = Lesson::factory()->for($subject)->create(['grade_id' => $grade9->id]);
+    $grade10Lesson = Lesson::factory()->for($subject)->create(['grade_id' => $grade10->id]);
+
+    $teacher = TeacherProfile::factory()->approved()->create();
+    $pending = TeacherProfile::factory()->pending()->create();
+
+    ServiceOffering::factory()->for($teacher, 'teacherProfile')->forType(ServiceType::Lesson)->create([
+        'subject_id' => $subject->id, 'lesson_id' => $grade9Lesson->id, 'grade_id' => $grade9->id, 'title' => 'Grade Nine Pack',
+    ]);
+    ServiceOffering::factory()->for($teacher, 'teacherProfile')->forType(ServiceType::Lesson)->create([
+        'subject_id' => $subject->id, 'lesson_id' => $grade10Lesson->id, 'grade_id' => $grade10->id, 'title' => 'Grade Ten Pack',
+    ]);
+    ServiceOffering::factory()->for($pending, 'teacherProfile')->forType(ServiceType::Qna)->create([
+        'subject_id' => $subject->id, 'title' => 'Unapproved Q&A',
+    ]);
+    ServiceOffering::factory()->for($teacher, 'teacherProfile')->forType(ServiceType::Qna)->inactive()->create([
+        'subject_id' => $subject->id, 'title' => 'Retired Q&A',
+    ]);
+
+    // A grade pins the catalog to that grade's services.
+    $this->get(route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade9->id]))
+        ->assertOk()
+        ->assertSee('Grade Nine Pack')
+        ->assertDontSee('Grade Ten Pack')
+        ->assertDontSee('Unapproved Q&A')
+        ->assertDontSee('Retired Q&A');
+
+    // Without a grade the whole subject catalog is shown.
+    $this->get(route('catalog.subjects.show', $subject))
+        ->assertOk()
+        ->assertSee('Grade Nine Pack')
+        ->assertSee('Grade Ten Pack')
+        ->assertDontSee('Unapproved Q&A')
+        ->assertDontSee('Retired Q&A');
+});
+
+test('subject services offer buying to students and sign-up to guests', function () {
+    $level = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade9 = Grade::query()->where('education_level_id', $level->id)->where('number', 9)->firstOrFail();
+
+    $subject = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'ol-mathematics', 'education_level_id' => $level->id]);
+    Lesson::factory()->for($subject)->create(['grade_id' => $grade9->id]);
+
+    $teacher = TeacherProfile::factory()->approved()->create();
+    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) $grade9->id]]);
+
+    $discussion = ServiceOffering::factory()->for($teacher, 'teacherProfile')->forType(ServiceType::Qna)->create([
+        'subject_id' => $subject->id,
+        'title' => 'Mock paper discussion',
+    ]);
+    $marking = ServiceOffering::factory()->for($teacher, 'teacherProfile')->forType(ServiceType::PaperMarking)->create([
+        'subject_id' => $subject->id,
+        'title' => 'Past paper marking',
+    ]);
+
+    $url = route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade9->id]);
+
+    // Guests only get the create-account action.
+    $this->get($url)
+        ->assertOk()
+        ->assertSee('Sign up to buy')
+        ->assertDontSee('Buy now')
+        ->assertDontSee('Submit a paper');
+
+    // Students are redirected to their workspace page, where they buy the
+    // offering or start a marking order for a paper service.
+    $this->actingAs(User::factory()->student()->onboarded()->create())
+        ->get($url)
+        ->assertRedirect(route('student.subjects.show', ['subject' => $subject->slug, 'grade' => $grade9->id]));
+
+    $this->actingAs(User::factory()->student()->onboarded()->create())
+        ->get(route('student.subjects.show', ['subject' => $subject, 'grade' => $grade9->id]))
+        ->assertOk()
+        ->assertSee('Buy now')
+        ->assertSee(route('student.purchases.store', $discussion))
+        ->assertSee('Submit a paper')
+        ->assertSee(route('student.marking.create', $marking));
+});
+
+test('the student subject page is scoped to the profile grade', function () {
+    $level = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade9 = Grade::query()->where('education_level_id', $level->id)->where('number', 9)->firstOrFail();
+    $grade10 = Grade::query()->where('education_level_id', $level->id)->where('number', 10)->firstOrFail();
+
+    $subject = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'ol-mathematics', 'education_level_id' => $level->id]);
+    Lesson::factory()->for($subject)->create(['grade_id' => $grade9->id, 'name' => 'Grade Nine Algebra']);
+    Lesson::factory()->for($subject)->create(['grade_id' => $grade10->id, 'name' => 'Grade Ten Geometry']);
+
+    $student = User::factory()->student()->onboarded()->create();
+    $student->studentProfile->update(['grade_id' => $grade9->id]);
+
+    // A student opening the public URL is sent to their own page.
+    $this->actingAs($student)
+        ->get(route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade10->id]))
+        ->assertRedirect(route('student.subjects.show', ['subject' => $subject->slug, 'grade' => $grade10->id]));
+
+    // The profile grade wins: even a grade 10 query cannot widen the page.
+    $this->actingAs($student)
+        ->get(route('student.subjects.show', ['subject' => $subject, 'grade' => $grade10->id]))
+        ->assertOk()
+        ->assertSee('Grade Nine Algebra')
+        ->assertDontSee('Grade Ten Geometry');
+});
+
+test('the student subject page requires an onboarded student', function () {
+    $subject = Subject::factory()->create();
+
+    $this->get(route('student.subjects.show', $subject))
+        ->assertRedirect(route('login'));
+
+    $this->actingAs(User::factory()->student()->create())
+        ->get(route('student.subjects.show', $subject))
+        ->assertRedirect(route('student.onboarding.show'));
+
+    $this->actingAs(User::factory()->teacher()->create())
+        ->get(route('student.subjects.show', $subject))
+        ->assertForbidden();
+});
+
+test('a subject with no services points at the teacher directory', function () {
+    $level = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade9 = Grade::query()->where('education_level_id', $level->id)->where('number', 9)->firstOrFail();
+
+    $subject = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'ol-mathematics', 'education_level_id' => $level->id]);
+    Lesson::factory()->for($subject)->create(['grade_id' => $grade9->id]);
+
+    $this->get(route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade9->id]))
+        ->assertOk()
+        ->assertSee('Services for Mathematics in Grade 9')
+        ->assertSee('No ready-made services for this subject yet')
+        ->assertSee(route('teachers.index', ['subject' => 'ol-mathematics', 'grade' => $grade9->id]));
 });

@@ -42,7 +42,10 @@ class CatalogService
     }
 
     /**
-     * Active subjects, ordered, each with its level, basket and active lessons.
+     * Active subjects of active levels, ordered, each with its level, basket and
+     * active lessons. Subjects whose level was deactivated (or is missing) drop
+     * out with it: the pickers cascade level → subject → lesson, so a subject
+     * without a level has nowhere to sit.
      *
      * @return Collection<int, Subject>
      */
@@ -144,7 +147,7 @@ class CatalogService
             $subject->setRelation('lessons', $lessons->get($subject->id, new Collection));
 
             return $subject;
-        });
+        })->filter(fn (Subject $subject) => $subject->educationLevel !== null)->values();
     }
 
     /**

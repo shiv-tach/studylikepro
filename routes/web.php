@@ -43,6 +43,7 @@ use App\Http\Controllers\Student\PurchaseSessionController as StudentPurchaseSes
 use App\Http\Controllers\Student\ReceiptController;
 use App\Http\Controllers\Student\ReviewController as StudentReviewController;
 use App\Http\Controllers\Student\SummaryController as StudentSummaryController;
+use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
 use App\Http\Controllers\Student\TeacherFinderController;
 use App\Http\Controllers\Student\TeacherProfileController as StudentTeacherProfileController;
 use App\Http\Controllers\Student\TutoringRequestController;
@@ -126,6 +127,11 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_STUDENT, 'not-suspende
 
         Route::get('/interests', [StudentInterestsController::class, 'edit'])->middleware('onboarded')->name('interests.edit');
         Route::put('/interests', [StudentInterestsController::class, 'update'])->middleware('onboarded')->name('interests.update');
+
+        // The student workspace's dedicated subject page: lessons, services and
+        // teachers scoped to the profile grade. Students opening a public
+        // /subjects/{slug} URL land here instead.
+        Route::get('/subjects/{subject}', StudentSubjectController::class)->middleware('onboarded')->name('subjects.show');
 
         // Teacher discovery matched to the student's profile grade, with the
         // student workspace around it. The public directory stays at /teachers.

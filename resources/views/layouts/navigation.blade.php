@@ -56,7 +56,7 @@
             ['label' => 'Get started', 'url' => route('student.onboarding.show'), 'active' => request()->routeIs('student.onboarding*'), 'icon' => 'user', 'badge' => null],
         ];
     } elseif ($user->isStudent()) {
-        $navItems[] = ['label' => 'Subjects & lessons', 'url' => route('student.interests.edit'), 'active' => request()->routeIs('student.interests*'), 'icon' => 'book', 'badge' => null];
+        $navItems[] = ['label' => 'My subjects', 'url' => route('student.interests.edit'), 'active' => request()->routeIs('student.interests*'), 'icon' => 'book', 'badge' => null];
         $navItems[] = ['label' => 'My requests', 'url' => route('student.requests.index'), 'active' => request()->routeIs('student.requests*'), 'icon' => 'doc', 'badge' => null];
         $navItems[] = ['label' => 'My lessons', 'url' => route('student.bookings.index'), 'active' => request()->routeIs('student.bookings*'), 'icon' => 'calendar', 'badge' => $upcomingLessons ?: null];
         $navItems[] = ['label' => 'My purchases', 'url' => route('student.purchases.index'), 'active' => request()->routeIs('student.purchases*') || request()->routeIs('student.purchase-sessions*') || request()->routeIs('student.summaries*') || request()->routeIs('student.marking*'), 'icon' => 'wallet', 'badge' => null];

@@ -43,7 +43,7 @@ function gradeTenStudentWithBasketSubjects(array $basketKeys = ['category_1', 'c
     return [$user->fresh(), $grade, $baskets, $subjects];
 }
 
-test('the interests page groups grade 10 subjects by basket', function () {
+test('the interests page shows compulsory subjects and only the picked basket subject', function () {
     [$student, $grade, , $subjects] = gradeTenStudentWithBasketSubjects(['category_1']);
 
     $mandatory = Subject::factory()->create([
@@ -52,6 +52,15 @@ test('the interests page groups grade 10 subjects by basket', function () {
     ]);
     Lesson::factory()->for($mandatory)->create(['grade_id' => $grade->id]);
 
+    $unpicked = Subject::factory()->create([
+        'name' => 'Unpicked Category One',
+        'education_level_id' => $grade->education_level_id,
+        'basket_id' => $subjects['category_1']->basket_id,
+    ]);
+    Lesson::factory()->for($unpicked)->create(['grade_id' => $grade->id]);
+
+    $student->interestedSubjects()->sync([$subjects['category_1']->id]);
+
     $this->actingAs($student)
         ->get(route('student.interests.edit'))
         ->assertOk()
@@ -59,12 +68,16 @@ test('the interests page groups grade 10 subjects by basket', function () {
         ->assertSee('Compulsory subjects')
         ->assertSee($subjects['category_1']->name)
         ->assertSee($mandatory->name)
-        // Only a basket that offers a subject in this grade renders a group
-        // wrapper; the compulsory subjects keep their own group.
-        ->assertSee('data-basket-group', false)
-        ->assertSee('pick one')
-        ->assertSee('all students')
-        ->assertSee('Aesthetic, music, dancing, literature and drama subjects');
+        // The basket group keeps its header and the picked subject is marked
+        // chosen; the other basket options stay off the page.
+        ->assertSee('chosen')
+        ->assertSee('Aesthetic, music, dancing, literature and drama subjects')
+        ->assertDontSee($unpicked->name)
+        // The page is a display, not a picker: no checkboxes, no lessons.
+        ->assertDontSee('name="subjects"', false)
+        ->assertDontSee('name="lessons"', false)
+        ->assertDontSee('pick one')
+        ->assertDontSee('data-basket-group', false);
 });
 
 test('the interests page stays ungrouped below grade 10', function () {

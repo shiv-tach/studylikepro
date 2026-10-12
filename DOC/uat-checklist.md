@@ -23,7 +23,7 @@ Automated equivalent: `tests/Feature/Acceptance/CoreFlowTest.php` (runs in CI).
 | A1c | Step 3 — pick one subject from each basket (Category I, II, III) | The counter reaches 3/3 and Continue enables; a second subject in the same basket cannot be selected; each basket shows its description and a *chosen* marker | ☐ |
 | A1d | Step 4 — pick the learning language | Only Sinhala and English are offered | ☐ |
 | A1e | Step 5 — check the summary and **Finish setup** | Summary repeats level, grade, the basket subjects and the language, each with an Edit link back to its step; the dashboard then opens with "Your profile is complete" | ☐ |
-| A1f | Open *Subjects & lessons* after finishing | The basket picks are already ticked, and the wizard is no longer reachable | ☐ |
+| A1f | Open *My subjects* after finishing | The picked category subjects appear under their basket headers marked *chosen* and every compulsory subject is listed; each card opens its subject page | ☐ |
 | A2 | Change the learning profile (grade, language, goals) | Grade picker groups grades under Primary · O/L · A/L · Other; the language select keeps the wizard's answer; saving returns to the profile | ☐ |
 | A3 | Pick a subject and a lesson | Only your level's subjects and your grade's lessons are offered; choices persist after a reload | ☐ |
 | A4 | Create a request with a question photo attached | Request page shows *Classifying…* then the subject, lesson and confidence | ☐ |
@@ -131,17 +131,17 @@ Automated equivalents: `tests/Feature/CatalogTest.php`, `tests/Feature/Admin/Cur
 | G2 | Admin edits **O/L Mathematics** and reads the Grade 6 tab | The real lesson list (12 lessons in Grade 6, 10 in Grade 7, …); add, copy-to-grade, bulk-activate and move-lesson tools all work; the change is visible on the student side after a reload | ☐ |
 | G3 | Teacher selects **O/L Mathematics** while setting up subjects | Grades 6–11 and every lesson are auto-assigned; unchecking Grade 10 detaches its lessons when saved | ☐ |
 | G4 | Teacher opens the request inbox with a Grade 8 request pending | Only requests for grades the teacher covers appear, each with its grade chip; the nav badge count matches | ☐ |
-| G5 | Grade 8 student opens interests, the request form and the booking page | Only O/L subjects and Grade 8 lessons are offered; a Grade 11 lesson cannot be submitted, confirmed or booked | ☐ |
+| G5 | Grade 8 student opens interests, the request form and the booking page | Interests lists only O/L Grade 8 subjects; the request form and booking page offer only Grade 8 lessons; a Grade 11 lesson cannot be submitted, confirmed or booked | ☐ |
 | G6 | Grade 8 request where the lesson is only taught by a Grade 11-only teacher | That teacher is neither notified nor shown the request in the inbox | ☐ |
 | G7 | Admin renames lessons in the matrix | Teacher and student pickers show the new names (catalog cache flushed), and directory cards show "Grades 6-11 · N lessons" | ☐ |
 | G8 | Visitor opens `/subjects` | The four levels (Primary, O/L, A/L, Other) are offered; picking a level reveals its grades; picking a grade lists only the subjects that run in it (e.g. Commerce for Grade 10–11, not Grade 6), each with the grade's lesson count; opening one lists that grade's lessons with a "View all grades" link | ☐ |
 | G9 | Visitor opens a subject (e.g. `/subjects/english?grade=6`) | Verified teachers for that subject and grade are listed with their hourly rate for the selected grade, teaching scope and next availability; "See all N teachers" opens the directory pre-filtered; each card opens the teacher profile to book | ☐ |
 | G10 | Admin opens `/admin/curriculum` | The O/L card lists the three baskets (Category I, II, III) with subject counts and inline name/description/icon/order/active forms | ☐ |
 | G11 | Admin edits an O/L subject (e.g. Art) and changes its **Subject basket**, then opens `/subjects?level=ol&grade=10` | The subject appears under the new basket; a basket of another level is rejected with a validation error | ☐ |
-| G12 | Grade 10 student opens interests | Subjects are grouped Compulsory subjects · Category I · Category II · Category III; checking a Category I subject unchecks the other Category I choices | ☐ |
+| G12 | Grade 10 student opens interests | Compulsory subjects are all listed, and each basket shows only its picked subject (marked *chosen*); unpicked basket options stay hidden; every card opens the subject page | ☐ |
 | G13 | Grade 10 student saves two subjects of the same basket (e.g. by disabling JS) | The save is rejected with "Pick one subject from each O/L basket …" | ☐ |
-| G14 | Grade 10 student saves with one basket still empty | The interests are saved and the confirmation names the empty basket as a reminder | ☐ |
-| G15 | Grade 9 (or Primary) student opens interests | The flat subject list stays as before — no basket groups, no limit | ☐ |
+| G14 | Grade 10 student with no Category II pick opens interests | The Category II group is simply absent — only compulsory subjects and picked category subjects appear | ☐ |
+| G15 | Grade 9 (or Primary) student opens interests | All subjects are listed as clickable cards in one flat grid — no basket groups, no lesson checkboxes | ☐ |
 | G16 | Visitor opens `/subjects?level=ol&grade=10` | Step 3 shows *Compulsory subjects* first, then 🎨 Category I, 🛠️ Category II and 📚 Category III, each with a "pick one" chip and its one-line description; the note explains the exam rule | ☐ |
 | G17 | Visitor opens `/subjects?level=ol&grade=6` | The grid stays flat with the note "Every subject below is compulsory in Grade 6; the optional O/L baskets … begin in Grades 10–11" — never a "pick one" chip | ☐ |
 | G18 | Admin renames/describes a basket, then reloads `/subjects?level=ol&grade=10` | The new name and description appear immediately (catalog cache flushed on the basket write) | ☐ |
@@ -149,6 +149,8 @@ Automated equivalents: `tests/Feature/CatalogTest.php`, `tests/Feature/Admin/Cur
 | G20 | Grade 8 student opens a teacher from the finder | The profile opens inside the student area (`/student/teachers/…`) showing only Grade 8 subjects, lessons and rates ("Grade 8 lessons & rates"); *Book a slot* opens the booking page; the student is redirected from `/teachers` and `/teachers/{id}`; a guest still gets the full public profile with the log-in CTA; a teacher who does not take Grade 8 gets a notice linking back to *Find a teacher* | ☐ |
 | G21 | Grade 8 student opens `/student/lessons/book/{teacher}` | The grade shows as a read-only value taken from the learning profile (no grade picker); adding `?learner_grade_id=…` to the URL or posting one leaves the lessons and the rate at Grade 8; *Change grade* opens the learning profile, and the page then follows the new grade | ☐ |
 | G22 | Grade 8 student opens `/student/requests/create` | The learner grade shows read-only from the learning profile (no grade picker); posting another `grade_id` still stores the request at Grade 8, so matching and the AI lesson scope stay at that grade | ☐ |
+| G23 | Grade 9 student opens interests and clicks a subject card | The dedicated subject page opens inside the student area at `/student/subjects/{slug}` (e.g. `/student/subjects/ol-mathematics`) with only the profile grade's lessons, services and teachers | ☐ |
+| G24 | Student opens the public `/subjects/{slug}?grade=…` URL (from a bookmark or the marketing site) | They are redirected into `/student/subjects/{slug}`; the query-string grade never widens the page — lessons, services and rates stay on the profile grade | ☐ |
 
 ---
 
@@ -176,6 +178,8 @@ Automated equivalents: `tests/Feature/Services/PurchaseFlowTest.php`, `tests/Fea
 | H15 | Student buys a **paper discussion** after receiving the marked paper | The live session books against the purchase and runs in the classroom like any lesson | ☐ |
 | H16 | Student buys a **Q&A** (lesson-scoped, then subject-scoped) | The session books against the purchase; the subject-scoped Q&A shows no lesson on the booking | ☐ |
 | H17 | Admin opens *Services*, *Purchases* and *Marking* consoles | Filtering works; a purchase can be refunded and cancelled; a disputed marking order can be resolved; an offering with purchases cannot be deleted | ☐ |
+| H18 | Visitor opens a subject page (e.g. `/subjects/ol-mathematics?grade=9`) | A *Services for Mathematics in Grade 9* section groups the active offerings of verified teachers by type (lesson plans, summaries, paper marking, paper discussions, Q&A) with price, grade/lesson scope chips and the teacher's name; other grades' offerings, deactivated offerings and unapproved teachers stay hidden; with no offerings yet the empty state links to the teacher directory | ☐ |
+| H19 | Same page, signed in as a student | The student is redirected to `/student/subjects/ol-mathematics` inside their workspace; there each offering shows *Buy now* (heading into that purchase's checkout) and paper marking shows *Submit a paper*; the teacher cards' "Book now" opens the booking page; the guest still gets the public page with *Sign up to buy* | ☐ |
 
 ---
 

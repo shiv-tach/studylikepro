@@ -99,6 +99,7 @@ it('renders the student pages from eager-loaded data', function () {
         route('student.interests.edit'),
         route('student.teachers.index'),
         route('student.teachers.show', $scenario['teacher']),
+        route('student.subjects.show', $scenario['subject']),
         route('student.requests.index'),
         route('student.requests.create'),
         route('student.bookings.index'),
