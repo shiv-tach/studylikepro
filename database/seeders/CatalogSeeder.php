@@ -127,18 +127,21 @@ class CatalogSeeder extends Seeder
                 ['name' => 'History', 'icon' => '🏛️', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6],
                 ['name' => 'Buddhism', 'icon' => '☸️', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6],
 
-                // Category I: aesthetic, literary and drama subjects.
-                ['name' => 'Art', 'icon' => '🎨', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Eastern Music', 'icon' => '🪕', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Western Music', 'icon' => '🎹', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Carnatic Music', 'icon' => '🎻', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Eastern Dancing', 'icon' => '💃', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Bharatha Dancing', 'icon' => '🩰', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                // Category I: aesthetic, literary and drama subjects. The
+                // aesthetic and performing ones run from Grade 6 (the junior
+                // grades pick their Category I subject from them) while the
+                // literature subjects stay in the O/L Grades 10-11.
+                ['name' => 'Art', 'icon' => '🎨', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Eastern Music', 'icon' => '🪕', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Western Music', 'icon' => '🎹', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Carnatic Music', 'icon' => '🎻', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Eastern Dancing', 'icon' => '💃', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Bharatha Dancing', 'icon' => '🩰', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
                 ['name' => 'English Literature', 'icon' => '📚', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
                 ['name' => 'Sinhala Literature', 'icon' => '📚', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
                 ['name' => 'Tamil Literature', 'icon' => '📚', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
                 ['name' => 'Arabic Literature', 'icon' => '📚', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Drama & Theatre', 'icon' => '🎭', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Drama & Theatre', 'icon' => '🎭', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
 
                 // Category II: technical and practical subjects.
                 ['name' => 'ICT', 'icon' => '💻', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_2'],

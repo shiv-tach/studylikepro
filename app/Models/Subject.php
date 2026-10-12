@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\GradeBand;
 use Database\Factories\SubjectFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,6 +19,7 @@ class Subject extends Model
     protected $fillable = [
         'education_level_id',
         'basket_id',
+        'grade_band',
         'name',
         'slug',
         'icon',
@@ -29,6 +31,7 @@ class Subject extends Model
     protected function casts(): array
     {
         return [
+            'grade_band' => GradeBand::class,
             'is_active' => 'boolean',
         ];
     }
@@ -68,6 +71,25 @@ class Subject extends Model
     public function gradeRangeLabel(): ?string
     {
         return $this->educationLevel?->gradeRangeLabel();
+    }
+
+    /**
+     * The band the subject runs in, defaulting to every grade when the column
+     * is missing (a model built from a cache row written before it existed).
+     */
+    public function gradeBand(): GradeBand
+    {
+        return $this->grade_band instanceof GradeBand ? $this->grade_band : GradeBand::All;
+    }
+
+    /**
+     * Whether the subject is taught in this grade: it has to belong to the
+     * grade's level and its grade band has to cover the grade.
+     */
+    public function appliesToGrade(Grade $grade): bool
+    {
+        return (int) $grade->education_level_id === (int) $this->education_level_id
+            && $this->gradeBand()->includes($grade->number);
     }
 
     /**

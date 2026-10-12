@@ -273,14 +273,29 @@ test('the catalog seeder builds the o/l basket subjects', function () {
 
     expect($baskets->keys()->all())->toBe(['category_1', 'category_2', 'category_3']);
 
-    // A basket subject runs in Grades 10-11 only, so it carries lessons in the
-    // grade the choice happens in and none below it.
+    // Category I runs from Grade 6 (the junior grades pick from that basket
+    // alone) and Categories II and III from Grade 10.
+    $ranges = SubjectBasket::query()
+        ->where('education_level_id', $ol->id)
+        ->get()
+        ->mapWithKeys(fn (SubjectBasket $basket) => [$basket->key => $basket->gradeNumbers()]);
+
+    expect($ranges['category_1'])->toBe([6, 7, 8, 9, 10, 11])
+        ->and($ranges['category_2'])->toBe([10, 11])
+        ->and($ranges['category_3'])->toBe([10, 11]);
+
+    // An aesthetic Category I subject runs in both ends of the level, while a
+    // literature subject stays in the O/L Grades 10-11.
     $art = Subject::query()->where('slug', 'art')->first();
+    $literature = Subject::query()->where('slug', 'english-literature')->first();
 
     expect($art)->not->toBeNull()
         ->and($art->basket_id)->toBe($baskets['category_1'])
+        ->and($art->lessons()->where('grade_id', $grade6->id)->count())->toBeGreaterThan(0)
         ->and($art->lessons()->where('grade_id', $grade10->id)->count())->toBeGreaterThan(0)
-        ->and($art->lessons()->where('grade_id', $grade6->id)->count())->toBe(0);
+        ->and($literature)->not->toBeNull()
+        ->and($literature->basket_id)->toBe($baskets['category_1'])
+        ->and($literature->lessons()->where('grade_id', $grade6->id)->count())->toBe(0);
 
     // Existing O/L subjects map onto their basket, and mandatory subjects stay
     // outside every basket.
@@ -322,7 +337,7 @@ test('the catalog step three groups a basket grade by basket', function () {
 
     $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
     $grade10 = Grade::query()->where('education_level_id', $ol->id)->where('number', 10)->firstOrFail();
-    $grade6 = Grade::query()->where('education_level_id', $ol->id)->where('number', 6)->firstOrFail();
+    $grade7 = Grade::query()->where('education_level_id', $ol->id)->where('number', 7)->firstOrFail();
 
     $this->get(route('catalog.subjects.index', ['level' => 'ol', 'grade' => $grade10->id]))
         ->assertOk()
@@ -335,13 +350,33 @@ test('the catalog step three groups a basket grade by basket', function () {
         ->assertSee('Art')
         ->assertSee('Mathematics');
 
-    // Below Grade 10 nothing is optional yet: the same subjects are simply
-    // compulsory, so the grid stays flat and a note says when the baskets begin.
-    $this->get(route('catalog.subjects.index', ['level' => 'ol', 'grade' => $grade6->id]))
+    // The junior grades pick their Category I subject alone: the other two
+    // baskets start in Grade 10, so their subjects stay compulsory here.
+    $this->get(route('catalog.subjects.index', ['level' => 'ol', 'grade' => $grade7->id]))
         ->assertOk()
-        ->assertSee('Every subject below is compulsory in Grade 6')
-        ->assertSee('begin in Grades 10–11')
+        ->assertSee('Compulsory subjects')
+        ->assertSee('Category I')
+        ->assertSee('Art')
         ->assertSee('ICT')
+        ->assertDontSee('Category II')
+        ->assertDontSee('Category III');
+});
+
+test('a basket grade with no basket subjects stays flat and names the basket grades', function () {
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade7 = Grade::query()->where('education_level_id', $ol->id)->where('number', 7)->firstOrFail();
+
+    $subject = Subject::factory()->create([
+        'name' => 'Grade Seven Science',
+        'education_level_id' => $ol->id,
+    ]);
+    Lesson::factory()->for($subject)->create(['grade_id' => $grade7->id]);
+
+    $this->get(route('catalog.subjects.index', ['level' => 'ol', 'grade' => $grade7->id]))
+        ->assertOk()
+        ->assertSee('Every subject below is compulsory in Grade 7')
+        ->assertSee('begin in Grades 6-11')
+        ->assertSee('Grade Seven Science')
         ->assertDontSee('Compulsory subjects')
         ->assertDontSee('pick one');
 });

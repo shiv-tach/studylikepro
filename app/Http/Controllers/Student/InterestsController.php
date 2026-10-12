@@ -33,7 +33,7 @@ class InterestsController extends Controller
             ? $this->catalog->subjectsForGrade($grade)
             : $this->catalog->subjects();
 
-        $baskets = $this->basketsForGrade($grade);
+        $baskets = $grade !== null ? $this->catalog->basketsForGrade($grade) : collect();
 
         return view('student.interests', [
             'grade' => $grade,
@@ -72,21 +72,6 @@ class InterestsController extends Controller
             ->route('student.interests.edit')
             ->with('status', 'interests-updated')
             ->with('basketReminder', $this->missingBaskets($grade, $subjectIds));
-    }
-
-    /**
-     * The active baskets of the student's grade, or an empty set when the
-     * grade has no basket choice (every grade except O/L 10-11).
-     *
-     * @return Collection<int, SubjectBasket>
-     */
-    private function basketsForGrade(?Grade $grade): Collection
-    {
-        if ($grade === null || ! $grade->requiresBasketSelection() || $grade->educationLevel === null) {
-            return collect();
-        }
-
-        return $this->catalog->basketsFor($grade->educationLevel);
     }
 
     /**
@@ -137,7 +122,11 @@ class InterestsController extends Controller
      */
     private function missingBaskets(?Grade $grade, array $subjectIds): array
     {
-        $baskets = $this->basketsForGrade($grade);
+        if ($grade === null) {
+            return [];
+        }
+
+        $baskets = $this->catalog->basketsForGrade($grade);
 
         if ($baskets->isEmpty()) {
             return [];

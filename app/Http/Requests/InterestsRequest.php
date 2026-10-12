@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Grade;
 use App\Models\Subject;
-use App\Models\SubjectBasket;
+use App\Services\CatalogService;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -36,21 +36,19 @@ class InterestsRequest extends FormRequest
     }
 
     /**
-     * In the O/L basket years (Grades 10-11) a student picks one subject from
-     * each basket, so a second pick inside the same basket is rejected while a
-     * missing basket is only a reminder, never a blocked save.
+     * A student picks one subject per basket their grade offers - Category I
+     * from Grade 6 and all three O/L baskets in Grades 10-11 - so a second
+     * pick inside the same basket is rejected while a missing basket is only a
+     * reminder, never a blocked save.
      */
     private function basketLimitRule(?Grade $grade): Closure
     {
         return function (string $attribute, mixed $value, Closure $fail) use ($grade): void {
-            if ($grade === null || ! $grade->requiresBasketSelection()) {
+            if ($grade === null) {
                 return;
             }
 
-            $baskets = SubjectBasket::query()
-                ->where('education_level_id', $grade->education_level_id)
-                ->active()
-                ->pluck('name', 'id');
+            $baskets = app(CatalogService::class)->basketsForGrade($grade)->pluck('name', 'id');
 
             if ($baskets->isEmpty()) {
                 return;

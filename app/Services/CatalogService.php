@@ -25,9 +25,9 @@ use Illuminate\Support\Facades\Cache;
  */
 class CatalogService
 {
-    public const CACHE_KEY = 'studylikepro:catalog:v6:levels';
+    public const CACHE_KEY = 'studylikepro:catalog:v7:levels';
 
-    public const SUBJECT_CACHE_KEY = 'studylikepro:catalog:v6:subjects';
+    public const SUBJECT_CACHE_KEY = 'studylikepro:catalog:v7:subjects';
 
     /**
      * Active levels, ordered, each with its active grades and subject baskets.
@@ -151,16 +151,31 @@ class CatalogService
     }
 
     /**
-     * Active subjects that run in one grade: those of the grade's level with at
-     * least one active lesson in the grade, each carrying only the grade's
-     * lessons so callers can show a grade-scoped count.
+     * Active subjects that run in one grade: those of the grade's level inside
+     * their grade band with at least one active lesson in the grade, each
+     * carrying only the grade's lessons so callers can show a grade-scoped
+     * count.
      *
      * @return Collection<int, Subject>
      */
     public function subjectsForGrade(Grade $grade): Collection
     {
-        return $this->subjects()
+        return $this->gradeSubjects($this->subjects(), $grade);
+    }
+
+    /**
+     * The subjects of one grade taken from an already-hydrated catalog - the
+     * shared half of subjectsForGrade() and the basket groups, so a caller
+     * that needs several grades hydrates the catalog once.
+     *
+     * @param  Collection<int, Subject>  $subjects
+     * @return Collection<int, Subject>
+     */
+    private function gradeSubjects(Collection $subjects, Grade $grade): Collection
+    {
+        return $subjects
             ->where('education_level_id', $grade->education_level_id)
+            ->filter(fn (Subject $subject) => $subject->appliesToGrade($grade))
             ->map(function (Subject $subject) use ($grade): Subject {
                 $scoped = clone $subject;
                 $scoped->setRelation('lessons', $subject->lessons->where('grade_id', $grade->id)->values());
@@ -209,23 +224,99 @@ class CatalogService
     }
 
     /**
-     * The subject baskets a grade chooses from - each carrying only the
-     * subjects that actually run in that grade - in basket order. Empty for
-     * every grade without a basket choice (all except O/L 10-11).
+     * The active baskets a grade chooses from, in basket order: Category I for
+     * the junior grades and all three O/L baskets for Grades 10-11. Empty for
+     * a grade that picks nothing.
      *
-     * @return Collection<int, array{basket: SubjectBasket, subjects: Collection<int, Subject>}>
+     * @return Collection<int, SubjectBasket>
      */
-    public function basketGroupsForGrade(Grade $grade): Collection
+    public function basketsForGrade(Grade $grade): Collection
     {
-        $level = $grade->educationLevel;
+        $level = $this->levelFor($grade);
 
         if ($level === null || ! $level->requiresBasketSelection($grade)) {
             return collect();
         }
 
-        $subjects = $this->subjectsForGrade($grade);
-
         return $this->basketsFor($level)
+            ->filter(fn (SubjectBasket $basket) => $basket->appliesToGrade($grade))
+            ->values();
+    }
+
+    /**
+     * The education level of a grade, taken from the cached catalog so a grade
+     * that was never loaded with its level costs no extra query.
+     */
+    private function levelFor(Grade $grade): ?EducationLevel
+    {
+        if ($grade->relationLoaded('educationLevel')) {
+            return $grade->educationLevel;
+        }
+
+        return $this->levels()->firstWhere('id', $grade->education_level_id);
+    }
+
+    /**
+     * The subject baskets a grade chooses from - each carrying only the
+     * subjects that run in that grade and belong to it - in basket order.
+     * Empty for every grade without a basket choice.
+     *
+     * @return Collection<int, array{basket: SubjectBasket, subjects: Collection<int, Subject>}>
+     */
+    public function basketGroupsForGrade(Grade $grade): Collection
+    {
+        $level = $this->levelFor($grade);
+
+        if ($level === null || ! $level->requiresBasketSelection($grade)) {
+            return collect();
+        }
+
+        return $this->basketGroupsFor($grade, $this->basketsFor($level), $this->subjectsForGrade($grade));
+    }
+
+    /**
+     * The subject baskets of every grade that chooses from baskets, keyed by
+     * grade id - built from one pass over the catalog, which is what the
+     * onboarding wizard needs for all of its grade steps at once.
+     *
+     * @param  Collection<int, EducationLevel>  $levels  the levels from levels(), each carrying its grades and baskets
+     * @return array<int, Collection<int, array{basket: SubjectBasket, subjects: Collection<int, Subject>}>>
+     */
+    public function basketGroupsByGrade(Collection $levels): array
+    {
+        $subjects = $this->subjects();
+        $groups = [];
+
+        foreach ($levels as $level) {
+            foreach ($level->grades as $grade) {
+                if (! $level->requiresBasketSelection($grade)) {
+                    continue;
+                }
+
+                $gradeGroups = $this->basketGroupsFor(
+                    $grade,
+                    $level->subjectBaskets,
+                    $this->gradeSubjects($subjects, $grade),
+                );
+
+                if ($gradeGroups->isNotEmpty()) {
+                    $groups[$grade->id] = $gradeGroups;
+                }
+            }
+        }
+
+        return $groups;
+    }
+
+    /**
+     * @param  Collection<int, SubjectBasket>  $baskets
+     * @param  Collection<int, Subject>  $subjects
+     * @return Collection<int, array{basket: SubjectBasket, subjects: Collection<int, Subject>}>
+     */
+    private function basketGroupsFor(Grade $grade, Collection $baskets, Collection $subjects): Collection
+    {
+        return $baskets
+            ->filter(fn (SubjectBasket $basket) => $basket->appliesToGrade($grade))
             ->map(fn (SubjectBasket $basket) => [
                 'basket' => $basket,
                 'subjects' => $subjects->where('basket_id', $basket->id)->values(),

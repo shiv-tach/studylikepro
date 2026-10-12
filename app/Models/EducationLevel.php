@@ -54,8 +54,9 @@ class EducationLevel extends Model
     }
 
     /**
-     * The grade numbers where this level's students pick one subject from each
-     * basket (O/L: Grades 10-11). Empty for levels without baskets.
+     * The grade numbers where this level's students pick a basket subject
+     * (O/L: Grades 6-11, Category I alone below Grade 10). Empty for levels
+     * without baskets.
      *
      * @return list<int>
      */
@@ -67,7 +68,7 @@ class EducationLevel extends Model
     }
 
     /**
-     * Whether a student in this grade picks one subject per basket.
+     * Whether a student in this grade picks a subject from a basket.
      */
     public function requiresBasketSelection(Grade $grade): bool
     {

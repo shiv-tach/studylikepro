@@ -295,6 +295,7 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended'
         Route::get('/subjects/{subject}/edit', [AdminSubjectController::class, 'edit'])->name('subjects.edit');
         Route::put('/subjects/{subject}', [AdminSubjectController::class, 'update'])->name('subjects.update');
         Route::delete('/subjects/{subject}', [AdminSubjectController::class, 'destroy'])->name('subjects.destroy');
+        Route::put('/subjects/{subject}/basket', [AdminSubjectController::class, 'updateBasket'])->name('subjects.basket.update');
 
         Route::post('/subjects/{subject}/lessons', [AdminLessonController::class, 'store'])->name('subjects.lessons.store');
         Route::post('/subjects/{subject}/lessons/copy', [AdminLessonController::class, 'copy'])->name('subjects.lessons.copy');

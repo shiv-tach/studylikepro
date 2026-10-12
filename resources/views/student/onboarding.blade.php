@@ -234,6 +234,10 @@
                 <!-- Step 3: O/L basket subjects (only the grades that choose from baskets) -->
                 <section x-show="current === 'baskets'" x-cloak class="space-y-4">
                     @foreach ($basketGroups as $gradeId => $groups)
+                        @php
+                            $stepGrade = $levels->flatMap->grades->firstWhere('id', $gradeId);
+                            $juniorGrades = ($stepGrade?->number ?? 10) < 10;
+                        @endphp
                         <div class="{{ $cardBase }}" :class="{{ $cardTheme }}" x-show="grade === {{ $gradeId }}" x-cloak>
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('Pick your subjects') }}</h3>
@@ -242,7 +246,9 @@
                                 </span>
                             </div>
                             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                {{ __('Grade 10 and 11 students take one subject from each of the three O/L baskets. Pick the subject you are studying for each one.') }}
+                                {{ $juniorGrades
+                                    ? __('Grades 6 to 9 pick one subject from their Category I basket. Pick the subject you are studying for it.')
+                                    : __('Grade 10 and 11 students take one subject from each of the three O/L baskets. Pick the subject you are studying for each one.') }}
                             </p>
 
                             <div class="mt-5 space-y-6">

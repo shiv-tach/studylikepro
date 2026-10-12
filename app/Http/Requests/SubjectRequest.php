@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\GradeBand;
 use App\Models\EducationLevel;
 use App\Models\Subject;
 use Illuminate\Foundation\Http\FormRequest;
@@ -48,6 +49,9 @@ class SubjectRequest extends FormRequest
                 // Categories I, II and III belong to the O/L subjects).
                 Rule::exists('subject_baskets', 'id')->where('education_level_id', $levelId),
             ],
+            // Which grades of its level the subject is offered to; "all" when
+            // the admin leaves it alone.
+            'grade_band' => ['nullable', Rule::enum(GradeBand::class)],
             'name' => ['required', 'string', 'max:100'],
             'slug' => [
                 'nullable',

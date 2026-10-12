@@ -43,8 +43,8 @@ class Grade extends Model
     }
 
     /**
-     * True in the O/L basket years (Grades 10-11), where a student picks one
-     * optional subject from each basket.
+     * True in the O/L basket grades (6-11 from the junior years), where a
+     * student picks an optional subject from the baskets their grade offers.
      */
     public function requiresBasketSelection(): bool
     {

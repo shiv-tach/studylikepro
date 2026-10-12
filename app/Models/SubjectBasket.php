@@ -11,8 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A basket of optional subjects inside one education level - the O/L has three
- * (Categories I, II and III) and a Grade 10-11 student picks one subject from
- * each. A subject belongs to at most one basket.
+ * (Categories I, II and III). A subject belongs to at most one basket, and the
+ * basket runs in a range of grades: Category I from Grade 6, so the junior
+ * grades pick from it alone, while Grades 10-11 pick from all three.
  */
 class SubjectBasket extends Model
 {
@@ -25,6 +26,8 @@ class SubjectBasket extends Model
         'name',
         'description',
         'icon',
+        'grade_min',
+        'grade_max',
         'sort_order',
         'is_active',
     ];
@@ -32,6 +35,8 @@ class SubjectBasket extends Model
     protected function casts(): array
     {
         return [
+            'grade_min' => 'integer',
+            'grade_max' => 'integer',
             'is_active' => 'boolean',
         ];
     }
@@ -44,6 +49,50 @@ class SubjectBasket extends Model
     public function subjects(): HasMany
     {
         return $this->hasMany(Subject::class, 'basket_id');
+    }
+
+    /**
+     * The grade numbers this basket runs in, in order. Empty means every grade
+     * of its level.
+     *
+     * @return list<int>
+     */
+    public function gradeNumbers(): array
+    {
+        if ($this->grade_min === null || $this->grade_max === null) {
+            return [];
+        }
+
+        return range($this->grade_min, $this->grade_max);
+    }
+
+    /**
+     * Whether a student in this grade picks one subject from this basket.
+     */
+    public function appliesToGrade(Grade $grade): bool
+    {
+        if ($grade->number === null || (int) $grade->education_level_id !== (int) $this->education_level_id) {
+            return false;
+        }
+
+        $numbers = $this->gradeNumbers();
+
+        return $numbers === [] || in_array((int) $grade->number, $numbers, true);
+    }
+
+    /**
+     * Human label for the grades the basket runs in, e.g. "Grades 6-11", or
+     * null when it runs in every grade of its level.
+     */
+    public function gradeRangeLabel(): ?string
+    {
+        $numbers = $this->gradeNumbers();
+
+        if ($numbers === []) {
+            return null;
+        }
+
+        return 'Grades '.reset($numbers).'-'.end($numbers);
     }
 
     /**

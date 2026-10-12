@@ -74,7 +74,7 @@
                         </p>
                     @elseif ($baskets->isNotEmpty())
                         <p class="mt-3 max-w-3xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                            {{ __('Every subject below is compulsory in :grade; the optional O/L baskets (:baskets) begin in Grades :grades.', ['grade' => $grade->label, 'baskets' => $baskets->pluck('name')->implode(', '), 'grades' => implode('–', $level->basketGradeNumbers())]) }}
+                            {{ __('Every subject below is compulsory in :grade; the optional baskets (:baskets) begin in :grades.', ['grade' => $grade->label, 'baskets' => $baskets->pluck('name')->implode(', '), 'grades' => $baskets->map(fn ($basket) => $basket->gradeRangeLabel())->filter()->unique()->implode(', ')]) }}
                         </p>
                     @endif
 

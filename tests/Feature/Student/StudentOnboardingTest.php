@@ -1,11 +1,13 @@
 <?php
 
+use App\Enums\GradeBand;
 use App\Models\EducationLevel;
 use App\Models\Grade;
 use App\Models\Lesson;
 use App\Models\Subject;
 use App\Models\SubjectBasket;
 use App\Models\User;
+use Database\Seeders\CatalogSeeder;
 
 /**
  * A student who has not finished onboarding, plus one subject - with a lesson
@@ -41,9 +43,41 @@ function onboardingBasketSubjects(array $basketKeys = ['category_1', 'category_2
     return [$user, $grade, $subjects];
 }
 
+/**
+ * An O/L subject of one basket that runs in the given grade, so it shows up in
+ * that grade's onboarding step.
+ *
+ * @return array{0: Subject, 1: Grade}
+ */
+function basketSubjectInGrade(int $gradeNumber, string $basketKey = 'category_1', GradeBand $band = GradeBand::All): array
+{
+    $grade = Grade::query()->whereKey(gradeId($gradeNumber))->firstOrFail();
+
+    $basket = SubjectBasket::query()
+        ->where('education_level_id', $grade->education_level_id)
+        ->where('key', $basketKey)
+        ->firstOrFail();
+
+    $subject = Subject::factory()->create([
+        'name' => 'Basket '.$basketKey.' in Grade '.$gradeNumber,
+        'education_level_id' => $grade->education_level_id,
+        'basket_id' => $basket->id,
+        'grade_band' => $band,
+    ]);
+
+    Lesson::factory()->for($subject)->create(['grade_id' => $grade->id]);
+
+    return [$subject, $grade];
+}
+
 function olLevelId(): int
 {
     return (int) EducationLevel::query()->where('key', 'ol')->value('id');
+}
+
+function primaryLevelId(): int
+{
+    return (int) EducationLevel::query()->where('key', 'primary')->value('id');
 }
 
 test('a new student is sent to the onboarding wizard', function () {
@@ -84,6 +118,40 @@ test('a basket with nothing to choose from is left out of the wizard', function 
         ->assertOk()
         ->assertSee($subjects['category_1']->name)
         ->assertDontSee('Category III');
+});
+
+test('the seeded catalog offers a grade 6 to 9 student the Category I step', function () {
+    $this->seed(CatalogSeeder::class);
+
+    $grade7 = Grade::query()->whereKey(gradeId(7))->firstOrFail();
+    $art = Subject::query()->where('slug', 'art')->firstOrFail();
+    $ict = Subject::query()->where('slug', 'ict')->firstOrFail();
+    $user = User::factory()->student()->create();
+
+    $this->actingAs($user)
+        ->get(route('student.onboarding.show'))
+        ->assertOk()
+        ->assertSee('Category I')
+        ->assertSee($art->name)
+        ->assertSee('Grades 6 to 9 pick one subject from their Category I basket');
+
+    // Category II opens in Grade 10 only, so an ICT pick has no basket to sit
+    // in for this grade.
+    $this->actingAs($user)->post(route('student.onboarding.store'), [
+        'level_id' => olLevelId(),
+        'grade_id' => $grade7->id,
+        'learning_language' => 'Sinhala',
+        'basket_subjects' => ['category_2' => $ict->id],
+    ])->assertSessionHasErrors('basket_subjects');
+
+    $this->actingAs($user)->post(route('student.onboarding.store'), [
+        'level_id' => olLevelId(),
+        'grade_id' => $grade7->id,
+        'learning_language' => 'Sinhala',
+        'basket_subjects' => ['category_1' => $art->id],
+    ])->assertRedirect(route('student.dashboard'));
+
+    expect($user->fresh()->interestedSubjects()->pluck('subjects.slug')->all())->toBe(['art']);
 });
 
 test('finishing the wizard saves the grade, the language and the basket subjects', function () {
@@ -159,26 +227,109 @@ test('a subject has to come from the basket it is submitted under', function () 
     ])->assertSessionHasErrors('basket_subjects');
 });
 
+test('a grade 6 to 9 student picks their Category I subject and nothing else', function () {
+    $user = User::factory()->student()->create();
+    [$art, $grade] = basketSubjectInGrade(7);
+    [$ict] = basketSubjectInGrade(7, 'category_2');
+    $this->actingAs($user)
+        ->get(route('student.onboarding.show'))
+        ->assertOk()
+        ->assertSee('Category I')
+        ->assertSee($art->name)
+        ->assertSee('Grades 6 to 9 pick one subject from their Category I basket')
+        ->assertDontSee('Category II')
+        ->assertDontSee($ict->name);
+
+    $this->actingAs($user)->post(route('student.onboarding.store'), [
+        'level_id' => olLevelId(),
+        'grade_id' => $grade->id,
+        'learning_language' => 'Sinhala',
+        'basket_subjects' => ['category_1' => $art->id],
+    ])->assertRedirect(route('student.dashboard'));
+
+    expect($user->fresh()->interestedSubjects()->pluck('subjects.id')->all())->toBe([$art->id]);
+});
+
+test('a grade 6 to 9 student has to pick a Category I subject', function () {
+    $user = User::factory()->student()->create();
+    [, $grade] = basketSubjectInGrade(8);
+
+    $this->actingAs($user)->post(route('student.onboarding.store'), [
+        'level_id' => olLevelId(),
+        'grade_id' => $grade->id,
+        'learning_language' => 'Sinhala',
+    ])->assertSessionHasErrors('basket_subjects');
+
+    expect($user->fresh()->studentProfile)->toBeNull();
+});
+
+test('a subject banded to the senior grades is only offered in grades 10 and 11', function () {
+    [$senior] = basketSubjectInGrade(10, 'category_1', GradeBand::Senior);
+    Lesson::factory()->for($senior)->create(['grade_id' => gradeId(7)]);
+
+    $student = User::factory()->student()->create();
+    $payload = [
+        'level_id' => olLevelId(),
+        'learning_language' => 'English',
+        'basket_subjects' => ['category_1' => $senior->id],
+    ];
+
+    // The subject runs in Grade 7 as well, but its band keeps it out.
+    $this->actingAs($student)
+        ->post(route('student.onboarding.store'), $payload + ['grade_id' => gradeId(7)])
+        ->assertSessionHasErrors('basket_subjects');
+
+    $this->actingAs($student)
+        ->post(route('student.onboarding.store'), $payload + ['grade_id' => gradeId(10)])
+        ->assertRedirect(route('student.dashboard'));
+
+    expect($student->fresh()->interestedSubjects()->pluck('subjects.id')->all())->toBe([$senior->id]);
+});
+
+test('a subject banded to the junior grades is not offered in grade 10', function () {
+    [$junior] = basketSubjectInGrade(7, 'category_1', GradeBand::Junior);
+    Lesson::factory()->for($junior)->create(['grade_id' => gradeId(10)]);
+
+    $student = User::factory()->student()->create();
+    $payload = [
+        'level_id' => olLevelId(),
+        'learning_language' => 'English',
+        'basket_subjects' => ['category_1' => $junior->id],
+    ];
+
+    $this->actingAs($student)
+        ->post(route('student.onboarding.store'), $payload + ['grade_id' => gradeId(10)])
+        ->assertSessionHasErrors('basket_subjects');
+
+    $this->actingAs($student)
+        ->post(route('student.onboarding.store'), $payload + ['grade_id' => gradeId(7)])
+        ->assertRedirect(route('student.dashboard'));
+
+    expect($student->fresh()->interestedSubjects()->pluck('subjects.id')->all())->toBe([$junior->id]);
+});
+
 test('a grade without baskets finishes without sending any', function () {
     $user = User::factory()->student()->create();
 
     $this->actingAs($user)->post(route('student.onboarding.store'), [
-        'level_id' => olLevelId(),
-        'grade_id' => gradeId(9),
+        'level_id' => primaryLevelId(),
+        'grade_id' => gradeId(5),
         'learning_language' => 'English',
     ])->assertRedirect(route('student.dashboard'));
 
-    expect($user->fresh()->studentProfile->grade_id)->toBe(gradeId(9));
+    expect($user->fresh()->studentProfile->grade_id)->toBe(gradeId(5));
 });
 
 test('basket subjects are refused for a grade that does not choose them', function () {
-    [$user, $grade, $subjects] = onboardingBasketSubjects(['category_1']);
+    [$subject] = basketSubjectInGrade(10);
+
+    $user = User::factory()->student()->create();
 
     $this->actingAs($user)->post(route('student.onboarding.store'), [
-        'level_id' => olLevelId(),
-        'grade_id' => gradeId(9),
+        'level_id' => primaryLevelId(),
+        'grade_id' => gradeId(5),
         'learning_language' => 'English',
-        'basket_subjects' => ['category_1' => $subjects['category_1']->id],
+        'basket_subjects' => ['category_1' => $subject->id],
     ])->assertSessionHasErrors('basket_subjects');
 
     expect($user->fresh()->studentProfile)->toBeNull();

@@ -87,7 +87,7 @@
                     <div class="mt-5 border-t border-slate-100 pt-4 dark:border-slate-800">
                         <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Subject baskets') }}</p>
                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            {{ __('Students in Grades :grades pick one subject from each basket; subjects join their basket in the subject editor.', ['grades' => implode('–', $level->basketGradeNumbers())]) }}
+                            {{ __('A student picks one subject from each basket their grade offers — Grades 6 to 9 choose their Category I subject, Grades 10 and 11 all three. Subjects join their basket in the subject editor.') }}
                         </p>
 
                         <div class="mt-3 space-y-3">
@@ -120,6 +120,7 @@
                                             Active
                                         </label>
                                         <x-primary-button class="mb-1">{{ __('Save') }}</x-primary-button>
+                                        <span class="{{ $chip }} mb-2.5">{{ $basket->gradeRangeLabel() ?? __('Every grade') }}</span>
                                         <span class="{{ $chip }} mb-2.5">{{ $basket->subjects_count }} {{ Str::plural('subject', $basket->subjects_count) }}</span>
                                     </div>
 

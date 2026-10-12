@@ -29,14 +29,14 @@ class CatalogController extends Controller
         $grade = $this->pages->requestedGrade($request, $level);
 
         $subjects = $grade === null ? collect() : $this->catalog->subjectsForGrade($grade);
-        $baskets = $level === null ? collect() : $this->catalog->basketsFor($level);
+        $baskets = $grade === null ? collect() : $this->catalog->basketsForGrade($grade);
 
-        // The basket groups only mean something where the choice happens (O/L
-        // Grades 10-11). Below that the same subjects are simply compulsory, so
-        // the grid stays flat and a note says when the baskets begin.
-        $groupedByBasket = $grade !== null
-            && $baskets->isNotEmpty()
-            && $grade->requiresBasketSelection();
+        // The basket groups only mean something where the choice happens and
+        // the baskets actually carry subjects (the O/L: Category I from Grade
+        // 6, all three baskets in Grades 10-11). Everywhere else the grid
+        // stays flat and a note says when the baskets begin.
+        $groupedByBasket = $baskets->isNotEmpty()
+            && $subjects->contains(fn (Subject $subject) => $baskets->contains('id', $subject->basket_id));
 
         return view('catalog.index', [
             'levels' => $levels,

@@ -80,13 +80,13 @@ test('the interests page shows compulsory subjects and only the picked basket su
         ->assertDontSee('data-basket-group', false);
 });
 
-test('the interests page stays ungrouped below grade 10', function () {
+test('the interests page stays ungrouped below the O/L basket grades', function () {
     $user = User::factory()->student()->onboarded()->create();
-    $grade = Grade::query()->whereKey(gradeId(9))->firstOrFail();
+    $grade = Grade::query()->whereKey(gradeId(5))->firstOrFail();
     $user->studentProfile->update(['grade_id' => $grade->id]);
 
     $subject = Subject::factory()->create([
-        'name' => 'Grade Nine Mathematics',
+        'name' => 'Primary Mathematics',
         'education_level_id' => $grade->education_level_id,
     ]);
     Lesson::factory()->for($subject)->create(['grade_id' => $grade->id]);
@@ -94,9 +94,43 @@ test('the interests page stays ungrouped below grade 10', function () {
     $this->actingAs($user)
         ->get(route('student.interests.edit'))
         ->assertOk()
-        ->assertSee('Grade Nine Mathematics')
-        ->assertDontSee('data-basket-group', false)
+        ->assertSee('Primary Mathematics')
+        ->assertDontSee('Compulsory subjects')
         ->assertDontSee('pick one');
+});
+
+test('a grade 6 to 9 student sees their picked Category I subject grouped', function () {
+    $user = User::factory()->student()->onboarded()->create();
+    $grade = Grade::query()->whereKey(gradeId(8))->firstOrFail();
+    $user->studentProfile->update(['grade_id' => $grade->id]);
+
+    $basket = SubjectBasket::query()
+        ->where('education_level_id', $grade->education_level_id)
+        ->where('key', 'category_1')
+        ->firstOrFail();
+
+    $art = Subject::factory()->create([
+        'name' => 'Junior Art',
+        'education_level_id' => $grade->education_level_id,
+        'basket_id' => $basket->id,
+    ]);
+    Lesson::factory()->for($art)->create(['grade_id' => $grade->id]);
+
+    $mathematics = Subject::factory()->create([
+        'name' => 'Junior Mathematics',
+        'education_level_id' => $grade->education_level_id,
+    ]);
+    Lesson::factory()->for($mathematics)->create(['grade_id' => $grade->id]);
+
+    $user->interestedSubjects()->sync([$art->id]);
+
+    $this->actingAs($user)
+        ->get(route('student.interests.edit'))
+        ->assertOk()
+        ->assertSee('Compulsory subjects')
+        ->assertSee('Category I')
+        ->assertSee('Junior Art')
+        ->assertSee('Junior Mathematics');
 });
 
 test('a grade 10 student can pick one subject from each basket', function () {
@@ -145,7 +179,7 @@ test('an incomplete basket choice is saved with a reminder', function () {
     expect($student->fresh()->interestedSubjects()->count())->toBe(1);
 });
 
-test('the one subject per basket limit does not apply below grade 10', function () {
+test('the one subject from Category I limit applies to the junior grades too', function () {
     $user = User::factory()->student()->onboarded()->create();
     $grade = Grade::query()->whereKey(gradeId(9))->firstOrFail();
     $user->studentProfile->update(['grade_id' => $grade->id]);
@@ -168,7 +202,7 @@ test('the one subject per basket limit does not apply below grade 10', function 
 
     $this->actingAs($user)
         ->put(route('student.interests.update'), ['subjects' => [$first->id, $second->id]])
-        ->assertSessionHasNoErrors();
+        ->assertSessionHasErrors('subjects');
 
-    expect($user->fresh()->interestedSubjects()->count())->toBe(2);
+    expect($user->fresh()->interestedSubjects()->count())->toBe(0);
 });

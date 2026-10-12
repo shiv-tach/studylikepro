@@ -40,7 +40,7 @@ class OnboardingController extends Controller
 
         $profile = $user->studentProfile;
         $levels = $this->catalog->levels();
-        $basketGroups = $this->basketGroups($levels);
+        $basketGroups = $this->catalog->basketGroupsByGrade($levels);
         $languages = config('studylikepro.student_learning_languages');
 
         $gradeId = (int) old('grade_id', $profile?->grade_id);
@@ -102,39 +102,11 @@ class OnboardingController extends Controller
     */
 
     /**
-     * The subject baskets of every grade that chooses from baskets, keyed by
-     * grade id.
-     *
-     * @param  Collection<int, EducationLevel>  $levels
-     * @return array<int, list<array{basket: SubjectBasket, subjects: Collection<int, Subject>}>>
-     */
-    private function basketGroups(Collection $levels): array
-    {
-        $groups = [];
-
-        foreach ($levels as $level) {
-            foreach ($level->grades as $grade) {
-                if (! $level->requiresBasketSelection($grade)) {
-                    continue;
-                }
-
-                $baskets = $this->catalog->basketGroupsForGrade($grade);
-
-                if ($baskets->isNotEmpty()) {
-                    $groups[$grade->id] = $baskets->all();
-                }
-            }
-        }
-
-        return $groups;
-    }
-
-    /**
      * Levels and grades with the number of baskets each grade chooses from,
      * which tells the client which steps exist.
      *
      * @param  Collection<int, EducationLevel>  $levels
-     * @param  array<int, list<array{basket: SubjectBasket, subjects: Collection<int, Subject>}>>  $basketGroups
+     * @param  array<int, Collection<int, array{basket: SubjectBasket, subjects: Collection<int, Subject>}>>  $basketGroups
      * @return list<array<string, mixed>>
      */
     private function levelPayload(Collection $levels, array $basketGroups): array
@@ -156,7 +128,7 @@ class OnboardingController extends Controller
      * builds a Map from them: PHP renumbers integer array keys, so a keyed map
      * would lose the ids.
      *
-     * @param  array<int, list<array{basket: SubjectBasket, subjects: Collection<int, Subject>}>>  $basketGroups
+     * @param  array<int, Collection<int, array{basket: SubjectBasket, subjects: Collection<int, Subject>}>>  $basketGroups
      * @return list<array{0: string, 1: string}>
      */
     private function basketNames(array $basketGroups): array
@@ -175,7 +147,7 @@ class OnboardingController extends Controller
     /**
      * Subject id → name pairs, for the same reason as basketNames().
      *
-     * @param  array<int, list<array{basket: SubjectBasket, subjects: Collection<int, Subject>}>>  $basketGroups
+     * @param  array<int, Collection<int, array{basket: SubjectBasket, subjects: Collection<int, Subject>}>>  $basketGroups
      * @return list<array{0: int, 1: string}>
      */
     private function subjectNames(array $basketGroups): array
@@ -217,7 +189,7 @@ class OnboardingController extends Controller
      * The step that owns the validation errors, so a failed submit returns the
      * student to where the fix belongs instead of the first step.
      *
-     * @param  array<int, list<array{basket: SubjectBasket, subjects: Collection<int, Subject>}>>  $basketGroups
+     * @param  array<int, Collection<int, array{basket: SubjectBasket, subjects: Collection<int, Subject>}>>  $basketGroups
      */
     private function initialStep(array $basketGroups, int $gradeId): int
     {

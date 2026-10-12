@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\GradeBand;
 use App\Models\EducationLevel;
 use App\Models\Grade;
 use App\Models\Lesson;
@@ -159,6 +160,114 @@ test('creating a subject validates its input', function () {
     $this->actingAs(User::factory()->admin()->create())
         ->post(route('admin.subjects.store'), ['name' => ''])
         ->assertSessionHasErrors('name');
+});
+
+test('admins can limit a subject to one part of its level', function () {
+    $level = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->post(route('admin.subjects.store'), [
+            'education_level_id' => $level->id,
+            'name' => 'Junior Science',
+            'grade_band' => GradeBand::Junior->value,
+        ])
+        ->assertRedirect();
+
+    $subject = Subject::query()->where('name', 'Junior Science')->firstOrFail();
+
+    expect($subject->gradeBand())->toBe(GradeBand::Junior);
+
+    // The default is every grade of the level.
+    $this->actingAs($admin)
+        ->post(route('admin.subjects.store'), [
+            'education_level_id' => $level->id,
+            'name' => 'All Grade Science',
+        ])
+        ->assertRedirect();
+
+    expect(Subject::query()->where('name', 'All Grade Science')->firstOrFail()->gradeBand())->toBe(GradeBand::All);
+
+    $this->actingAs($admin)
+        ->put(route('admin.subjects.update', $subject), [
+            'name' => 'Junior Science',
+            'grade_band' => GradeBand::Senior->value,
+        ])
+        ->assertRedirect();
+
+    expect($subject->fresh()->gradeBand())->toBe(GradeBand::Senior);
+
+    $this->actingAs($admin)
+        ->put(route('admin.subjects.update', $subject), [
+            'name' => 'Junior Science',
+            'grade_band' => 'middle',
+        ])
+        ->assertSessionHasErrors('grade_band');
+});
+
+test('the subject forms offer every grade band, labelled for the level', function () {
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $subject = Subject::factory()->create([
+        'name' => 'Grade Band Subject',
+        'education_level_id' => $ol->id,
+    ]);
+    $admin = User::factory()->admin()->create();
+
+    // The labels follow the level: the O/L level starts at Grade 6, so its
+    // junior band is Grades 6-9 rather than Grades 1-9.
+    $this->actingAs($admin)
+        ->get(route('admin.subjects.index', ['level' => 'ol']))
+        ->assertOk()
+        ->assertSee('All grades')
+        ->assertSee('Grades 6-9')
+        ->assertSee('Grades 10-11');
+
+    $this->actingAs($admin)
+        ->get(route('admin.subjects.edit', $subject))
+        ->assertOk()
+        ->assertSee('name="grade_band"', false)
+        ->assertSee('All grades')
+        ->assertSee('Grades 6-9')
+        ->assertSee('Grades 10-11');
+});
+
+test('the lesson matrix only offers the grades the subject band covers', function () {
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $subject = Subject::factory()->create([
+        'name' => 'Junior Civic',
+        'education_level_id' => $ol->id,
+        'grade_band' => GradeBand::Junior,
+    ]);
+    Lesson::factory()->for($subject)->create([
+        'name' => 'Senior only lesson',
+        'grade_id' => gradeId(10),
+    ]);
+    $admin = User::factory()->admin()->create();
+
+    $response = $this->actingAs($admin)
+        ->get(route('admin.subjects.edit', $subject))
+        ->assertOk()
+        ->assertSee('Grade 6')
+        ->assertSee('Grade 9')
+        ->assertDontSee('Grade 10')
+        ->assertDontSee('Grade 11');
+
+    expect($response->viewData('grades')->pluck('number')->all())->toBe([6, 7, 8, 9]);
+
+    // A lesson parked in a grade the band does not cover stays out of the matrix.
+    $response->assertDontSee('Senior only lesson')
+        ->assertSee('0 total');
+
+    // Widening the band brings those grades — and their lessons — back.
+    $subject->update(['grade_band' => GradeBand::All]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.subjects.edit', $subject))
+        ->assertOk()
+        ->assertSee('Grade 10')
+        ->assertSee('Grade 11')
+        ->assertSee('Senior only lesson')
+        ->assertSee('1 total');
 });
 
 test('admins can update a subject and deactivate it', function () {

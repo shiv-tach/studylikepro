@@ -117,3 +117,81 @@ test('a basket from another level is rejected', function () {
 
     expect($subject->fresh()->basket_id)->toBeNull();
 });
+
+test('the subjects page manages a level\'s basket subjects in one place', function () {
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $basket = olSubjectBasket('category_2');
+    $subject = Subject::factory()->create([
+        'name' => 'Technical Drawing',
+        'education_level_id' => $ol->id,
+        'basket_id' => $basket->id,
+    ]);
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->get(route('admin.subjects.index', ['level' => 'ol']))
+        ->assertOk()
+        ->assertSee('Subject baskets')
+        ->assertSee('Category II')
+        ->assertSee('Technical Drawing')
+        ->assertSee(route('admin.subjects.basket.update', $subject));
+
+    // Without a level filter there is no basket group to manage.
+    $this->get(route('admin.subjects.index'))
+        ->assertOk()
+        ->assertDontSee('Subject baskets');
+});
+
+test('admins can move a subject between baskets from the subjects page', function () {
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $categoryOne = olSubjectBasket('category_1');
+    $categoryTwo = olSubjectBasket('category_2');
+    $subject = Subject::factory()->create([
+        'name' => 'Art',
+        'education_level_id' => $ol->id,
+        'basket_id' => $categoryOne->id,
+    ]);
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->put(route('admin.subjects.basket.update', $subject), ['basket_id' => $categoryTwo->id])
+        ->assertRedirect(route('admin.subjects.index', ['level' => 'ol']))
+        ->assertSessionHas('status', 'subject-basket-updated');
+
+    expect($subject->fresh()->basket_id)->toBe($categoryTwo->id);
+
+    // Clearing the choice turns the subject back into a mandatory one.
+    $this->actingAs($admin)
+        ->put(route('admin.subjects.basket.update', $subject->refresh()), ['basket_id' => ''])
+        ->assertRedirect(route('admin.subjects.index', ['level' => 'ol']));
+
+    expect($subject->fresh()->basket_id)->toBeNull();
+});
+
+test('a basket from another level is rejected when moving from the subjects page', function () {
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $subject = Subject::factory()->create(['name' => 'O/L Art', 'education_level_id' => $ol->id]);
+    $foreignBasket = SubjectBasket::factory()->create();
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->put(route('admin.subjects.basket.update', $subject), ['basket_id' => $foreignBasket->id])
+        ->assertSessionHasErrors('basket_id');
+
+    expect($subject->fresh()->basket_id)->toBeNull();
+});
+
+test('non admins cannot move subjects between baskets', function () {
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $categoryOne = olSubjectBasket('category_1');
+    $categoryTwo = olSubjectBasket('category_2');
+    $subject = Subject::factory()->create([
+        'name' => 'Art',
+        'education_level_id' => $ol->id,
+        'basket_id' => $categoryOne->id,
+    ]);
+
+    $this->actingAs(User::factory()->teacher()->create())
+        ->put(route('admin.subjects.basket.update', $subject), ['basket_id' => $categoryTwo->id])
+        ->assertForbidden();
+
+    expect($subject->fresh()->basket_id)->toBe($categoryOne->id);
+});

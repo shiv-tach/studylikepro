@@ -242,9 +242,14 @@ return [
     |
     | `baskets` groups the optional subjects of a level the way the examination
     | does - in the O/L a Grade 10-11 candidate picks one subject from each of
-    | the three categories - and `basket_grades` lists the grades where that
-    | choice happens. The basket rows live in `subject_baskets` (seeded by
-    | SubjectBasketSeeder), and every subject points at its basket.
+    | the three categories, while Grades 6-9 pick their Category I subject only
+    | - and `basket_grades` lists every grade where that choice happens. Each
+    | basket also declares the `grades` it runs in. The basket rows live in
+    | `subject_baskets` (seeded by SubjectBasketSeeder) and carry that range as
+    | grade_min/grade_max, and every subject points at its basket.
+    |
+    | A subject is offered to a grade when its level, its basket and its own
+    | `grade_band` (see App\Enums\GradeBand) all cover the grade.
     |
     */
 
@@ -255,22 +260,25 @@ return [
             'grade_min' => 6,
             'grade_max' => 11,
             'icon' => '📘',
-            'basket_grades' => [10, 11],
+            'basket_grades' => [6, 7, 8, 9, 10, 11],
             'baskets' => [
                 'category_1' => [
                     'name' => 'Category I',
                     'icon' => '🎨',
                     'description' => 'Aesthetic, music, dancing, literature and drama subjects',
+                    'grades' => [6, 7, 8, 9, 10, 11],
                 ],
                 'category_2' => [
                     'name' => 'Category II',
                     'icon' => '🛠️',
                     'description' => 'Technical, practical and technology subjects',
+                    'grades' => [10, 11],
                 ],
                 'category_3' => [
                     'name' => 'Category III',
                     'icon' => '📚',
                     'description' => 'Academic, commerce and second-language subjects',
+                    'grades' => [10, 11],
                 ],
             ],
         ],

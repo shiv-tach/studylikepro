@@ -1,6 +1,9 @@
 @php
     $cardBase = 'rounded-2xl border p-6';
     $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
+    $level = $subject->educationLevel;
+    $bandLabels = collect(App\Enums\GradeBand::cases())
+        ->mapWithKeys(fn ($band) => [$band->value => $band->labelWithin($level?->grade_min, $level?->grade_max)]);
 @endphp
 <x-app-layout>
     <x-slot name="header">
@@ -90,16 +93,32 @@
                                 <option value="">{{ __('None — not a basket subject') }}</option>
                                 @foreach ($baskets as $basket)
                                     <option value="{{ $basket->id }}" @selected((int) old('basket_id', $subject->basket_id) === $basket->id)>
-                                        {{ trim(($basket->icon ?? '').' '.$basket->name) }}
+                                        {{ trim(($basket->icon ?? '').' '.$basket->name) }}{{ $basket->gradeRangeLabel() ? ' · '.$basket->gradeRangeLabel() : '' }}
                                     </option>
                                 @endforeach
                             </select>
                             <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                                {{ __('Optional subjects a student picks one of (normally Grades :grades); leave as "None" for mandatory subjects.', ['grades' => implode('–', $subject->educationLevel?->basketGradeNumbers() ?? [])]) }}
+                                {{ __('Optional subjects join one basket of their level; a student picks one subject from each basket their grade offers. Leave as "None" for mandatory subjects.') }}
                             </p>
                             <x-input-error :messages="$errors->get('basket_id')" class="mt-2" />
                         </div>
                     @endif
+
+                    <div>
+                        <x-input-label for="grade_band" :value="__('Grades')" />
+                        <select id="grade_band" name="grade_band"
+                                class="mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                            @foreach (App\Enums\GradeBand::cases() as $band)
+                                <option value="{{ $band->value }}" @selected(old('grade_band', $subject->gradeBand()->value) === $band->value)>
+                                    {{ __($bandLabels[$band->value]) }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                            {{ __('Which grades of this level the subject is offered to. Keep "All grades" unless it runs in only part of the level.') }}
+                        </p>
+                        <x-input-error :messages="$errors->get('grade_band')" class="mt-2" />
+                    </div>
 
                     <div>
                         <x-input-label for="description" :value="__('Description')" />
@@ -126,12 +145,16 @@
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Lessons by grade</h3>
                     <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                        {{ $subject->lessons->count() }} total
+                        {{ $lessons->count() }} total
                     </span>
                 </div>
 
                 @if ($grades->isEmpty())
-                    <p class="mt-5 text-sm text-slate-400">This subject has no education level, so it has no grades to hang lessons off. Create the subject inside a level to manage lessons.</p>
+                    @if ($subject->educationLevel === null)
+                        <p class="mt-5 text-sm text-slate-400">This subject has no education level, so it has no grades to hang lessons off. Create the subject inside a level to manage lessons.</p>
+                    @else
+                        <p class="mt-5 text-sm text-slate-400">{{ __('This subject is limited to :band, which covers no grades of its level, so there are no grades to hang lessons off. Widen the Grades setting to "All grades" to manage lessons.', ['band' => $bandLabels[$subject->gradeBand()->value]]) }}</p>
+                    @endif
                 @else
                     <!-- Grade tabs -->
                     <div class="mt-5 flex flex-wrap gap-2">

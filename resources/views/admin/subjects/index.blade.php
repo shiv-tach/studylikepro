@@ -2,6 +2,8 @@
     $cardBase = 'rounded-2xl border p-6';
     $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
     $selectClasses = 'mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900';
+    $defaultLevelId = (int) old('education_level_id') ?: ($levels->firstWhere('key', $filters['level'] ?? null)?->id ?? $levels->first()?->id);
+    $defaultBandLabels = $bandLabels[$defaultLevelId] ?? [];
 @endphp
 <x-app-layout>
     <x-slot name="header">
@@ -16,6 +18,10 @@
         @elseif (session('status') === 'subject-deleted')
             <div class="rounded-2xl border border-slate-200/80 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                 {{ __('Subject deleted — its lessons and teacher/student selections were removed with it.') }}
+            </div>
+        @elseif (session('status') === 'subject-basket-updated')
+            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                {{ __('Basket updated.') }}
             </div>
         @endif
 
@@ -48,18 +54,118 @@
             </a>
         </div>
 
+        <!-- Basket manager: group a level's optional subjects in one place -->
+        @if ($levelBaskets->isNotEmpty())
+            @php
+                $subjectsByBasket = $subjects->groupBy(fn ($subject) => $subject->basket_id ?? 0);
+                $basketSelectClasses = 'rounded-lg border-slate-300 bg-white py-1 pl-2 pr-6 text-xs shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900';
+            @endphp
+            <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('Subject baskets') }}</h3>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            {{ __('Group this level\'s optional subjects into the baskets a student picks one from. Move a subject with its dropdown — no need to open the subject editor.') }}
+                        </p>
+                    </div>
+                    <a href="{{ route('admin.curriculum.index') }}"
+                       class="text-xs font-semibold text-primary transition-colors hover:text-primary/80">
+                        {{ __('Rename, reorder or disable baskets') }} &rarr;
+                    </a>
+                </div>
+
+                <div class="mt-5 grid gap-4 lg:grid-cols-3">
+                    @foreach ($levelBaskets as $basket)
+                        @php $basketSubjects = $subjectsByBasket->get($basket->id, collect()); @endphp
+                        <div class="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-900/40">
+                            <div class="flex items-center gap-2.5">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-base">{{ $basket->icon ?? '🗂️' }}</span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <p class="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{{ $basket->name }}</p>
+                                        @unless ($basket->is_active)
+                                            <span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">{{ __('Off') }}</span>
+                                        @endunless
+                                    </div>
+                                    <p class="text-[11px] text-slate-400">{{ $basket->gradeRangeLabel() ?? __('Every grade') }}</p>
+                                </div>
+                                <span class="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">{{ $basketSubjects->count() }}</span>
+                            </div>
+
+                            @if ($basketSubjects->isEmpty())
+                                <p class="mt-3 rounded-xl border border-dashed border-slate-300 p-3 text-xs text-slate-400 dark:border-slate-700">
+                                    {{ __('No subjects in this basket yet — assign one below.') }}
+                                </p>
+                            @else
+                                <ul class="mt-3 space-y-2">
+                                    @foreach ($basketSubjects as $subject)
+                                        <li class="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+                                            <span class="min-w-0 truncate text-xs font-semibold text-slate-700 dark:text-slate-200">
+                                                {{ $subject->icon }} {{ $subject->name }}
+                                            </span>
+                                            <form method="POST" action="{{ route('admin.subjects.basket.update', $subject) }}">
+                                                @csrf
+                                                @method('PUT')
+                                                <select name="basket_id" onchange="this.form.submit()"
+                                                        aria-label="{{ __('Basket for :name', ['name' => $subject->name]) }}"
+                                                        class="{{ $basketSelectClasses }}">
+                                                    <option value="">{{ __('No basket') }}</option>
+                                                    @foreach ($levelBaskets as $option)
+                                                        <option value="{{ $option->id }}" @selected($subject->basket_id === $option->id)>{{ $option->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </form>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+
+                @php $looseSubjects = $subjectsByBasket->get(0, collect()); @endphp
+                @if ($looseSubjects->isNotEmpty())
+                    <div class="mt-4 rounded-2xl border border-dashed border-slate-300 p-4 dark:border-slate-700">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Not in a basket') }}</p>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            {{ __('These subjects are offered to every grade. Pick a basket to make one optional.') }}
+                        </p>
+                        <ul class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            @foreach ($looseSubjects as $subject)
+                                <li class="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+                                    <span class="min-w-0 truncate text-xs font-semibold text-slate-700 dark:text-slate-200">
+                                        {{ $subject->icon }} {{ $subject->name }}
+                                    </span>
+                                    <form method="POST" action="{{ route('admin.subjects.basket.update', $subject) }}">
+                                        @csrf
+                                        @method('PUT')
+                                        <select name="basket_id" onchange="this.form.submit()"
+                                                aria-label="{{ __('Basket for :name', ['name' => $subject->name]) }}"
+                                                class="{{ $basketSelectClasses }}">
+                                            <option value="">{{ __('No basket') }}</option>
+                                            @foreach ($levelBaskets as $option)
+                                                <option value="{{ $option->id }}" @selected($subject->basket_id === $option->id)>{{ $option->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </form>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+            </div>
+        @endif
+
         <!-- Create form -->
         <div x-show="showCreate" x-transition class="{{ $cardBase }}" :class="{{ $cardTheme }}" style="display: none;">
             <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">New subject</h3>
-            <form method="POST" action="{{ route('admin.subjects.store') }}" class="mt-5 space-y-5">
+            <form method="POST" action="{{ route('admin.subjects.store') }}" class="mt-5 space-y-5"
+                  x-data="{ levelId: {{ $defaultLevelId }}, bandLabels: @js($bandLabels) }">
                 @csrf
                 <div class="grid gap-5 sm:grid-cols-3">
                     <div>
                         <x-input-label for="education_level_id" :value="__('Education level')" />
-                        @php
-                            $defaultLevelId = (int) old('education_level_id') ?: ($levels->firstWhere('key', $filters['level'] ?? null)?->id ?? $levels->first()?->id);
-                        @endphp
-                        <select id="education_level_id" name="education_level_id" class="{{ $selectClasses }}">
+                        <select id="education_level_id" name="education_level_id" x-model.number="levelId" class="{{ $selectClasses }}">
                             @foreach ($levels as $level)
                                 <option value="{{ $level->id }}" @selected($defaultLevelId === $level->id)>{{ $level->name }}</option>
                             @endforeach
@@ -98,6 +204,16 @@
                             <x-input-error :messages="$errors->get('basket_id')" class="mt-2" />
                         </div>
                     @endif
+                    <div>
+                        <x-input-label for="create-grade_band" :value="__('Grades')" />
+                        <select id="create-grade_band" name="grade_band" class="{{ $selectClasses }}">
+                            @foreach (App\Enums\GradeBand::cases() as $band)
+                                <option value="{{ $band->value }}" @selected(old('grade_band', App\Enums\GradeBand::All->value) === $band->value)
+                                        x-text="bandLabels[levelId]?.[@js($band->value)] ?? @js(__($band->label()))">{{ __($defaultBandLabels[$band->value] ?? $band->label()) }}</option>
+                            @endforeach
+                        </select>
+                        <x-input-error :messages="$errors->get('grade_band')" class="mt-2" />
+                    </div>
                     <div>
                         <x-input-label for="sort_order" :value="__('Sort order')" />
                         <x-text-input id="sort_order" name="sort_order" type="number" min="0" max="999" class="mt-1 block w-full" :value="old('sort_order', 0)" />
@@ -148,6 +264,9 @@
                                         @if ($subject->basket)
                                             <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">{{ $subject->basket->name }}</span>
                                         @endif
+                                        @unless ($subject->gradeBand() === App\Enums\GradeBand::All)
+                                            <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">{{ $subject->gradeBand()->labelWithin($subject->educationLevel?->grade_min, $subject->educationLevel?->grade_max) }}</span>
+                                        @endunless
                                     </div>
                                     <p class="truncate font-mono text-xs text-slate-400">/{{ $subject->slug }}</p>
                                 </div>
