@@ -12,6 +12,7 @@ use App\Models\Dispute;
 use App\Models\Payment;
 use App\Models\Refund;
 use App\Models\Review;
+use App\Models\ServicePurchase;
 use App\Models\Subject;
 use App\Models\TeacherEarning;
 use App\Models\TeacherProfile;
@@ -55,7 +56,12 @@ class DashboardController extends Controller
                     ->whereHas('payments', fn ($query) => $query
                         ->where('status', PaymentStatus::Captured->value)
                         ->where('captured_at', '>=', $since))
-                    ->sum('platform_fee_minor'),
+                    ->sum('platform_fee_minor')
+                    + (int) ServicePurchase::query()
+                        ->whereHas('payments', fn ($query) => $query
+                            ->where('status', PaymentStatus::Captured->value)
+                            ->where('captured_at', '>=', $since))
+                        ->sum('platform_fee_minor'),
                 'refunded' => (int) Refund::query()->where('created_at', '>=', $since)->sum('amount_minor'),
                 'payouts_due' => (int) TeacherEarning::query()
                     ->eligible()

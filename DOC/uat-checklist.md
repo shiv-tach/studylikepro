@@ -55,6 +55,7 @@ Automated equivalent: `tests/Feature/Acceptance/CoreFlowTest.php` (runs in CI).
 | B5 | Pay, then let the auto-completion sweep close the lesson | Earnings become eligible; teacher can be paid out | ☐ |
 | B6 | Admin creates a payout batch and marks it paid with a reference | Teacher gets the payout receipt; balance drops to zero | ☐ |
 | B7 | Admin refunds 50% from the Payments console | Payment shows Partially refunded; teacher's earning is adjusted | ☐ |
+| B8 | Admin opens Admin → Earnings for a date range | Collections, commission, booking fees, refunds and teacher payouts reconcile with the Payments console; net platform earnings and the CSV export match | ☐ |
 
 ---
 

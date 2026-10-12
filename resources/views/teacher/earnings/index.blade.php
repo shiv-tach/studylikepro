@@ -38,14 +38,14 @@
         <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
             <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ __('Ledger') }}</h3>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {{ __('A lesson becomes available once it is delivered; reversed amounts are shown next to the original earning.') }}
+                {{ __('A lesson or service becomes available once it is delivered; reversed amounts are shown next to the original earning.') }}
             </p>
 
             <div class="mt-4 overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
                     <thead>
                         <tr class="text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
-                            <th class="py-3 pr-4">{{ __('Lesson') }}</th>
+                            <th class="py-3 pr-4">{{ __('Item') }}</th>
                             <th class="px-4 py-3">{{ __('When') }}</th>
                             <th class="px-4 py-3">{{ __('Status') }}</th>
                             <th class="px-4 py-3 text-right">{{ __('Earned') }}</th>
@@ -54,17 +54,26 @@
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
                         @forelse ($ledger as $earning)
+                            @php
+                                $booking = $earning->booking;
+                                $purchase = $earning->servicePurchase;
+                                $when = $booking?->starts_at ?? $earning->available_at ?? $earning->created_at;
+                            @endphp
                             <tr>
                                 <td class="py-4 pr-4">
                                     <p class="font-semibold text-slate-800 dark:text-slate-100">
-                                        {{ $earning->booking->subject?->name }}@if ($earning->booking->lesson) · {{ $earning->booking->lesson->name }}@endif
+                                        @if ($booking)
+                                            {{ $booking->subject?->name }}@if ($booking->lesson) · {{ $booking->lesson->name }}@endif
+                                        @else
+                                            {{ $purchase?->type()->icon() }} {{ $purchase?->scopeLabel() ?? __('Service') }}
+                                        @endif
                                     </p>
                                     <p class="text-xs text-slate-500 dark:text-slate-400">
-                                        {{ $earning->booking->learner_name ?: $earning->booking->student->name }}
+                                        {{ $booking?->learner_name ?: ($booking?->student?->name ?? $purchase?->student?->name) }}
                                     </p>
                                 </td>
                                 <td class="px-4 py-4 text-slate-600 dark:text-slate-300">
-                                    {{ $earning->booking->starts_at->copy()->setTimezone($timezone)->format('d M Y') }}
+                                    {{ $when?->copy()->setTimezone($timezone)->format('d M Y') }}
                                 </td>
                                 <td class="px-4 py-4">
                                     <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $earning->status->badgeClasses() }}">{{ $earning->status->label() }}</span>
@@ -80,7 +89,7 @@
                         @empty
                             <tr>
                                 <td colspan="5" class="py-10 text-center text-sm text-slate-500 dark:text-slate-400">
-                                    {{ __('No earnings yet — your first paid lesson will appear here.') }}
+                                    {{ __('No earnings yet — your first paid lesson or service will appear here.') }}
                                 </td>
                             </tr>
                         @endforelse

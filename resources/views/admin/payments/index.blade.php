@@ -119,8 +119,15 @@
                                 <td class="px-6 py-4">
                                     <p class="font-semibold text-slate-800 dark:text-slate-100">{{ $payment->student->name }}</p>
                                     <p class="text-xs text-slate-500 dark:text-slate-400">
-                                        #{{ str_pad((string) $payment->booking_id, 6, '0', STR_PAD_LEFT) }}
-                                        · {{ $payment->booking->teacherProfile->user->name }}
+                                        @if ($payment->booking)
+                                            #{{ str_pad((string) $payment->booking_id, 6, '0', STR_PAD_LEFT) }}
+                                            · {{ $payment->booking->teacherProfile->user->name }}
+                                        @elseif ($payment->purchase)
+                                            {{ $payment->purchase->scopeLabel() }}
+                                            · {{ $payment->purchase->teacherProfile->user->name }}
+                                        @else
+                                            {{ __('—') }}
+                                        @endif
                                     </p>
                                 </td>
                                 <td class="px-6 py-4">

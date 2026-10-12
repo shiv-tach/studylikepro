@@ -46,7 +46,15 @@ class PaymentController extends Controller
      */
     public function show(Payment $payment): View
     {
-        $payment->load(['student', 'booking.teacherProfile.user', 'booking.subject', 'booking.lesson', 'refunds']);
+        $payment->load([
+            'student',
+            'booking.teacherProfile.user',
+            'booking.subject',
+            'booking.lesson',
+            'refunds',
+            'purchase.teacherProfile.user',
+            'purchase.subject',
+        ]);
 
         return view('admin.payments.show', [
             'payment' => $payment,
@@ -114,7 +122,15 @@ class PaymentController extends Controller
     private function query(array $filters): Builder
     {
         return Payment::query()
-            ->with(['student', 'booking.teacherProfile.user', 'refunds'])
+            ->with([
+                'student',
+                'booking.teacherProfile.user',
+                'refunds',
+                'purchase.teacherProfile.user',
+                'purchase.lesson',
+                'purchase.subject',
+                'purchase.offering',
+            ])
             ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('status', $status))
             ->when($filters['gateway'] ?? null, fn (Builder $query, string $gateway) => $query->where('gateway', $gateway))
             ->when($filters['from'] ?? null, fn (Builder $query, string $from) => $query->where('created_at', '>=', Carbon::parse($from)->startOfDay()))

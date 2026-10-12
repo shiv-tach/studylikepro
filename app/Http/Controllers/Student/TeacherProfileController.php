@@ -32,11 +32,14 @@ class TeacherProfileController extends Controller
         $studentGrade = $request->user()->studentProfile?->grade;
 
         $gradeScoped = false;
+        $gradeSubjectIds = [];
 
         if ($studentGrade !== null) {
             $scopedSubjects = $teacherProfile->subjects
                 ->filter(fn (Subject $subject) => in_array((int) $studentGrade->id, $teacherProfile->gradeIdsFor($subject), true))
                 ->values();
+
+            $gradeSubjectIds = $scopedSubjects->pluck('id')->map(fn ($id) => (int) $id)->all();
 
             if ($scopedSubjects->isNotEmpty()) {
                 $teacherProfile->setRelation('subjects', $scopedSubjects);
@@ -52,6 +55,10 @@ class TeacherProfileController extends Controller
             'lessonsBySubject' => $teacherProfile->lessons->groupBy('subject_id'),
             'offerings' => $teacherProfile->offerings()
                 ->active()
+                ->when(
+                    $studentGrade !== null,
+                    fn ($query) => $query->forGrade((int) $studentGrade->id, $gradeSubjectIds),
+                )
                 ->ordered()
                 ->with(['subject', 'lesson', 'grade'])
                 ->get()

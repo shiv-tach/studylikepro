@@ -122,6 +122,23 @@ it('rejects a webhook whose signature does not match', function () {
         ->and(PaymentWebhookEvent::query()->count())->toBe(0);
 });
 
+it('accepts a raw JSON body from the provider', function () {
+    $booking = ownedBooking();
+    $payment = app(PaymentService::class)->startCheckout($booking);
+
+    [$body] = app(FakePaymentGateway::class)->localCapturePayload($payment);
+    $raw = (string) json_encode($body);
+    $signature = app(FakePaymentGateway::class)->signPayload($raw);
+
+    $this->call('POST', route('payments.webhook', 'fake'), [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_X_RAZORPAY_SIGNATURE' => $signature,
+    ], $raw)->assertOk()->assertJson(['status' => 'processed']);
+
+    expect($payment->refresh()->status)->toBe(PaymentStatus::Captured)
+        ->and($booking->refresh()->status)->toBe(BookingStatus::Confirmed);
+});
+
 it('applies a duplicated delivery only once', function () {
     $booking = ownedBooking();
     $payment = app(PaymentService::class)->startCheckout($booking);

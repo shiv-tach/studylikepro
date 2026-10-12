@@ -30,10 +30,12 @@ class PaymentWebhookController extends Controller
             return response()->json(['status' => 'unknown_gateway'], 404);
         }
 
-        // Razorpay posts raw JSON; the local demo posts the same JSON as a form field.
-        $payload = $request->filled('payload')
-            ? (string) $request->input('payload')
-            : $request->getContent();
+        // Razorpay posts raw JSON; the local demo posts the same JSON as a form
+        // field. A raw provider body carries a nested "payload" object, so only a
+        // string field counts as the payload — otherwise read the raw body.
+        $formPayload = $request->input('payload');
+
+        $payload = is_string($formPayload) ? $formPayload : $request->getContent();
 
         $signature = $request->header('X-Razorpay-Signature') ?? $request->input('signature');
 

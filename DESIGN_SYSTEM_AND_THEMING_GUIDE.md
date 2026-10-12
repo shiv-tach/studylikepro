@@ -69,7 +69,7 @@ To prevent the brief flash of the light/default theme during page reloads, a blo
 <!-- Blocking theme script: prevents flash of light theme on page load -->
 <script>
     (function() {
-        const mode = localStorage.getItem('themeMode') || '{{ $userTheme['mode'] ?? 'system' }}';
+        const mode = localStorage.getItem('themeMode') || '{{ $userTheme['mode'] ?? 'light' }}';
         const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         if (isDark) {
             document.documentElement.classList.add('dark');
@@ -112,6 +112,9 @@ The public entry points — [welcome.blade.php](file:///d:/Github/studylikepro/r
 ```
 
 `system` (or an unset value) resolves to light here, so the marketing, catalog, legal and auth screens always render light by default, while the signed-in shell keeps honouring the stored `light` / `dark` / `system` mode.
+
+### Signed-in Pages Default to Light for New Users
+The signed-in shell also defaults to **light** when a user has never saved a theme. [User::getThemeAttribute()](file:///d:/Github/studylikepro/app/Models/User.php) supplies `mode => 'light'` as the default for any missing key, so first-time students and teachers land on the light palette during onboarding regardless of their operating system preference. `system` remains selectable in Theme Settings for users who want to follow their OS.
 
 ### Flow Method: AlpineJS Live Preview
 Theme adjustments on the settings page update the UI instantly using AlpineJS component state and a custom window event (`theme-changed`):

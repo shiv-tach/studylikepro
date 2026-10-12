@@ -9,22 +9,25 @@ use App\Models\Payment;
 use App\Models\Payout;
 use App\Models\Refund;
 use App\Models\TeacherProfile;
+use App\Services\Payments\PlatformEarningsService;
 use Carbon\CarbonInterface;
 use Generator;
 use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * CSV exports for the ops team: bookings, payments, refunds, payouts and teacher
- * performance, over any date range. Rows are streamed so a big export cannot
- * exhaust memory.
+ * CSV exports for the ops team: bookings, payments, refunds, payouts, teacher
+ * performance and platform earnings, over any date range. Rows are streamed so a
+ * big export cannot exhaust memory.
  */
 class AdminCsvExporter
 {
     /** @var list<string> */
-    public const TYPES = ['bookings', 'payments', 'refunds', 'payouts', 'teachers'];
+    public const TYPES = ['bookings', 'payments', 'refunds', 'payouts', 'teachers', 'earnings'];
 
     private string $timezone = 'Asia/Colombo';
+
+    public function __construct(private readonly PlatformEarningsService $platformEarnings) {}
 
     public function download(string $type, CarbonInterface $from, CarbonInterface $to): StreamedResponse
     {
@@ -62,6 +65,7 @@ class AdminCsvExporter
             'refunds' => ['Refund', 'Booking', 'Payment', 'Amount', 'Percent', 'Initiated by', 'Reason', 'Status', 'Created at'],
             'payouts' => ['Reference', 'Teacher', 'Lessons', 'Amount', 'Currency', 'Status', 'Paid at', 'Notes'],
             'teachers' => ['Teacher', 'Email', 'Verification', 'Rating', 'Reviews', 'Lessons completed', 'Gross billed', 'Commission', 'Net to teacher', 'Available balance', 'Pending balance'],
+            'earnings' => ['Date', 'Payment', 'Gateway', 'Student', 'Teacher', 'Source', 'Collected', 'Commission', 'Booking fee', 'Refunded', 'Teacher payout', 'Net platform', 'Currency'],
         };
     }
 
@@ -76,6 +80,7 @@ class AdminCsvExporter
             'refunds' => $this->refunds($from, $to),
             'payouts' => $this->payouts($from, $to),
             'teachers' => $this->teachers($from, $to),
+            'earnings' => $this->earnings($from, $to),
         };
     }
 
@@ -197,6 +202,34 @@ class AdminCsvExporter
                 $this->money((int) (clone $completed)->sum('teacher_payout_minor')),
                 $this->money($teacher->availableBalanceMinor()),
                 $this->money($teacher->pendingBalanceMinor()),
+            ];
+        }
+    }
+
+    /**
+     * One row per settled payment: what was collected and the platform's slice.
+     */
+    private function earnings(CarbonInterface $from, CarbonInterface $to): Generator
+    {
+        $query = $this->platformEarnings->settled($from, $to)->orderBy('captured_at');
+
+        foreach ($query->lazy(200) as $payment) {
+            $breakdown = $this->platformEarnings->breakdown($payment);
+
+            yield [
+                $this->date($payment->captured_at ?? $payment->created_at),
+                $payment->id,
+                $payment->gateway,
+                $payment->student?->name,
+                $payment->purchase?->teacherProfile?->user?->name ?? $payment->booking?->teacherProfile?->user?->name,
+                $breakdown['source'],
+                $this->money($breakdown['collected']),
+                $this->money($breakdown['commission']),
+                $this->money($breakdown['booking_fee']),
+                $this->money($breakdown['refunded']),
+                $this->money($breakdown['teacher']),
+                $this->money($breakdown['net']),
+                $payment->currency,
             ];
         }
     }

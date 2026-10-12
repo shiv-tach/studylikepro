@@ -150,7 +150,8 @@
                         </div>
 
                         <div class="mt-4 space-y-4">
-                            @foreach ($offerings as $type => $items)
+                            @foreach ($offerings as $items)
+                                @php $type = $items->first()->type(); @endphp
                                 <div>
                                     <p class="text-xs font-semibold uppercase tracking-wider text-primary">{{ $type->icon() }} {{ $type->label() }}</p>
                                     <div class="mt-2 grid gap-2 sm:grid-cols-2">

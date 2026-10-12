@@ -120,13 +120,16 @@ class User extends Authenticatable
 
     /**
      * Get the user's theme preferences with defaults for any missing keys.
+     *
+     * New users (students and teachers) start on the light palette so their
+     * first onboarding screens never open in dark mode.
      */
     public function getThemeAttribute(mixed $value): array
     {
         $defaults = [
             'preset' => 'classic',
             'accent' => 'indigo',
-            'mode' => 'system',
+            'mode' => 'light',
             'sidebarStyle' => 'flat',
         ];
 

@@ -87,6 +87,7 @@
 
     if ($user->isAdmin()) {
         $navItems[] = ['label' => 'Reports', 'url' => route('admin.reports.index'), 'active' => request()->routeIs('admin.reports*'), 'icon' => 'chart', 'badge' => null];
+        $navItems[] = ['label' => 'Earnings', 'url' => route('admin.earnings.index'), 'active' => request()->routeIs('admin.earnings*'), 'icon' => 'coins', 'badge' => null];
         $navItems[] = ['label' => 'Users', 'url' => route('admin.users.index'), 'active' => request()->routeIs('admin.users*'), 'icon' => 'user', 'badge' => null];
         $navItems[] = ['label' => 'Invite teachers', 'url' => route('admin.invites.index'), 'active' => request()->routeIs('admin.invites*'), 'icon' => 'invite', 'badge' => null];
         $navItems[] = ['label' => 'Disputes', 'url' => route('admin.disputes.index'), 'active' => request()->routeIs('admin.disputes*'), 'icon' => 'shield', 'badge' => $openDisputes ?: null];
@@ -217,6 +218,10 @@
                             @break
                         @case('check')
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            @break
+                        @case('coins')
+                            <circle cx="8" cy="8" r="6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.09 10.37A6 6 0 1110.34 18M7 6h1v4M16.71 13.88l.7.71-2.82 2.82" />
                             @break
                     @endswitch
                 </svg>

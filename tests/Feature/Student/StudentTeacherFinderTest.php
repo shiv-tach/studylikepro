@@ -1,11 +1,13 @@
 <?php
 
 use App\Enums\BookingStatus;
+use App\Enums\ServiceType;
 use App\Models\Booking;
 use App\Models\EducationLevel;
 use App\Models\Grade;
 use App\Models\Lesson;
 use App\Models\Review;
+use App\Models\ServiceOffering;
 use App\Models\Subject;
 use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherProfile;
@@ -377,4 +379,103 @@ test('the dedicated teacher page lists reviews and the rating', function () {
         ->assertOk()
         ->assertSee('Great grade 8 maths lesson.')
         ->assertSee('5 ★');
+});
+
+test('the dedicated teacher page lists the teacher services grouped by type', function () {
+    $student = finderStudent(8);
+    $teacher = gradeSplitTeacher();
+
+    $lesson = $teacher->lessons()->where('grade_id', gradeId(8))->firstOrFail();
+
+    ServiceOffering::factory()
+        ->for($teacher, 'teacherProfile')
+        ->forType(ServiceType::Lesson)
+        ->create([
+            'subject_id' => $lesson->subject_id,
+            'lesson_id' => $lesson->id,
+            'grade_id' => $lesson->grade_id,
+            'price_minor' => 120000,
+        ]);
+
+    ServiceOffering::factory()
+        ->for($teacher, 'teacherProfile')
+        ->forType(ServiceType::Summary)
+        ->create([
+            'subject_id' => $lesson->subject_id,
+            'lesson_id' => $lesson->id,
+            'grade_id' => $lesson->grade_id,
+            'price_minor' => 35000,
+        ]);
+
+    $this->actingAs($student)
+        ->get(route('student.teachers.show', $teacher))
+        ->assertOk()
+        ->assertSee('Services &amp; pricing', false)
+        ->assertSee(ServiceType::Lesson->icon().' '.ServiceType::Lesson->label())
+        ->assertSee(ServiceType::Summary->icon().' '.ServiceType::Summary->label())
+        ->assertSee('Grade Eight Numbers')
+        ->assertSee(platform_settings()->formatMinor(120000))
+        ->assertSee(platform_settings()->formatMinor(35000));
+});
+
+test('the dedicated teacher page hides services for other grades', function () {
+    $student = finderStudent(8);
+    $teacher = gradeSplitTeacher();
+
+    $grade9 = $teacher->lessons()->where('grade_id', gradeId(9))->firstOrFail();
+
+    // Grade 9 offerings must not leak onto a grade 8 student's page.
+    ServiceOffering::factory()
+        ->for($teacher, 'teacherProfile')
+        ->forType(ServiceType::Lesson)
+        ->create([
+            'subject_id' => $grade9->subject_id,
+            'lesson_id' => $grade9->id,
+            'grade_id' => $grade9->grade_id,
+            'price_minor' => 777700,
+        ]);
+
+    ServiceOffering::factory()
+        ->for($teacher, 'teacherProfile')
+        ->forType(ServiceType::Summary)
+        ->create([
+            'subject_id' => $grade9->subject_id,
+            'lesson_id' => $grade9->id,
+            'grade_id' => $grade9->grade_id,
+            'price_minor' => 666600,
+        ]);
+
+    // A grade-less subject-wide service shows when the teacher covers the
+    // student's grade on that subject...
+    ServiceOffering::factory()
+        ->for($teacher, 'teacherProfile')
+        ->forType(ServiceType::PaperMarking)
+        ->create([
+            'subject_id' => $grade9->subject_id,
+            'lesson_id' => null,
+            'grade_id' => null,
+            'price_minor' => 555500,
+        ]);
+
+    // ...and stays hidden when the teacher only takes that subject for other grades.
+    $science = Subject::factory()->create(['name' => 'Science', 'slug' => 'science']);
+    $teacher->subjects()->attach($science->id, ['grade_levels' => [(string) gradeId(9)]]);
+
+    ServiceOffering::factory()
+        ->for($teacher, 'teacherProfile')
+        ->forType(ServiceType::PaperMarking)
+        ->create([
+            'subject_id' => $science->id,
+            'lesson_id' => null,
+            'grade_id' => null,
+            'price_minor' => 444400,
+        ]);
+
+    $this->actingAs($student)
+        ->get(route('student.teachers.show', $teacher))
+        ->assertOk()
+        ->assertSee(platform_settings()->formatMinor(555500))
+        ->assertDontSee(platform_settings()->formatMinor(777700))
+        ->assertDontSee(platform_settings()->formatMinor(666600))
+        ->assertDontSee(platform_settings()->formatMinor(444400));
 });

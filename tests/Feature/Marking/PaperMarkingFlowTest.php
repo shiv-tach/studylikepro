@@ -269,6 +269,26 @@ it('renders the submission page for a paper-marking offering', function () {
         ->assertSee(platform_settings()->formatMinor($offering->price_minor));
 });
 
+it('renders the submission page with per-file validation errors after a rejected upload', function () {
+    Storage::fake('local');
+
+    $offering = markingOffering();
+    $student = User::factory()->student()->onboarded()->create();
+
+    $this->from(route('student.marking.create', $offering))
+        ->actingAs($student)
+        ->post(route('student.marking.store', $offering), [
+            'files' => [UploadedFile::fake()->create('notes.txt', 10, 'text/plain')],
+        ])
+        ->assertSessionHasErrors('files.0')
+        ->assertRedirect(route('student.marking.create', $offering));
+
+    $this->actingAs($student)
+        ->get(route('student.marking.create', $offering))
+        ->assertOk()
+        ->assertSee('files.0');
+});
+
 it('404s the submission page for a non-marking offering', function () {
     $teacher = TeacherProfile::factory()->approved()->create();
     $offering = ServiceOffering::factory()

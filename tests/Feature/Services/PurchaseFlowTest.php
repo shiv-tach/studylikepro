@@ -95,6 +95,32 @@ it('activates a purchase when the payment is captured and opens a pending earnin
         ->and($purchase->fresh()->earning->status)->toBe(EarningStatus::Pending);
 });
 
+it('wires the demo payment buttons on the purchase checkout page', function () {
+    ['student' => $student, 'offering' => $offering] = serviceScenario();
+
+    $purchase = app(PurchaseService::class)->create($offering, $student);
+    $payment = app(PurchaseService::class)->startCheckout($purchase);
+
+    $this->actingAs($student)
+        ->get(route('student.purchases.checkout.show', $payment))
+        ->assertOk()
+        ->assertSee('data-demo-payment', false)
+        ->assertSee('form[data-demo-payment]', false);
+});
+
+it('shows a service-purchase earning on the teacher ledger', function () {
+    ['student' => $student, 'teacher' => $teacher, 'offering' => $offering, 'lesson' => $lesson] = serviceScenario();
+
+    $purchase = app(PurchaseService::class)->create($offering, $student);
+    capturePurchase($purchase);
+
+    $this->actingAs($teacher->user)
+        ->get(route('teacher.earnings.index'))
+        ->assertOk()
+        ->assertSee($lesson->name)
+        ->assertSee($student->name);
+});
+
 it('books a session against a plan and tracks the remaining balance', function () {
     ['student' => $student, 'offering' => $offering] = serviceScenario(
         overrides: [

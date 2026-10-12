@@ -134,6 +134,21 @@
                         </form>
                     </div>
                 </div>
+                <script>
+                    document.querySelectorAll('form[data-demo-payment]').forEach((form) => {
+                        form.addEventListener('submit', async (event) => {
+                            event.preventDefault();
+                            const button = form.querySelector('button');
+                            button.disabled = true;
+                            await fetch(form.action, {
+                                method: 'POST',
+                                body: new FormData(form),
+                                headers: { Accept: 'application/json' },
+                            });
+                            window.location.href = form.dataset.redirect;
+                        });
+                    });
+                </script>
             @endif
         </div>
     </div>

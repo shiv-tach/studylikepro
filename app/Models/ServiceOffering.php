@@ -96,6 +96,26 @@ class ServiceOffering extends Model
         return $query->where('lesson_id', $lessonId);
     }
 
+    /**
+     * Offerings a student at the given grade can buy: ones pinned to that grade
+     * directly or through their lesson, plus grade-less subject-wide services
+     * for subjects the teacher covers that grade on.
+     *
+     * @param  array<int, int>  $subjectIds  subjects the teacher teaches at the grade
+     */
+    public function scopeForGrade(Builder $query, int $gradeId, array $subjectIds): Builder
+    {
+        return $query->where(function (Builder $query) use ($gradeId, $subjectIds) {
+            $query->where('grade_id', $gradeId)
+                ->orWhereHas('lesson', fn (Builder $lesson) => $lesson->where('grade_id', $gradeId))
+                ->orWhere(function (Builder $query) use ($subjectIds) {
+                    $query->whereNull('grade_id')
+                        ->whereNull('lesson_id')
+                        ->whereIn('subject_id', $subjectIds);
+                });
+        });
+    }
+
     public function scopeOrdered(Builder $query): Builder
     {
         return $query->orderBy('sort_order')->orderBy('title');

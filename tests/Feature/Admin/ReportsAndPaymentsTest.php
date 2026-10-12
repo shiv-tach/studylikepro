@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\Refund;
+use App\Models\ServicePurchase;
 use App\Models\User;
 use App\Services\AdminCsvExporter;
 use App\Services\Payments\RefundService;
@@ -31,6 +32,24 @@ it('shows revenue, commission and lesson totals for the range', function () {
 
     $response->assertSee($commission);
     $response->assertSee($scenario['teacherUser']->name);
+});
+
+it('includes service purchase commission on the dashboard', function () {
+    $admin = User::factory()->admin()->create();
+    $purchase = ServicePurchase::factory()->create(['platform_fee_minor' => 15000]);
+
+    Payment::factory()->create([
+        'booking_id' => null,
+        'service_purchase_id' => $purchase->id,
+        'student_id' => $purchase->student_id,
+        'amount_minor' => $purchase->totalMinor(),
+        'currency' => $purchase->currency,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSee(platform_settings()->formatMinor($purchase->platform_fee_minor));
 });
 
 it('excludes payments outside the selected range', function () {
@@ -123,6 +142,30 @@ it('filters the payment list by status, gateway and date', function () {
         ]))
         ->assertOk()
         ->assertSee('No payments match these filters yet.');
+});
+
+it('lists a service purchase payment that has no booking', function () {
+    $admin = User::factory()->admin()->create();
+    $purchase = ServicePurchase::factory()->create();
+    $payment = Payment::factory()->create([
+        'booking_id' => null,
+        'service_purchase_id' => $purchase->id,
+        'student_id' => $purchase->student_id,
+        'amount_minor' => $purchase->price_minor,
+        'currency' => $purchase->currency,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.payments.index'))
+        ->assertOk()
+        ->assertSee($payment->gateway_payment_id)
+        ->assertSee($purchase->teacherProfile->user->name);
+
+    $this->actingAs($admin)
+        ->get(route('admin.payments.show', $payment))
+        ->assertOk()
+        ->assertSee($purchase->service_type->label())
+        ->assertSee($purchase->teacherProfile->user->name);
 });
 
 it('shows one payment with its refund history and refund control', function () {

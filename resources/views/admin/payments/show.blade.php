@@ -4,6 +4,7 @@
     $chip = 'inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300';
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);
     $booking = $payment->booking;
+    $purchase = $payment->purchase;
 @endphp
 
 <x-app-layout>
@@ -101,6 +102,25 @@
                             {{ __('Commission :fee · payout :payout', [
                                 'fee' => $money($booking->platform_fee_minor),
                                 'payout' => $money($booking->teacher_payout_minor),
+                            ]) }}
+                        </p>
+                    </div>
+                @endif
+
+                @if ($purchase)
+                    <div class="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+                        <a href="{{ route('admin.purchases.show', $purchase) }}" class="text-sm font-semibold text-primary hover:underline">
+                            {{ __(':type #:id', ['type' => $purchase->service_type->label(), 'id' => $purchase->id]) }}
+                        </a>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            {{ $purchase->teacherProfile->user->name }}
+                            @if ($purchase->subject) · {{ $purchase->subject->name }} @endif
+                        </p>
+                        <p class="mt-2 text-xs text-slate-400">
+                            {{ __('Price :price · commission :fee · payout :payout', [
+                                'price' => $money($purchase->price_minor),
+                                'fee' => $money($purchase->platform_fee_minor),
+                                'payout' => $money($purchase->teacher_payout_minor),
                             ]) }}
                         </p>
                     </div>

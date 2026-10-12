@@ -15,7 +15,7 @@
         <!-- Blocking theme script: prevents flash of light theme on page load -->
         <script>
             (function() {
-                const mode = localStorage.getItem('themeMode') || '{{ $userTheme['mode'] ?? 'system' }}';
+                const mode = localStorage.getItem('themeMode') || '{{ $userTheme['mode'] ?? 'light' }}';
                 const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
                 if (isDark) {
                     document.documentElement.classList.add('dark');
@@ -64,7 +64,7 @@
               themeTransitionEnabled: false,
               themePreset: localStorage.getItem('themePreset') || '{{ $preset }}',
               themeAccent: localStorage.getItem('themeAccent') || '{{ $userTheme['accent'] ?? 'indigo' }}',
-              themeMode: localStorage.getItem('themeMode') || '{{ $userTheme['mode'] ?? 'system' }}',
+              themeMode: localStorage.getItem('themeMode') || '{{ $userTheme['mode'] ?? 'light' }}',
               sidebarStyle: localStorage.getItem('sidebarStyle') || '{{ $userTheme['sidebarStyle'] ?? 'flat' }}',
               initTheme() {
                   this.applyThemeMode();

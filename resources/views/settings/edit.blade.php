@@ -16,7 +16,7 @@
          x-data="{
             selectedPreset: '{{ $user->theme['preset'] ?? 'classic' }}',
             selectedAccent: '{{ $user->theme['accent'] ?? 'indigo' }}',
-            selectedMode: '{{ $user->theme['mode'] ?? 'system' }}',
+            selectedMode: '{{ $user->theme['mode'] ?? 'light' }}',
             selectedSidebarStyle: '{{ $user->theme['sidebarStyle'] ?? 'flat' }}',
 
             previewTheme(preset, accent, mode, sidebarStyle) {

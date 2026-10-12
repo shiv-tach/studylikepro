@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\BookingFeePromotionController as AdminBookingFeeP
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DisputeController as AdminDisputeController;
 use App\Http\Controllers\Admin\EducationLevelController as AdminEducationLevelController;
+use App\Http\Controllers\Admin\EarningsController as AdminEarningsController;
 use App\Http\Controllers\Admin\LessonController as AdminLessonController;
 use App\Http\Controllers\Admin\ModerationController as AdminModerationController;
 use App\Http\Controllers\Admin\PaperMarkingController as AdminPaperMarkingController;
@@ -251,6 +252,8 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended'
 
         Route::get('/reports', [AdminReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/export/{type}', [AdminReportController::class, 'export'])->name('reports.export');
+
+        Route::get('/earnings', AdminEarningsController::class)->name('earnings.index');
 
         Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
         Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
