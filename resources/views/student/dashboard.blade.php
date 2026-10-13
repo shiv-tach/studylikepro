@@ -1,201 +1,161 @@
 @php
-    $cardBase = 'rounded-2xl border p-6 transition-all hover:shadow-md hover:border-primary/40 dark:hover:border-primary/30';
-    $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
-    $chip = 'inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400';
-    $profile = Auth::user()->studentProfile;
-    $gradeLabel = $profile?->grade?->label;
-    $interestsCount = Auth::user()->interestedSubjects()->count();
-    $openRequestsCount = Auth::user()->tutoringRequests()->where('status', \App\Enums\RequestStatus::Open->value)->count();
-    $upcomingLessonsCount = Auth::user()->bookings()->upcoming()->whereIn('status', ['pending_payment', 'confirmed', 'in_progress'])->count();
+    // The dashboard is rendered by resources/js/student-dashboard. Blade owns the
+    // copy, the route map and the student's live numbers, then hands them over as
+    // a JSON island, so no URL or figure is ever hardcoded in the Vue app.
+    $quickActions = [
+        [
+            'key' => 'ask',
+            'urlKey' => 'ask',
+            'eyebrow' => __('Ask'),
+            'label' => __('Ask a question'),
+            'description' => __('Describe it or upload a photo — AI finds the lesson.'),
+            'icon' => 'camera',
+            'tone' => 'primary',
+            'badge' => null,
+        ],
+        [
+            'key' => 'requests',
+            'urlKey' => 'requests',
+            'eyebrow' => __('Requests'),
+            'label' => __('My requests'),
+            'description' => __('Track teacher proposals and your held slots.'),
+            'icon' => 'clipboard',
+            'tone' => 'amber',
+            'badge' => $openRequestCount > 0 ? __(':count open', ['count' => $openRequestCount]) : __('None open'),
+        ],
+        [
+            'key' => 'lessons',
+            'urlKey' => 'bookings',
+            'eyebrow' => __('Lessons'),
+            'label' => __('My lessons'),
+            'description' => __('Holds, upcoming lessons and past history.'),
+            'icon' => 'calendar',
+            'tone' => 'emerald',
+            'badge' => $upcomingLessonCount > 0 ? __(':count upcoming', ['count' => $upcomingLessonCount]) : __('None booked'),
+        ],
+        [
+            'key' => 'profile',
+            'urlKey' => 'profile',
+            'eyebrow' => __('Profile'),
+            'label' => __('My learning profile'),
+            'description' => __('Grade, goals and photo.'),
+            'icon' => 'user',
+            'tone' => 'primary',
+            'badge' => null,
+        ],
+        [
+            'key' => 'theme',
+            'urlKey' => 'theme',
+            'eyebrow' => __('Appearance'),
+            'label' => __('Theme & appearance'),
+            'description' => __('Personalize presets, accents, and dark mode.'),
+            'icon' => 'palette',
+            'tone' => 'violet',
+            'badge' => null,
+        ],
+        [
+            'key' => 'subjects',
+            'urlKey' => 'subjects',
+            'eyebrow' => __('Learning'),
+            'label' => __('My subjects'),
+            'description' => __('Your compulsory and picked subjects — open one to explore lessons, teachers and services.'),
+            'icon' => 'book',
+            'tone' => 'violet',
+            'badge' => $subjectCount > 0 ? $subjectCount.' '.Str::plural('subject', $subjectCount) : __('Browse subjects'),
+        ],
+        [
+            'key' => 'teachers',
+            'urlKey' => 'teachers',
+            'eyebrow' => __('Tutors'),
+            'label' => __('Find a teacher'),
+            'description' => __('Verified tutors who take your grade — filter by subject, language and lesson times.'),
+            'icon' => 'users',
+            'tone' => 'primary',
+            'badge' => $gradeLabel ?? __('Directory'),
+        ],
+    ];
+
+    $dashboard = [
+        'appName' => config('app.name', 'Studylikepro'),
+        'user' => [
+            'name' => Auth::user()->name,
+            'grade' => $gradeLabel,
+            'timezone' => $displayTimezone,
+            'learningLanguage' => $learningLanguage,
+        ],
+        'theme' => ['preset' => $themePreset],
+        'flash' => ['profileCompleted' => session('status') === 'profile-completed'],
+        'stats' => [
+            'subjects' => $subjectCount,
+            'openRequests' => $openRequestCount,
+            'upcomingLessons' => $upcomingLessonCount,
+            'completedLessons' => $completedLessonCount,
+            'reviewedLessons' => $reviewedLessonCount,
+        ],
+        'nextLesson' => $nextLesson,
+        'awaitingReview' => $awaitingReview,
+        'quickActions' => $quickActions,
+        'urls' => [
+            'ask' => route('student.requests.create'),
+            'requests' => route('student.requests.index'),
+            'bookings' => route('student.bookings.index'),
+            'pastBookings' => route('student.bookings.index', ['tab' => 'past']),
+            'profile' => route('student.profile'),
+            'theme' => route('settings.theme'),
+            'subjects' => route('student.interests.edit'),
+            'teachers' => route('student.teachers.index'),
+        ],
+    ];
+
+    // JSON_UNESCAPED_SLASHES keeps the URLs readable; the HEX flags keep the
+    // island safe inside a <script> tag.
+    $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
 @endphp
+
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">
-            {{ __('My Learning') }}
-        </h2>
+        <div class="flex items-center gap-3">
+            <span class="hidden h-9 w-9 items-center justify-center rounded-xl bg-primary/10 p-2 text-primary sm:flex">
+                <svg class="h-full w-full" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 4.5l8.5 3.8-8.5 3.8-8.5-3.8z" />
+                    <path d="M7 10.6V15c0 1.7 2.2 3 5 3s5-1.3 5-3v-4.4" />
+                    <path d="M19.5 9.2V14" />
+                </svg>
+            </span>
+            <div>
+                <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">
+                    {{ __('My Learning') }}
+                </h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                    {{ __('Every lesson, request and next step in one place.') }}
+                </p>
+            </div>
+        </div>
     </x-slot>
 
-    <div class="space-y-6">
-        @if (session('status') === 'profile-completed')
-            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                Your profile is complete — welcome to Studylikepro! 🎉
-            </div>
-        @endif
+    <script type="application/json" id="student-dashboard-config">@json($dashboard, $jsonFlags)</script>
 
-        <!-- Welcome banner -->
-        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-primary/80 to-purple-600 p-6 text-white shadow-lg shadow-primary/10 dark:shadow-primary/5">
-            <div class="relative z-10 max-w-xl">
-                <h3 class="text-xl font-bold md:text-2xl">Welcome, {{ Auth::user()->name }}! 👋</h3>
-                <p class="mt-1 text-sm text-white/90">Studylikepro connects you with verified tutors for live 1-on-1 lessons. Upload a question, get matched to the right lesson, and book a time that works for you.</p>
-                @if ($profile)
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        @if ($gradeLabel)
-                            <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur-sm">🎓 {{ $gradeLabel }}</span>
-                        @endif
-                        <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur-sm">🕐 {{ $profile->timezone }}</span>
-                    </div>
-                @endif
-            </div>
-            <div class="absolute right-0 top-0 -mr-6 -mt-6 h-36 w-36 rounded-full bg-white/10 blur-xl"></div>
-            <div class="absolute right-20 bottom-0 -mb-10 h-28 w-28 rounded-full bg-white/10 blur-lg"></div>
+    <div id="student-dashboard-app" class="space-y-6"></div>
+
+    {{-- Fallback for a browser without JavaScript: the page is a thin shell, so
+         point students straight at the destinations the dashboard links to. --}}
+    <noscript>
+        <div class="mt-6 rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900">
+            <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('Your learning') }}</h3>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                {{ __('The dashboard needs JavaScript. Your main destinations are:') }}
+            </p>
+            <ul class="mt-4 space-y-2 text-sm font-semibold text-primary">
+                <li><a class="hover:underline" href="{{ route('student.requests.create') }}">{{ __('Ask a question') }}</a></li>
+                <li><a class="hover:underline" href="{{ route('student.requests.index') }}">{{ __('My requests') }}</a></li>
+                <li><a class="hover:underline" href="{{ route('student.bookings.index') }}">{{ __('My lessons') }}</a></li>
+                <li><a class="hover:underline" href="{{ route('student.interests.edit') }}">{{ __('My subjects') }}</a></li>
+                <li><a class="hover:underline" href="{{ route('student.teachers.index') }}">{{ __('Find a teacher') }}</a></li>
+                <li><a class="hover:underline" href="{{ route('student.profile') }}">{{ __('My learning profile') }}</a></li>
+                <li><a class="hover:underline" href="{{ route('settings.theme') }}">{{ __('Theme & appearance') }}</a></li>
+            </ul>
         </div>
+    </noscript>
 
-        <!-- Quick actions -->
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <a href="{{ route('student.requests.create') }}" class="group {{ $cardBase }}"
-               :class="{{ $cardTheme }}">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Ask</span>
-                    <div class="rounded-xl bg-primary/10 p-2.5 text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-white">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                    </div>
-                </div>
-                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">Ask a question</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Describe it or upload a photo — AI finds the lesson.</p>
-            </a>
-
-            <a href="{{ route('student.requests.index') }}" class="group {{ $cardBase }}"
-               :class="{{ $cardTheme }}">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Requests</span>
-                    @if ($openRequestsCount > 0)
-                        <span class="{{ $chip }}">{{ $openRequestsCount }} open</span>
-                    @else
-                        <span class="{{ $chip }}">None open</span>
-                    @endif
-                </div>
-                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">My requests</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Track teacher proposals and your held slots.</p>
-            </a>
-
-            <a href="{{ route('student.bookings.index') }}" class="group {{ $cardBase }}"
-               :class="{{ $cardTheme }}">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Lessons</span>
-                    @if ($upcomingLessonsCount > 0)
-                        <span class="{{ $chip }}">{{ $upcomingLessonsCount }} upcoming</span>
-                    @else
-                        <span class="{{ $chip }}">None booked</span>
-                    @endif
-                </div>
-                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">My lessons</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Holds, upcoming lessons and past history.</p>
-            </a>
-
-            <a href="{{ route('student.profile') }}" class="group {{ $cardBase }}"
-               :class="{{ $cardTheme }}">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Profile</span>
-                    <div class="rounded-xl bg-primary/10 p-2.5 text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-white">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                    </div>
-                </div>
-                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">My learning profile</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Grade, goals and photo.</p>
-            </a>
-
-            <a href="{{ route('settings.theme') }}" class="group {{ $cardBase }}"
-               :class="{{ $cardTheme }}">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Appearance</span>
-                    <div class="rounded-xl bg-primary/10 p-2.5 text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-white">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                        </svg>
-                    </div>
-                </div>
-                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">Theme & appearance</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Personalize presets, accents, and dark mode.</p>
-            </a>
-
-            <a href="{{ route('student.interests.edit') }}" class="group {{ $cardBase }}"
-               :class="{{ $cardTheme }}">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Learning</span>
-                    @if ($interestsCount > 0)
-                        <span class="{{ $chip }}">{{ $interestsCount }} {{ Str::plural('subject', $interestsCount) }}</span>
-                    @else
-                        <span class="{{ $chip }}">Browse subjects</span>
-                    @endif
-                </div>
-                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">My subjects</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Your compulsory and picked subjects — open one to explore lessons, teachers and services.</p>
-            </a>
-
-            <a href="{{ route('student.teachers.index') }}" class="group {{ $cardBase }}" :class="{{ $cardTheme }}">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Tutors</span>
-                    <span class="{{ $chip }}">{{ $gradeLabel ?? 'Directory' }}</span>
-                </div>
-                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">Find a teacher</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Verified tutors who take your grade — filter by subject, language and lesson times.</p>
-            </a>
-        </div>
-
-        <div class="grid gap-6 lg:grid-cols-3">
-            <!-- Build roadmap -->
-            <div class="lg:col-span-2 {{ $cardBase }} hover:shadow-none" :class="{{ $cardTheme }}">
-                <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Your path to your first lesson</h3>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Each step ships in a phase of the build plan, so you can watch the platform come together.</p>
-
-                @php
-                    $steps = [
-                        ['Profile & onboarding', 'Add your learning details so tutors know how to help.', 'Phase 1'],
-                        ['Choose subjects & lessons', 'Pick what you want help with from the catalog.', 'Phase 2'],
-                        ['Upload your question', 'Add a photo and AI suggests the exact lesson.', 'Phase 4'],
-                        ['Book & pay securely', 'Pick an available time and pay through the payment gateway.', 'Phase 5–6'],
-                        ['Join your live lesson', 'Meet your teacher in a private video room.', 'Phase 7'],
-                        ['Chat, review & history', 'Stay in touch, rate the lesson, and revisit past lessons.', 'Phase 8–9'],
-                    ];
-                @endphp
-
-                <ol class="mt-5 space-y-4">
-                    @foreach ($steps as $index => [$title, $description, $phase])
-                        <li class="flex items-start gap-3">
-                            <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">{{ $index + 1 }}</span>
-                            <div class="flex-1">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <h4 class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ $title }}</h4>
-                                    <span class="{{ $chip }}">{{ $phase }}</span>
-                                </div>
-                                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $description }}</p>
-                            </div>
-                        </li>
-                    @endforeach
-                </ol>
-            </div>
-
-            <!-- Flow overview -->
-            <div class="{{ $cardBase }} hover:shadow-none" :class="{{ $cardTheme }}">
-                <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">The Studylikepro flow</h3>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">One journey from question to lesson.</p>
-
-                @php
-                    $flow = [
-                        ['📷', 'Upload your question', 'Snap a photo of what you are stuck on.'],
-                        ['🤖', 'AI identifies the lesson', 'Know exactly what to learn next.'],
-                        ['👨‍🏫', 'Match with a verified teacher', 'Only approved tutors appear.'],
-                        ['🕐', 'Choose a time & pay', 'Real availability, secure checkout.'],
-                        ['🎥', 'Live lesson, then review', 'Learn 1-on-1 and rate your tutor.'],
-                    ];
-                @endphp
-
-                <ul class="mt-5 space-y-4">
-                    @foreach ($flow as [$emoji, $title, $description])
-                        <li class="flex items-start gap-3">
-                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-base">{{ $emoji }}</span>
-                            <div>
-                                <h4 class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ $title }}</h4>
-                                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ $description }}</p>
-                            </div>
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
-        </div>
-    </div>
+    @vite('resources/js/student-dashboard/main.js')
 </x-app-layout>

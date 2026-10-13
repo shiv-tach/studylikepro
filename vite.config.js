@@ -11,6 +11,12 @@ export default defineConfig({
                 // The marketing landing page is its own Vue entry, so the rest of
                 // the app keeps shipping plain Blade + Alpine without Vue.
                 'resources/js/landing/main.js',
+                // The student dashboard is the signed-in shell's Vue page; its
+                // bundle stays out of every other Blade + Alpine screen.
+                'resources/js/student-dashboard/main.js',
+                // The signed-in chrome (sidebar + top bar) that wraps every
+                // x-app-layout screen, so the layout itself is a Vue component.
+                'resources/js/app-shell/main.js',
             ],
             refresh: true,
         }),

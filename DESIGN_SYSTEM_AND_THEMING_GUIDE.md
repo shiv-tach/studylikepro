@@ -135,11 +135,27 @@ Theme adjustments on the settings page update the UI instantly using AlpineJS co
 
 ---
 
-## 🧩 Marketing Landing Page (Vue 3)
+## 🧩 Vue Pages (Vue 3)
 
-`/` ([welcome.blade.php](file:///d:/Github/studylikepro/resources/views/welcome.blade.php)) is the only Vue-rendered page in the app; everything else stays Blade + Alpine.
+The signed-in chrome (sidebar + top bar) and one page are rendered by Vue 3 single-file components; every other screen keeps Blade for its markup and Alpine for its page-level interactions.
 
-* **Entry point:** `resources/js/landing/main.js` is a separate Vite input (`vite.config.js`), so Vue is never shipped to the signed-in app.
+### Signed-in shell (sidebar + top bar)
+
+Every `x-app-layout` screen — student, teacher, admin — wears the same Vue shell, so [layouts/app.blade.php](file:///d:/Github/studylikepro/resources/views/layouts/app.blade.php) is now only the document, the theme bootstrap and the `{{ $slot }}`, and [layouts/navigation.blade.php](file:///d:/Github/studylikepro/resources/views/layouts/navigation.blade.php) only computes the navigation and emits the config island.
+
+* **Entry point:** `resources/js/app-shell/main.js` is its own Vite input, loaded by `layouts/app.blade.php`.
+* **Structure:** `AppShell.vue` provides the theme preset and the drawer state, then renders `AppSidebar.vue` (brand, nav list, signed-in user) and `AppTopbar.vue` (hamburger, page heading, `NotificationBell.vue`, `ProfileMenu.vue`). Both dropdowns are `DropdownPanel.vue`, which owns click-outside/Escape and the open/close transition; nav rows are `SidebarNavItem.vue`; icons live in `icons.js` and the preset → class maps in `theme.js`.
+* **Server data:** Blade writes a `#studylikepro-shell-config` JSON island (user, `navItems`, notifications, CSRF token, route map) plus a `#studylikepro-page-header` template holding the page's `header` slot. Never hardcode a URL in the shell — read it from `config.urls`. The island is read *before* `mount()`, because mounting clears the container.
+* **Layout:** the mount point is `display: contents`, so the sticky top bar keeps the content column as its containing block and the sidebar stays `fixed`; `md:pl-64` on the content column is unchanged.
+* **Theme preset:** the head bootstrap script and the Alpine `theme-changed` event stay the source of truth, so `useThemePreset` mirrors them and the chrome restyles live while the user previews a preset in Theme Settings.
+* **No-JS fallback:** a `<noscript>` block renders the same `navItems` as plain links.
+* **Contract test:** `tests/Feature/AppShellTest.php` asserts the island (the `shellConfig()` helper lives in `tests/Pest.php`).
+
+### Marketing landing page (`/`)
+
+`/` ([welcome.blade.php](file:///d:/Github/studylikepro/resources/views/welcome.blade.php)) is the public entry point.
+
+* **Entry point:** `resources/js/landing/main.js` is a separate Vite input (`vite.config.js`), so Vue is never shipped to the Blade + Alpine screens.
 * **Structure:** [App.vue](file:///d:/Github/studylikepro/resources/js/landing/App.vue) composes one component per section under `resources/js/landing/components/` (header, hero, stats, subjects, how-it-works, features, teachers, reviews, FAQ, CTA, footer). Icons live in `resources/js/landing/icons.js` and all copy in `resources/js/landing/content.js` — change wording there, not in the templates.
 * **Server data:** Blade renders a `#landing-config` JSON island (`route()` URLs, `auth()->check()`, support details) and mounts the app on `#landing-app`. Never hardcode a URL in the Vue code — read it from `config.urls`.
 * **No-JS fallback:** a `<noscript>` block lists the key destinations, and the meta description/Open Graph tags are rendered server-side.
@@ -147,6 +163,18 @@ Theme adjustments on the settings page update the UI instantly using AlpineJS co
 * **Theme:** the head bootstrap script is unchanged (light unless `themeMode === 'dark'`). The header toggle writes the same `themeMode` key, so the choice survives navigation to the Blade pages.
 * **Motion:** the `v-reveal` directive (registered in `main.js`) fades sections in; it is skipped entirely for `prefers-reduced-motion`.
 * **A11y:** sections are labelled, the FAQ uses `aria-expanded`/`aria-controls`, and buttons are real `<button>` elements with `aria-pressed` where they toggle state.
+
+### Student dashboard (`/student/dashboard`)
+
+The signed-in student workspace is a Vue app mounted **inside** the shell above (`x-app-layout`), so it inherits the shared Vue sidebar and top bar.
+
+* **Entry point:** `resources/js/student-dashboard/main.js` is its own Vite input; [dashboard.blade.php](file:///d:/Github/studylikepro/resources/views/student/dashboard.blade.php) calls `@vite(...)` for it, so no other signed-in screen loads the bundle.
+* **Server data:** [DashboardController](file:///d:/Github/studylikepro/app/Http/Controllers/Student/DashboardController.php) computes the figures, the next lesson, the review nudge and the route map, then Blade renders them into a `#student-dashboard-config` JSON island and mounts the app on `#student-dashboard-app`. Never hardcode a URL in the Vue code — read it from `config.urls`; quick actions carry a `urlKey` into that map.
+* **Structure:** [App.vue](file:///d:/Github/studylikepro/resources/js/student-dashboard/App.vue) composes the banner, stat tiles, next-lesson card, review prompt, quick actions, roadmap and flow panels from `resources/js/student-dashboard/components/`. Static copy lives in `content.js`, the icon set in `icons.js`, and the card surfaces in `styles.js`.
+* **Theme preset:** the shell owns the preset, so a `useThemePreset` composable reads `localStorage` / the `theme-changed` event and the app `provide()`s it. Cards resolve their surface through the `usePanel` composable — `glass` and `ocean` get the frosted translucent card, the other presets the opaque one.
+* **Motion:** `RevealOnScroll.vue` fades panels in with an `IntersectionObserver` and stat values ease up through a `useCountUp` composable; both are skipped for `prefers-reduced-motion`.
+* **A11y:** sections are labelled, status badges are text (not colour-only), and every card is a real link.
+* **Contract test:** `tests/Feature/Student/StudentDashboardTest.php` asserts the island the Vue app depends on.
 3. **Database update:** Form submission saves selection permanently.
 
 ---
@@ -166,9 +194,10 @@ When writing new views, editing components, or extending layouts, you **MUST** f
   ```
 
 ### 2. High-Aesthetic UI Elements (Requirements Checklist)
-* **Smooth Transitions:** Enable transition states via AlpineJS: `:class="{'transition-colors duration-300': themeTransitionEnabled}"`.
+* **Smooth Transitions:** Enable transition states via AlpineJS: `:class="{'transition-colors duration-300': themeTransitionEnabled}"`. Vue pages do the same through `usePanel()`/`styles.js` class bindings.
 * **Rounded Corners:** Prefer `rounded-2xl` for cards/panels and `rounded-xl` for buttons/input elements.
 * **Interactive hover effects:** Anchor hover interactions with scaling or slight accent translation changes (e.g., `hover:border-primary/40 hover:shadow-lg group-hover:translate-x-0.5`).
+* **Tailwind class detection:** never build a class name from a variable inside a Vue component (`bg-${color}`); Tailwind only sees complete class strings in the source. Semantic status colours that live in a PHP enum are therefore mapped again in the component (see `NextLessonCard.vue`).
 
 ---
 
@@ -177,4 +206,6 @@ When writing new views, editing components, or extending layouts, you **MUST** f
 * **Custom Patterns CSS:** [resources/css/app.css](file:///d:/Github/studylikepro/resources/css/app.css)
 * **Master Layout File:** [resources/views/layouts/app.blade.php](file:///d:/Github/studylikepro/resources/views/layouts/app.blade.php)
 * **Sidebar Template:** [resources/views/layouts/navigation.blade.php](file:///d:/Github/studylikepro/resources/views/layouts/navigation.blade.php)
+* **Vue Shell Components:** [resources/js/app-shell/](file:///d:/Github/studylikepro/resources/js/app-shell)
 * **Theme Configuration view:** [resources/views/settings/edit.blade.php](file:///d:/Github/studylikepro/resources/views/settings/edit.blade.php)
+* **Vue Entries:** [resources/js/app-shell/main.js](file:///d:/Github/studylikepro/resources/js/app-shell/main.js), [resources/js/landing/main.js](file:///d:/Github/studylikepro/resources/js/landing/main.js), [resources/js/student-dashboard/main.js](file:///d:/Github/studylikepro/resources/js/student-dashboard/main.js)

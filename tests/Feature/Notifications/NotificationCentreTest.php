@@ -83,11 +83,14 @@ it('caps the bell badge once the pile gets deep', function () {
         $scenario['student']->notify(new LessonCompleted($scenario['booking']));
     }
 
-    $this->actingAs($scenario['student'])
+    $response = $this->actingAs($scenario['student'])
         ->get(route('student.dashboard'))
         ->assertOk()
-        ->assertSee('9+')
         ->assertSee(route('notifications.index'), false);
+
+    // The badge is drawn by resources/js/app-shell, which caps it at "9+"; the
+    // island carries the full count so the bell itself never lies.
+    expect(shellConfig($response)['notifications']['unreadCount'])->toBe(12);
 });
 
 it('honours the email preference on every notification', function () {

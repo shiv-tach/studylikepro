@@ -16,6 +16,7 @@ use App\Services\Payments\EarningsService;
 use App\Support\BookingDraft;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /*
@@ -62,6 +63,22 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Read the config island the Vue app-shell renders the sidebar and top bar from.
+ *
+ * @return array<string, mixed>
+ */
+function shellConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="studylikepro-shell-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
 }
 
 /**
