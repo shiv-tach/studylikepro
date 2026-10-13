@@ -2,7 +2,7 @@
 
 Tutoring marketplace MVP — a student uploads a question, AI identifies the lesson, the platform matches a verified teacher, the student books and pays for a live 1-on-1 lesson, and both sides rate and track the outcome.
 
-Built with Laravel 12, Blade, Alpine.js, Tailwind CSS, Vite, and Pest.
+Built with Laravel 12, Blade, Alpine.js, Vue 3 (the marketing landing page), Tailwind CSS, Vite, and Pest.
 
 ## MVP scope
 

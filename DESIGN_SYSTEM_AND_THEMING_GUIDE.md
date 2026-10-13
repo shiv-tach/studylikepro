@@ -132,6 +132,21 @@ Theme adjustments on the settings page update the UI instantly using AlpineJS co
        ...
    }
    ```
+
+---
+
+## 🧩 Marketing Landing Page (Vue 3)
+
+`/` ([welcome.blade.php](file:///d:/Github/studylikepro/resources/views/welcome.blade.php)) is the only Vue-rendered page in the app; everything else stays Blade + Alpine.
+
+* **Entry point:** `resources/js/landing/main.js` is a separate Vite input (`vite.config.js`), so Vue is never shipped to the signed-in app.
+* **Structure:** [App.vue](file:///d:/Github/studylikepro/resources/js/landing/App.vue) composes one component per section under `resources/js/landing/components/` (header, hero, stats, subjects, how-it-works, features, teachers, reviews, FAQ, CTA, footer). Icons live in `resources/js/landing/icons.js` and all copy in `resources/js/landing/content.js` — change wording there, not in the templates.
+* **Server data:** Blade renders a `#landing-config` JSON island (`route()` URLs, `auth()->check()`, support details) and mounts the app on `#landing-app`. Never hardcode a URL in the Vue code — read it from `config.urls`.
+* **No-JS fallback:** a `<noscript>` block lists the key destinations, and the meta description/Open Graph tags are rendered server-side.
+* **Styling rules still apply:** use the dynamic `primary` color, the slate palette, `rounded-2xl`/`rounded-3xl`, translucent borders and `dark:` variants exactly as the Blade pages do. Tailwind scans `resources/js/**/*.{vue,js}`, so classes written inside single-file components are compiled.
+* **Theme:** the head bootstrap script is unchanged (light unless `themeMode === 'dark'`). The header toggle writes the same `themeMode` key, so the choice survives navigation to the Blade pages.
+* **Motion:** the `v-reveal` directive (registered in `main.js`) fades sections in; it is skipped entirely for `prefers-reduced-motion`.
+* **A11y:** sections are labelled, the FAQ uses `aria-expanded`/`aria-controls`, and buttons are real `<button>` elements with `aria-pressed` where they toggle state.
 3. **Database update:** Form submission saves selection permanently.
 
 ---
