@@ -408,7 +408,7 @@ test('the interests page shows compulsory subjects and only the picked basket su
         ->assertOk()
         ->assertSee('Compulsory subjects')
         ->assertSee('Category I')
-        ->assertSee('View lessons & teachers')
+        ->assertSee('View lessons and teachers')
         // Compulsory subjects and the picked basket subject open the student's
         // dedicated subject page, scoped to the student's own grade.
         ->assertSee(route('student.subjects.show', ['subject' => 'ol-mathematics', 'grade' => $grade10->id]))

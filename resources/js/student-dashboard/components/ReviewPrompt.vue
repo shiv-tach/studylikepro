@@ -1,6 +1,6 @@
 <script setup>
-import { usePanel } from '../composables/usePanel';
-import AppIcon from './AppIcon.vue';
+import { usePanel } from '../../shared/composables/usePanel';
+import AppIcon from '../../shared/components/AppIcon.vue';
 
 const props = defineProps({
     lesson: { type: Object, required: true },

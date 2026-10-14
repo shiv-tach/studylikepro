@@ -137,7 +137,7 @@ Theme adjustments on the settings page update the UI instantly using AlpineJS co
 
 ## 🧩 Vue Pages (Vue 3)
 
-The signed-in chrome (sidebar + top bar) and one page are rendered by Vue 3 single-file components; every other screen keeps Blade for its markup and Alpine for its page-level interactions.
+The signed-in chrome (sidebar + top bar) and a growing set of pages are rendered by Vue 3 single-file components; every other screen keeps Blade for its markup and Alpine for its page-level interactions. [DOC/vue-conversion-guide.md](DOC/vue-conversion-guide.md) is the step-by-step recipe for converting another screen, using `/student/interests` as the worked reference.
 
 ### Signed-in shell (sidebar + top bar)
 
@@ -175,6 +175,30 @@ The signed-in student workspace is a Vue app mounted **inside** the shell above 
 * **Motion:** `RevealOnScroll.vue` fades panels in with an `IntersectionObserver` and stat values ease up through a `useCountUp` composable; both are skipped for `prefers-reduced-motion`.
 * **A11y:** sections are labelled, status badges are text (not colour-only), and every card is a real link.
 * **Contract test:** `tests/Feature/Student/StudentDashboardTest.php` asserts the island the Vue app depends on.
+
+### Student subject pages (`/student/interests`, `/student/subjects/{slug}`)
+
+"My subjects" and the student subject page are the reference implementation for a conversion — the
+full walkthrough lives in [DOC/vue-conversion-guide.md](DOC/vue-conversion-guide.md).
+
+* **Entry point:** `resources/js/student-subjects/main.js` is one Vite input serving both pages; each Blade view calls `@vite(...)` and only the page's own mount point boots.
+* **Server data:** [InterestsController](file:///d:/Github/studylikepro/app/Http/Controllers/Student/InterestsController.php) and the subject controller keep every permission check, grouping and price format; Blade then renders the `#student-interests-config` / `#student-subject-config` JSON islands and mounts on `#student-interests-app` / `#student-subject-app`. Never hardcode a URL in the Vue code — read it from `config.urls`.
+* **Structure:** [InterestsApp.vue](file:///d:/Github/studylikepro/resources/js/student-subjects/InterestsApp.vue) and [SubjectApp.vue](file:///d:/Github/studylikepro/resources/js/student-subjects/SubjectApp.vue) compose the cards in `resources/js/student-subjects/components/` and reuse [resources/js/shared/](file:///d:/Github/studylikepro/resources/js/shared) (`AppIcon`, `UiChip`, `UiEmptyState`, `UiSectionHeading`, `UiBreadcrumbs`, `RevealOnScroll`, `usePanel`, `useThemePreset`, `styles.js`) rather than shipping their own icon/style copies. Blade copy and the CSRF token are `provide()`d once through `composables/usePageContext.js`, so cards `inject()` them instead of prop-drilling.
+* **Actions:** the subject page proves the interactive case — the payload decides *which* action a service card gets, and Vue renders a real `<form>` carrying `csrfToken`, so CSRF, validation errors and redirects all stay server-side.
+* **No-JS fallback:** both views render the same subjects/lessons as a `<noscript>` list.
+* **Contract tests:** `tests/Feature/Student/InterestsTest.php` and `tests/Feature/Student/BasketSubjectsTest.php` cover the behaviour; add an island assertion in the style of `StudentDashboardTest.php` when a payload changes.
+
+### Student request pages (`/student/requests`, `/student/requests/create`)
+
+The request list and the "Ask a question" form share one bundle, mounted inside the shell like the pages above.
+
+* **Entry point:** `resources/js/student-requests/main.js` is one Vite input serving both pages; each Blade view calls `@vite(...)` and only the page's own mount point boots (`#student-requests-app`, `#student-request-form-app`).
+* **Server data:** [TutoringRequestController](file:///d:/Github/studylikepro/app/Http/Controllers/Student/TutoringRequestController.php) keeps every permission check, the grade lock and the timezone formatting; Blade then renders the `#student-requests-config` / `#student-request-form-config` JSON islands. The list island carries the cards, the three status buckets and the summary figures (counted over the student's whole history, not just the page); the form island carries the limits, the old input, the CSRF token and the validation messages keyed by the field that failed.
+* **Structure:** [RequestsApp.vue](file:///d:/Github/studylikepro/resources/js/student-requests/RequestsApp.vue) composes the overview, the filter bar, the cards and the empty state; [CreateRequestApp.vue](file:///d:/Github/studylikepro/resources/js/student-requests/CreateRequestApp.vue) composes the question, window, photo and budget cards. Both reuse [resources/js/shared/](file:///d:/Github/studylikepro/resources/js/shared) and `composables/usePageContext.js` for the copy, the route map and the CSRF token instead of shipping their own copies.
+* **Interactivity that stays client-side:** the status buckets filter the requests already on the page, the form owns the repeatable windows (add/remove, max 5, min 1, contiguous `windows[n][…]` names), the photo dropzone trims a selection to `maxAttachments` and shows thumbnails, and the question counter warns below the minimum length. Laravel still validates every one of them.
+* **Actions:** the form is a real `method="POST"` form to `student.requests.store` carrying the island's CSRF token, so CSRF, validation errors, redirects and the queued AI classification all stay server-side.
+* **No-JS fallback:** both views render a `<noscript>` version — a plain list, and a plain form with the same field names, limits and attributes.
+* **Contract tests:** `tests/Feature/Student/RequestsIndexTest.php` and `tests/Feature/Student/RequestsCreateTest.php` assert the islands the two apps depend on.
 3. **Database update:** Form submission saves selection permanently.
 
 ---
@@ -208,4 +232,7 @@ When writing new views, editing components, or extending layouts, you **MUST** f
 * **Sidebar Template:** [resources/views/layouts/navigation.blade.php](file:///d:/Github/studylikepro/resources/views/layouts/navigation.blade.php)
 * **Vue Shell Components:** [resources/js/app-shell/](file:///d:/Github/studylikepro/resources/js/app-shell)
 * **Theme Configuration view:** [resources/views/settings/edit.blade.php](file:///d:/Github/studylikepro/resources/views/settings/edit.blade.php)
-* **Vue Entries:** [resources/js/app-shell/main.js](file:///d:/Github/studylikepro/resources/js/app-shell/main.js), [resources/js/landing/main.js](file:///d:/Github/studylikepro/resources/js/landing/main.js), [resources/js/student-dashboard/main.js](file:///d:/Github/studylikepro/resources/js/student-dashboard/main.js)
+* **Vue Entries:** [resources/js/app-shell/main.js](file:///d:/Github/studylikepro/resources/js/app-shell/main.js), [resources/js/landing/main.js](file:///d:/Github/studylikepro/resources/js/landing/main.js), [resources/js/student-dashboard/main.js](file:///d:/Github/studylikepro/resources/js/student-dashboard/main.js), [resources/js/student-subjects/main.js](file:///d:/Github/studylikepro/resources/js/student-subjects/main.js), [resources/js/student-requests/main.js](file:///d:/Github/studylikepro/resources/js/student-requests/main.js)
+* **Vue Shared Kit:** [resources/js/shared/](file:///d:/Github/studylikepro/resources/js/shared) — reuse these components, composables and class strings in every new page instead of shipping per-page copies.
+* **Vue Page Bundles:** [resources/js/student-dashboard/](file:///d:/Github/studylikepro/resources/js/student-dashboard), [resources/js/student-subjects/](file:///d:/Github/studylikepro/resources/js/student-subjects), [resources/js/student-requests/](file:///d:/Github/studylikepro/resources/js/student-requests)
+* **Conversion Guide:** [DOC/vue-conversion-guide.md](DOC/vue-conversion-guide.md)

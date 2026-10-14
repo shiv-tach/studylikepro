@@ -14,6 +14,12 @@ export default defineConfig({
                 // The student dashboard is the signed-in shell's Vue page; its
                 // bundle stays out of every other Blade + Alpine screen.
                 'resources/js/student-dashboard/main.js',
+                // "My subjects" and the student subject page share one Vue
+                // entry: whichever mount point the page renders boots.
+                'resources/js/student-subjects/main.js',
+                // The request list and the question form share one Vue entry,
+                // mounted only on the pages that render their island.
+                'resources/js/student-requests/main.js',
                 // The signed-in chrome (sidebar + top bar) that wraps every
                 // x-app-layout screen, so the layout itself is a Vue component.
                 'resources/js/app-shell/main.js',

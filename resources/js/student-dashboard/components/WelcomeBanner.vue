@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import AppIcon from './AppIcon.vue';
+import AppIcon from '../../shared/components/AppIcon.vue';
 
 const props = defineProps({
     appName: { type: String, default: 'Studylikepro' },

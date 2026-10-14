@@ -1,8 +1,8 @@
 <script setup>
 import { computed, toRef } from 'vue';
-import { useCountUp } from '../composables/useCountUp';
-import { usePanel } from '../composables/usePanel';
-import AppIcon from './AppIcon.vue';
+import { useCountUp } from '../../shared/composables/useCountUp';
+import { usePanel } from '../../shared/composables/usePanel';
+import AppIcon from '../../shared/components/AppIcon.vue';
 
 const props = defineProps({
     label: { type: String, required: true },

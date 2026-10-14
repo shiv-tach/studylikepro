@@ -1,7 +1,7 @@
 /**
- * The dashboard's own 24x24 stroke icons, drawn with currentColor so they follow
- * the surrounding text. Kept local to this entry point: the signed-in dashboard
- * never pulls in the landing page bundle, and vice versa.
+ * The signed-in workspace's shared 24x24 stroke icons, drawn with currentColor
+ * so they follow the surrounding text. One icon set for every Vue entry point
+ * under `resources/js`, so a card and a chip never disagree on a glyph.
  */
 export const icons = {
     sparkles: {
@@ -41,6 +41,13 @@ export const icons = {
     book: {
         paths: ['M5 4.5h8.5a3 3 0 013 3v12H8a3 3 0 01-3-3z', 'M16.5 19.5H18a1 1 0 001-1V7'],
     },
+    graduation: {
+        paths: [
+            'M12 4.5l8.5 3.8-8.5 3.8-8.5-3.8z',
+            'M7 10.6V15c0 1.7 2.2 3 5 3s5-1.3 5-3v-4.4',
+            'M19.5 9.2V14',
+        ],
+    },
     palette: {
         paths: ['M12 4a8 8 0 000 16h1.4a1.5 1.5 0 001.1-2.5 1.5 1.5 0 011.1-2.5H17a3 3 0 003-3A8 8 0 0012 4z'],
         circles: [
@@ -53,6 +60,12 @@ export const icons = {
         paths: ['M8.5 12.4l2.6 2.6 4.9-5.3'],
         circles: [{ cx: 12, cy: 12, r: 8.5 }],
     },
+    check: {
+        paths: ['M5.5 12.5l4.5 4.5 8.5-9.5'],
+    },
+    'shield-check': {
+        paths: ['M12 3.5l6.5 2.4v5.5c0 3.9-2.7 7.3-6.5 8.6-3.8-1.3-6.5-4.7-6.5-8.6V5.9z', 'M9.2 12.3l2 2 3.7-4.1'],
+    },
     star: {
         paths: ['M12 4.5l2.3 4.7 5.2.8-3.8 3.6.9 5.1-4.6-2.5-4.6 2.5.9-5.1-3.8-3.6 5.2-.8z'],
     },
@@ -63,8 +76,22 @@ export const icons = {
         paths: ['M12 7.8V12l3 1.8'],
         circles: [{ cx: 12, cy: 12, r: 8 }],
     },
+    tag: {
+        paths: ['M4.6 11.3V5.7a1.1 1.1 0 011.1-1.1h5.6c.3 0 .6.1.8.3l7.3 7.3a1.1 1.1 0 010 1.6l-5.6 5.6a1.1 1.1 0 01-1.6 0l-7.3-7.3a1.1 1.1 0 01-.3-.8z'],
+        circles: [{ cx: 8.4, cy: 8.4, r: 1.2 }],
+    },
+    search: {
+        paths: ['M15.8 15.8L20 20'],
+        circles: [{ cx: 11, cy: 11, r: 6.5 }],
+    },
     'arrow-right': {
         paths: ['M4.5 12h14', 'M13 6.5l5.5 5.5-5.5 5.5'],
+    },
+    'chevron-right': {
+        paths: ['M9.5 5.5l6.5 6.5-6.5 6.5'],
+    },
+    'chevron-left': {
+        paths: ['M14.5 5.5L8 12l6.5 6.5'],
     },
 };
 

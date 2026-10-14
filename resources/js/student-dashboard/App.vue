@@ -1,12 +1,12 @@
 <script setup>
 import { computed, provide } from 'vue';
 import { roadmapSteps } from './content';
-import { THEME_PRESET_KEY, useThemePreset } from './composables/useThemePreset';
+import { THEME_PRESET_KEY, useThemePreset } from '../shared/composables/useThemePreset';
+import RevealOnScroll from '../shared/components/RevealOnScroll.vue';
 import LearningRoadmap from './components/LearningRoadmap.vue';
 import NextLessonCard from './components/NextLessonCard.vue';
 import PlatformFlow from './components/PlatformFlow.vue';
 import QuickActionCard from './components/QuickActionCard.vue';
-import RevealOnScroll from './components/RevealOnScroll.vue';
 import ReviewPrompt from './components/ReviewPrompt.vue';
 import StatTile from './components/StatTile.vue';
 import WelcomeBanner from './components/WelcomeBanner.vue';

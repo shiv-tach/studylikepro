@@ -29,12 +29,25 @@ class TutoringRequestController extends Controller
      */
     public function index(Request $request): View
     {
-        $requests = $request->user()->tutoringRequests()
+        $user = $request->user();
+
+        $requests = $user->tutoringRequests()
             ->with(['subject', 'lesson'])
             ->withCount(['responses' => fn ($query) => $query->where('status', ResponseStatus::Pending->value)])
             ->paginate(10);
 
-        return view('student.requests.index', ['requests' => $requests]);
+        // The summary tiles and filter tabs count the student's whole history,
+        // so one grouped query fills them in without a count per status.
+        $statusCounts = $user->tutoringRequests()
+            ->toBase()
+            ->selectRaw('status, count(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        return view('student.requests.index', [
+            'requests' => $requests,
+            'statusCounts' => $statusCounts,
+        ]);
     }
 
     /**

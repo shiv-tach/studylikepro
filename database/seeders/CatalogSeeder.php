@@ -110,13 +110,13 @@ class CatalogSeeder extends Seeder
     private function catalog(): array
     {
         return [
-            'primary' => [
-                ['name' => 'Mathematics', 'icon' => '🔢', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
-                ['name' => 'English', 'icon' => '📖', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
-                ['name' => 'Sinhala', 'icon' => '📜', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
-                ['name' => 'Tamil', 'icon' => '📜', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
-                ['name' => 'Environmental Studies', 'icon' => '🌱', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
-            ],
+            // 'primary' => [
+            //     ['name' => 'Mathematics', 'icon' => '🔢', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
+            //     ['name' => 'English', 'icon' => '📖', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
+            //     ['name' => 'Sinhala', 'icon' => '📜', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
+            //     ['name' => 'Tamil', 'icon' => '📜', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
+            //     ['name' => 'Environmental Studies', 'icon' => '🌱', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
+            // ],
             'ol' => [
                 // Mandatory subjects: every O/L student takes these, no basket.
                 ['name' => 'Mathematics', 'icon' => '🔢', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 10, 'lessons_by_grade' => [6 => 12, 7 => 10]],

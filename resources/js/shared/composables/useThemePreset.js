@@ -1,6 +1,6 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 
-export const THEME_PRESET_KEY = Symbol('student-dashboard.theme-preset');
+export const THEME_PRESET_KEY = Symbol('workspace.theme-preset');
 
 const STORAGE_KEY = 'themePreset';
 const KNOWN_PRESETS = ['classic', 'forest', 'midnight', 'sunset', 'glass', 'ocean'];

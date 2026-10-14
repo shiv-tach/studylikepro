@@ -1,8 +1,8 @@
 <script setup>
 import { computed } from 'vue';
-import { usePanel } from '../composables/usePanel';
-import { CHIP } from '../styles';
-import AppIcon from './AppIcon.vue';
+import { usePanel } from '../../shared/composables/usePanel';
+import { CHIP } from '../../shared/styles';
+import AppIcon from '../../shared/components/AppIcon.vue';
 
 const props = defineProps({
     label: { type: String, required: true },

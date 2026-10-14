@@ -1,6 +1,6 @@
 <script setup>
 import { flowSteps } from '../content';
-import { usePanel } from '../composables/usePanel';
+import { usePanel } from '../../shared/composables/usePanel';
 
 const panel = usePanel();
 </script>
