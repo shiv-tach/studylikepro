@@ -285,19 +285,36 @@ function gradeSplitTeacher(): TeacherProfile
     return $teacher;
 }
 
+/**
+ * The dedicated teacher page is rendered by resources/js/student-teacher-profile,
+ * so the Blade view only has to hand the Vue app a correct config island (see
+ * `teacherProfileConfig()` in tests/Pest.php). These tests pin that contract
+ * down: the grade scope, the subjects and rates, the services, the reviews and
+ * the booking action.
+ */
 test('a student only sees their own grade on the dedicated teacher page', function () {
     $student = finderStudent(8);
     $teacher = gradeSplitTeacher();
 
-    $this->actingAs($student)
+    $response = $this->actingAs($student)
         ->get(route('student.teachers.show', $teacher))
         ->assertOk()
-        ->assertSee('Grade 8 lessons')
-        ->assertSee('Grade Eight Numbers')
-        ->assertDontSee('Grade Nine Numbers')
-        ->assertSee(platform_settings()->formatMinor(40000))
-        ->assertDontSee(platform_settings()->formatMinor(90000))
-        ->assertSee(route('student.bookings.create', $teacher), false);
+        // The Blade heading names the grade the page is scoped to.
+        ->assertSee('Grade 8 lessons');
+
+    $config = teacherProfileConfig($response);
+
+    expect($config['grade'])->toBe(['label' => 'Grade 8']);
+    expect($config['gradeScoped'])->toBeTrue();
+    expect($config['subjects'])->toHaveCount(1);
+    expect($config['subjects'][0]['gradeLabel'])->toBe('Grade 8');
+    expect($config['subjects'][0]['lessons'])->toBe(['Grade Eight Numbers']);
+    expect($config['subjects'][0]['rate'])->toBe(platform_settings()->formatMinor(40000));
+    expect($config['booking']['rate'])->toBe(platform_settings()->formatMinor(40000));
+    expect($config['booking']['bookUrl'])->toBe(route('student.bookings.create', $teacher));
+
+    // Nothing priced for another grade leaks into the payload.
+    expect(json_encode($config))->not->toContain(platform_settings()->formatMinor(90000));
 });
 
 test('a guest still sees every grade on the public teacher page', function () {
@@ -327,12 +344,19 @@ test('a teacher who does not take the student grade shows a notice instead of le
     $student = finderStudent(13);
     $teacher = gradeSplitTeacher();
 
-    $this->actingAs($student)
-        ->get(route('student.teachers.show', $teacher))
-        ->assertOk()
-        ->assertSee('does not teach Grade 13 lessons yet')
-        ->assertDontSee('Grade Eight Numbers')
-        ->assertSee(route('student.teachers.index'), false);
+    $config = teacherProfileConfig(
+        $this->actingAs($student)->get(route('student.teachers.show', $teacher))->assertOk()
+    );
+
+    expect($config['grade'])->toBe(['label' => 'Grade 13']);
+    expect($config['gradeScoped'])->toBeFalse();
+    expect($config['subjects'])->toBe([]);
+    expect($config['copy']['gradeMismatch'])->toBe('Split Grades Teacher does not teach Grade 13 lessons yet.');
+    expect($config['copy']['findGradeTeachers'])->toBe('Find Grade 13 teachers');
+    expect($config['urls']['index'])->toBe(route('student.teachers.index'));
+
+    // None of the lessons the teacher does run for other grades leak in.
+    expect(json_encode($config))->not->toContain('Grade Eight Numbers');
 });
 
 test('the finder links to the dedicated student teacher page', function () {
@@ -374,11 +398,19 @@ test('the dedicated teacher page lists reviews and the rating', function () {
 
     app(TeacherStatsService::class)->refresh($teacher);
 
-    $this->actingAs($student)
-        ->get(route('student.teachers.show', $teacher))
-        ->assertOk()
-        ->assertSee('Great grade 8 maths lesson.')
-        ->assertSee('5 ★');
+    $config = teacherProfileConfig(
+        $this->actingAs($student)->get(route('student.teachers.show', $teacher))->assertOk()
+    );
+
+    expect($config['reviews']['count'])->toBe(1);
+    expect($config['reviews']['rating'])->toBe('5.0');
+    expect($config['reviews']['summaryLabel'])->toBe('1 review');
+    expect($config['reviews']['breakdown'][0])->toEqual(['label' => '5 ★', 'count' => 1, 'percent' => 100]);
+    expect($config['reviews']['items'][0]['comment'])->toBe('Great grade 8 maths lesson.');
+    expect($config['reviews']['items'][0]['rating'])->toBe(5);
+    expect($config['reviews']['items'][0]['stars']['filled'])->toBe('★★★★★');
+    expect($config['reviews']['items'][0]['stars']['empty'])->toBe('');
+    expect($config['teacher']['rating'])->toBe('5.0');
 });
 
 test('the dedicated teacher page lists the teacher services grouped by type', function () {
@@ -387,7 +419,7 @@ test('the dedicated teacher page lists the teacher services grouped by type', fu
 
     $lesson = $teacher->lessons()->where('grade_id', gradeId(8))->firstOrFail();
 
-    ServiceOffering::factory()
+    $lessonOffering = ServiceOffering::factory()
         ->for($teacher, 'teacherProfile')
         ->forType(ServiceType::Lesson)
         ->create([
@@ -397,7 +429,7 @@ test('the dedicated teacher page lists the teacher services grouped by type', fu
             'price_minor' => 120000,
         ]);
 
-    ServiceOffering::factory()
+    $summaryOffering = ServiceOffering::factory()
         ->for($teacher, 'teacherProfile')
         ->forType(ServiceType::Summary)
         ->create([
@@ -407,15 +439,31 @@ test('the dedicated teacher page lists the teacher services grouped by type', fu
             'price_minor' => 35000,
         ]);
 
-    $this->actingAs($student)
-        ->get(route('student.teachers.show', $teacher))
-        ->assertOk()
-        ->assertSee('Services &amp; pricing', false)
-        ->assertSee(ServiceType::Lesson->icon().' '.ServiceType::Lesson->label())
-        ->assertSee(ServiceType::Summary->icon().' '.ServiceType::Summary->label())
-        ->assertSee('Grade Eight Numbers')
-        ->assertSee(platform_settings()->formatMinor(120000))
-        ->assertSee(platform_settings()->formatMinor(35000));
+    $config = teacherProfileConfig(
+        $this->actingAs($student)->get(route('student.teachers.show', $teacher))->assertOk()
+    );
+
+    expect($config['copy']['servicesTitle'])->toBe('Services & pricing');
+
+    $groups = collect($config['serviceGroups'])->keyBy('key');
+    $lessonGroup = $groups[ServiceType::Lesson->value];
+    $summaryGroup = $groups[ServiceType::Summary->value];
+
+    expect($lessonGroup['icon'].' '.$lessonGroup['label'])
+        ->toBe(ServiceType::Lesson->icon().' '.ServiceType::Lesson->label());
+    expect($summaryGroup['icon'].' '.$summaryGroup['label'])
+        ->toBe(ServiceType::Summary->icon().' '.ServiceType::Summary->label());
+
+    expect($lessonGroup['items'][0]['title'])->toBe('Grade Eight Numbers');
+    expect($lessonGroup['items'][0]['price'])->toBe(platform_settings()->formatMinor(120000));
+    expect($lessonGroup['items'][0]['action'])->toBe([
+        'kind' => 'form',
+        'label' => 'Buy',
+        'url' => route('student.purchases.store', $lessonOffering),
+    ]);
+
+    expect($summaryGroup['items'][0]['price'])->toBe(platform_settings()->formatMinor(35000));
+    expect($summaryGroup['items'][0]['action']['url'])->toBe(route('student.purchases.store', $summaryOffering));
 });
 
 test('the dedicated teacher page hides services for other grades', function () {
@@ -471,11 +519,168 @@ test('the dedicated teacher page hides services for other grades', function () {
             'price_minor' => 444400,
         ]);
 
-    $this->actingAs($student)
-        ->get(route('student.teachers.show', $teacher))
-        ->assertOk()
-        ->assertSee(platform_settings()->formatMinor(555500))
-        ->assertDontSee(platform_settings()->formatMinor(777700))
-        ->assertDontSee(platform_settings()->formatMinor(666600))
-        ->assertDontSee(platform_settings()->formatMinor(444400));
+    $config = teacherProfileConfig(
+        $this->actingAs($student)->get(route('student.teachers.show', $teacher))->assertOk()
+    );
+
+    // Only the grade-less paper service the teacher covers grade 8 on survives;
+    // the grade 9 rows and the other subject never reach the payload.
+    $prices = collect($config['serviceGroups'])
+        ->flatMap(fn (array $group) => collect($group['items'])->pluck('price'))
+        ->all();
+
+    expect($prices)->toBe([platform_settings()->formatMinor(555500)]);
+});
+
+/**
+ * The finder list is rendered by resources/js/student-teacher-finder, so the
+ * Blade view only has to hand the Vue app a correct config island (see
+ * `teacherFinderConfig()` in tests/Pest.php). These tests pin that contract
+ * down: the grade scope, the filter options, the cards and the route map.
+ */
+test('the finder island carries the grade scope, the filters and the route map', function () {
+    $student = finderStudent(11);
+    $grade = Grade::query()->whereKey(gradeId(11))->firstOrFail();
+
+    $offered = Subject::factory()->create([
+        'name' => 'Grade Eleven Mathematics',
+        'slug' => 'grade-eleven-mathematics',
+        'icon' => '🧮',
+        'education_level_id' => $grade->education_level_id,
+    ]);
+    Lesson::factory()->for($offered)->create(['grade_id' => $grade->id, 'name' => 'Algebra']);
+
+    $config = teacherFinderConfig(
+        $this->actingAs($student)->get(route('student.teachers.index'))->assertOk()
+    );
+
+    // The profile grade is the one filter the student cannot change, so the
+    // island names it and never repeats it as a query string field.
+    expect($config['grade'])->toBe(['label' => 'Grade 11']);
+    expect($config['theme']['preset'])->toBe('classic');
+    expect($config['filters']['sort'])->toBe('available_soon');
+    expect($config['subjectOptions'])->toContain(['value' => 'grade-eleven-mathematics', 'label' => '🧮 Grade Eleven Mathematics']);
+    expect($config['languageOptions'])->toBe(['Sinhala', 'English', 'Tamil']);
+    expect(collect($config['sortOptions'])->pluck('value')->all())->toBe(['available_soon', 'rating', 'price_low', 'price_high', 'newest']);
+    expect($config['hasActiveFilters'])->toBeFalse();
+    expect($config['hasDateFilter'])->toBeFalse();
+    expect($config['errorMessage'])->toBeNull();
+    expect($config['teachers'])->toBe([]);
+    expect($config['totalLabel'])->toBe('0 teachers found');
+    expect($config['urls'])->toBe([
+        'index' => route('student.teachers.index'),
+        'reset' => route('student.teachers.index'),
+        'profile' => route('student.profile'),
+    ]);
+});
+
+test('a finder card carries the grade rate, the rating and the next open slot', function () {
+    $student = finderStudent(11);
+    $maths = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'mathematics', 'icon' => '📐']);
+
+    $teacher = finderTeacher('Rated Teacher', 11, [
+        'hourly_rate_minor' => 90000,
+        'rating_avg' => 4.5,
+        'rating_count' => 3,
+    ], $maths);
+
+    // The student's own grade rate wins over the teacher's headline rate.
+    $teacher->subjects()->updateExistingPivot($maths->id, [
+        'grade_rates' => [gradeId(11) => 45000],
+    ]);
+
+    $teacher->lessons()->attach(
+        Lesson::factory()->for($maths)->create(['grade_id' => gradeId(11), 'name' => 'Algebra'])->id
+    );
+
+    TeacherAvailabilitySlot::factory()->on(2, '10:00', '11:00')->create(['teacher_profile_id' => $teacher->id]);
+
+    $config = teacherFinderConfig(
+        $this->actingAs($student)->get(route('student.teachers.index', ['subject' => 'mathematics']))->assertOk()
+    );
+
+    $card = collect($config['teachers'])->firstWhere('id', $teacher->id);
+
+    expect($card['url'])->toBe(route('student.teachers.show', $teacher));
+    expect($card['name'])->toBe('Rated Teacher');
+    expect($card['initials'])->toBe('Ra');
+    expect($card['rating'])->toBe('4.5');
+    expect($card['ratingCount'])->toBe(3);
+    expect($card['rate'])->toBe(platform_settings()->formatMinor(45000));
+    expect($card['subjects'])->toHaveCount(1);
+    expect($card['subjects'][0])->toContain('Mathematics');
+    expect($card['extraSubjects'])->toBe(0);
+    expect($card['metaLabel'])->toContain('Grade 11')->toContain('1 lesson');
+    expect($card['availability']['label'])->toMatch('/^Next: \w{3} \d{2} \w{3} · \d{2}:\d{2}$/');
+});
+
+test('a finder card without a rating or an open slot says so', function () {
+    $student = finderStudent(11);
+    finderTeacher('Brand New Teacher', 11);
+
+    $config = teacherFinderConfig(
+        $this->actingAs($student)->get(route('student.teachers.index'))->assertOk()
+    );
+
+    $card = $config['teachers'][0];
+
+    // No rating yet means the "new teacher" chip, and no weekly slot means the
+    // card prints the no-slots sentence instead of a blank line.
+    expect($card['rating'])->toBeNull();
+    expect($card['ratingCount'])->toBe(0);
+    expect($card['subjects'])->toHaveCount(1);
+    expect($card['availability'])->toBeNull();
+    expect($card['metaLabel'])->toContain('Grade 11');
+    expect($card['metaLabel'])->not->toContain('lesson');
+});
+
+test('a picked day turns the card slot into "available" and counts as a filter', function () {
+    $student = finderStudent(11);
+    $tuesday = CarbonImmutable::parse('2026-06-02 00:00', 'UTC');
+
+    $teacher = finderTeacher('Tuesday Evening Teacher', 11);
+    TeacherAvailabilitySlot::factory()->on(2, '18:00', '20:00')->create(['teacher_profile_id' => $teacher->id]);
+
+    $config = teacherFinderConfig(
+        $this->actingAs($student)
+            ->get(route('student.teachers.index', [
+                'date' => $tuesday->toDateString(),
+                'time_from' => '18:30',
+            ]))
+            ->assertOk()
+    );
+
+    expect($config['hasDateFilter'])->toBeTrue();
+    expect($config['hasActiveFilters'])->toBeTrue();
+    expect($config['filters']['date'])->toBe($tuesday->toDateString());
+    expect($config['filters']['time_from'])->toBe('18:30');
+    expect($config['teachers'][0]['availability']['label'])
+        ->toMatch('/^Available \w{3} \d{2} \w{3} · \d{2}:\d{2}$/');
+});
+
+test('the finder island switches to the day-filtered empty state', function () {
+    $student = finderStudent(11);
+    finderTeacher('Monday Only Teacher', 11);
+
+    $config = teacherFinderConfig(
+        $this->actingAs($student)
+            ->get(route('student.teachers.index', ['date' => '2026-06-02']))
+            ->assertOk()
+    );
+
+    expect($config['teachers'])->toBe([]);
+    expect($config['hasDateFilter'])->toBeTrue();
+    expect($config['copy']['emptyWithDate'])->toContain('widen the time window');
+    expect($config['copy']['emptyBody'])->toContain('clear the filters');
+});
+
+test('the student\'s own theme preset reaches the finder island', function () {
+    $student = finderStudent(11);
+    $student->update(['theme' => ['preset' => 'glass', 'accent' => 'indigo', 'mode' => 'light', 'sidebarStyle' => 'flat']]);
+
+    $config = teacherFinderConfig(
+        $this->actingAs($student->fresh())->get(route('student.teachers.index'))->assertOk()
+    );
+
+    expect($config['theme']['preset'])->toBe('glass');
 });

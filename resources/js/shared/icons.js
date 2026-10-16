@@ -90,8 +90,14 @@ export const icons = {
         paths: ['M15.8 15.8L20 20'],
         circles: [{ cx: 11, cy: 11, r: 6.5 }],
     },
+    chat: {
+        paths: ['M6 5.5h12a2 2 0 012 2v7a2 2 0 01-2 2h-6.5L8 19.5v-3H6a2 2 0 01-2-2v-7a2 2 0 012-2z'],
+    },
     'arrow-right': {
         paths: ['M4.5 12h14', 'M13 6.5l5.5 5.5-5.5 5.5'],
+    },
+    mail: {
+        paths: ['M4.5 7.5h15v9h-15z', 'M5.2 8.3l6.8 4.9 6.8-4.9'],
     },
     'chevron-right': {
         paths: ['M9.5 5.5l6.5 6.5-6.5 6.5'],

@@ -1,12 +1,128 @@
 @php
-    $cardBase = 'rounded-2xl border p-6';
-    $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
-    $fieldClasses = 'rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
+    // The direct-booking stepper is rendered by resources/js/student-booking-create.
+    // Blade keeps ownership of the grade scope, the lesson list, the prices, the
+    // permission check and the route map, then hands them over as a JSON island.
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);
+    $themePreset = auth()->user()->theme['preset'];
+
     $ratePerHour = $teacher->effectiveRateFor($subject, $learnerGradeId);
     $feeGross = $bookingFee['booking_fee_minor'];
     $feeNet = $bookingFee['net_minor'];
     $totalMinor = $priceMinor + $feeNet;
+
+    // Slot groups, each already labelled in the viewer's timezone.
+    $slotGroups = collect($slotsByDate)->map(fn ($slots, $date) => [
+        'date' => (string) $date,
+        'label' => \Carbon\CarbonImmutable::parse($date)->format('D, d M'),
+        'slots' => collect($slots)->map(fn ($slot) => [
+            'value' => $slot['starts_at']->toIso8601String(),
+            'label' => $slot['label'],
+        ])->values()->all(),
+    ])->values()->all();
+
+    $bookingPayload = [
+        'appName' => config('app.name', 'Studylikepro'),
+        'csrfToken' => csrf_token(),
+        'theme' => ['preset' => $themePreset],
+        'teacher' => [
+            'name' => $teacher->user->name,
+            'url' => route('student.teachers.show', $teacher),
+        ],
+        'subjects' => $subjects
+            ->map(fn ($option) => ['value' => (string) $option->id, 'label' => $option->name])
+            ->values()->all(),
+        // Only the lessons this teacher runs at the learner's grade are offered.
+        'lessons' => $lessons
+            ->map(fn ($option) => [
+                'value' => (string) $option->id,
+                'label' => ($option->grade?->label ? $option->grade->label.' — ' : '').$option->name,
+            ])
+            ->values()->all(),
+        'durations' => collect($durations)
+            ->map(fn ($option) => ['value' => (string) $option, 'label' => $option.' '.__('minutes')])
+            ->values()->all(),
+        'selection' => [
+            'subjectId' => (string) $subjectId,
+            'lessonId' => $selectedLessonId === null ? '' : (string) $selectedLessonId,
+            'duration' => (string) $duration,
+        ],
+        'lessonsNotice' => $lessons->isNotEmpty() ? null : ($learnerGrade
+            ? __('This teacher has not listed :grade lessons for :subject yet — you can still book without picking one.', ['grade' => $learnerGrade->label, 'subject' => $subject->name])
+            : __('This teacher has not listed lessons for :subject yet — you can book without picking one.', ['subject' => $subject->name])),
+        'timezone' => $timezone,
+        'holdNotice' => __('All times are shown in :timezone. Selection is held for :minutes minutes while you pay.', [
+            'timezone' => $timezone,
+            'minutes' => platform_settings()->int('hold_ttl_minutes'),
+        ]),
+        'slots' => $slotGroups,
+        'slotsNotice' => $slotGroups !== [] ? null : __('No open :minutes-minute slots in the next :days days — try a different lesson length.', [
+            'minutes' => $duration,
+            'days' => config('studylikepro.booking.max_advance_days'),
+        ]),
+        // A rejected submit bounces back with the picked slot and the errors.
+        'selectedSlot' => old('starts_at'),
+        'learner' => [
+            'name' => old('learner_name', auth()->user()->name),
+            'gradeLabel' => $learnerGrade?->label ?? __('Not set'),
+            'gradeHint' => __('From your learning profile.'),
+            'changeLabel' => __('Change grade'),
+            'changeUrl' => route('student.profile'),
+            'note' => __('Booked for someone else? Put their name here — the lesson always follows your learning profile grade.'),
+        ],
+        'errors' => [
+            'startsAt' => $errors->first('starts_at') ?: null,
+            'learnerName' => $errors->first('learner_name') ?: null,
+        ],
+        // Every figure is pre-formatted, so the summary card never computes a price.
+        'summary' => [
+            'teacher' => $teacher->user->name,
+            'subject' => $subject->name,
+            'length' => $duration.' '.__('minutes'),
+            'rate' => $money($ratePerHour).__('/hour'),
+            'lessonLabel' => __('Lesson :minutes min', ['minutes' => $duration]),
+            'lessonPrice' => $money($priceMinor),
+            'feeValue' => $money($feeNet),
+            'feeGross' => $money($feeGross),
+            'feeIsFree' => $feeNet === 0 && $feeGross > 0,
+            'feeFreeLabel' => __('Free'),
+            'feeHasDiscount' => $feeNet < $feeGross,
+            'youPay' => __('You pay'),
+            'total' => $money($totalMinor),
+            'includesFee' => __('includes the :amount booking fee', ['amount' => $money($feeNet)]),
+            'promotion' => $bookingFee['promotion']
+                ? __(':offer — the booking fee is discounted at checkout.', ['offer' => $bookingFee['promotion']->name])
+                : null,
+            'cancelNotice' => __('Cancellation is free up to :hours hours before the lesson starts.', [
+                'hours' => platform_settings()->int('student_cancel_window_hours'),
+            ]),
+        ],
+        'copy' => [
+            'stepPick' => __('1. What do you need help with?'),
+            'subject' => __('Subject'),
+            'lesson' => __('Lesson (optional)'),
+            'anyLesson' => __('Any lesson'),
+            'duration' => __('Lesson length'),
+            'stepTime' => __('2. Pick a time'),
+            'stepWho' => __('3. Who is the lesson for?'),
+            'learnerName' => __('Learner name'),
+            'grade' => __('Grade'),
+            'total' => __('Total'),
+            'reserve' => __('Reserve this slot'),
+            'summaryTitle' => __('Lesson summary'),
+            'teacher' => __('Teacher'),
+            'length' => __('Length'),
+            'rate' => __('Rate'),
+            'bookingFee' => __('Booking fee'),
+        ],
+        'urls' => [
+            'filter' => route('student.bookings.create', $teacher),
+            'store' => route('student.bookings.store', $teacher),
+        ],
+    ];
+
+    // JSON_UNESCAPED_SLASHES keeps the URLs readable; the HEX flags keep the
+    // island safe inside a <script> tag.
+    $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
 @endphp
 
 <x-app-layout>
@@ -17,182 +133,64 @@
         </div>
     </x-slot>
 
-    <div class="mx-auto max-w-5xl">
-        <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-            <div class="space-y-6">
-                <!-- Lesson choice -->
-                <form method="GET" action="{{ route('student.bookings.create', $teacher) }}" id="booking-filter-form"
-                      class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-                    <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ __('1. What do you need help with?') }}</h3>
-                    <div class="mt-4 grid gap-4 sm:grid-cols-3">
-                        <div>
-                            <x-input-label for="filter-subject" :value="__('Subject')" />
-                            <select id="filter-subject" name="subject_id" onchange="this.form.submit()" class="mt-1 block w-full {{ $fieldClasses }}">
-                                @foreach ($subjects as $option)
-                                    <option value="{{ $option->id }}" @selected($option->id === $subjectId)>{{ $option->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <x-input-label for="filter-lesson" :value="__('Lesson (optional)')" />
-                            <select id="filter-lesson" name="lesson_id" onchange="this.form.submit()" class="mt-1 block w-full {{ $fieldClasses }}">
-                                <option value="">{{ __('Any lesson') }}</option>
-                                @foreach ($lessons as $option)
-                                    <option value="{{ $option->id }}" @selected($option->id === $selectedLessonId)>{{ $option->grade?->label ? $option->grade->label.' — ' : '' }}{{ $option->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <x-input-label for="filter-duration" :value="__('Lesson length')" />
-                            <select id="filter-duration" name="duration" onchange="this.form.submit()" class="mt-1 block w-full {{ $fieldClasses }}">
-                                @foreach ($durations as $option)
-                                    <option value="{{ $option }}" @selected($option === $duration)>{{ $option }} {{ __('minutes') }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    @if ($lessons->isEmpty())
-                        <p class="mt-3 text-xs text-slate-400">
-                            @if ($learnerGrade)
-                                {{ __('This teacher has not listed :grade lessons for :subject yet — you can still book without picking one.', ['grade' => $learnerGrade->label, 'subject' => $subject->name]) }}
-                            @else
-                                {{ __('This teacher has not listed lessons for :subject yet — you can book without picking one.', ['subject' => $subject->name]) }}
-                            @endif
-                        </p>
-                    @endif
-                </form>
+    <script type="application/json" id="student-booking-create-config">@json($bookingPayload, $jsonFlags)</script>
 
-                <!-- Slot picker + confirm -->
-                <form method="POST" action="{{ route('student.bookings.store', $teacher) }}" id="booking-form" class="{{ $cardBase }}" :class="{{ $cardTheme }}">
+    <div id="student-booking-create-app"></div>
+
+    {{-- Fallback for a browser without JavaScript: the stepper is a thin shell,
+         so print the same choice, slots and total the Vue app would render. --}}
+    <noscript>
+        <div class="mx-auto max-w-5xl space-y-6">
+            <div class="rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900">
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ __('Lesson summary') }}</h3>
+                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    {{ $bookingPayload['summary']['teacher'] }} · {{ $bookingPayload['summary']['subject'] }} · {{ $bookingPayload['summary']['length'] }}
+                </p>
+                <p class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    {{ __('You pay') }} {{ $bookingPayload['summary']['total'] }}
+                </p>
+            </div>
+
+            @if ($slotGroups === [])
+                <div class="rounded-2xl border border-slate-200/80 bg-white p-6 text-center text-sm text-slate-500 dark:border-slate-800/80 dark:bg-slate-900 dark:text-slate-400">
+                    {{ $bookingPayload['slotsNotice'] }}
+                </div>
+            @else
+                <form method="POST" action="{{ route('student.bookings.store', $teacher) }}" class="space-y-6 rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900">
                     @csrf
                     <input type="hidden" name="subject_id" value="{{ $subjectId }}">
                     <input type="hidden" name="lesson_id" value="{{ $selectedLessonId }}">
                     <input type="hidden" name="duration" value="{{ $duration }}">
 
-                    <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ __('2. Pick a time') }}</h3>
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {{ __('All times are shown in :timezone. Selection is held for :minutes minutes while you pay.', [
-                            'timezone' => $timezone,
-                            'minutes' => platform_settings()->int('hold_ttl_minutes'),
-                        ]) }}
-                    </p>
-                    <x-input-error :messages="$errors->get('starts_at')" class="mt-2" />
-
-                    @if ($slotsByDate === [])
-                        <p class="mt-4 rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                            {{ __('No open :minutes-minute slots in the next :days days — try a different lesson length.', [
-                                'minutes' => $duration,
-                                'days' => config('studylikepro.booking.max_advance_days'),
-                            ]) }}
-                        </p>
-                    @else
-                        <div class="mt-4 space-y-5">
-                            @foreach ($slotsByDate as $date => $slots)
-                                <div>
-                                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ \Carbon\CarbonImmutable::parse($date)->format('D, d M') }}</p>
-                                    <div class="mt-2 flex flex-wrap gap-2">
-                                        @foreach ($slots as $slot)
-                                            <label class="cursor-pointer">
-                                                <input type="radio" name="starts_at" value="{{ $slot['starts_at']->toIso8601String() }}"
-                                                       class="peer sr-only" {{ old('starts_at') === $slot['starts_at']->toIso8601String() ? 'checked' : '' }} required>
-                                                <span class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition-colors peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40 dark:border-slate-700 dark:text-slate-300">
-                                                    {{ $slot['label'] }}
-                                                </span>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-
-                    <div class="mt-6 border-t border-slate-200 pt-6 dark:border-slate-800">
-                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ __('3. Who is the lesson for?') }}</h3>
-                        <div class="mt-4 grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <x-input-label for="learner_name" :value="__('Learner name')" />
-                                <x-text-input id="learner_name" name="learner_name" type="text" class="mt-1 block w-full"
-                                              :value="old('learner_name', auth()->user()->name)" />
-                                <x-input-error :messages="$errors->get('learner_name')" class="mt-2" />
-                            </div>
-                            <div>
-                                <x-input-label :value="__('Grade')" />
-                                <p class="mt-1 rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
-                                    {{ $learnerGrade?->label ?? __('Not set') }}
-                                </p>
-                                <p class="mt-1 text-xs text-slate-400">
-                                    {{ __('From your learning profile.') }}
-                                    <a href="{{ route('student.profile') }}" class="font-semibold text-primary hover:underline">{{ __('Change grade') }}</a>
-                                </p>
+                    @foreach ($slotGroups as $group)
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ $group['label'] }}</p>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                @foreach ($group['slots'] as $slot)
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="starts_at" value="{{ $slot['value'] }}" class="peer sr-only" required>
+                                        <span class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary dark:border-slate-700 dark:text-slate-300">
+                                            {{ $slot['label'] }}
+                                        </span>
+                                    </label>
+                                @endforeach
                             </div>
                         </div>
-                        <p class="mt-3 text-xs text-slate-400">{{ __('Booked for someone else? Put their name here — the lesson always follows your learning profile grade.') }}</p>
+                    @endforeach
+
+                    <div>
+                        <label for="noscript-learner-name" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{{ __('Learner name') }}</label>
+                        <input id="noscript-learner-name" name="learner_name" type="text" value="{{ auth()->user()->name }}"
+                               class="mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                     </div>
 
-                    <div class="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-6 dark:border-slate-800">
-                        <p class="text-sm text-slate-500 dark:text-slate-400">
-                            {{ __('Total') }} <span class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ $money($totalMinor) }}</span>
-                            <span class="ml-1 text-xs text-slate-400">{{ __('includes the :amount booking fee', ['amount' => $money($feeNet)]) }}</span>
-                        </p>
-                        <x-primary-button :disabled="$slotsByDate === []">
-                            {{ __('Reserve this slot') }}
-                        </x-primary-button>
-                    </div>
+                    <button type="submit" class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-colors hover:bg-primary/90">
+                        {{ __('Reserve this slot') }}
+                    </button>
                 </form>
-            </div>
-
-            <!-- Summary -->
-            <aside class="space-y-4 lg:sticky lg:top-24 lg:self-start">
-                <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Lesson summary') }}</p>
-                    <div class="mt-3 space-y-2 text-sm">
-                        <div class="flex items-center justify-between gap-3">
-                            <span class="text-slate-500 dark:text-slate-400">{{ __('Teacher') }}</span>
-                            <span class="font-semibold text-slate-800 dark:text-slate-100">{{ $teacher->user->name }}</span>
-                        </div>
-                        <div class="flex items-center justify-between gap-3">
-                            <span class="text-slate-500 dark:text-slate-400">{{ __('Subject') }}</span>
-                            <span class="font-semibold text-slate-800 dark:text-slate-100">{{ $subject->name }}</span>
-                        </div>
-                        <div class="flex items-center justify-between gap-3">
-                            <span class="text-slate-500 dark:text-slate-400">{{ __('Length') }}</span>
-                            <span class="font-semibold text-slate-800 dark:text-slate-100">{{ $duration }} {{ __('minutes') }}</span>
-                        </div>
-                        <div class="flex items-center justify-between gap-3">
-                            <span class="text-slate-500 dark:text-slate-400">{{ __('Rate') }}</span>
-                            <span class="font-semibold text-slate-800 dark:text-slate-100">{{ $money($ratePerHour) }}/{{ __('hour') }}</span>
-                        </div>
-                        <div class="flex items-center justify-between gap-3">
-                            <span class="text-slate-500 dark:text-slate-400">{{ __('Lesson :minutes min', ['minutes' => $duration]) }}</span>
-                            <span class="font-semibold text-slate-800 dark:text-slate-100">{{ $money($priceMinor) }}</span>
-                        </div>
-                        <div class="flex items-center justify-between gap-3">
-                            <span class="text-slate-500 dark:text-slate-400">{{ __('Booking fee') }}</span>
-                            <span class="font-semibold {{ $feeNet < $feeGross ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100' }}">
-                                @if ($feeNet === 0 && $feeGross > 0)
-                                    {{ __('Free') }} <span class="text-xs font-normal text-slate-400 line-through">{{ $money($feeGross) }}</span>
-                                @elseif ($feeNet < $feeGross)
-                                    {{ $money($feeNet) }} <span class="text-xs font-normal text-slate-400 line-through">{{ $money($feeGross) }}</span>
-                                @else
-                                    {{ $money($feeNet) }}
-                                @endif
-                            </span>
-                        </div>
-                    </div>
-                    <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
-                        <span class="text-sm font-semibold text-slate-600 dark:text-slate-300">{{ __('You pay') }}</span>
-                        <span class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{{ $money($totalMinor) }}</span>
-                    </div>
-                    @if ($bookingFee['promotion'])
-                        <p class="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
-                            {{ __(':offer — the booking fee is discounted at checkout.', ['offer' => $bookingFee['promotion']->name]) }}
-                        </p>
-                    @endif
-                    <p class="mt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                        {{ __('Cancellation is free up to :hours hours before the lesson starts.', ['hours' => platform_settings()->int('student_cancel_window_hours')]) }}
-                    </p>
-                </div>
-            </aside>
+            @endif
         </div>
-    </div>
+    </noscript>
+
+    @vite('resources/js/student-booking-create/main.js')
 </x-app-layout>

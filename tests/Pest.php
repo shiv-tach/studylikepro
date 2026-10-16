@@ -130,6 +130,125 @@ function purchaseShowConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the "Messages" inbox renders its threads from.
+ *
+ * @return array<string, mixed>
+ */
+function messagesConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="messages-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island one lesson thread renders its messages, composer and
+ * report dialog from.
+ *
+ * @return array<string, mixed>
+ */
+function messagesThreadConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="messages-thread-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island the grade-matched teacher finder renders its filters,
+ * cards and empty state from.
+ *
+ * @return array<string, mixed>
+ */
+function teacherFinderConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="student-teacher-finder-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island one teacher's workspace page renders the grade-scoped
+ * rates, services, availability, reviews and booking action from.
+ *
+ * @return array<string, mixed>
+ */
+function teacherProfileConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="student-teacher-profile-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island the learning profile renders its grade and language
+ * pickers, the student's answers, the validation messages and the save action
+ * from.
+ *
+ * @return array<string, mixed>
+ */
+function studentProfileConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="student-profile-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island the direct-booking stepper renders its subject picker,
+ * slots and order summary from.
+ *
+ * @return array<string, mixed>
+ */
+function bookingCreateConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="student-booking-create-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island the lesson detail page renders its banners, timeline,
+ * money and actions from.
+ *
+ * @return array<string, mixed>
+ */
+function bookingShowConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="student-booking-show-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Create a usable teacher onboarding invite and return the plaintext token.
  *
  * @return array{0: TeacherInvite, 1: string}

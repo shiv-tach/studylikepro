@@ -100,3 +100,81 @@ test('teachers cannot access student profile routes', function () {
         ->get(route('student.profile'))
         ->assertForbidden();
 });
+
+test('the profile island carries the pickers, the answers and the save action', function () {
+    $user = User::factory()->student()->onboarded()->create();
+    $user->studentProfile->update([
+        'grade_id' => gradeId(11),
+        'learning_language' => 'English',
+        'learning_goals' => 'Calculus and linear algebra',
+    ]);
+
+    $config = studentProfileConfig(
+        $this->actingAs($user)->get(route('student.profile'))->assertOk()
+    );
+
+    $gradeIds = collect($config['levels'])->flatMap(fn (array $level) => $level['grades'])->pluck('id');
+
+    expect($config['urls']['update'])->toBe(route('student.profile.update'))
+        ->and($config['csrfToken'])->not->toBeEmpty()
+        ->and($config['student']['email'])->toBe($user->email)
+        ->and($config['values']['gradeId'])->toBe(gradeId(11))
+        ->and($config['values']['learningLanguage'])->toBe('English')
+        ->and($config['values']['learningGoals'])->toBe('Calculus and linear algebra')
+        // The wizard's level → grade tree drives the picker, in order.
+        ->and($gradeIds)->toContain(gradeId(11))
+        ->and(collect($config['levels'])->pluck('name')->all())->not->toBeEmpty()
+        // Only the languages the marketplace teaches in are offered.
+        ->and(collect($config['languages'])->pluck('value')->all())->toBe(['Sinhala', 'English'])
+        // The limits mirror StudentProfileRequest, so the counters agree with it.
+        ->and($config['limits']['learningGoals'])->toBe(1000)
+        ->and($config['errors']['gradeId'])->toBe([])
+        ->and($config['status']['updated'])->toBeFalse();
+});
+
+test('a rejected save reopens the form with the answers and messages the server sent back', function () {
+    $user = User::factory()->student()->onboarded()->create();
+    $user->studentProfile->update([
+        'grade_id' => gradeId(11),
+        'learning_language' => 'English',
+        'learning_goals' => 'Old goal',
+    ]);
+
+    $this->actingAs($user)
+        ->from(route('student.profile'))
+        ->put(route('student.profile.update'), [
+            'grade_id' => gradeId(13),
+            'learning_language' => 'Tamil',
+            'learning_goals' => 'Calculus and linear algebra',
+        ])
+        ->assertRedirect(route('student.profile'))
+        ->assertSessionHasErrors(['learning_language']);
+
+    $config = studentProfileConfig(
+        $this->actingAs($user)->get(route('student.profile'))->assertOk()
+    );
+
+    expect($config['values']['gradeId'])->toBe(gradeId(13))
+        ->and($config['values']['learningLanguage'])->toBe('Tamil')
+        ->and($config['values']['learningGoals'])->toBe('Calculus and linear algebra')
+        ->and($config['errors']['learningLanguage'])->not->toBeEmpty()
+        // Nothing was written: the rejected answers only came back as input.
+        ->and($user->fresh()->studentProfile->learning_language)->toBe('English');
+});
+
+test('a saved profile flashes the confirmation the island renders', function () {
+    $user = User::factory()->student()->onboarded()->create();
+
+    $response = $this->actingAs($user)->followingRedirects()->put(route('student.profile.update'), [
+        'grade_id' => gradeId(12),
+        'learning_language' => 'Sinhala',
+        'guardian_name' => 'Nimal Perera',
+        'guardian_phone' => '0771234567',
+    ]);
+
+    $config = studentProfileConfig($response->assertOk());
+
+    expect($config['status']['updated'])->toBeTrue()
+        ->and($config['values']['guardianName'])->toBe('Nimal Perera')
+        ->and($config['errors']['guardianPhone'])->toBe([]);
+});

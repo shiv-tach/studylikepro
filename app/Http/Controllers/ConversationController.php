@@ -60,10 +60,14 @@ class ConversationController extends Controller
 
         $messages = $conversation->messages()
             ->with('sender')
+            // Newest first, so the window is the newest page; the thread is then
+            // read oldest-to-newest, which is the order the chat client appends
+            // and scrolls in. The relation carries its own `orderBy('id')`, so the
+            // sort is explicit rather than a reverse of whatever came back.
             ->latest('id')
             ->limit(ConversationService::PAGE_SIZE)
             ->get()
-            ->reverse()
+            ->sortBy('id')
             ->values();
 
         $this->conversations->markRead($conversation, $user);

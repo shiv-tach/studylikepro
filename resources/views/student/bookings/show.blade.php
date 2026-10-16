@@ -1,17 +1,289 @@
 @php
     use App\Enums\BookingStatus;
+    use App\Enums\PaymentStatus;
 
-    $cardBase = 'rounded-2xl border p-6';
-    $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
+    // The lesson detail page is rendered by resources/js/student-booking-show.
+    // Blade keeps ownership of the booking's state — the banners, the timeline,
+    // the money, the payment record, the review and the permitted actions — then
+    // hands them over as a JSON island.
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);
+    $themePreset = auth()->user()->theme['preset'];
+
     $teacherUser = $booking->teacherProfile->user;
     $isHold = $booking->status === BookingStatus::PendingPayment;
     $holdLapsed = $isHold && $booking->expires_at?->isPast();
-    $startLabel = $booking->starts_at->copy()->setTimezone($timezone)->format('D d M Y');
-    $endLabel = $booking->ends_at->copy()->setTimezone($timezone)->format('H:i');
-    $startTime = $booking->starts_at->copy()->setTimezone($timezone)->format('H:i');
     $isCompleted = $booking->status === BookingStatus::Completed;
+    $cancelWindowHours = platform_settings()->int('student_cancel_window_hours');
 
+    $startDateLabel = $booking->starts_at->copy()->setTimezone($timezone)->format('D d M Y');
+    $startTimeLabel = $booking->starts_at->copy()->setTimezone($timezone)->format('H:i');
+    $endTimeLabel = $booking->ends_at->copy()->setTimezone($timezone)->format('H:i');
+
+    // The flash banner a redirect left behind, if any.
+    $flash = match (session('status')) {
+        'hold-created' => ['tone' => 'amber', 'icon' => 'clock', 'message' => __('Slot reserved. Complete the payment before the hold lapses and the lesson is confirmed.')],
+        'session-booked' => ['tone' => 'emerald', 'icon' => 'check-circle', 'message' => __('Session booked — it is already paid for from your purchase.')],
+        'booking-confirmed' => ['tone' => 'emerald', 'icon' => 'check-circle', 'message' => __('Payment received — your lesson is confirmed.')],
+        'booking-cancelled' => ['tone' => 'slate', 'icon' => null, 'message' => __('Lesson cancelled. The slot is back on the teacher calendar.')],
+        'review-submitted' => ['tone' => 'emerald', 'icon' => 'check-circle', 'message' => __('Thank you! Your review is live on the teacher profile.')],
+        'review-updated' => ['tone' => 'emerald', 'icon' => 'check-circle', 'message' => __('Review updated — the teacher profile reflects your new rating.')],
+        'review-locked' => ['tone' => 'amber', 'icon' => 'alert', 'message' => __('The edit window for this review has closed.')],
+        default => null,
+    };
+
+    // The classroom callout only exists while the room is open.
+    $join = $booking->canJoinNow() ? [
+        'title' => __('Your classroom is open'),
+        'body' => __('Join :teacher now — the room stays open until :time.', [
+            'teacher' => $teacherUser->name,
+            'time' => $booking->joinClosesAt()->copy()->setTimezone($timezone)->format('H:i'),
+        ]),
+        'ctaLabel' => __('Join lesson'),
+        'url' => route('classroom.show', $booking),
+    ] : null;
+
+    // The one banner that owns the money, decided by the booking's own state.
+    $banner = null;
+
+    if ($isHold && ! $holdLapsed) {
+        $banner = [
+            'kind' => 'hold',
+            'title' => __('Your slot is held'),
+            'slotLine' => $startDateLabel.', '.$startTimeLabel.'–'.$endTimeLabel.' · '.$booking->durationMinutes().' '.__('minutes'),
+            'note' => $booking->expires_at
+                ? __('Reserved until :time (:relative). After that the slot is released to other students.', [
+                    'time' => $booking->expires_at->copy()->setTimezone($timezone)->format('H:i'),
+                    'relative' => $booking->expires_at->diffForHumans(),
+                ])
+                : __('Complete the payment to confirm this lesson.'),
+            // The lesson's share of the total, plus the net booking fee when one applies.
+            'priceLine' => collect([
+                __('Lesson :price', ['price' => $money($booking->price_minor)]),
+                $booking->booking_fee_minor > 0 ? __('booking fee :fee', ['fee' => $money($booking->netBookingFeeMinor())]) : null,
+            ])->filter()->implode(' · '),
+            'total' => $money($booking->totalMinor()),
+            'payLabel' => __('Pay :amount', ['amount' => $money($booking->totalMinor())]),
+            'payUrl' => route('student.bookings.checkout', $booking),
+            'secureNote' => __('Secure checkout · the slot stays yours until :time', [
+                'time' => $booking->expires_at?->copy()->setTimezone($timezone)->format('H:i') ?? __('you pay'),
+            ]),
+        ];
+    } elseif ($holdLapsed || $booking->status === BookingStatus::Expired) {
+        $banner = [
+            'kind' => 'lapsed',
+            'title' => __('This hold lapsed'),
+            'body' => __('The payment window closed and the slot went back on the teacher calendar.'),
+            'reason' => null,
+            'action' => [
+                'label' => __('Pick another time'),
+                'url' => route('student.bookings.create', $booking->teacher_profile_id),
+                'variant' => 'primary',
+            ],
+        ];
+    } elseif ($booking->status === BookingStatus::Cancelled) {
+        $banner = [
+            'kind' => 'cancelled',
+            'title' => __('Lesson cancelled'),
+            'body' => __('Cancelled by the :who.', ['who' => $booking->cancelled_by ?? __('platform')]),
+            'reason' => $booking->cancellation_reason,
+            'action' => [
+                'label' => __('Find another teacher'),
+                'url' => route('student.teachers.index'),
+                'variant' => 'outline',
+            ],
+        ];
+    }
+
+    $details = [
+        'dateLine' => $startDateLabel.', '.$startTimeLabel.'–'.$endTimeLabel,
+        'durationLine' => $booking->durationMinutes().' '.__('minutes').' · '.$timezone,
+        'teacherName' => $teacherUser->name,
+        'teacherUrl' => route('student.teachers.show', $booking->teacher_profile_id),
+        'subjectLine' => collect([$booking->subject?->name, $booking->lesson?->name])->filter()->implode(' · '),
+        'learner' => $booking->learner_name ?? auth()->user()->name,
+        'learnerGrade' => $booking->learnerGrade?->label,
+        'bookedOn' => $booking->created_at->format('d M Y, H:i'),
+        'reference' => '#'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
+        'requestUrl' => $booking->tutoringRequest ? route('student.requests.show', $booking->tutoring_request_id) : null,
+    ];
+
+    // Booking::timeline() builds the steps; only the timestamps are converted here.
+    $timelineSteps = collect($booking->timeline())
+        ->map(fn (array $step) => [
+            'key' => $step['key'],
+            'label' => $step['label'],
+            'at' => $step['at']?->copy()->setTimezone($timezone)->format('d M Y, H:i'),
+            'description' => $step['description'],
+        ])
+        ->values()->all();
+
+    // What the lesson is for. Nothing here is a permission decision — those are
+    // the actions below, which Blade has already filtered by policy.
+    $moneyBlock = [
+        'totalLabel' => $isCompleted ? __('Paid') : __('Lesson total'),
+        'total' => $money($booking->totalMinor()),
+        'purchaseNotice' => $booking->isPurchaseSession() ? [
+            'text' => __('This session is covered by your purchase — no payment is needed.'),
+            'linkLabel' => __('View the purchase'),
+            'url' => route('student.purchases.show', $booking->service_purchase_id),
+        ] : null,
+        'breakdown' => $booking->booking_fee_minor > 0 ? [
+            [
+                'label' => __('Lesson'),
+                'tag' => null,
+                'value' => $money($booking->price_minor),
+                'strike' => null,
+                'positive' => false,
+            ],
+            [
+                'label' => __('Platform booking fee'),
+                'tag' => $booking->bookingFeePromotion?->name,
+                'value' => $money($booking->hasBookingFeeDiscount() ? $booking->netBookingFeeMinor() : $booking->booking_fee_minor),
+                'strike' => $booking->hasBookingFeeDiscount() ? $money($booking->booking_fee_minor) : null,
+                'positive' => $booking->hasBookingFeeDiscount(),
+            ],
+        ] : null,
+        'payment' => $payment ? [
+            'statusLabel' => $payment->status->label(),
+            // Payment status colors live in the PHP enum, outside Tailwind's scan.
+            'statusTone' => match ($payment->status) {
+                PaymentStatus::Created, PaymentStatus::Authorized => 'amber',
+                PaymentStatus::Captured => 'emerald',
+                PaymentStatus::Failed => 'rose',
+                default => 'slate',
+            },
+            'gatewayId' => $payment->gateway_payment_id,
+            'refunded' => $payment->refundedMinor() > 0 ? $money($payment->refundedMinor()) : null,
+            'paidOn' => $payment->captured_at?->copy()->setTimezone($timezone)->format('d M Y, H:i') ?? '—',
+        ] : null,
+        'receiptUrl' => route('receipts.show', $booking),
+    ];
+
+    $actions = [];
+
+    if ($booking->status->isLive()) {
+        $actions[] = [
+            'kind' => 'link',
+            'label' => $booking->canJoinNow() ? __('Join lesson') : __('Live classroom'),
+            'url' => route('classroom.show', $booking),
+            'variant' => $booking->canJoinNow() ? 'primary' : 'outline',
+        ];
+    }
+
+    // Cancelling opens a dialog instead of navigating; its copy only travels in
+    // the island when the policy allows the action at all.
+    if ($canCancel) {
+        $actions[] = ['kind' => 'dialog', 'label' => __('Cancel lesson'), 'url' => null, 'variant' => 'outline'];
+    }
+
+    if ($booking->status === BookingStatus::Confirmed) {
+        $actions[] = [
+            'kind' => 'form',
+            'label' => __('Reschedule'),
+            'url' => route('student.bookings.reschedule', $booking),
+            'variant' => 'outline',
+        ];
+    }
+
+    if ($booking->conversation) {
+        $actions[] = [
+            'kind' => 'link',
+            'label' => __('Chat with teacher'),
+            'url' => route('messages.show', $booking->conversation),
+            'variant' => 'outline',
+        ];
+    }
+
+    $cancelNotice = ! $canCancel
+        && $booking->status === BookingStatus::Confirmed
+        && $booking->isInsideStudentCancelWindow($cancelWindowHours)
+            ? __('This lesson starts in less than :hours hours, so self-service cancellation is closed — contact support and we will sort it out.', ['hours' => $cancelWindowHours])
+            : null;
+
+    $cancelDialog = $canCancel ? [
+        'title' => __('Cancel this lesson?'),
+        'body' => __('The slot is released immediately. A paid lesson is refunded in full when you cancel outside the :hours-hour window; a teacher cancellation is always refunded.', ['hours' => $cancelWindowHours]),
+        'reasonLabel' => __('Reason (optional)'),
+        'keepLabel' => __('Keep lesson'),
+        'submitLabel' => __('Cancel lesson'),
+        'url' => route('student.bookings.cancel', $booking),
+        'error' => $errors->first('reason') ?: null,
+    ] : null;
+
+    $reviewBlock = null;
+
+    if ($isCompleted) {
+        $review = $booking->review;
+        $editable = (bool) $review?->isEditable();
+
+        $reviewBlock = [
+            'heading' => __('Your review'),
+            'hasReview' => $review !== null,
+            // The label only travels when it applies: the student either has a
+            // verdict to write or one to edit.
+            'actionLabel' => $review === null
+                ? __('Leave a review')
+                : ($editable ? __('Edit review') : null),
+            'actionUrl' => route('student.reviews.show', $booking),
+            'prompt' => $review === null
+                ? __('How did it go? A review takes a minute and helps other students pick the right teacher.')
+                : null,
+            'rating' => $review?->rating,
+            'outOfFive' => $review ? $review->rating.'/5' : null,
+            'comment' => $review?->comment,
+            'noComment' => __('No comment left.'),
+            'metaLine' => $review ? collect([
+                __('Published :when', ['when' => $review->created_at->diffForHumans()]),
+                $review->wasEdited() ? __('edited :when', ['when' => $review->edited_at->diffForHumans()]) : null,
+                $editable ? null : __('edit window closed'),
+            ])->filter()->implode(' · ') : null,
+            'editableUntil' => $editable
+                ? __('You can change this review until :date.', ['date' => $review->editableUntil()->format('d M Y')])
+                : null,
+        ];
+    }
+
+    $bookingPayload = [
+        'appName' => config('app.name', 'Studylikepro'),
+        'csrfToken' => csrf_token(),
+        'theme' => ['preset' => $themePreset],
+        'flash' => $flash,
+        'error' => $errors->first('status') ?: null,
+        'join' => $join,
+        'banner' => $banner,
+        'details' => $details,
+        'timeline' => [
+            'steps' => $timelineSteps,
+            'cancellationReason' => $booking->cancellation_reason,
+        ],
+        'money' => $moneyBlock,
+        'actions' => $actions,
+        'cancelNotice' => $cancelNotice,
+        'cancel' => $cancelDialog,
+        'review' => $reviewBlock,
+        'copy' => [
+            'lessonLabel' => __('Lesson'),
+            'teacherLabel' => __('Teacher'),
+            'learnerLabel' => __('Learner'),
+            'bookedOnLabel' => __('Booked on'),
+            'referenceLabel' => __('Reference'),
+            'requestLead' => __('This lesson answers'),
+            'requestLink' => __('your tutoring request'),
+            'timelineTitle' => __('Status timeline'),
+            'pendingLabel' => __('pending'),
+            'paymentLabel' => __('Payment'),
+            'refundedLabel' => __('Refunded'),
+            'paidOnLabel' => __('Paid on'),
+            'receiptLabel' => __('View receipt'),
+        ],
+        'urls' => [
+            'index' => route('student.bookings.index'),
+        ],
+    ];
+
+    // JSON_UNESCAPED_SLASHES keeps the URLs readable; the HEX flags keep the
+    // island safe inside a <script> tag.
+    $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
 @endphp
 
 <x-app-layout>
@@ -30,362 +302,79 @@
         </div>
     </x-slot>
 
-    <div class="w-full">
-        <div class="space-y-6">
-            @if (session('status') === 'hold-created')
-                <div class="rounded-2xl border border-amber-200/80 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
-                    {{ __('Slot reserved. Complete the payment before the hold lapses and the lesson is confirmed.') }}
-                </div>
-            @elseif (session('status') === 'session-booked')
-                <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                    {{ __('Session booked — it is already paid for from your purchase.') }}
-                </div>
-            @elseif (session('status') === 'booking-confirmed')
-                <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                    {{ __('Payment received — your lesson is confirmed.') }}
-                </div>
-            @elseif (session('status') === 'booking-cancelled')
+    <script type="application/json" id="student-booking-show-config">@json($bookingPayload, $jsonFlags)</script>
+
+    <div id="student-booking-show-app" class="w-full"></div>
+
+    {{-- Fallback for a browser without JavaScript: the page is a thin shell, so
+         print the same state, total and actions the Vue app would render. --}}
+    <noscript>
+        <div class="w-full space-y-6">
+            @if ($flash)
                 <div class="rounded-2xl border border-slate-200/80 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                    {{ __('Lesson cancelled. The slot is back on the teacher calendar.') }}
-                </div>
-            @elseif (session('status') === 'review-submitted')
-                <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                    {{ __('Thank you! Your review is live on the teacher profile.') }}
-                </div>
-            @elseif (session('status') === 'review-updated')
-                <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                    {{ __('Review updated — the teacher profile reflects your new rating.') }}
-                </div>
-            @elseif (session('status') === 'review-locked')
-                <div class="rounded-2xl border border-amber-200/80 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
-                    {{ __('The edit window for this review has closed.') }}
+                    {{ $flash['message'] }}
                 </div>
             @endif
 
-            @if ($errors->has('status'))
-                <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
-                    {{ $errors->first('status') }}
-                </div>
-            @endif
-
-            @if ($booking->canJoinNow())
-                <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-5 dark:border-emerald-900/40 dark:bg-emerald-950/20">
-                    <div class="flex flex-wrap items-center justify-between gap-4">
-                        <div class="flex items-start gap-3">
-                            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-xl dark:bg-emerald-900/40">🎥</span>
-                            <div>
-                                <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('Your classroom is open') }}</h3>
-                                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                    {{ __('Join :teacher now — the room stays open until :time.', [
-                                        'teacher' => $teacherUser->name,
-                                        'time' => $booking->joinClosesAt()->copy()->setTimezone($timezone)->format('H:i'),
-                                    ]) }}
-                                </p>
-                            </div>
-                        </div>
-                        <a href="{{ route('classroom.show', $booking) }}"
-                           class="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary/90">
-                            {{ __('Join lesson') }} &nearr;
-                        </a>
-                    </div>
-                </div>
-            @endif
-
-            <!-- Payment / status banner -->
-            @if ($isHold && ! $holdLapsed)
-                <div class="{{ $cardBase }} border-amber-200/80 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div class="flex items-start gap-3">
-                            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-xl dark:bg-amber-900/40">⏳</span>
-                            <div>
-                                <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('Your slot is held') }}</h3>
-                                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                    {{ $startLabel }}, {{ $startTime }}–{{ $endLabel }} · {{ $booking->durationMinutes() }} {{ __('minutes') }}
-                                </p>
-                                <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                                    @if ($booking->expires_at)
-                                        {{ __('Reserved until :time (:relative). After that the slot is released to other students.', [
-                                            'time' => $booking->expires_at->copy()->setTimezone($timezone)->format('H:i'),
-                                            'relative' => $booking->expires_at->diffForHumans(),
-                                        ]) }}
-                                    @else
-                                        {{ __('Complete the payment to confirm this lesson.') }}
-                                    @endif
-                                </p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-xs text-slate-500 dark:text-slate-400">
-                                {{ __('Lesson :price', ['price' => $money($booking->price_minor)]) }}
-                                @if ($booking->booking_fee_minor > 0)
-                                    · {{ __('booking fee :fee', ['fee' => $money($booking->netBookingFeeMinor())]) }}
-                                @endif
-                            </p>
-                            <p class="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">{{ $money($booking->totalMinor()) }}</p>
-                            <form method="POST" action="{{ route('student.bookings.checkout', $booking) }}" class="mt-2">
-                                @csrf
-                                <x-primary-button>{{ __('Pay :amount', ['amount' => $money($booking->totalMinor())]) }}</x-primary-button>
-                            </form>
-                            <p class="mt-2 text-[11px] text-amber-700 dark:text-amber-400">
-                                {{ __('Secure checkout · the slot stays yours until :time', ['time' => $booking->expires_at?->copy()->setTimezone($timezone)->format('H:i') ?? __('you pay')]) }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            @elseif ($holdLapsed || $booking->status === BookingStatus::Expired)
-                <div class="{{ $cardBase }} border-slate-200/80 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60">
-                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('This hold lapsed') }}</h3>
-                    <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ __('The payment window closed and the slot went back on the teacher calendar.') }}</p>
-                    <a href="{{ route('student.bookings.create', $booking->teacher_profile_id) }}"
-                       class="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90">
-                        {{ __('Pick another time') }}
-                    </a>
-                </div>
-            @elseif ($booking->status === BookingStatus::Cancelled)
-                <div class="{{ $cardBase }} border-slate-200/80 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60">
-                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('Lesson cancelled') }}</h3>
-                    <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                        {{ __('Cancelled by the :who.', ['who' => $booking->cancelled_by ?? __('platform')]) }}
-                        @if ($booking->cancellation_reason)
-                            <span class="italic">“{{ $booking->cancellation_reason }}”</span>
-                        @endif
-                    </p>
-                    <a href="{{ route('student.teachers.index') }}"
-                       class="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                        {{ __('Find another teacher') }}
-                    </a>
-                </div>
-            @endif
-
-            <!-- Lesson details -->
-            <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Lesson') }}</p>
-                        <p class="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">{{ $startLabel }}, {{ $startTime }}–{{ $endLabel }}</p>
-                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $booking->durationMinutes() }} {{ __('minutes') }} · {{ $timezone }}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Teacher') }}</p>
-                        <a href="{{ route('student.teachers.show', $booking->teacher_profile_id) }}" class="mt-1 block text-sm font-bold text-primary hover:underline">{{ $teacherUser->name }}</a>
-                        <p class="text-xs text-slate-400">{{ $booking->subject?->name }}@if ($booking->lesson) · {{ $booking->lesson->name }}@endif</p>
-                    </div>
-                </div>
-
-                <dl class="mt-5 grid gap-4 border-t border-slate-200 pt-5 text-sm sm:grid-cols-3 dark:border-slate-800">
-                    <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Learner') }}</dt>
-                        <dd class="mt-1 font-semibold text-slate-700 dark:text-slate-200">{{ $booking->learner_name ?? auth()->user()->name }}</dd>
-                        @if ($booking->learnerGrade)
-                            <dd class="text-xs text-slate-500 dark:text-slate-400">{{ $booking->learnerGrade->label }}</dd>
-                        @endif
-                    </div>
-                    <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Booked on') }}</dt>
-                        <dd class="mt-1 font-semibold text-slate-700 dark:text-slate-200">{{ $booking->created_at->format('d M Y, H:i') }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Reference') }}</dt>
-                        <dd class="mt-1 font-semibold text-slate-700 dark:text-slate-200">#{{ str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT) }}</dd>
-                    </div>
-                </dl>
-
-                @if ($booking->tutoringRequest)
-                    <p class="mt-5 border-t border-slate-200 pt-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                        {{ __('This lesson answers') }}
-                        <a href="{{ route('student.requests.show', $booking->tutoring_request_id) }}" class="font-semibold text-primary hover:underline">{{ __('your tutoring request') }}</a>.
-                    </p>
-                @endif
+            <div class="rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Lesson') }}</p>
+                <p class="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">{{ $details['dateLine'] }}</p>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $details['durationLine'] }}</p>
+                <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">
+                    {{ $details['teacherName'] }}@if ($details['subjectLine']) · {{ $details['subjectLine'] }}@endif
+                </p>
+                <p class="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    {{ $moneyBlock['totalLabel'] }} {{ $moneyBlock['total'] }}
+                </p>
             </div>
 
-            <!-- Timeline -->
-            <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ __('Status timeline') }}</h3>
-                <div class="mt-4">
-                    <x-booking-timeline :booking="$booking" :timezone="$timezone" />
-                </div>
-            </div>
+            @if ($banner)
+                <div class="rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ $banner['title'] }}</h3>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $banner['body'] ?? $banner['note'] }}</p>
 
-            <!-- Money + actions -->
-            <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-                <div class="flex items-center justify-between gap-3">
-                    <span class="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                        {{ $booking->status === BookingStatus::Completed ? __('Paid') : __('Lesson total') }}
-                    </span>
-                    <span class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{{ $money($booking->totalMinor()) }}</span>
-                </div>
-
-                @if ($booking->isPurchaseSession())
-                    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                        {{ __('This session is covered by your purchase — no payment is needed.') }}
-                        <a href="{{ route('student.purchases.show', $booking->service_purchase_id) }}" class="font-semibold text-primary hover:underline">
-                            {{ __('View the purchase') }}
-                        </a>
-                    </p>
-                @endif
-
-                @if ($booking->booking_fee_minor > 0)
-                    <dl class="mt-3 space-y-1 border-t border-slate-200 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                        <div class="flex items-center justify-between gap-3">
-                            <dt>{{ __('Lesson') }}</dt>
-                            <dd>{{ $money($booking->price_minor) }}</dd>
-                        </div>
-                        <div class="flex items-center justify-between gap-3">
-                            <dt>
-                                {{ __('Platform booking fee') }}
-                                @if ($booking->bookingFeePromotion)
-                                    <span class="text-emerald-600 dark:text-emerald-400">· {{ $booking->bookingFeePromotion->name }}</span>
-                                @endif
-                            </dt>
-                            <dd class="{{ $booking->hasBookingFeeDiscount() ? 'text-emerald-600 dark:text-emerald-400' : '' }}">
-                                @if ($booking->hasBookingFeeDiscount())
-                                    {{ $money($booking->netBookingFeeMinor()) }}
-                                    <span class="ml-1 text-slate-400 line-through">{{ $money($booking->booking_fee_minor) }}</span>
-                                @else
-                                    {{ $money($booking->booking_fee_minor) }}
-                                @endif
-                            </dd>
-                        </div>
-                    </dl>
-                @endif
-
-                @if ($payment)
-                    <dl class="mt-4 space-y-2 border-t border-slate-200 pt-4 text-sm dark:border-slate-800">
-                        <div class="flex items-center justify-between gap-3">
-                            <dt class="text-slate-500 dark:text-slate-400">{{ __('Payment') }}</dt>
-                            <dd class="flex items-center gap-2">
-                                <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $payment->status->badgeClasses() }}">{{ $payment->status->label() }}</span>
-                                <span class="text-xs text-slate-400">{{ $payment->gateway_payment_id }}</span>
-                            </dd>
-                        </div>
-                        @if ($payment->refundedMinor() > 0)
-                            <div class="flex items-center justify-between gap-3">
-                                <dt class="text-slate-500 dark:text-slate-400">{{ __('Refunded') }}</dt>
-                                <dd class="font-semibold text-emerald-600 dark:text-emerald-400">−{{ $money($payment->refundedMinor()) }}</dd>
-                            </div>
-                        @endif
-                        <div class="flex items-center justify-between gap-3">
-                            <dt class="text-slate-500 dark:text-slate-400">{{ __('Paid on') }}</dt>
-                            <dd class="text-slate-600 dark:text-slate-300">{{ $payment->captured_at?->copy()->setTimezone($timezone)->format('d M Y, H:i') ?? '—' }}</dd>
-                        </div>
-                    </dl>
-
-                    <a href="{{ route('receipts.show', $booking) }}"
-                       class="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                        {{ __('View receipt') }}
-                    </a>
-                @endif
-
-                <div class="mt-5 flex flex-wrap gap-3 border-t border-slate-200 pt-5 dark:border-slate-800">
-                    @if ($booking->status->isLive())
-                        <a href="{{ route('classroom.show', $booking) }}"
-                           class="inline-flex items-center gap-2 rounded-xl {{ $booking->canJoinNow() ? 'bg-primary px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary/90' : 'border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800' }}">
-                            {{ $booking->canJoinNow() ? __('Join lesson') : __('Live classroom') }}
-                        </a>
-                    @endif
-
-                    @if ($canCancel)
-                        <button type="button" x-data="" @click="$dispatch('open-modal', 'cancel-booking')"
-                                class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                            {{ __('Cancel lesson') }}
-                        </button>
-                    @endif
-
-                    @if ($booking->status === BookingStatus::Confirmed)
-                        <form method="POST" action="{{ route('student.bookings.reschedule', $booking) }}">
+                    @if ($banner['kind'] === 'hold')
+                        <form method="POST" action="{{ $banner['payUrl'] }}" class="mt-3">
                             @csrf
-                            <button type="submit"
-                                    class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                                {{ __('Reschedule') }}
-                            </button>
+                            <button type="submit" class="inline-flex items-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white">{{ $banner['payLabel'] }}</button>
+                        </form>
+                    @elseif ($banner['action'])
+                        <a href="{{ $banner['action']['url'] }}" class="mt-3 inline-block font-semibold text-primary hover:underline">{{ $banner['action']['label'] }}</a>
+                    @endif
+                </div>
+            @endif
+
+            @if ($join)
+                <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-6 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ $join['title'] }}</h3>
+                    <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ $join['body'] }}</p>
+                    <a href="{{ $join['url'] }}" class="mt-3 inline-block rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white">{{ $join['ctaLabel'] }}</a>
+                </div>
+            @endif
+
+            <div class="flex flex-wrap items-center gap-3">
+                @foreach ($actions as $action)
+                    @if ($action['kind'] === 'link')
+                        <a href="{{ $action['url'] }}" class="font-semibold text-primary hover:underline">{{ $action['label'] }}</a>
+                    @elseif ($action['kind'] === 'form')
+                        <form method="POST" action="{{ $action['url'] }}">
+                            @csrf
+                            <button type="submit" class="font-semibold text-primary hover:underline">{{ $action['label'] }}</button>
+                        </form>
+                    @elseif ($cancelDialog)
+                        <form method="POST" action="{{ $cancelDialog['url'] }}">
+                            @csrf
+                            <button type="submit" class="font-semibold text-rose-600 hover:underline">{{ $cancelDialog['submitLabel'] }}</button>
                         </form>
                     @endif
+                @endforeach
 
-                    @if ($booking->conversation)
-                        <a href="{{ route('messages.show', $booking->conversation) }}"
-                           class="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                            {{ __('Chat with teacher') }}
-                        </a>
-                    @endif
-                </div>
-
-                @if (! $canCancel && $booking->status === BookingStatus::Confirmed && $booking->isInsideStudentCancelWindow(platform_settings()->int('student_cancel_window_hours')))
-                    <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                        {{ __('This lesson starts in less than :hours hours, so self-service cancellation is closed — contact support and we will sort it out.', ['hours' => platform_settings()->int('student_cancel_window_hours')]) }}
-                    </p>
+                @if ($reviewBlock && ! $reviewBlock['hasReview'])
+                    <a href="{{ $reviewBlock['actionUrl'] }}" class="font-semibold text-primary hover:underline">{{ $reviewBlock['actionLabel'] }}</a>
                 @endif
             </div>
-
-            <!-- Review -->
-            @if ($isCompleted)
-                @php
-                    $review = $booking->relationLoaded('review') ? $booking->review : $booking->review()->first();
-                    $windowDays = config('studylikepro.reviews.edit_window_days');
-                @endphp
-
-                <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ __('Your review') }}</h3>
-                        @if ($review?->isEditable())
-                            <a href="{{ route('student.reviews.show', $booking) }}" class="text-xs font-semibold text-primary hover:underline">{{ __('Edit review') }}</a>
-                        @endif
-                    </div>
-
-                    @if ($review === null)
-                        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                            {{ __('How did it go? A review takes a minute and helps other students pick the right teacher.') }}
-                        </p>
-                        <a href="{{ route('student.reviews.show', $booking) }}"
-                           class="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90">
-                            {{ __('Leave a review') }}
-                        </a>
-                    @else
-                        <div class="mt-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                            <p class="text-lg text-amber-500">{{ str_repeat('★', $review->rating) }}<span class="text-slate-300 dark:text-slate-600">{{ str_repeat('★', 5 - $review->rating) }}</span>
-                                <span class="ml-2 align-middle text-xs font-semibold text-slate-400">{{ $review->rating }}/5</span>
-                            </p>
-                            @if ($review->comment)
-                                <p class="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ $review->comment }}</p>
-                            @else
-                                <p class="mt-2 text-sm italic text-slate-400">{{ __('No comment left.') }}</p>
-                            @endif
-                            <p class="mt-2 text-xs text-slate-400">
-                                {{ __('Published :when', ['when' => $review->created_at->diffForHumans()]) }}
-                                @if ($review->wasEdited()) · {{ __('edited :when', ['when' => $review->edited_at->diffForHumans()]) }} @endif
-                                @unless ($review->isEditable()) · {{ __('edit window closed') }} @endunless
-                            </p>
-                        </div>
-
-                        @if ($review->isEditable())
-                            <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                                {{ __('You can change this review until :date.', ['date' => $review->editableUntil()->format('d M Y')]) }}
-                            </p>
-                        @endif
-                    @endif
-                </div>
-            @endif
         </div>
-    </div>
+    </noscript>
 
-    @if ($canCancel)
-        <x-modal name="cancel-booking" focusable>
-            <form method="POST" action="{{ route('student.bookings.cancel', $booking) }}" class="p-6">
-                @csrf
-                <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ __('Cancel this lesson?') }}</h2>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    {{ __('The slot is released immediately. A paid lesson is refunded in full when you cancel outside the :hours-hour window; a teacher cancellation is always refunded.', ['hours' => platform_settings()->int('student_cancel_window_hours')]) }}
-                </p>
-                <div class="mt-4">
-                    <x-input-label for="cancel-reason" :value="__('Reason (optional)')" />
-                    <textarea id="cancel-reason" name="reason" rows="3"
-                              class="mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"></textarea>
-                    <x-input-error :messages="$errors->get('reason')" class="mt-2" />
-                </div>
-                <div class="mt-6 flex justify-end gap-3">
-                    <x-secondary-button x-on:click="$dispatch('close')">{{ __('Keep lesson') }}</x-secondary-button>
-                    <x-danger-button>{{ __('Cancel lesson') }}</x-danger-button>
-                </div>
-            </form>
-        </x-modal>
-    @endif
+    @vite('resources/js/student-booking-show/main.js')
 </x-app-layout>

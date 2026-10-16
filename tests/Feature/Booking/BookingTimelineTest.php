@@ -4,19 +4,25 @@ use App\Models\Booking;
 use App\Services\BookingTransitionService;
 
 /**
- * The status timeline a lesson page renders (resources/views/components/booking-timeline.blade.php)
- * is built by Booking::timeline(); these tests pin the steps it hands the view.
+ * The status timeline is built by Booking::timeline(). The student lesson page
+ * renders it from the Vue island (see `bookingShowConfig()` in tests/Pest.php),
+ * so these tests pin the steps it hands the view.
  */
 it('closes the timeline with the rate and review step', function () {
     $scenario = classroomScenario();
     $booking = $scenario['booking'];
 
     // The final step is on the page straight away and waits for the lesson.
-    $this->actingAs($scenario['student'])
+    $response = $this->actingAs($scenario['student'])
         ->get(route('student.bookings.show', $booking))
         ->assertOk()
-        ->assertSee('Rate & review')
         ->assertSee('The student has not rated this lesson yet.');
+
+    $steps = collect(bookingShowConfig($response)['timeline']['steps'])->keyBy('key');
+
+    expect($steps->keys()->all())->toBe(['requested', 'confirmed', 'in_progress', 'completed', 'reviewed'])
+        ->and($steps['reviewed']['label'])->toBe('Rate & review')
+        ->and($steps['reviewed']['at'])->toBeNull();
 
     $this->travelTo($booking->starts_at->addMinutes(10));
     app(BookingTransitionService::class)->complete($booking);

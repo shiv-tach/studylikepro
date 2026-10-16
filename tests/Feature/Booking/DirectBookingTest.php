@@ -9,6 +9,7 @@ use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherProfile;
 use App\Models\User;
 use App\Notifications\BookingRequestReceived;
+use App\Services\BookingFeeService;
 use App\Services\RequestMatcher;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Notification;
@@ -315,4 +316,75 @@ it('sends a student to the payment page after reserving', function () {
         ->assertOk()
         ->assertSee('Checkout')
         ->assertSee('Demo gateway');
+});
+
+/**
+ * The stepper is rendered by resources/js/student-booking-create, so the Blade
+ * view only has to hand the Vue app a correct config island (see
+ * `bookingCreateConfig()` in tests/Pest.php). These tests pin that contract down:
+ * the scoped options, the slots, the learner block and the order summary.
+ */
+it('hands the stepper island the scoped options, the slots and the order summary', function () {
+    $scenario = directBookingScenario();
+
+    $config = bookingCreateConfig(
+        $this->actingAs($scenario['student'])
+            ->get(route('student.bookings.create', $scenario['teacher']))
+            ->assertOk()
+    );
+
+    expect($config['theme']['preset'])->toBe('classic')
+        ->and($config['urls']['filter'])->toBe(route('student.bookings.create', $scenario['teacher']))
+        ->and($config['urls']['store'])->toBe(route('student.bookings.store', $scenario['teacher']))
+        ->and($config['selection']['subjectId'])->toBe((string) $scenario['subject']->id)
+        ->and($config['selection']['lessonId'])->toBe('')
+        ->and($config['selection']['duration'])->toBe('60')
+        ->and($config['learner']['gradeLabel'])->toBe('Grade 11')
+        ->and($config['copy']['reserve'])->toBe('Reserve this slot')
+        ->and($config['copy']['bookingFee'])->toBe('Booking fee');
+
+    // Only the grade-scoped subject and lesson are on offer.
+    expect(collect($config['subjects'])->pluck('label')->all())->toBe(['Mathematics'])
+        ->and($config['lessons'])->toHaveCount(1)
+        ->and($config['lessons'][0]['label'])->toContain('Algebra');
+
+    // The open slot travels as an instant plus the label the student clicked.
+    $slotValues = collect($config['slots'])
+        ->flatMap(fn (array $group) => collect($group['slots'])->pluck('value'))
+        ->all();
+
+    expect($slotValues)->toContain($scenario['slot']->toIso8601String())
+        ->and($config['slots'][0]['label'])->not->toBeEmpty()
+        ->and($config['slots'][0]['slots'][0]['label'])->toMatch('/^\d{2}:\d{2}$/')
+        ->and($config['slotsNotice'])->toBeNull();
+
+    // 60 minutes of the 600.00/hr rate, plus the booking fee on top.
+    $fee = app(BookingFeeService::class)->quote();
+
+    expect($config['summary']['teacher'])->toBe($scenario['teacherUser']->name)
+        ->and($config['summary']['subject'])->toBe('Mathematics')
+        ->and($config['summary']['rate'])->toBe(platform_settings()->formatMinor(60000).'/hour')
+        ->and($config['summary']['lessonPrice'])->toBe(platform_settings()->formatMinor(60000))
+        ->and($config['summary']['total'])->toBe(platform_settings()->formatMinor(60000 + $fee['net_minor']))
+        ->and($config['summary']['includesFee'])->toBe('includes the '.platform_settings()->formatMinor($fee['net_minor']).' booking fee');
+});
+
+it('echoes the chosen lesson and length back into the stepper island', function () {
+    $scenario = directBookingScenario();
+
+    $config = bookingCreateConfig(
+        $this->actingAs($scenario['student'])
+            ->get(route('student.bookings.create', [
+                'teacherProfile' => $scenario['teacher'],
+                'subject_id' => $scenario['subject']->id,
+                'lesson_id' => $scenario['lesson']->id,
+                'duration' => 30,
+            ]))
+            ->assertOk()
+    );
+
+    expect($config['selection']['lessonId'])->toBe((string) $scenario['lesson']->id)
+        ->and($config['selection']['duration'])->toBe('30')
+        ->and($config['summary']['length'])->toBe('30 minutes')
+        ->and($config['summary']['lessonPrice'])->toBe(platform_settings()->formatMinor(30000));
 });
