@@ -199,6 +199,27 @@ The request list and the "Ask a question" form share one bundle, mounted inside 
 * **Actions:** the form is a real `method="POST"` form to `student.requests.store` carrying the island's CSRF token, so CSRF, validation errors, redirects and the queued AI classification all stay server-side.
 * **No-JS fallback:** both views render a `<noscript>` version — a plain list, and a plain form with the same field names, limits and attributes.
 * **Contract tests:** `tests/Feature/Student/RequestsIndexTest.php` and `tests/Feature/Student/RequestsCreateTest.php` assert the islands the two apps depend on.
+
+### Student lessons (`/student/lessons`)
+
+"My lessons" is the student's booking list: the upcoming/past tabs, the history filters and the lesson cards. Filtering, paging and the tab switch stay server-side, so this conversion only moves the markup — not the query.
+
+* **Entry point:** `resources/js/student-lessons/main.js` is its own Vite input; [bookings/index.blade.php](file:///d:/Github/studylikepro/resources/views/student/bookings/index.blade.php) calls `@vite(...)` for it, so the other booking screens keep their bundles.
+* **Server data:** [BookingController](file:///d:/Github/studylikepro/app/Http/Controllers/Student/BookingController.php) keeps the request validation, the upcoming/past scopes, the eager loading and the timezone/money formatting; Blade then renders the `#student-lessons-config` JSON island and mounts the app on `#student-lessons-app`. The island carries both tabs (each URL keeping the filters already applied), the filter options taken from the student's own history, the pre-formatted lesson cards (status, pay-by countdown, duration, join-now, review nudge, time range and total) and the route map. Never hardcode a URL in the Vue code — read it from `config.urls`.
+* **Structure:** [App.vue](file:///d:/Github/studylikepro/resources/js/student-lessons/App.vue) composes the tabs, the filter panel, the cards and the empty state from `resources/js/student-lessons/components/`, reusing [resources/js/shared/](file:///d:/Github/studylikepro/resources/js/shared) (`AppIcon`, `UiEmptyState`, `RevealOnScroll`, `usePanel`, `useThemePreset`, `styles.js`) and `composables/usePageContext.js` for the copy and the route map.
+* **Interactivity that stays server-side:** the tabs are real links and the filter panel is a real `method="GET"` form carrying the island's `tab`, so Laravel still validates `status`, `subject`, `teacher`, `from` and `to`.
+* **Pagination:** `$bookings->links()` stays server-rendered below the island.
+* **No-JS fallback:** the view renders a `<noscript>` list of the same lessons — or the same empty state — plus the teacher directory link.
+* **Contract test:** `tests/Feature/Student/LessonsIndexTest.php` asserts the island the Vue app depends on.
+
+### Lesson detail (`/student/lessons/{booking}`)
+
+[bookings/show.blade.php](file:///d:/Github/studylikepro/resources/views/student/bookings/show.blade.php) is the one booking screen that stays Blade + Alpine. It is the reference for the full-width, in-page-navigation layout:
+
+* **Full width:** the page opens on `w-full` instead of `mx-auto max-w-<size>`, then splits into `xl:grid-cols-[15rem_minmax(0,1fr)]` (widening the rail to `16rem` at `2xl`). Every card sits in the second column, so the lesson content uses the whole workspace.
+* **Rail:** the first grid column holds a `sticky top-24` card of section links. Because it is a stretched grid item, it travels the full height of the cards beside it. Below `xl` the rail would squeeze the cards, so it is hidden there and the same links render as sticky chips under the top bar (`sticky top-16`).
+* **Sections:** `$sections` is built in the view from the cards the booking actually renders (the review entry is added only for a completed lesson), and each card carries its own `id` plus `scroll-mt-32 xl:scroll-mt-24` so native anchor jumps clear the sticky chrome.
+* **Alpine contract:** one `x-data` on the page wrapper owns `ids`, `active`, the scroll listener and `go()`. `sync()` marks the last section whose top passed the offset line and pins the final section at the bottom of the page; `go()` holds the highlight for 900ms while the smooth scroll runs and skips motion for `prefers-reduced-motion`. The section links are real `href="#…"` anchors that also carry `scroll-margin`, so the navigation still works without JavaScript.
 3. **Database update:** Form submission saves selection permanently.
 
 ---
@@ -232,7 +253,7 @@ When writing new views, editing components, or extending layouts, you **MUST** f
 * **Sidebar Template:** [resources/views/layouts/navigation.blade.php](file:///d:/Github/studylikepro/resources/views/layouts/navigation.blade.php)
 * **Vue Shell Components:** [resources/js/app-shell/](file:///d:/Github/studylikepro/resources/js/app-shell)
 * **Theme Configuration view:** [resources/views/settings/edit.blade.php](file:///d:/Github/studylikepro/resources/views/settings/edit.blade.php)
-* **Vue Entries:** [resources/js/app-shell/main.js](file:///d:/Github/studylikepro/resources/js/app-shell/main.js), [resources/js/landing/main.js](file:///d:/Github/studylikepro/resources/js/landing/main.js), [resources/js/student-dashboard/main.js](file:///d:/Github/studylikepro/resources/js/student-dashboard/main.js), [resources/js/student-subjects/main.js](file:///d:/Github/studylikepro/resources/js/student-subjects/main.js), [resources/js/student-requests/main.js](file:///d:/Github/studylikepro/resources/js/student-requests/main.js)
+* **Vue Entries:** [resources/js/app-shell/main.js](file:///d:/Github/studylikepro/resources/js/app-shell/main.js), [resources/js/landing/main.js](file:///d:/Github/studylikepro/resources/js/landing/main.js), [resources/js/student-dashboard/main.js](file:///d:/Github/studylikepro/resources/js/student-dashboard/main.js), [resources/js/student-subjects/main.js](file:///d:/Github/studylikepro/resources/js/student-subjects/main.js), [resources/js/student-requests/main.js](file:///d:/Github/studylikepro/resources/js/student-requests/main.js), [resources/js/student-lessons/main.js](file:///d:/Github/studylikepro/resources/js/student-lessons/main.js)
 * **Vue Shared Kit:** [resources/js/shared/](file:///d:/Github/studylikepro/resources/js/shared) — reuse these components, composables and class strings in every new page instead of shipping per-page copies.
-* **Vue Page Bundles:** [resources/js/student-dashboard/](file:///d:/Github/studylikepro/resources/js/student-dashboard), [resources/js/student-subjects/](file:///d:/Github/studylikepro/resources/js/student-subjects), [resources/js/student-requests/](file:///d:/Github/studylikepro/resources/js/student-requests)
+* **Vue Page Bundles:** [resources/js/student-dashboard/](file:///d:/Github/studylikepro/resources/js/student-dashboard), [resources/js/student-subjects/](file:///d:/Github/studylikepro/resources/js/student-subjects), [resources/js/student-requests/](file:///d:/Github/studylikepro/resources/js/student-requests), [resources/js/student-lessons/](file:///d:/Github/studylikepro/resources/js/student-lessons)
 * **Conversion Guide:** [DOC/vue-conversion-guide.md](DOC/vue-conversion-guide.md)

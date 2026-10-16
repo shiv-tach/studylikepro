@@ -393,8 +393,10 @@ class Booking extends Model implements Payable
             $steps[] = [
                 'key' => 'cancelled',
                 'label' => 'Cancelled',
-                'at' => $this->cancelled_at,
-                'description' => trim(ucfirst((string) $this->cancelled_by).' cancelled this lesson.'),
+                'at' => $this->cancelled_at ?? $this->updated_at,
+                'description' => filled($this->cancelled_by)
+                    ? ucfirst($this->cancelled_by).' cancelled this lesson.'
+                    : 'This lesson was cancelled.',
             ];
         } elseif ($this->status === BookingStatus::Expired) {
             $steps[] = [
@@ -428,6 +430,18 @@ class Booking extends Model implements Payable
                 'label' => 'Completed',
                 'at' => $this->completed_at,
                 'description' => 'Lesson delivered.',
+            ];
+            // The student's verdict closes the loop, so it always rides at the end
+            // of a lesson's timeline — pending until the review is written.
+            $review = $this->relationLoaded('review') ? $this->review : $this->review()->first();
+
+            $steps[] = [
+                'key' => 'reviewed',
+                'label' => 'Rate & review',
+                'at' => $review?->created_at,
+                'description' => $review === null
+                    ? 'The student has not rated this lesson yet.'
+                    : sprintf('The student rated this lesson %d/5.', $review->rating),
             ];
         }
 

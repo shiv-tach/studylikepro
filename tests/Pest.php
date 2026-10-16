@@ -82,6 +82,22 @@ function shellConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the "My lessons" page renders its cards from.
+ *
+ * @return array<string, mixed>
+ */
+function lessonsConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="student-lessons-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Create a usable teacher onboarding invite and return the plaintext token.
  *
  * @return array{0: TeacherInvite, 1: string}

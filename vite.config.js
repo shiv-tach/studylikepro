@@ -20,6 +20,9 @@ export default defineConfig({
                 // The request list and the question form share one Vue entry,
                 // mounted only on the pages that render their island.
                 'resources/js/student-requests/main.js',
+                // "My lessons" is the student's booking list; its bundle stays
+                // out of the other booking screens.
+                'resources/js/student-lessons/main.js',
                 // The signed-in chrome (sidebar + top bar) that wraps every
                 // x-app-layout screen, so the layout itself is a Vue component.
                 'resources/js/app-shell/main.js',

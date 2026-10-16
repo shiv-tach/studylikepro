@@ -63,7 +63,7 @@ class BookingController extends Controller
 
         abort_unless($booking->teacher_profile_id === $teacher->id || $request->user()->isAdmin(), 403);
 
-        $booking->load(['student.studentProfile', 'subject', 'lesson', 'tutoringRequest', 'conversation']);
+        $booking->load(['student.studentProfile', 'subject', 'lesson', 'tutoringRequest', 'conversation', 'review']);
 
         return view('teacher.bookings.show', [
             'booking' => $booking,

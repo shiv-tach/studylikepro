@@ -103,11 +103,15 @@ it('prompts for a review on the lesson page after delivery', function () {
         ->assertSee('Edit review')
         ->assertDontSee('Leave a review');
 
-    // The history card flags lessons still waiting for a review.
-    $this->actingAs($scenario['student'])
-        ->get(route('student.bookings.index', ['tab' => 'past']))
-        ->assertOk()
-        ->assertDontSee('Review this lesson');
+    // The history card flags lessons still waiting for a review. The page is a
+    // Vue island now, so the flag is asserted on the card the app renders.
+    $island = lessonsConfig(
+        $this->actingAs($scenario['student'])
+            ->get(route('student.bookings.index', ['tab' => 'past']))
+            ->assertOk()
+    );
+
+    expect(collect($island['lessons'])->firstWhere('id', $booking->id)['reviewPrompt'])->toBeFalse();
 
     $other = classroomScenario()['booking'];
     $other->forceFill([
@@ -118,10 +122,13 @@ it('prompts for a review on the lesson page after delivery', function () {
         'completed_at' => now()->subDays(3),
     ])->save();
 
-    $this->actingAs($scenario['student'])
-        ->get(route('student.bookings.index', ['tab' => 'past']))
-        ->assertOk()
-        ->assertSee('Review this lesson');
+    $island = lessonsConfig(
+        $this->actingAs($scenario['student'])
+            ->get(route('student.bookings.index', ['tab' => 'past']))
+            ->assertOk()
+    );
+
+    expect(collect($island['lessons'])->firstWhere('id', $other->id)['reviewPrompt'])->toBeTrue();
 });
 
 it('counts delivered lessons towards the teacher profile', function () {

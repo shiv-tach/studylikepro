@@ -41,6 +41,9 @@ export const icons = {
     book: {
         paths: ['M5 4.5h8.5a3 3 0 013 3v12H8a3 3 0 01-3-3z', 'M16.5 19.5H18a1 1 0 001-1V7'],
     },
+    folder: {
+        paths: ['M4.5 7.5a2 2 0 012-2h2.9l1.9 2.4h6.2a2 2 0 012 2v7.1a2 2 0 01-2 2h-11a2 2 0 01-2-2z'],
+    },
     graduation: {
         paths: [
             'M12 4.5l8.5 3.8-8.5 3.8-8.5-3.8z',
