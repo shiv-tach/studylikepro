@@ -138,6 +138,29 @@ class ServicePurchase extends Model implements Payable
         return $query->where('status', PurchaseStatus::PendingPayment->value);
     }
 
+    /**
+     * Pending-payment holds whose payment window is still open.
+     */
+    public function scopeHoldOpen(Builder $query): Builder
+    {
+        return $query->where('status', PurchaseStatus::PendingPayment->value)
+            ->where(fn (Builder $window) => $window
+                ->whereNull('expires_at')
+                ->orWhere('expires_at', '>', now()));
+    }
+
+    /**
+     * Pending-payment holds whose window has closed but the scheduler has not
+     * written the Expired status yet. They must never read as payable: checkout
+     * expires them on the spot and refuses the payment.
+     */
+    public function scopeHoldLapsed(Builder $query): Builder
+    {
+        return $query->where('status', PurchaseStatus::PendingPayment->value)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<=', now());
+    }
+
     public function scopeConsumable(Builder $query): Builder
     {
         return $query->whereIn('status', [
@@ -159,6 +182,18 @@ class ServicePurchase extends Model implements Payable
     public function isActive(): bool
     {
         return $this->status === PurchaseStatus::Active;
+    }
+
+    /**
+     * Whether this is a hold whose payment window has already closed. The row
+     * still says "awaiting payment" until the scheduler catches up, but it can
+     * no longer be paid for, so it is shown as expired in the meantime.
+     */
+    public function isHoldLapsed(): bool
+    {
+        return $this->status === PurchaseStatus::PendingPayment
+            && $this->expires_at !== null
+            && $this->expires_at->isPast();
     }
 
     /**

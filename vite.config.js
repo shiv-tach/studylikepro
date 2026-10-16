@@ -23,6 +23,12 @@ export default defineConfig({
                 // "My lessons" is the student's booking list; its bundle stays
                 // out of the other booking screens.
                 'resources/js/student-lessons/main.js',
+                // "My purchases" is the student's service wallet; its bundle
+                // stays out of the detail, checkout and session screens.
+                'resources/js/student-purchases/main.js',
+                // The purchase detail page carries its own bundle, so neither
+                // the wallet nor the checkout screens pay for the other's code.
+                'resources/js/student-purchase-show/main.js',
                 // The signed-in chrome (sidebar + top bar) that wraps every
                 // x-app-layout screen, so the layout itself is a Vue component.
                 'resources/js/app-shell/main.js',

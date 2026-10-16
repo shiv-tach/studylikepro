@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Models\ServiceOffering;
 use App\Models\ServicePurchase;
 use App\Services\PurchaseService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -30,22 +32,8 @@ class PurchaseController extends Controller
 
         $tab = ($filters['tab'] ?? null) === 'past' ? 'past' : 'active';
 
-        $purchases = $request->user()->servicePurchases()
+        $purchases = $this->bucket($request->user()->servicePurchases(), $tab)
             ->with(['offering', 'teacherProfile.user', 'subject', 'lesson', 'summary', 'markingOrder'])
-            ->when(
-                $tab === 'past',
-                fn ($query) => $query->whereIn('status', [
-                    PurchaseStatus::Completed->value,
-                    PurchaseStatus::Cancelled->value,
-                    PurchaseStatus::Expired->value,
-                    PurchaseStatus::Resolved->value,
-                ]),
-                fn ($query) => $query->whereIn('status', [
-                    PurchaseStatus::PendingPayment->value,
-                    PurchaseStatus::Active->value,
-                    PurchaseStatus::Disputed->value,
-                ]),
-            )
             ->when($filters['type'] ?? null, fn ($query, string $type) => $query->where('service_type', $type))
             ->latest()
             ->paginate(8)
@@ -57,19 +45,38 @@ class PurchaseController extends Controller
             'types' => ServiceType::cases(),
             'selectedType' => $filters['type'] ?? null,
             'counts' => [
-                'active' => $request->user()->servicePurchases()->whereIn('status', [
-                    PurchaseStatus::PendingPayment->value,
-                    PurchaseStatus::Active->value,
-                    PurchaseStatus::Disputed->value,
-                ])->count(),
-                'past' => $request->user()->servicePurchases()->whereIn('status', [
-                    PurchaseStatus::Completed->value,
-                    PurchaseStatus::Cancelled->value,
-                    PurchaseStatus::Expired->value,
-                    PurchaseStatus::Resolved->value,
-                ])->count(),
+                'active' => $this->bucket($request->user()->servicePurchases(), 'active')->count(),
+                'past' => $this->bucket($request->user()->servicePurchases(), 'past')->count(),
+                // The one figure the student has to act on, so the overview can
+                // separate "still to pay for" from "already usable".
+                'pending' => $request->user()->servicePurchases()->holdOpen()->count(),
             ],
         ]);
+    }
+
+    /**
+     * The statuses a tab lists. A hold that ran out belongs with the finished
+     * purchases rather than with the ones the student can still act on, because
+     * paying for it is already impossible — the scheduler expires it minutes
+     * later, and this page must not offer that dead end in the meantime.
+     */
+    private function bucket(HasMany $purchases, string $tab): Builder
+    {
+        $statuses = $tab === 'past'
+            ? [
+                PurchaseStatus::Completed->value,
+                PurchaseStatus::Cancelled->value,
+                PurchaseStatus::Expired->value,
+                PurchaseStatus::Resolved->value,
+            ]
+            : [
+                PurchaseStatus::Active->value,
+                PurchaseStatus::Disputed->value,
+            ];
+
+        return $purchases->getQuery()->where(fn (Builder $bucket) => $bucket
+            ->whereIn('status', $statuses)
+            ->orWhere(fn (Builder $hold) => $tab === 'past' ? $hold->holdLapsed() : $hold->holdOpen()));
     }
 
     public function show(Request $request, ServicePurchase $purchase): View
