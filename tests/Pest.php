@@ -249,6 +249,90 @@ function bookingShowConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the settings home renders its cards, the unread badge
+ * and the email preference from.
+ *
+ * @return array<string, mixed>
+ */
+function settingsConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="settings-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island the theme page renders its presets, accents, modes and
+ * saved choice from.
+ *
+ * @return array<string, mixed>
+ */
+function settingsThemeConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="settings-theme-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island the admin platform settings console renders its grouped
+ * definitions and current values from.
+ *
+ * @return array<string, mixed>
+ */
+function adminSettingsConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="admin-settings-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island the profile page renders its three account forms from.
+ *
+ * @return array<string, mixed>
+ */
+function profileConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="profile-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island the notification centre renders its rows and email
+ * preference from.
+ *
+ * @return array<string, mixed>
+ */
+function notificationsConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="notifications-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Create a usable teacher onboarding invite and return the plaintext token.
  *
  * @return array{0: TeacherInvite, 1: string}

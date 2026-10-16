@@ -55,6 +55,16 @@ export default defineConfig({
                 // One lesson thread at /messages/{conversation}, with the
                 // composer, the poller and the report dialog.
                 'resources/js/messages-thread/main.js',
+                // The Settings section: the home cards + email toggle, the theme
+                // picker and the admin platform console each ship their own
+                // bundle so no screen pays for another's pickers.
+                'resources/js/settings-home/main.js',
+                'resources/js/settings-theme/main.js',
+                'resources/js/admin-settings/main.js',
+                // The account pages the Settings cards link to: the profile
+                // details/password/danger zone and the notification centre.
+                'resources/js/profile/main.js',
+                'resources/js/notifications/main.js',
             ],
             refresh: true,
         }),

@@ -1,20 +1,82 @@
 @php
-    $cardBase = 'rounded-2xl border p-6';
-    $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
-    $fieldClasses = 'rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
-
-    // Group the definitions by area while keeping the settings keys intact.
-    $groups = [];
-    foreach ($definitions as $key => $definition) {
-        $groups[$definition['group']][$key] = $definition;
-    }
+    // /admin/settings is rendered by resources/js/admin-settings. Blade keeps the
+    // setting definitions (grouped, with their labels and already-formatted
+    // values), the validation messages and the route map, then hands them over as
+    // a JSON island, so no field, bound or URL is hardcoded in Vue.
+    $settingsService = platform_settings();
 
     $groupLabels = [
         'money' => __('Money'),
         'bookings' => __('Bookings'),
         'refunds' => __('Cancellations & refunds'),
         'ai' => __('AI matching'),
+        'services' => __('Services'),
     ];
+
+    $groups = [];
+    $settingErrors = [];
+
+    foreach ($definitions as $key => $definition) {
+        $rawValue = old($key, $values[$key] ?? '');
+
+        // Money settings are stored in minor units but edited in whole currency.
+        $inputValue = $definition['type'] === 'money'
+            ? number_format(((int) $rawValue) / 100, 2, '.', '')
+            : $rawValue;
+
+        $groups[$definition['group']][] = [
+            'key' => $key,
+            'label' => $definition['label'],
+            'description' => $definition['description'],
+            'type' => $definition['type'],
+            'value' => $inputValue,
+            'inputType' => $definition['type'] === 'string' ? 'text' : 'number',
+            'step' => in_array($definition['type'], ['float', 'money'], true) ? '0.01' : null,
+        ];
+
+        // Blade's $errors->get() returns an empty array when the key is absent,
+        // so the island never carries a phantom message.
+        $settingErrors[$key] = $errors->get($key);
+    }
+
+    $orderedGroups = collect($groups)
+        ->map(fn ($items, $group) => [
+            'key' => $group,
+            'label' => $groupLabels[$group] ?? ucfirst($group),
+            'items' => array_values($items),
+        ])
+        ->values()
+        ->all();
+
+    $adminSettingsPayload = [
+        'appName' => config('app.name', 'Studylikepro'),
+        'csrfToken' => csrf_token(),
+        'theme' => ['preset' => $userTheme['preset'] ?? 'classic'],
+        'groups' => $orderedGroups,
+        'errors' => $settingErrors,
+        'status' => [
+            'saved' => session('status') === 'settings-saved',
+        ],
+        'meta' => [
+            'currencySymbol' => $settingsService->currencySymbol(),
+        ],
+        'copy' => [
+            'saved' => __('Settings saved.'),
+            'errorTitle' => __('Please check the highlighted fields.'),
+            'save' => __('Save settings'),
+            'saving' => __('Saving...'),
+        ],
+        'urls' => [
+            'update' => route('admin.settings.update'),
+            'offers' => route('admin.offers.index'),
+        ],
+    ];
+
+    // JSON_UNESCAPED_SLASHES keeps the URLs readable; the HEX flags keep the
+    // island safe inside a <script> tag.
+    $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
+
+    $fieldClasses = 'mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
 @endphp
 
 <x-app-layout>
@@ -28,57 +90,60 @@
         </div>
     </x-slot>
 
-    <div class="mx-auto max-w-3xl space-y-6">
-        @if (session('status') === 'settings-saved')
-            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                {{ __('Settings saved.') }}
-            </div>
-        @endif
+    <script type="application/json" id="admin-settings-config">@json($adminSettingsPayload, $jsonFlags)</script>
 
-        <form method="POST" action="{{ route('admin.settings.update') }}" class="space-y-6">
-            @csrf
-            @method('PUT')
+    <div id="admin-settings-app"></div>
 
-            @foreach ($groups as $group => $items)
-                <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-                    <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ $groupLabels[$group] ?? ucfirst($group) }}</h3>
-
-                    <div class="mt-4 space-y-5">
-                        @foreach ($items as $key => $definition)
-                            @php
-                                $rawValue = old($key, $values[$key] ?? '');
-                                $inputValue = $definition['type'] === 'money'
-                                    ? number_format(((int) $rawValue) / 100, 2, '.', '')
-                                    : $rawValue;
-                            @endphp
-                            <div>
-                                <x-input-label :for="'setting-'.$key" :value="$definition['label']" />
-                                @if ($definition['type'] === 'text')
-                                    <textarea id="setting-{{ $key }}" name="{{ $key }}" rows="3"
-                                              class="mt-1 block w-full {{ $fieldClasses }}">{{ $rawValue }}</textarea>
-                                @else
-                                    <x-text-input :id="'setting-'.$key" :name="$key"
-                                                  :type="$definition['type'] === 'string' ? 'text' : 'number'"
-                                                  :step="in_array($definition['type'], ['float', 'money'], true) ? '0.01' : null"
-                                                  class="mt-1 block w-full"
-                                                  :value="$inputValue" />
-                                @endif
-                                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                    {{ $definition['description'] }}
-                                    @if ($definition['type'] === 'money')
-                                        · {{ __('in :currency', ['currency' => platform_settings()->currencySymbol()]) }}
-                                    @endif
-                                </p>
-                                <x-input-error :messages="$errors->get($key)" class="mt-2" />
-                            </div>
-                        @endforeach
-                    </div>
+    {{-- Fallback for a browser without JavaScript: the same settings as a real
+         PUT form, with the names the server validates. --}}
+    <noscript>
+        <div class="mx-auto max-w-3xl space-y-6">
+            @if (session('status') === 'settings-saved')
+                <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                    {{ __('Settings saved.') }}
                 </div>
-            @endforeach
+            @endif
 
-            <div class="flex justify-end">
-                <x-primary-button>{{ __('Save settings') }}</x-primary-button>
-            </div>
-        </form>
-    </div>
+            <form method="POST" action="{{ route('admin.settings.update') }}" class="space-y-6">
+                @csrf
+                @method('PUT')
+
+                @foreach ($orderedGroups as $group)
+                    <div class="rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900">
+                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ $group['label'] }}</h3>
+
+                        <div class="mt-4 space-y-5">
+                            @foreach ($group['items'] as $item)
+                                <div>
+                                    <x-input-label :for="'setting-'.$item['key']" :value="$item['label']" />
+                                    @if ($item['type'] === 'text')
+                                        <textarea id="setting-{{ $item['key'] }}" name="{{ $item['key'] }}" rows="3" class="{{ $fieldClasses }}">{{ $item['value'] }}</textarea>
+                                    @else
+                                        <x-text-input :id="'setting-'.$item['key']" :name="$item['key']"
+                                                      :type="$item['inputType']"
+                                                      :step="$item['step']"
+                                                      class="mt-1 block w-full"
+                                                      :value="$item['value']" />
+                                    @endif
+                                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                        {{ $item['description'] }}
+                                        @if ($item['type'] === 'money')
+                                            · {{ __('in :currency', ['currency' => $settingsService->currencySymbol()]) }}
+                                        @endif
+                                    </p>
+                                    <x-input-error :messages="$settingErrors[$item['key']]" class="mt-2" />
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+
+                <div class="flex justify-end">
+                    <x-primary-button>{{ __('Save settings') }}</x-primary-button>
+                </div>
+            </form>
+        </div>
+    </noscript>
+
+    @vite('resources/js/admin-settings/main.js')
 </x-app-layout>
