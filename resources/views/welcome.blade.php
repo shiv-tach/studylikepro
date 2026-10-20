@@ -3,7 +3,7 @@
     // renders the document shell and hands the Vue app the route map, auth state,
     // support details and image URLs, so no URL is hardcoded in JavaScript.
     $landing = [
-        'appName' => config('app.name', 'Studylikepro'),
+        'appName' => config('app.name', 'Study Like Pro'),
         'authenticated' => auth()->check(),
         'urls' => [
             'home' => route('home'),
@@ -49,7 +49,7 @@
     // by tests); the HEX flags keep the island safe inside a <script> tag.
     $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
 
-    $title = config('app.name', 'Studylikepro').' — Learn with verified Sri Lankan tutors';
+    $title = config('app.name', 'Study Like Pro');
     $description = 'Upload a question, let AI pinpoint the lesson, and book a live 1-on-1 lesson with a verified teacher. Grades 1–13 on the Sri Lankan syllabus, paid securely in rupees.';
 @endphp
 <!DOCTYPE html>
