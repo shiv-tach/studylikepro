@@ -17,6 +17,10 @@ test('non admins cannot manage the curriculum', function () {
     $this->actingAs(User::factory()->student()->create())
         ->put(route('admin.curriculum.levels.update', 'ol'), ['name' => 'Hacked'])
         ->assertForbidden();
+
+    $this->actingAs(User::factory()->student()->create())
+        ->delete(route('admin.curriculum.levels.destroy', 'ol'))
+        ->assertForbidden();
 });
 
 test('admins can list the levels with grades and subject counts', function () {
@@ -32,7 +36,8 @@ test('admins can list the levels with grades and subject counts', function () {
         ->assertSee('Grade 6')
         ->assertSee('Grade 11')
         ->assertSee('1 subject')
-        ->assertSee('Grades 6-11');
+        ->assertSee('Grades 6-11')
+        ->assertSee('Delete level');
 });
 
 test('admins can rename, reorder and deactivate a level', function () {
@@ -76,6 +81,33 @@ test('level changes are written to the activity log', function () {
 
     expect($entry)->not->toBeNull()
         ->and($entry->description)->toContain('Ordinary Level');
+});
+
+test('admins can delete a level that has no subjects', function () {
+    $level = EducationLevel::factory()->create(['name' => 'Vocational']);
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->delete(route('admin.curriculum.levels.destroy', $level))
+        ->assertRedirect(route('admin.curriculum.index'));
+
+    expect(EducationLevel::query()->whereKey($level->id)->exists())->toBeFalse();
+
+    $entry = ActivityLog::query()->where('action', 'admin.curriculum.levels.destroy')->latest('id')->first();
+
+    expect($entry)->not->toBeNull()
+        ->and($entry->description)->toContain('Vocational');
+});
+
+test('a level that still has subjects cannot be deleted', function () {
+    $level = EducationLevel::query()->where('key', 'primary')->firstOrFail();
+    Subject::factory()->create(['education_level_id' => $level->id]);
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->delete(route('admin.curriculum.levels.destroy', $level))
+        ->assertRedirect(route('admin.curriculum.index'))
+        ->assertSessionHas('status', 'level-in-use');
+
+    expect(EducationLevel::query()->whereKey($level->id)->exists())->toBeTrue();
 });
 
 test('deactivating a level drops it from the public catalog', function () {

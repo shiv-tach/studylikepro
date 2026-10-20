@@ -37,6 +37,14 @@ export const icons = {
         circles: [{ cx: 12, cy: 12, r: 8 }],
     },
     search: { paths: ['M20 20l-4.6-4.6'], circles: [{ cx: 11, cy: 11, r: 6 }] },
+    filter: {
+        paths: ['M4 7h3', 'M13 7h7', 'M4 12h9', 'M19 12h1', 'M4 17h1', 'M11 17h9'],
+        circles: [
+            { cx: 10, cy: 7, r: 2 },
+            { cx: 16, cy: 12, r: 2 },
+            { cx: 8, cy: 17, r: 2 },
+        ],
+    },
     check: { paths: ['M5 12.5l4.5 4.5L19 7'] },
     'chevron-down': { paths: ['M6 9.5l6 6 6-6'] },
     'arrow-up': { paths: ['M12 19V5', 'M6 11l6-6 6 6'] },

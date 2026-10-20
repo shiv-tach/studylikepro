@@ -36,6 +36,19 @@ function selectLevel(event, option) {
     explorer.selectLevel(option);
 }
 
+function selectGrade(event, option) {
+    if (!isPlainClick(event)) {
+        return;
+    }
+
+    event.preventDefault();
+    explorer.selectGrade(option);
+}
+
+function badgeFor(option) {
+    return option.number ?? option.label.charAt(0).toUpperCase();
+}
+
 function prefetchLevel(key) {
     explorer.prefetch(key);
 }
@@ -107,12 +120,39 @@ function prefetchGrade(option) {
                     </p>
                 </div>
 
-                <!-- Level picked, grade not yet: the chips are right above. -->
+                <!-- Level picked, grade not yet: cards, so the grades read as
+                     clearly as the levels did one step earlier. -->
                 <div v-else-if="!grade" class="pt-10">
                     <p class="text-xs font-semibold tracking-widest text-ink-400 uppercase">{{ copy.gradeStep }}</p>
                     <p class="mt-2 max-w-xl text-sm leading-relaxed text-ink-500">
                         {{ grades.length ? copy.chooseGrade : copy.gradeEmpty }}
                     </p>
+
+                    <div v-if="grades.length" class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <a
+                            v-for="option in grades"
+                            :key="option.id"
+                            :href="option.url"
+                            class="lift hairline group flex flex-col rounded-2xl bg-white p-5"
+                            @click="selectGrade($event, option)"
+                            @pointerenter="prefetchGrade(option)"
+                            @focus="prefetchGrade(option)"
+                        >
+                            <div class="flex items-start justify-between gap-3">
+                                <span
+                                    class="flex size-11 items-center justify-center rounded-xl bg-brand-50 font-display text-base font-semibold text-brand-600"
+                                    aria-hidden="true"
+                                >{{ badgeFor(option) }}</span>
+                                <span class="hairline rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap text-ink-500">
+                                    {{ option.subjectCount ? `${option.subjectCount} ${copy.subjectsWord}` : copy.gradeNoSubjects }}
+                                </span>
+                            </div>
+                            <h2 class="mt-4 font-display text-lg font-semibold text-ink">{{ option.label }}</h2>
+                            <p class="mt-auto pt-3 text-sm font-medium text-brand-600 underline-offset-4 group-hover:underline">
+                                {{ copy.gradeCta }}
+                            </p>
+                        </a>
+                    </div>
                 </div>
 
                 <div v-else>

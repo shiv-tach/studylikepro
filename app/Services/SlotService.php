@@ -167,6 +167,46 @@ class SlotService
     }
 
     /**
+     * The teacher's bookable ranges over the coming days, in UTC and in order.
+     *
+     * The public profile knows the concrete slots already; these wider ranges
+     * are what let it say "available now" or "free until 19:00" while a lesson
+     * is still in progress, which a slot list cannot express.
+     *
+     * @return list<array{start: CarbonImmutable, end: CarbonImmutable}>
+     */
+    public function availabilityWindows(TeacherProfile $teacher, int $days = 3): array
+    {
+        $timezone = $teacher->timezone ?: config('app.timezone');
+        $firstDay = CarbonImmutable::now('UTC')->setTimezone($timezone)->startOfDay();
+        $lastDay = $firstDay->addDays($days);
+
+        $weekly = $this->weeklyRanges($teacher);
+        $timeOff = $teacher->relationLoaded('timeOff')
+            ? $teacher->timeOff
+            : $teacher->timeOff()->get();
+
+        $windows = [];
+
+        for ($date = $firstDay; $date->lessThanOrEqualTo($lastDay); $date = $date->addDay()) {
+            if ($timeOff->contains(fn ($entry) => $entry->coversDate($date))) {
+                continue;
+            }
+
+            foreach ($weekly->get($date->dayOfWeek, collect()) as $range) {
+                $windows[] = [
+                    'start' => $this->localMinuteToUtc($date, $range->start_minute, $timezone),
+                    'end' => $this->localMinuteToUtc($date, $range->end_minute, $timezone),
+                ];
+            }
+        }
+
+        usort($windows, fn (array $left, array $right) => $left['start']->timestamp <=> $right['start']->timestamp);
+
+        return $windows;
+    }
+
+    /**
      * Ranges already taken by live holds, confirmed and in-progress lessons.
      *
      * @return list<array{0: CarbonInterface, 1: CarbonInterface}>

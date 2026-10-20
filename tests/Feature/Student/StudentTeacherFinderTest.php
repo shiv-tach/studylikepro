@@ -320,11 +320,13 @@ test('a student only sees their own grade on the dedicated teacher page', functi
 test('a guest still sees every grade on the public teacher page', function () {
     $teacher = gradeSplitTeacher();
 
+    // The public page lists the grades the teacher takes, each with its rate,
+    // rather than the per-grade lesson lists the student workspace shows.
     $this->get(route('teachers.show', $teacher))
         ->assertOk()
-        ->assertSee('Grade Eight Numbers')
-        ->assertSee('Grade Nine Numbers')
-        ->assertSee('Log in to request a lesson');
+        ->assertSee('Grade 8 · '.platform_settings()->formatMinor(40000).'/hr')
+        ->assertSee('Grade 9 · '.platform_settings()->formatMinor(90000).'/hr')
+        ->assertSee('Log in to book');
 });
 
 test('students are redirected from the public teacher pages to their own', function () {

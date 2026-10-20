@@ -23,11 +23,28 @@
             <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
                 Subject basket updated.
             </div>
+        @elseif (session('status') === 'level-deleted')
+            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                Education level deleted.
+            </div>
+        @elseif (session('status') === 'basket-deleted')
+            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                Subject basket deleted. Its subjects stay in the catalog without a basket.
+            </div>
+        @elseif (session('status') === 'level-in-use')
+            @php($inUse = session('levelInUse'))
+            <div class="rounded-2xl border border-amber-200/80 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+                {{ __(':level still has :count :subjects. Move or delete them before deleting the level.', [
+                    'level' => $inUse['name'] ?? 'This level',
+                    'count' => $inUse['subjects'] ?? 0,
+                    'subjects' => Str::plural('subject', $inUse['subjects'] ?? 0),
+                ]) }}
+            </div>
         @endif
 
         <p class="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
             The Sri Lankan structure every subject and lesson hangs off — Primary (Grades 1–5), O/L (Grades 6–11), A/L (Grades 12–13) and Other.
-            Grades are fixed; levels can be renamed, reordered or switched off. Lessons are managed per subject, grade by grade; the O/L's optional
+            Grades are fixed; levels can be renamed, reordered, switched off or deleted. Lessons are managed per subject, grade by grade; the O/L's optional
             subjects are grouped into the three baskets a Grade 10–11 student picks one subject from each.
         </p>
 
@@ -71,10 +88,21 @@
                         <span class="{{ $chip }}">{{ $level->subjects_count }} {{ Str::plural('subject', $level->subjects_count) }}</span>
                         <span class="{{ $chip }}">{{ $level->grades->count() }} {{ Str::plural('grade', $level->grades->count()) }}</span>
                     </div>
-                    <a href="{{ route('admin.subjects.index', ['level' => $level->key]) }}"
-                       class="text-xs font-semibold text-primary transition-colors hover:text-primary/80">
-                        {{ __('Manage subjects') }} &rarr;
-                    </a>
+                    <div class="flex items-center gap-4">
+                        <a href="{{ route('admin.subjects.index', ['level' => $level->key]) }}"
+                           class="text-xs font-semibold text-primary transition-colors hover:text-primary/80">
+                            {{ __('Manage subjects') }} &rarr;
+                        </a>
+                        <form method="POST" action="{{ route('admin.curriculum.levels.destroy', $level) }}"
+                              onsubmit="return confirm('{{ __('Delete this curriculum level? Its grades and subject baskets are removed too.') }}');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit"
+                                    class="text-xs font-semibold text-rose-500 transition-colors hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300">
+                                {{ __('Delete level') }}
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
                 <div class="mt-3 flex flex-wrap gap-1.5">
@@ -132,6 +160,18 @@
                                         <x-input-error :messages="$errors->get('description')" class="mt-2" />
                                     </div>
                                 </form>
+
+                                <div class="flex justify-end">
+                                    <form method="POST" action="{{ route('admin.curriculum.baskets.destroy', $basket) }}"
+                                          onsubmit="return confirm('{{ __('Delete this basket? Its subjects stay in the catalog but are no longer grouped by it.') }}');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="text-xs font-semibold text-rose-500 transition-colors hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300">
+                                            {{ __('Delete basket') }}
+                                        </button>
+                                    </form>
+                                </div>
                             @endforeach
                         </div>
                     </div>

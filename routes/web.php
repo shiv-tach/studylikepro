@@ -294,7 +294,9 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended'
 
         Route::get('/curriculum', [AdminEducationLevelController::class, 'index'])->name('curriculum.index');
         Route::put('/curriculum/levels/{level}', [AdminEducationLevelController::class, 'update'])->name('curriculum.levels.update');
+        Route::delete('/curriculum/levels/{level}', [AdminEducationLevelController::class, 'destroy'])->name('curriculum.levels.destroy');
         Route::put('/curriculum/baskets/{basket}', [AdminSubjectBasketController::class, 'update'])->name('curriculum.baskets.update');
+        Route::delete('/curriculum/baskets/{basket}', [AdminSubjectBasketController::class, 'destroy'])->name('curriculum.baskets.destroy');
 
         Route::get('/subjects', [AdminSubjectController::class, 'index'])->name('subjects.index');
         Route::post('/subjects', [AdminSubjectController::class, 'store'])->name('subjects.store');

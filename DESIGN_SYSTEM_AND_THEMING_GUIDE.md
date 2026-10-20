@@ -98,7 +98,7 @@ To prevent the brief flash of the light/default theme during page reloads, a blo
 ```
 
 ### Logged-out Pages Default to Light
-The public entry points — [welcome.blade.php](file:///d:/Github/studylikepro/resources/views/welcome.blade.php), [public-page.blade.php](file:///d:/Github/studylikepro/resources/views/components/public-page.blade.php) (subjects, teachers, contact), [public-layout.blade.php](file:///d:/Github/studylikepro/resources/views/components/public-layout.blade.php) (privacy, terms, refunds) and [guest.blade.php](file:///d:/Github/studylikepro/resources/views/layouts/guest.blade.php) (login/register) — deliberately do **not** follow the operating system preference. They load the light palette unless the visitor explicitly picked **Dark** in Theme Settings (which is the only value that writes a dark `themeMode` to `localStorage`):
+The public entry points — [welcome.blade.php](file:///d:/Github/studylikepro/resources/views/welcome.blade.php), [public-page.blade.php](file:///d:/Github/studylikepro/resources/views/components/public-page.blade.php) (subjects, teachers, one teacher, contact), [public-layout.blade.php](file:///d:/Github/studylikepro/resources/views/components/public-layout.blade.php) (privacy, terms, refunds) and [guest.blade.php](file:///d:/Github/studylikepro/resources/views/layouts/guest.blade.php) (login/register) — deliberately do **not** follow the operating system preference. They load the light palette unless the visitor explicitly picked **Dark** in Theme Settings (which is the only value that writes a dark `themeMode` to `localStorage`):
 
 ```html
 <!-- Blocking theme script: public pages load light unless dark was chosen explicitly -->
@@ -165,14 +165,15 @@ Every `x-app-layout` screen — student, teacher, admin — wears the same Vue s
 * **Motion:** the `v-reveal` directive (registered in `main.js`) fades sections in; it is skipped entirely for `prefers-reduced-motion`.
 * **A11y:** sections are labelled, the FAQ uses `aria-expanded`/`aria-controls`, and buttons are real `<button>` elements with `aria-pressed` where they toggle state.
 
-### Public catalog, directory and contact (`/subjects`, `/teachers`, `/contact`)
+### Public catalog, directory and contact (`/subjects`, `/teachers`, `/teachers/{teacher}`, `/contact`)
 
-These three screens wear the landing page's design so a visitor never crosses a visual seam.
+These screens wear the landing page's design so a visitor never crosses a visual seam.
 
-* **Entry point:** `resources/js/public/main.js` is its own Vite input. It mounts whichever of `#public-subjects-app`, `#public-teachers-app` or `#public-contact-app` the page renders, reading `#public-subjects-config`, `#public-teachers-config` or `#public-contact-config`.
+* **Entry point:** `resources/js/public/main.js` is its own Vite input. It mounts whichever of `#public-subjects-app`, `#public-teachers-app`, `#public-teacher-app` or `#public-contact-app` the page renders, reading `#public-subjects-config`, `#public-teachers-config`, `#public-teacher-config` or `#public-contact-config`.
 * **Shared chrome:** `SiteHeader.vue` and `SiteFooter.vue` are the landing page's own components. Every public screen renders the landing page's full navigation (How it works, Subjects, Teachers, Why Studylikepro, FAQ, Contact); the section anchors resolve against `/` via the `homeUrl` prop while Subjects, Teachers and Contact stay real routes. Pages mark their own item with `activeSection`, and the footer's `landingUrl` points its section links back at `/`'s anchors.
 * **Theming:** the landing tokens in `resources/css/landing.css` are scoped to `.lp-theme`, which every public root (landing and these pages) carries. The compact page heroes use `lp-aurora-soft` so the same wash stays subtle in a shorter band.
 * **Server data:** Blade keeps ownership of the copy, lesson counts, grade labels, formatted money, next-slot times and pagination URLs, then hands them over in the JSON island. Never format or hardcode those in Vue.
+* **Teacher profile:** [TeacherDirectoryController](file:///d:/Github/studylikepro/app/Http/Controllers/TeacherDirectoryController.php) builds the island through [PublicTeacherPageConfig](file:///d:/Github/studylikepro/app/Support/PublicTeacherPageConfig.php), which lists only the grades the teacher actually takes (each with its rate) and the open slots grouped by day. The live availability line — free now, free later today, next open slot — comes from `SlotService::availabilityWindows()`: Blade renders the first answer server-side and [useLiveAvailability.js](file:///d:/Github/studylikepro/resources/js/public/teacher/composables/useLiveAvailability.js) re-derives the same status from the window ISO timestamps every 20 seconds. Keep the PHP status and the composable in step when changing the wording.
 * **Filters:** the teacher directory still submits a plain `GET` form; the level and subject pickers cascade server-side and reload the page, exactly as before.
 * **No-JS fallback:** each page has a `<noscript>` block with the same destinations; the contact one keeps a working native form.
 

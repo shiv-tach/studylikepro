@@ -273,6 +273,36 @@ it('shows an approved teacher profile with rates and availability', function () 
         ->assertSee('18:00');
 });
 
+it('renders the public teacher profile inside the landing page shell', function () {
+    $maths = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'mathematics', 'icon' => null]);
+    $profile = approvedTeacher('Priya Verma', [
+        'hourly_rate_minor' => 70000,
+        'timezone' => 'Asia/Colombo',
+    ]);
+    $profile->subjects()->attach($maths->id, ['grade_levels' => [(string) gradeId(11)], 'rate_per_hour_minor' => 80000]);
+    TeacherAvailabilitySlot::factory()->on(1, '18:00', '20:00')->create(['teacher_profile_id' => $profile->id]);
+
+    $response = $this->get(route('teachers.show', $profile))->assertOk();
+
+    // The public pages share one entry: the island boots the landing page's own
+    // navigation, so a visitor keeps the menu they arrived with.
+    $response->assertSee('public-teacher-config', false)
+        ->assertSee('public-teacher-app', false)
+        ->assertDontSee('Go to dashboard', false);
+
+    preg_match('/<script type="application\/json" id="public-teacher-config">(.*?)<\/script>/s', $response->getContent(), $matches);
+    $config = json_decode($matches[1], true);
+
+    expect($config['grades']['summary'])->toBe('Grade 11')
+        ->and($config['grades']['groups'])->toHaveCount(1)
+        ->and($config['grades']['groups'][0]['grades'][0]['chip'])
+        ->toBe('Grade 11 · '.platform_settings()->formatMinor(80000).'/hr')
+        ->and($config['availability']['days'])->not->toBeEmpty()
+        ->and($config['availability']['status']['state'])->toBeIn(['now', 'soon', 'later'])
+        ->and($config['availability']['timezoneLabel'])->toBe('Your time (Asia/Colombo)')
+        ->and($config['booking']['action']['url'])->toBe(route('login'));
+});
+
 it('hides teacher profiles that are not approved', function () {
     $draft = TeacherProfile::factory()->create();
     $pending = TeacherProfile::factory()->pending()->create();

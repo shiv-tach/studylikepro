@@ -85,6 +85,8 @@
             'title' => __('Find your teacher'),
             'intro' => __('Every teacher here is verified by our team. Pick your level and subject to see the grades and lessons they teach.'),
             'filtersTitle' => __('Filter the directory'),
+            'filtersToggle' => __('Filters'),
+            'filtersHide' => __('Hide filters'),
             'level' => __('Level'),
             'subject' => __('Subject'),
             'lesson' => __('Lesson'),

@@ -12,7 +12,13 @@ const copy = computed(() => props.config.copy ?? {});
 const urls = computed(() => props.config.urls ?? {});
 const filters = props.config.filters ?? {};
 
+// Filters stay collapsed on a fresh visit and open on their own when the page
+// was reached with a narrowed or re-sorted result set.
+const filterKeys = ['level', 'subject', 'lesson', 'grade', 'language', 'min_rate', 'max_rate', 'weekday', 'time_from', 'time_to'];
+const activeFilterCount = computed(() => filterKeys.filter((key) => String(filters[key] ?? '').trim() !== '').length);
+
 const formElement = ref(null);
+const filtersOpen = ref(activeFilterCount.value > 0 || (filters.sort ?? 'rating') !== 'rating');
 const form = reactive({
     level: filters.level ?? '',
     subject: filters.subject ?? '',
@@ -83,116 +89,153 @@ const labelClass = 'text-xs font-semibold tracking-widest text-ink-400 uppercase
                 </div>
             </section>
 
-            <section class="border-b border-line bg-ink-50 py-12 lg:py-14">
+            <section class="border-b border-line bg-white py-10 lg:py-14">
                 <div class="mx-auto w-full max-w-6xl px-5">
-                    <form ref="formElement" method="GET" :action="urls.teachers" class="hairline rounded-2xl bg-white p-6" style="box-shadow: var(--shadow-sm)">
-                        <p class="text-xs font-semibold tracking-widest text-ink-400 uppercase">{{ copy.filtersTitle }}</p>
-
-                        <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                            <div>
-                                <label for="filter-level" :class="labelClass">{{ copy.level }}</label>
-                                <select id="filter-level" v-model="form.level" name="level" :class="fieldClass" @change="onLevelChange">
-                                    <option value="">{{ copy.anyLevel }}</option>
-                                    <option v-for="option in config.levelOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label for="filter-subject" :class="labelClass">{{ copy.subject }}</label>
-                                <select id="filter-subject" v-model="form.subject" name="subject" :class="fieldClass" @change="onSubjectChange">
-                                    <option value="">{{ copy.anySubject }}</option>
-                                    <option v-for="option in config.subjectOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label for="filter-lesson" :class="labelClass">{{ copy.lesson }}</label>
-                                <select id="filter-lesson" v-model="form.lesson" name="lesson" :class="fieldClass">
-                                    <option value="">{{ copy.anyLesson }}</option>
-                                    <optgroup v-for="group in config.lessonGroups" :key="group.label" :label="group.label">
-                                        <option v-for="option in group.options" :key="option.value" :value="option.value">{{ option.label }}</option>
-                                    </optgroup>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label for="filter-grade" :class="labelClass">{{ copy.grade }}</label>
-                                <select id="filter-grade" v-model="form.grade" name="grade" :class="fieldClass">
-                                    <option value="">{{ copy.anyGrade }}</option>
-                                    <optgroup v-for="group in config.gradeGroups" :key="group.label" :label="group.label">
-                                        <option v-for="option in group.options" :key="option.value" :value="option.value">{{ option.label }}</option>
-                                    </optgroup>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label for="filter-language" :class="labelClass">{{ copy.language }}</label>
-                                <select id="filter-language" v-model="form.language" name="language" :class="fieldClass">
-                                    <option value="">{{ copy.anyLanguage }}</option>
-                                    <option v-for="language in config.languageOptions" :key="language" :value="language">{{ language }}</option>
-                                </select>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label for="filter-min-rate" :class="labelClass">{{ copy.minRate }}</label>
-                                    <input id="filter-min-rate" v-model="form.min_rate" name="min_rate" type="number" min="0" step="50" :class="fieldClass" />
-                                </div>
-                                <div>
-                                    <label for="filter-max-rate" :class="labelClass">{{ copy.maxRate }}</label>
-                                    <input id="filter-max-rate" v-model="form.max_rate" name="max_rate" type="number" min="0" step="50" :class="fieldClass" />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label for="filter-weekday" :class="labelClass">{{ copy.weekday }}</label>
-                                <select id="filter-weekday" v-model="form.weekday" name="weekday" :class="fieldClass">
-                                    <option value="">{{ copy.anyDay }}</option>
-                                    <option v-for="option in config.weekdayOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                                </select>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label for="filter-time-from" :class="labelClass">{{ copy.from }}</label>
-                                    <input id="filter-time-from" v-model="form.time_from" name="time_from" type="time" :class="fieldClass" />
-                                </div>
-                                <div>
-                                    <label for="filter-time-to" :class="labelClass">{{ copy.to }}</label>
-                                    <input id="filter-time-to" v-model="form.time_to" name="time_to" type="time" :class="fieldClass" />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label for="filter-sort" :class="labelClass">{{ copy.sort }}</label>
-                                <select id="filter-sort" v-model="form.sort" name="sort" :class="fieldClass">
-                                    <option v-for="option in config.sortOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                                </select>
-                            </div>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="min-w-0">
+                            <h2 class="font-display text-2xl font-semibold text-ink">{{ copy.resultsTitle }}</h2>
+                            <p class="mt-1 text-sm text-ink-500">{{ copy.found }}</p>
                         </div>
 
-                        <div class="mt-5 flex flex-wrap items-center gap-3">
-                            <button
-                                type="submit"
-                                class="rounded-full bg-brand-500 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600"
-                                style="box-shadow: var(--shadow-brand)"
+                        <div class="flex flex-wrap items-center gap-2">
+                            <a
+                                v-if="activeFilterCount"
+                                :href="urls.teachers"
+                                class="rounded-full px-2 py-2 text-sm font-medium text-ink-500 transition hover:text-ink"
                             >
-                                {{ copy.apply }}
+                                {{ copy.clear }}
+                            </a>
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-sm font-medium text-ink-700 transition hover:bg-ink-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30"
+                                :aria-expanded="filtersOpen"
+                                aria-controls="teacher-filters"
+                                @click="filtersOpen = !filtersOpen"
+                            >
+                                <AppIcon name="filter" class="h-4 w-4" />
+                                {{ filtersOpen ? copy.filtersHide : copy.filtersToggle }}
+                                <span
+                                    v-if="activeFilterCount"
+                                    class="inline-flex min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-[11px] font-semibold text-white"
+                                >{{ activeFilterCount }}</span>
+                                <AppIcon name="chevron-down" class="h-4 w-4 transition-transform" :class="filtersOpen ? 'rotate-180' : ''" />
                             </button>
-                            <a :href="urls.teachers" class="text-sm font-medium text-ink-500 transition hover:text-ink">{{ copy.clear }}</a>
-                            <span class="ml-auto text-sm text-ink-500">{{ copy.found }}</span>
                         </div>
-
-                        <p v-if="config.error" class="mt-3 text-sm text-rose-600">{{ config.error }}</p>
-                    </form>
-                </div>
-            </section>
-
-            <section class="border-b border-line bg-white py-14 lg:py-16">
-                <div class="mx-auto w-full max-w-6xl px-5">
-                    <div class="flex flex-wrap items-baseline justify-between gap-3">
-                        <h2 class="font-display text-2xl font-semibold text-ink">{{ copy.resultsTitle }}</h2>
                     </div>
+
+                    <p v-if="config.error" class="mt-3 text-sm text-rose-600" role="alert">{{ config.error }}</p>
+
+                    <Transition
+                        enter-active-class="transition duration-200 ease-out"
+                        enter-from-class="opacity-0 -translate-y-1"
+                        enter-to-class="opacity-100 translate-y-0"
+                        leave-active-class="transition duration-150 ease-in"
+                        leave-from-class="opacity-100 translate-y-0"
+                        leave-to-class="opacity-0 -translate-y-1"
+                    >
+                        <form
+                            v-if="filtersOpen"
+                            id="teacher-filters"
+                            ref="formElement"
+                            method="GET"
+                            :action="urls.teachers"
+                            :aria-label="copy.filtersTitle"
+                            class="hairline mt-5 rounded-2xl bg-ink-50 p-4 sm:p-5"
+                        >
+                            <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                                <div>
+                                    <label for="filter-level" :class="labelClass">{{ copy.level }}</label>
+                                    <select id="filter-level" v-model="form.level" name="level" :class="fieldClass" @change="onLevelChange">
+                                        <option value="">{{ copy.anyLevel }}</option>
+                                        <option v-for="option in config.levelOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="filter-subject" :class="labelClass">{{ copy.subject }}</label>
+                                    <select id="filter-subject" v-model="form.subject" name="subject" :class="fieldClass" @change="onSubjectChange">
+                                        <option value="">{{ copy.anySubject }}</option>
+                                        <option v-for="option in config.subjectOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-span-2 lg:col-span-1">
+                                    <label for="filter-lesson" :class="labelClass">{{ copy.lesson }}</label>
+                                    <select id="filter-lesson" v-model="form.lesson" name="lesson" :class="fieldClass">
+                                        <option value="">{{ copy.anyLesson }}</option>
+                                        <optgroup v-for="group in config.lessonGroups" :key="group.label" :label="group.label">
+                                            <option v-for="option in group.options" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="filter-grade" :class="labelClass">{{ copy.grade }}</label>
+                                    <select id="filter-grade" v-model="form.grade" name="grade" :class="fieldClass">
+                                        <option value="">{{ copy.anyGrade }}</option>
+                                        <optgroup v-for="group in config.gradeGroups" :key="group.label" :label="group.label">
+                                            <option v-for="option in group.options" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="filter-language" :class="labelClass">{{ copy.language }}</label>
+                                    <select id="filter-language" v-model="form.language" name="language" :class="fieldClass">
+                                        <option value="">{{ copy.anyLanguage }}</option>
+                                        <option v-for="language in config.languageOptions" :key="language" :value="language">{{ language }}</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="filter-weekday" :class="labelClass">{{ copy.weekday }}</label>
+                                    <select id="filter-weekday" v-model="form.weekday" name="weekday" :class="fieldClass">
+                                        <option value="">{{ copy.anyDay }}</option>
+                                        <option v-for="option in config.weekdayOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="filter-sort" :class="labelClass">{{ copy.sort }}</label>
+                                    <select id="filter-sort" v-model="form.sort" name="sort" :class="fieldClass">
+                                        <option v-for="option in config.sortOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-span-2 grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label for="filter-min-rate" :class="labelClass">{{ copy.minRate }}</label>
+                                        <input id="filter-min-rate" v-model="form.min_rate" name="min_rate" type="number" min="0" step="50" :class="fieldClass" />
+                                    </div>
+                                    <div>
+                                        <label for="filter-max-rate" :class="labelClass">{{ copy.maxRate }}</label>
+                                        <input id="filter-max-rate" v-model="form.max_rate" name="max_rate" type="number" min="0" step="50" :class="fieldClass" />
+                                    </div>
+                                </div>
+
+                                <div class="col-span-2 grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label for="filter-time-from" :class="labelClass">{{ copy.from }}</label>
+                                        <input id="filter-time-from" v-model="form.time_from" name="time_from" type="time" :class="fieldClass" />
+                                    </div>
+                                    <div>
+                                        <label for="filter-time-to" :class="labelClass">{{ copy.to }}</label>
+                                        <input id="filter-time-to" v-model="form.time_to" name="time_to" type="time" :class="fieldClass" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 border-t border-line pt-4">
+                                <button
+                                    type="submit"
+                                    class="w-full rounded-full bg-brand-500 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600 sm:w-auto"
+                                    style="box-shadow: var(--shadow-brand)"
+                                >
+                                    {{ copy.apply }}
+                                </button>
+                            </div>
+                        </form>
+                    </Transition>
 
                     <p v-if="!config.teachers.length" class="hairline mt-6 rounded-2xl bg-white p-10 text-center text-sm text-ink-500">
                         {{ copy.noResults }}

@@ -99,10 +99,16 @@ final class PublicCatalogConfig
             return [];
         }
 
+        /** @var array<int, int> $counts */
+        $counts = $state['gradeCounts'];
+
         return $level->grades->map(fn (Grade $option) => [
             'id' => $option->id,
             'levelKey' => $level->key,
             'label' => $option->label,
+            'number' => $option->number,
+            // Only filled while the grade cards are on screen; null elsewhere.
+            'subjectCount' => $counts[$option->id] ?? null,
             'selected' => $grade?->id === $option->id,
             'url' => route('catalog.subjects.index', ['level' => $level->key, 'grade' => $option->id]),
         ])->values()->all();
@@ -245,7 +251,9 @@ final class PublicCatalogConfig
             'resultsTitle' => __('Subjects'),
             'subjectsWord' => __('subjects'),
             'lessonsWord' => __('lessons'),
-            'chooseGrade' => __('Pick a grade above to see its subjects.'),
+            'chooseGrade' => __('Pick a grade to see its subjects and lessons.'),
+            'gradeCta' => __('View subjects'),
+            'gradeNoSubjects' => __('Subjects coming soon'),
             'loadingSubjects' => __('Loading subjects…'),
             'loadFailed' => __('We could not load this grade. Please try again.'),
             'retry' => __('Try again'),

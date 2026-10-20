@@ -1,259 +1,128 @@
 @php
-    $money = fn (int $minor) => platform_settings()->formatMinor($minor);
-    $cardBase = 'rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900';
-    $chip = 'inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400';
-    $viewerTz = auth()->user()?->studentProfile?->timezone
-        ?? auth()->user()?->teacherProfile?->timezone
-        ?? config('studylikepro.default_display_timezone');
+    // The public teacher profile is rendered by resources/js/public inside the
+    // landing page's shell. Blade keeps ownership of the grade scope, the rates,
+    // the permission checks and the route map, then hands them over as a JSON
+    // island — so a visitor keeps the public navigation they arrived with.
+    $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT
+        | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
 
-    $slotsByDate = [];
-    foreach ($availability as $slot) {
-        $local = $slot['starts_at']->setTimezone($viewerTz);
-        $slotsByDate[$local->toDateString()][] = $local;
-    }
-    $slotsByDate = array_slice($slotsByDate, 0, 7, true);
+    $description = $teacher->headline
+        ?: Str::limit((string) $teacher->bio, 150)
+        ?: __('Book a live 1-on-1 lesson with a verified Sri Lankan teacher.');
 @endphp
 
-<x-public-layout>
-    <x-slot name="title">{{ $teacher->user->name }} — {{ $teacher->headline }}</x-slot>
+<x-public-page
+    :title="$teacher->user->name.($teacher->headline ? ' — '.$teacher->headline : '')"
+    :description="$description"
+    :og-image="asset('images/hero/hero-students-1200.jpg')"
+    :vite="['resources/css/app.css', 'resources/js/public/main.js']"
+>
+    <script type="application/json" id="public-teacher-config">@json($config, $jsonFlags)</script>
 
-    <nav class="flex items-center gap-2 text-sm text-slate-400">
-        <a href="{{ route('teachers.index') }}" class="font-semibold transition hover:text-primary">Teachers</a>
-        <span>/</span>
-        <span class="text-slate-500 dark:text-slate-400">{{ $teacher->user->name }}</span>
-    </nav>
+    <div id="public-teacher-app"></div>
 
-    <div class="mt-6 grid gap-6 lg:grid-cols-3">
-        <!-- Main column -->
-        <div class="space-y-6 lg:col-span-2">
-            <div class="{{ $cardBase }}">
-                <div class="flex flex-wrap items-start gap-4">
-                    @if ($teacher->user->avatarUrl())
-                        <img src="{{ $teacher->user->avatarUrl() }}" alt="{{ $teacher->user->name }}" class="h-20 w-20 rounded-2xl object-cover" />
+    {{-- Fallback for crawlers and visitors without JavaScript: the same teacher,
+         the same grades and the same open slots, stacked and reachable. --}}
+    <noscript>
+        <div class="mx-auto w-full max-w-4xl px-5 py-10">
+            <nav class="flex items-center gap-2 text-sm text-ink-500" aria-label="Breadcrumb">
+                <a href="{{ route('teachers.index') }}" class="transition hover:text-ink">{{ __('Teachers') }}</a>
+                <span aria-hidden="true">/</span>
+                <span class="font-medium text-ink-700">{{ $teacher->user->name }}</span>
+            </nav>
+
+            <div class="hairline mt-6 rounded-2xl bg-white p-6">
+                <h1 class="font-display text-2xl font-semibold">{{ $teacher->user->name }}</h1>
+                @if ($teacher->headline)
+                    <p class="mt-1 text-ink-700">{{ $teacher->headline }}</p>
+                @endif
+                <p class="mt-3 text-sm text-ink-500">
+                    {{ $config['teacher']['rateChip'] }}
+                    @if ($config['teacher']['rating'])
+                        · {{ $config['teacher']['rating'] }} {{ $config['copy']['outOfFive'] }}
+                        ({{ $config['teacher']['reviewsLabel'] }})
                     @else
-                        <span class="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-2xl font-bold text-primary">
-                            {{ Str::of($teacher->user->name)->substr(0, 2) }}
-                        </span>
+                        · {{ $config['copy']['noReviews'] }}
                     @endif
-                    <div class="min-w-0 flex-1">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h1 class="text-2xl font-extrabold tracking-tight">{{ $teacher->user->name }}</h1>
-                            <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4" /></svg>
-                                Verified
-                            </span>
-                        </div>
-                        <p class="mt-1 text-slate-600 dark:text-slate-400">{{ $teacher->headline }}</p>
-
-                        <div class="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold">
-                            @if ($teacher->rating_count > 0)
-                                <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                                    ★ {{ number_format((float) $teacher->rating_avg, 1) }} <span class="font-medium text-amber-600/80 dark:text-amber-400/80">({{ trans_choice(':count review|:count reviews', $teacher->rating_count) }})</span>
-                                </span>
-                            @else
-                                <span class="{{ $chip }}">No reviews yet</span>
-                            @endif
-                            <span class="{{ $chip }}">{{ $teacher->lessons_completed_count }} lessons taught</span>
-                            <span class="{{ $chip }}">{{ $teacher->experience_years }} yrs experience</span>
-                            <span class="{{ $chip }}">{{ $money($teacher->startingRateMinor()) }}/hr</span>
-                        </div>
-                    </div>
-                </div>
+                </p>
 
                 @if ($teacher->bio)
-                    <p class="mt-5 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{{ $teacher->bio }}</p>
+                    <p class="mt-4 text-sm leading-relaxed text-ink-700">{{ $teacher->bio }}</p>
                 @endif
-
-                <dl class="mt-5 grid gap-4 border-t border-slate-200/80 pt-5 text-sm dark:border-slate-800 sm:grid-cols-3">
-                    <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Education</dt>
-                        <dd class="mt-1 text-slate-700 dark:text-slate-300">{{ $teacher->education }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Languages</dt>
-                        <dd class="mt-1 text-slate-700 dark:text-slate-300">{{ implode(', ', $teacher->languages ?? []) }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Lesson length</dt>
-                        <dd class="mt-1 text-slate-700 dark:text-slate-300">{{ $teacher->lessonDuration() }} minutes</dd>
-                    </div>
-                </dl>
             </div>
 
-            <!-- Subjects & lessons -->
-            <div class="{{ $cardBase }}">
-                <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">Subjects & lessons</h2>
+            <div class="hairline mt-6 rounded-2xl bg-white p-6">
+                <h2 class="font-display text-lg font-semibold">{{ $config['copy']['gradesTitle'] }}</h2>
 
-                @forelse ($teacher->subjects as $subject)
-                    @php
-                        $subjectRates = $teacher->gradeRatesFor($subject, $gradesById);
-                        $ratesVary = $subjectRates->pluck('rate_minor')->unique()->count() > 1;
-                        $subjectRate = $subjectRates->min('rate_minor') ?? $teacher->effectiveRateFor($subject);
-                    @endphp
-                    <div class="mt-4 rounded-xl border border-slate-200/80 p-4 dark:border-slate-800">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <div>
-                                <p class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ $subject->icon ?? '📘' }} {{ $subject->name }}</p>
-                                @if ($subject->educationLevel)
-                                    <p class="text-xs text-slate-400">{{ $subject->educationLevel->name }}</p>
-                                @endif
-                            </div>
-                            <p class="text-sm font-semibold text-primary">
-                                @if ($ratesVary)<span class="text-xs font-medium text-slate-400">{{ __('from') }} </span>@endif{{ $money($subjectRate) }}<span class="text-xs font-medium text-slate-400">/hr</span>
-                            </p>
-                        </div>
-
-                        @php $gradeScope = $teacher->gradeScopeLabelFor($subject, $gradesById); @endphp
-                        @if ($gradeScope)
-                            <div class="mt-2 flex flex-wrap gap-1.5">
-                                <span class="{{ $chip }}">{{ $gradeScope }}</span>
-                            </div>
-                        @endif
-
-                        @if ($ratesVary)
-                            <div class="mt-2 flex flex-wrap gap-1.5">
-                                @foreach ($subjectRates as $gradeRate)
-                                    <span class="{{ $chip }}">{{ $gradeRate['grade']->label }} · {{ $money($gradeRate['rate_minor']) }}/hr</span>
-                                @endforeach
-                            </div>
-                        @endif
-
-                        @php $lessons = $lessonsBySubject->get($subject->id, collect())->groupBy(fn ($lesson) => $lesson->grade?->label ?? __('Other')); @endphp
-                        @if ($lessons->isNotEmpty())
-                            <div class="mt-3 space-y-2">
-                                @foreach ($lessons as $gradeLabel => $gradeLessons)
-                                    <div>
-                                        <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{{ $gradeLabel }}</p>
-                                        <div class="mt-1 flex flex-wrap gap-1.5">
-                                            @foreach ($gradeLessons as $lesson)
-                                                <span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">{{ $lesson->name }}</span>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif
+                @forelse ($config['grades']['groups'] as $group)
+                    <div class="mt-4">
+                        <p class="text-xs font-semibold tracking-widest text-ink-400 uppercase">{{ $group['level'] }}</p>
+                        <ul class="mt-2 flex flex-wrap gap-2">
+                            @foreach ($group['grades'] as $grade)
+                                <li class="rounded-full bg-ink-50 px-3 py-1 text-xs font-semibold text-ink-700">{{ $grade['chip'] }}</li>
+                            @endforeach
+                        </ul>
                     </div>
                 @empty
-                    <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">This teacher is still setting up their subjects.</p>
+                    <p class="mt-3 text-sm text-ink-500">{{ $config['copy']['gradesEmpty'] }}</p>
                 @endforelse
             </div>
 
-            <!-- Availability -->
-            <div class="{{ $cardBase }}">                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">Availability</h2>
-                    <span class="{{ $chip }}">Your time ({{ $viewerTz }})</span>
-                </div>
+            <div class="hairline mt-6 rounded-2xl bg-white p-6">
+                <h2 class="font-display text-lg font-semibold">{{ $config['copy']['availabilityTitle'] }}</h2>
+                <p class="mt-1 text-sm text-ink-500">
+                    {{ $config['availability']['timezoneLabel'] }} · {{ $config['availability']['status']['label'] }}
+                </p>
 
-                @if (empty($slotsByDate))
-                    <p class="mt-4 rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                        No open slots in the next two weeks — check back soon.
+                @if ($config['availability']['empty'])
+                    <p class="mt-4 rounded-xl bg-ink-50 px-4 py-6 text-center text-sm text-ink-500">
+                        {{ $config['copy']['noSlots'] }}
                     </p>
                 @else
-                    <div class="mt-4 space-y-4">
-                        @foreach ($slotsByDate as $date => $slots)
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ \Carbon\CarbonImmutable::parse($date)->format('D, d M') }}</p>
-                                <div class="mt-2 flex flex-wrap gap-2">
-                                    @foreach ($slots as $slot)
-                                        <span class="{{ $chip }}">{{ $slot->format('H:i') }}</span>
-                                    @endforeach
-                                </div>
+                    @foreach ($config['availability']['days'] as $day)
+                        <div class="mt-4">
+                            <p class="text-xs font-semibold tracking-widest text-ink-400 uppercase">{{ $day['fullLabel'] }}</p>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                @foreach ($day['slots'] as $slot)
+                                    <span class="rounded-lg bg-ink-50 px-2.5 py-1 text-xs font-semibold text-ink-700">{{ $slot['time'] }}</span>
+                                @endforeach
                             </div>
-                        @endforeach
-                    </div>
+                        </div>
+                    @endforeach
                 @endif
             </div>
 
-            <!-- Reviews -->
-            <div class="{{ $cardBase }}">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">Student reviews</h2>
-                    @if ($teacher->rating_count > 0)
-                        <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                            ★ {{ number_format((float) $teacher->rating_avg, 1) }} · {{ trans_choice(':count review|:count reviews', $teacher->rating_count) }}
-                        </span>
-                    @endif
-                </div>
+            <div class="hairline mt-6 rounded-2xl bg-white p-6">
+                <h2 class="font-display text-lg font-semibold">{{ $config['copy']['reviewsTitle'] }}</h2>
 
-                @if ($teacher->rating_count === 0)
-                    <p class="mt-4 rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                        {{ __('No reviews yet — this teacher is new to Studylikepro.') }}
-                    </p>
+                @if ($config['reviews']['count'] === 0)
+                    <p class="mt-3 text-sm text-ink-500">{{ $config['copy']['noReviews'] }}</p>
                 @else
-                    <div class="mt-4 space-y-2">
-                        @foreach ($breakdown as $star => $count)
-                            @php $totalReviews = array_sum($breakdown); @endphp
-                            <div class="flex items-center gap-3 text-xs">
-                                <span class="w-8 shrink-0 font-semibold text-slate-500 dark:text-slate-400">{{ $star }} ★</span>
-                                <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                                    <div class="h-full rounded-full bg-amber-400" style="width: {{ $totalReviews > 0 ? round($count / $totalReviews * 100) : 0 }}%"></div>
-                                </div>
-                                <span class="w-6 shrink-0 text-right text-slate-400">{{ $count }}</span>
-                            </div>
-                        @endforeach
-                    </div>
-
-                    <div class="mt-5 space-y-4 border-t border-slate-200/80 pt-5 dark:border-slate-800">
-                        @foreach ($reviews as $review)
-                            <div class="rounded-xl border border-slate-200/80 p-4 dark:border-slate-800">
-                                <div class="flex flex-wrap items-center justify-between gap-2">
-                                    <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ $review->reviewerName() }}</p>
-                                    <p class="text-sm text-amber-500">{{ str_repeat('★', $review->rating) }}<span class="text-slate-300 dark:text-slate-600">{{ str_repeat('★', 5 - $review->rating) }}</span></p>
-                                </div>
-                                @if ($review->comment)
-                                    <p class="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{{ $review->comment }}</p>
+                    <ul class="mt-3 space-y-3">
+                        @foreach ($config['reviews']['items'] as $review)
+                            <li class="rounded-xl bg-ink-50 p-4">
+                                <p class="text-sm font-semibold">{{ $review['reviewer'] }}</p>
+                                <p class="text-xs text-ink-500">{{ $review['stars']['filled'] }}{{ $review['stars']['empty'] }}</p>
+                                @if ($review['comment'])
+                                    <p class="mt-2 text-sm leading-relaxed text-ink-700">{{ $review['comment'] }}</p>
                                 @endif
-                                <p class="mt-2 text-xs text-slate-400">
-                                    {{ $review->booking?->lesson?->name ?? $review->booking?->subject?->name ?? __('Lesson') }}
-                                    · {{ $review->created_at->format('M Y') }}
-                                    @if ($review->wasEdited()) · {{ __('edited') }} @endif
-                                </p>
-                            </div>
+                            </li>
                         @endforeach
-                    </div>
-
-                    @if ($teacher->rating_count > $reviews->count())
-                        <p class="mt-4 text-xs text-slate-400">{{ __('Showing the :count most recent reviews.', ['count' => $reviews->count()]) }}</p>
-                    @endif
+                    </ul>
                 @endif
             </div>
-        </div>
 
-        <!-- Sidebar -->
-        <div class="lg:sticky lg:top-24 lg:self-start">
-            <div class="{{ $cardBase }}">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Starting at</p>
-                <p class="mt-1 text-3xl font-extrabold tracking-tight">{{ $money($teacher->startingRateMinor()) }}<span class="text-sm font-medium text-slate-400">/hour</span></p>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $teacher->lessonDuration() }}-minute live 1-on-1 lesson.</p>
-
+            <p class="mt-6 text-sm">
                 @guest
-                    <a href="{{ route('login') }}" class="mt-5 block rounded-xl bg-primary px-4 py-2.5 text-center text-sm font-semibold text-white shadow-md shadow-primary/20 transition hover:bg-primary/90">
-                        Log in to request a lesson
-                    </a>
-                    <a href="{{ route('register', ['role' => 'student']) }}" class="mt-2 block rounded-xl border border-slate-300 px-4 py-2.5 text-center text-sm font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                        Create a student account
-                    </a>
+                    <a href="{{ route('login') }}" class="font-semibold text-brand-600">{{ $config['booking']['action']['label'] }}</a>
+                    ·
+                    <a href="{{ route('register', ['role' => 'student']) }}" class="font-semibold text-brand-600">{{ $config['booking']['secondary']['label'] }}</a>
                 @else
-                    @can('create', [App\Models\Booking::class, $teacher])
-                        <a href="{{ route('student.bookings.create', $teacher) }}"
-                           class="mt-5 block rounded-xl bg-primary px-4 py-2.5 text-center text-sm font-semibold text-white shadow-md shadow-primary/20 transition hover:bg-primary/90">
-                            {{ __('Book a slot') }}
-                        </a>
-                        <a href="{{ route('student.requests.create') }}"
-                           class="mt-2 block rounded-xl border border-slate-300 px-4 py-2.5 text-center text-sm font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                            {{ __('Send lesson request') }}
-                        </a>
-                        <p class="mt-3 text-xs text-slate-400">{{ __('Pick one of the open slots above, or send your question for the teacher to match a time.') }}</p>
-                    @else
-                        <button type="button" disabled
-                                class="mt-5 w-full cursor-not-allowed rounded-xl bg-primary/40 px-4 py-2.5 text-center text-sm font-semibold text-white">
-                            {{ __('Book a slot') }}
-                        </button>
-                        <p class="mt-3 text-xs text-slate-400">{{ __('Only student accounts can book lessons.') }}</p>
-                    @endcan
+                    <a href="{{ route('dashboard') }}" class="font-semibold text-brand-600">{{ $config['booking']['action']['label'] }}</a>
                 @endguest
-            </div>
+                ·
+                <a href="{{ route('teachers.index') }}" class="font-semibold text-brand-600">{{ $config['copy']['findTeacher'] }}</a>
+            </p>
         </div>
-    </div>
-</x-public-layout>
+    </noscript>
+</x-public-page>

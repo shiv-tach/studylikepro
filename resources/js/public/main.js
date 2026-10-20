@@ -2,6 +2,7 @@ import { createApp } from 'vue';
 import { createRevealDirective } from '../landing/reveal';
 import SubjectsApp from './SubjectsApp.vue';
 import SubjectShowApp from './SubjectShowApp.vue';
+import TeacherShowApp from './TeacherShowApp.vue';
 import TeachersApp from './TeachersApp.vue';
 import ContactApp from './ContactApp.vue';
 // The public design system shared with the landing page: tokens, decorative
@@ -59,6 +60,37 @@ const PAGE_DEFAULTS = {
         pagination: [],
         error: null,
     },
+    'public-teacher-config': {
+        ...DEFAULTS,
+        teacher: {},
+        grades: { summary: null, count: 0, groups: [] },
+        availability: {
+            timezone: '',
+            timezoneLabel: '',
+            timezoneNote: '',
+            empty: true,
+            slotCount: 0,
+            slotCountCapped: false,
+            days: [],
+            windows: [],
+            status: { state: 'none', label: '', detail: null },
+            lessonMinutes: 0,
+        },
+        reviews: { count: 0, rating: null, summaryLabel: null, breakdown: [], items: [], showingLabel: null },
+        booking: {
+            canBook: false,
+            startingAt: '',
+            rate: null,
+            perHour: '',
+            lessonLength: null,
+            timezoneLabel: '',
+            slotsLabel: '',
+            action: { label: '', url: null },
+            secondary: null,
+            trust: [],
+        },
+        breadcrumbs: [],
+    },
     'public-contact-config': {
         ...DEFAULTS,
         csrfToken: '',
@@ -98,6 +130,7 @@ const pages = [
     { mountId: 'public-subjects-app', configId: 'public-subjects-config', component: SubjectsApp },
     { mountId: 'public-subject-app', configId: 'public-subject-config', component: SubjectShowApp },
     { mountId: 'public-teachers-app', configId: 'public-teachers-config', component: TeachersApp },
+    { mountId: 'public-teacher-app', configId: 'public-teacher-config', component: TeacherShowApp },
     { mountId: 'public-contact-app', configId: 'public-contact-config', component: ContactApp },
 ];
 

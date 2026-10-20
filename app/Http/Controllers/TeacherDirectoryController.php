@@ -9,6 +9,7 @@ use App\Services\CatalogService;
 use App\Services\SlotService;
 use App\Services\TeacherSearch;
 use App\Services\TeacherStatsService;
+use App\Support\PublicTeacherPageConfig;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -47,9 +48,10 @@ class TeacherDirectoryController extends Controller
     }
 
     /**
-     * Public teacher profile with availability preview and recent reviews.
-     * Students read the same profile inside their workspace, scoped to the
-     * grade on their learning profile.
+     * Public teacher profile: the grades this teacher takes, their open slots
+     * with a live availability status, and recent reviews — inside the landing
+     * page's shell. Students read the same teacher inside their workspace,
+     * scoped to the grade on their learning profile.
      */
     public function show(Request $request, TeacherProfile $teacherProfile, SlotService $slots, TeacherStatsService $stats): View|RedirectResponse
     {
@@ -64,18 +66,22 @@ class TeacherDirectoryController extends Controller
             'subjects' => fn ($relation) => $relation->where('subjects.is_active', true)->with([
                 'educationLevel.grades' => fn ($query) => $query->where('is_active', true)->ordered(),
             ]),
-            'lessons.grade',
         ]);
+
+        $reviews = $teacherProfile->visibleReviews()->with('booking.lesson', 'booking.subject', 'student')->limit(5)->get();
 
         return view('teachers.show', [
             'teacher' => $teacherProfile,
-            'lessonsBySubject' => $teacherProfile->lessons->groupBy('subject_id'),
-            'gradesById' => $teacherProfile->subjects
-                ->flatMap(fn (Subject $subject) => $subject->educationLevel?->grades ?? collect())
-                ->keyBy('id'),
-            'availability' => $slots->upcoming($teacherProfile, 14, 40, excludeBookings: true),
-            'reviews' => $teacherProfile->visibleReviews()->with('student')->limit(5)->get(),
-            'breakdown' => $stats->ratingBreakdown($teacherProfile),
+            'config' => PublicTeacherPageConfig::build($teacherProfile, [
+                'gradesById' => $teacherProfile->subjects
+                    ->flatMap(fn (Subject $subject) => $subject->educationLevel?->grades ?? collect())
+                    ->keyBy('id'),
+                'availability' => $slots->upcoming($teacherProfile, 14, 40, excludeBookings: true),
+                'windows' => $slots->availabilityWindows($teacherProfile),
+                'slotLimit' => 40,
+                'reviews' => $reviews,
+                'breakdown' => $stats->ratingBreakdown($teacherProfile),
+            ]),
         ]);
     }
 }

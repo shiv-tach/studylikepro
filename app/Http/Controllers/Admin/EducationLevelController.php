@@ -12,7 +12,7 @@ use Illuminate\View\View;
 /**
  * The curriculum backbone: the four Sri Lankan education levels with their
  * grades. Grades are seeded and read-only here; the levels themselves can be
- * renamed, reordered and switched off.
+ * renamed, reordered, switched off and deleted.
  */
 class EducationLevelController extends Controller
 {
@@ -44,5 +44,34 @@ class EducationLevelController extends Controller
         return redirect()
             ->route('admin.curriculum.index')
             ->with('status', 'level-updated');
+    }
+
+    /**
+     * Delete a level. Its grades and baskets cascade away, but a level that
+     * still holds subjects is kept: subject rows are the history every lesson,
+     * offering and request hangs off, so they must be moved or deleted first.
+     */
+    public function destroy(EducationLevel $level, ActivityLogger $activity): RedirectResponse
+    {
+        $name = $level->name;
+        $subjects = $level->subjects()->count();
+
+        if ($subjects > 0) {
+            return redirect()
+                ->route('admin.curriculum.index')
+                ->with('status', 'level-in-use')
+                ->with('levelInUse', [
+                    'name' => $name,
+                    'subjects' => $subjects,
+                ]);
+        }
+
+        $level->delete();
+
+        $activity->describe('Deleted the '.$name.' education level');
+
+        return redirect()
+            ->route('admin.curriculum.index')
+            ->with('status', 'level-deleted');
     }
 }

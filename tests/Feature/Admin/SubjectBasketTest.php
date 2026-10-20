@@ -21,7 +21,28 @@ test('non admins cannot manage the baskets', function () {
         ->put(route('admin.curriculum.baskets.update', $basket), ['name' => 'Renamed'])
         ->assertForbidden();
 
+    $this->actingAs(User::factory()->teacher()->create())
+        ->delete(route('admin.curriculum.baskets.destroy', $basket))
+        ->assertForbidden();
+
     expect($basket->fresh()->name)->toBe('Category I');
+});
+
+test('admins can delete a basket and its subjects remain without one', function () {
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $basket = olSubjectBasket('category_3');
+    $subject = Subject::factory()->create([
+        'name' => 'Agriculture',
+        'education_level_id' => $ol->id,
+        'basket_id' => $basket->id,
+    ]);
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->delete(route('admin.curriculum.baskets.destroy', $basket))
+        ->assertRedirect(route('admin.curriculum.index'));
+
+    expect(SubjectBasket::query()->whereKey($basket->id)->exists())->toBeFalse()
+        ->and($subject->fresh()->basket_id)->toBeNull();
 });
 
 test('the curriculum page lists the o/l baskets', function () {
@@ -30,7 +51,8 @@ test('the curriculum page lists the o/l baskets', function () {
         ->assertOk()
         ->assertSee('Subject baskets')
         ->assertSee('Category I')
-        ->assertSee('Category III');
+        ->assertSee('Category III')
+        ->assertSee('Delete basket');
 });
 
 test('admins can rename, reorder and switch a basket off', function () {

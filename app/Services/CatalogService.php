@@ -164,6 +164,21 @@ class CatalogService
     }
 
     /**
+     * How many subjects run in each grade of a level, keyed by grade id. The
+     * catalog is hydrated once, so a level's grade cards cost a single read.
+     *
+     * @return array<int, int>
+     */
+    public function gradeSubjectCounts(EducationLevel $level): array
+    {
+        $subjects = $this->subjects();
+
+        return $level->grades
+            ->mapWithKeys(fn (Grade $grade) => [$grade->id => $this->gradeSubjects($subjects, $grade)->count()])
+            ->all();
+    }
+
+    /**
      * The subjects of one grade taken from an already-hydrated catalog - the
      * shared half of subjectsForGrade() and the basket groups, so a caller
      * that needs several grades hydrates the catalog once.

@@ -57,7 +57,7 @@ class CatalogController extends Controller
     /**
      * The catalog read behind both the page and its island.
      *
-     * @return array{levels: \Illuminate\Support\Collection<int, mixed>, level: mixed, grade: mixed, baskets: \Illuminate\Support\Collection<int, mixed>, groupedByBasket: bool, subjectGroups: \Illuminate\Support\Collection<int, mixed>}
+     * @return array{levels: \Illuminate\Support\Collection<int, mixed>, level: mixed, grade: mixed, gradeCounts: array<int, int>, baskets: \Illuminate\Support\Collection<int, mixed>, groupedByBasket: bool, subjectGroups: \Illuminate\Support\Collection<int, mixed>}
      */
     private function state(Request $request): array
     {
@@ -65,6 +65,11 @@ class CatalogController extends Controller
         $levelKey = $request->query('level');
         $level = is_string($levelKey) ? $levels->firstWhere('key', $levelKey) : null;
         $grade = $this->pages->requestedGrade($request, $level);
+
+        // The grade cards only render while a level is open and no grade is
+        // picked, so the counts are only read there - a results page pays for
+        // its one grade instead of every grade of the level.
+        $gradeCounts = $level !== null && $grade === null ? $this->catalog->gradeSubjectCounts($level) : [];
 
         $subjects = $grade === null ? collect() : $this->catalog->subjectsForGrade($grade);
         $baskets = $grade === null ? collect() : $this->catalog->basketsForGrade($grade);
@@ -80,6 +85,7 @@ class CatalogController extends Controller
             'levels' => $levels,
             'level' => $level,
             'grade' => $grade,
+            'gradeCounts' => $gradeCounts,
             'baskets' => $baskets,
             'groupedByBasket' => $groupedByBasket,
             'subjectGroups' => $this->catalog->groupByBasket($subjects, $groupedByBasket ? $baskets : collect()),
