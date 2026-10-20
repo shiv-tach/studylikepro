@@ -28,7 +28,7 @@ demands it.
 Copy `.env.example` and fill in, at minimum:
 
 ```dotenv
-APP_NAME=Studylikepro
+APP_NAME="Study Like Pro"   # quote any value that contains spaces
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://studylikepro.com

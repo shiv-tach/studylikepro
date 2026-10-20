@@ -1,0 +1,333 @@
+/**
+ * Landing-page design system.
+ *
+ * Ported from DOC/payments-lk-design-reference.md — tokens (§2), the decorative
+ * hero/footer layers and motion (§2.3, §4.3), and the native-first chrome
+ * (§4.2 <dialog>). Everything is scoped to .lp-theme so the signed-in app,
+ * which is on its own theme, is never affected. Loaded by the landing entry
+ * and the public catalog/directory/contact screens.
+ */
+
+/* ------------------------------------------------------------------ tokens */
+.lp-theme {
+    --color-brand-50: #f0f6fa;
+    --color-brand-200: #b8d6e6;
+    --color-brand-300: #8abcd7;
+    --color-brand-400: #4797c0;
+    --color-brand-500: #006ea7;
+    --color-brand-600: #005f90;
+    --color-brand-700: #004d75;
+
+    --color-ink: #0d1117;
+    --color-ink-800: #1f2933;
+    --color-ink-700: #3f4b57;
+    --color-ink-500: #6b7684;
+    --color-ink-400: #98a2b0;
+    --color-ink-50: #f6f8fa;
+
+    --color-line: #e6eaef;
+    --color-go: #00a34d;
+    --color-go-ink: #00823e;
+
+    --shadow-xs: 0 1px 2px #0d11170d;
+    --shadow-sm: 0 1px 2px #0d11170f, 0 2px 6px #0d11170a;
+    --shadow-md: 0 2px 4px #0d11170d, 0 8px 20px #0d11170f;
+    --shadow-lg: 0 4px 8px #0d11170d, 0 20px 48px #0d111717;
+    --shadow-xl: 0 8px 16px #0d11170f, 0 36px 80px #0d111724;
+    --shadow-brand: 0 8px 24px #006ea747;
+
+    --ease-out-expo: cubic-bezier(.16, 1, .3, 1);
+
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-feature-settings: 'cv05' 1, 'ss03' 1;
+    -webkit-font-smoothing: antialiased;
+    color: var(--color-ink);
+    background: #fff;
+}
+
+/* --------------------------------------------------------------- utilities */
+/* Signature hairline — replaces `border` on light surfaces (§2.3). */
+.lp-theme .hairline {
+    border: 1px solid color-mix(in oklab, var(--color-ink) 9%, transparent);
+}
+
+/* 3px hover lift (§2.3). */
+.lp-theme .lift {
+    transition: transform .35s var(--ease-out-expo), box-shadow .35s var(--ease-out-expo);
+}
+.lp-theme .lift:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* The subject page's section rail scrolls on narrow screens instead of wrapping;
+   a visible scrollbar there reads as a broken layout. */
+.lp-theme .lp-tab-rail {
+    scrollbar-width: none;
+}
+.lp-theme .lp-tab-rail::-webkit-scrollbar {
+    display: none;
+}
+
+/* The sticky explorer's grade row drops in when a level is picked. Plain CSS:
+   Tailwind v3 has no `starting:` variant to drive this. */
+.explorer-swap-enter-active,
+.explorer-swap-leave-active {
+    transition: opacity .18s var(--ease-out-expo), transform .18s var(--ease-out-expo);
+}
+.explorer-swap-enter-from,
+.explorer-swap-leave-to {
+    opacity: 0;
+    transform: translateY(-4px);
+}
+@media (prefers-reduced-motion: reduce) {
+    .explorer-swap-enter-active,
+    .explorer-swap-leave-active {
+        transition: none;
+    }
+    .explorer-swap-enter-from,
+    .explorer-swap-leave-to {
+        transform: none;
+    }
+}
+
+.lp-theme .text-gradient {
+    background: linear-gradient(96deg, #004d75 0%, #006ea7 45%, #12a0b4 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* Clamp-based display scale (§2.2). The reference bundles the display FACE with
+   these utilities (rebuild checklist §9 step 2), so the family is set here. */
+.lp-theme .text-display-hero {
+    font-family: 'Clash Grotesk', Inter, ui-sans-serif, system-ui, sans-serif;
+    font-size: clamp(2rem, 4vw, 3.4rem);
+    line-height: 1.06;
+    letter-spacing: -.03em;
+}
+.lp-theme .text-display-lg {
+    font-family: 'Clash Grotesk', Inter, ui-sans-serif, system-ui, sans-serif;
+    font-size: clamp(1.75rem, 3.6vw, 3rem);
+    line-height: 1.05;
+    letter-spacing: -.028em;
+}
+
+/* ------------------------------------------------- decorative hero layers (§4.3) */
+.lp-theme .lp-aurora {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.lp-theme .lp-aurora > span {
+    position: absolute;
+    width: 42rem;
+    height: 42rem;
+    border-radius: 9999px;
+    filter: blur(72px);
+    opacity: .5;
+}
+.lp-theme .lp-aurora > span:nth-child(1) {
+    background: radial-gradient(circle, #4797c0, transparent 68%);
+    top: -14rem;
+    left: -10rem;
+    animation: lp-drift-a 24s var(--ease-out-expo) infinite alternate;
+}
+.lp-theme .lp-aurora > span:nth-child(2) {
+    background: radial-gradient(circle, #12a0b4, transparent 68%);
+    top: -2rem;
+    right: -8rem;
+    animation: lp-drift-b 28s var(--ease-out-expo) infinite alternate;
+}
+.lp-theme .lp-aurora > span:nth-child(3) {
+    background: radial-gradient(circle, #00a34d, transparent 70%);
+    bottom: -18rem;
+    left: 26%;
+    animation: lp-drift-c 30s var(--ease-out-expo) infinite alternate;
+}
+/* Compact inner-page hero: the same wash, dialled back so a 280px band does
+   not turn into a solid gradient. */
+.lp-theme .lp-aurora-soft > span {
+    opacity: .3;
+}
+/* Inverted copy for the dark bands (footer / closing CTA) — §4.16. */
+.lp-theme .lp-aurora-dark > span:nth-child(1) {
+    background: radial-gradient(circle, #006ea7b3, transparent 68%);
+}
+.lp-theme .lp-aurora-dark > span:nth-child(2) {
+    background: radial-gradient(circle, #12a0b473, transparent 68%);
+}
+.lp-theme .lp-aurora-dark > span:nth-child(3) {
+    background: radial-gradient(circle, #00a34d59, transparent 70%);
+}
+
+.lp-theme .lp-grid-lines {
+    background-image: linear-gradient(90deg, #0d11170f 1px, transparent 0),
+        linear-gradient(#0d11170f 1px, transparent 0);
+    background-size: 64px 64px;
+    -webkit-mask-image: radial-gradient(70% 60% at 50% 0, #000 30%, transparent 78%);
+    mask-image: radial-gradient(70% 60% at 50% 0, #000 30%, transparent 78%);
+}
+.lp-theme .lp-grid-lines-dark {
+    background-image: linear-gradient(90deg, #ffffff0f 1px, transparent 0),
+        linear-gradient(#ffffff0f 1px, transparent 0);
+    -webkit-mask-image: radial-gradient(80% 70% at 50% 100%, #000 20%, transparent 82%);
+    mask-image: radial-gradient(80% 70% at 50% 100%, #000 20%, transparent 82%);
+}
+
+.lp-theme .lp-circuit {
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 46%, transparent 72%);
+    mask-image: linear-gradient(90deg, #000 0%, #000 46%, transparent 72%);
+}
+.lp-theme .lp-circuit .trace {
+    stroke-dasharray: 70 1000;
+    animation: lp-trace 2.8s linear infinite;
+}
+.lp-theme .lp-circuit .trace:nth-child(2) {
+    animation-delay: .5s;
+}
+.lp-theme .lp-circuit .trace:nth-child(3) {
+    animation-delay: 1.1s;
+}
+.lp-theme .lp-circuit .trace:nth-child(4) {
+    animation-delay: 1.7s;
+}
+
+/* --------------------------------------------------------------- glitch (§4.3) */
+.lp-theme .glitch {
+    position: relative;
+    display: inline-block;
+}
+/* The duplicates sit inside .text-gradient (color:transparent), so the fill must
+   be forced back to currentColor or they render invisible. */
+.lp-theme .glitch::before,
+.lp-theme .glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    opacity: 0;
+}
+.lp-theme .glitch::before {
+    color: var(--color-go);
+    animation: lp-glitch-a 4s step-end infinite;
+}
+.lp-theme .glitch::after {
+    color: #12a0b4;
+    animation: lp-glitch-b 4s step-end infinite;
+}
+
+/* --------------------------------------------------------------- marquee (§4.3) */
+.lp-theme .lp-marquee {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.lp-theme .lp-marquee-track {
+    animation: lp-marquee 28s linear infinite;
+}
+.lp-theme .lp-marquee:hover .lp-marquee-track {
+    animation-play-state: paused;
+}
+
+/* ----------------------------------------------------- native-first chrome (§4.2) */
+.lp-theme dialog.lp-sheet {
+    margin: 0;
+    height: 100dvh;
+    max-height: none;
+    width: min(20rem, 86vw);
+    max-width: none;
+    padding: 0;
+    background: #fff;
+    box-shadow: var(--shadow-xl);
+}
+.lp-theme dialog.lp-sheet::backdrop {
+    background: color-mix(in oklab, #0d1117 40%, transparent);
+}
+.lp-theme dialog.lp-sheet[open] {
+    animation: lp-sheet-in .2s ease-out;
+}
+
+/* FAQ accordion: the + becomes a x at 45deg when open (§4.9). */
+.lp-theme details[open] .lp-faq-plus {
+    transform: rotate(45deg);
+}
+
+/* Animated mockup bits (§4.20). */
+.lp-theme .lp-sc-fill {
+    animation: lp-sc-fill 8s var(--ease-out-expo) infinite;
+}
+.lp-theme .lp-sc-pop {
+    animation: lp-sc-pop 8s var(--ease-out-expo) infinite;
+}
+
+/* --------------------------------------------------------------- focus ring (§6.7) */
+.lp-theme :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+/* --------------------------------------------------------------- keyframes */
+@keyframes lp-drift-a {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(6rem, 4rem, 0) scale(1.12); }
+}
+@keyframes lp-drift-b {
+    from { transform: translate3d(0, 0, 0) scale(1.1); }
+    to { transform: translate3d(-5rem, 3rem, 0) scale(1); }
+}
+@keyframes lp-drift-c {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(4rem, -5rem, 0) scale(1.15); }
+}
+@keyframes lp-trace {
+    to { stroke-dashoffset: -1070; }
+}
+@keyframes lp-marquee {
+    to { transform: translateX(-50%); }
+}
+@keyframes lp-glitch-a {
+    0%, 40%, 100% { opacity: 0; transform: translate(0); }
+    42% { opacity: .85; transform: translate(-2px, 1px); }
+    44% { opacity: 0; transform: translate(2px, -1px); }
+}
+@keyframes lp-glitch-b {
+    0%, 58%, 100% { opacity: 0; transform: translate(0); }
+    60% { opacity: .7; transform: translate(2px, -1px); }
+    62% { opacity: 0; transform: translate(-1px, 1px); }
+}
+@keyframes lp-sheet-in {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+}
+@keyframes lp-sc-fill {
+    0%, 30% { width: 0; }
+    70%, 100% { width: 100%; }
+}
+@keyframes lp-sc-pop {
+    0%, 52% { opacity: 0; transform: scale(.9); }
+    62%, 100% { opacity: 1; transform: none; }
+}
+
+/* --------------------------------------------------------------- reduced motion (§6.3, §7) */
+@media (prefers-reduced-motion: reduce) {
+    .lp-theme .lp-aurora > span,
+    .lp-theme .lp-marquee-track,
+    .lp-theme .lp-circuit .trace,
+    .lp-theme .glitch::before,
+    .lp-theme .glitch::after,
+    .lp-theme .lp-sc-fill,
+    .lp-theme .lp-sc-pop {
+        animation: none !important;
+    }
+    .lp-theme .lp-aurora > span { opacity: .35; }
+    .lp-theme .lp-circuit .trace { opacity: .18; }
+    .lp-theme .lp-marquee-track { flex-wrap: wrap; }
+    .lp-theme .lp-marquee-track > ul:last-child { display: none; }
+    .lp-theme .lift { transition: none; }
+    .lp-theme .lift:hover { transform: none; box-shadow: none; }
+    .lp-theme dialog.lp-sheet { animation: none; }
+    .lp-theme .lp-sc-fill { width: 100%; }
+}

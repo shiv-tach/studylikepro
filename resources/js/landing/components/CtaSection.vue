@@ -7,38 +7,35 @@ defineProps({
 </script>
 
 <template>
-    <section class="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20" aria-labelledby="landing-cta-title">
-        <div
-            class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary via-primary/90 to-purple-600 p-8 text-center text-white shadow-xl shadow-primary/20 sm:p-12"
-        >
-            <div class="pointer-events-none absolute -top-16 right-8 h-48 w-48 rounded-full bg-white/10 blur-2xl"></div>
-            <div class="pointer-events-none absolute -bottom-20 left-0 h-52 w-52 rounded-full bg-white/10 blur-3xl"></div>
+    <section class="mx-auto w-full max-w-6xl px-5 py-16 lg:py-20" aria-labelledby="lp-cta-title">
+        <div class="relative overflow-hidden rounded-3xl px-6 py-14 text-center text-white sm:px-12" style="background: var(--color-ink)">
+            <div class="lp-aurora lp-aurora-dark" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="lp-grid-lines lp-grid-lines-dark pointer-events-none absolute inset-0" aria-hidden="true"></div>
 
-            <h2 id="landing-cta-title" class="relative text-2xl font-extrabold tracking-tight sm:text-3xl">
-                Ready to learn like a pro?
-            </h2>
-            <p class="relative mx-auto mt-3 max-w-xl text-sm leading-relaxed text-white/90">
+            <h2 id="lp-cta-title" class="relative text-display-lg font-semibold">Ready to learn like a pro?</h2>
+            <p class="relative mx-auto mt-5 max-w-xl text-lg leading-relaxed text-white/70">
                 Join as a student to get help with the questions that slow you down. Teachers join by invitation — tell
                 us what you teach and we will send you an onboarding link.
             </p>
 
-            <div class="relative mt-8 flex flex-wrap justify-center gap-3">
+            <div class="relative mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:items-center">
                 <a
                     :href="urls.registerStudent"
-                    class="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-primary shadow-md transition hover:bg-slate-100"
+                    class="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-brand-500 px-7 py-3.5 font-medium whitespace-nowrap text-white transition hover:bg-brand-600"
+                    style="box-shadow: var(--shadow-brand)"
                 >
                     Get started as a student
                     <AppIcon name="arrow-right" class="h-4 w-4" />
                 </a>
                 <a
                     :href="urls.contact"
-                    class="rounded-xl border border-white/40 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
+                    class="shrink-0 rounded-full border border-white/20 bg-white/10 px-7 py-3.5 font-medium whitespace-nowrap text-white backdrop-blur transition hover:bg-white/20"
                 >
                     Apply for a teacher invite
                 </a>
             </div>
 
-            <p class="relative mt-5 text-xs text-white/80">
+            <p class="relative mt-6 text-xs text-white/55">
                 Free to join · Verified teachers only · Secure payments &amp; refunds
             </p>
         </div>

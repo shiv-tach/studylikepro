@@ -19,6 +19,7 @@ const props = defineProps({
 
 const urls = computed(() => props.config.urls);
 const support = computed(() => props.config.support ?? {});
+const heroImage = computed(() => props.config.images.hero);
 
 const showBackToTop = ref(false);
 
@@ -29,24 +30,43 @@ function onScroll() {
 onMounted(() => {
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
+
+    // Section links on the catalog, directory and contact screens arrive as
+    // /#features. The browser cannot resolve that fragment before this app
+    // mounts, so scroll to the section once the sections exist.
+    const hash = window.location.hash.slice(1);
+
+    if (hash) {
+        const alignToSection = () => document.getElementById(hash)?.scrollIntoView({ block: 'start', behavior: 'instant' });
+
+        alignToSection();
+
+        // Webfonts and late images reflow the sections after mount, so realign
+        // once the page has settled.
+        document.fonts?.ready.then(alignToSection);
+
+        if (document.readyState !== 'complete') {
+            window.addEventListener('load', alignToSection, { once: true });
+        }
+    }
 });
 
 onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
 </script>
 
 <template>
-    <div class="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div class="lp-theme lp-root flex min-h-screen flex-col bg-white text-ink">
         <a
             href="#top"
-            class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+            class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-brand-500 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
         >
             Skip to content
         </a>
 
-        <SiteHeader :app-name="config.appName" :authenticated="config.authenticated" :urls="urls" />
+        <SiteHeader :app-name="config.appName" :authenticated="config.authenticated" :urls="urls" :logo="config.images.logo" />
 
         <main class="flex-1">
-            <HeroSection :urls="urls" />
+            <HeroSection :urls="urls" :image="heroImage" />
             <StatsBar />
             <SubjectsSection :urls="urls" />
             <HowItWorksSection />
@@ -57,7 +77,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
             <CtaSection :urls="urls" />
         </main>
 
-        <SiteFooter :app-name="config.appName" :urls="urls" :support="support" />
+        <SiteFooter :app-name="config.appName" :urls="urls" :support="support" :logo="config.images.logo" />
 
         <transition
             enter-active-class="transition duration-200 ease-out"
@@ -68,7 +88,8 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
             <a
                 v-show="showBackToTop"
                 href="#top"
-                class="fixed bottom-6 right-6 z-40 flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 text-slate-600 shadow-lg backdrop-blur transition-colors hover:text-primary dark:border-slate-800/80 dark:bg-slate-900/90 dark:text-slate-300"
+                class="hairline fixed bottom-5 right-5 z-40 flex size-11 items-center justify-center rounded-full bg-white/90 text-ink-700 backdrop-blur transition-colors hover:text-ink"
+                style="box-shadow: var(--shadow-md)"
                 aria-label="Back to top"
             >
                 <AppIcon name="arrow-up" class="h-5 w-5" />

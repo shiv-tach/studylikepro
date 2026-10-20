@@ -4,33 +4,27 @@ import { features } from '../content';
 </script>
 
 <template>
-    <section id="features" class="border-t border-slate-200/80 bg-white dark:border-slate-800/80 dark:bg-slate-900">
-        <div class="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-            <div class="max-w-2xl">
-                <p class="text-xs font-bold uppercase tracking-widest text-primary">Why Studylikepro</p>
-                <h2 class="mt-3 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-                    Built for real 1-on-1 learning
-                </h2>
-                <p class="mt-3 text-slate-600 dark:text-slate-400">
-                    Every part of the journey is designed to get you unstuck quickly — and to keep quality high for
-                    students and teachers alike.
-                </p>
-            </div>
+    <section id="features" class="scroll-mt-20 border-b border-line bg-ink-50 py-16 lg:py-24">
+        <div class="mx-auto w-full max-w-6xl px-5">
+            <p class="text-sm font-medium text-brand-600">Why Studylikepro</p>
+            <h2 class="mt-3 max-w-3xl text-display-lg font-semibold">Built for real 1-on-1 learning</h2>
+            <p class="mt-5 max-w-2xl text-lg leading-relaxed text-ink-700">
+                Every part of the journey is designed to get you unstuck quickly — and to keep quality high for
+                students and teachers alike.
+            </p>
 
-            <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="mt-10 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
                 <article
                     v-for="(feature, index) in features"
                     :key="feature.title"
                     v-reveal="index * 60"
-                    class="group rounded-2xl border border-slate-200/80 bg-slate-50/50 p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 dark:border-slate-800/80 dark:bg-slate-950/50"
+                    class="lift flex flex-col bg-white p-7"
                 >
-                    <span
-                        class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white"
-                    >
+                    <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
                         <AppIcon :name="feature.icon" class="h-5 w-5" />
                     </span>
-                    <h3 class="mt-4 text-sm font-bold text-slate-900 dark:text-white">{{ feature.title }}</h3>
-                    <p class="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{{ feature.description }}</p>
+                    <h3 class="mt-5 font-display text-lg font-semibold text-ink">{{ feature.title }}</h3>
+                    <p class="mt-2 text-sm leading-relaxed text-ink-700">{{ feature.description }}</p>
                 </article>
             </div>
         </div>

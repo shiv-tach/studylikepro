@@ -1,7 +1,7 @@
 @php
     // The landing page is rendered client-side by resources/js/landing. Blade only
-    // renders the document shell and hands the Vue app the route map, auth state
-    // and support details, so no URL is hardcoded in JavaScript.
+    // renders the document shell and hands the Vue app the route map, auth state,
+    // support details and image URLs, so no URL is hardcoded in JavaScript.
     $landing = [
         'appName' => config('app.name', 'Studylikepro'),
         'authenticated' => auth()->check(),
@@ -22,6 +22,27 @@
             'phone' => config('studylikepro.support.phone'),
             'hours' => config('studylikepro.support.hours'),
         ],
+        // The hero photo ships as pre-cropped 4:5 WebP + JPEG derivatives, so the
+        // above-the-fold image never pulls the multi-megabyte camera original.
+        // The logo is the brand mark; Blade owns the URL so Vite never guesses it.
+        'images' => [
+            'logo' => asset('images/brand/logo-mark.png'),
+            'hero' => [
+                'alt' => 'Two students holding a graded exam paper and a tablet showing their lesson dashboard',
+                'width' => 1200,
+                'height' => 1500,
+                'sizes' => '(min-width: 1024px) 512px, (min-width: 640px) 448px, calc(100vw - 2.5rem)',
+                'src' => asset('images/hero/hero-students-800.jpg'),
+                'ogSrc' => asset('images/hero/hero-students-1200.jpg'),
+                'webpHref' => asset('images/hero/hero-students-800.webp'),
+                'srcset' => asset('images/hero/hero-students-480.jpg').' 480w, '
+                    .asset('images/hero/hero-students-800.jpg').' 800w, '
+                    .asset('images/hero/hero-students-1200.jpg').' 1200w',
+                'webpSrcset' => asset('images/hero/hero-students-480.webp').' 480w, '
+                    .asset('images/hero/hero-students-800.webp').' 800w, '
+                    .asset('images/hero/hero-students-1200.webp').' 1200w',
+            ],
+        ],
     ];
 
     // JSON_UNESCAPED_SLASHES keeps the URLs readable in the document (and matchable
@@ -41,14 +62,34 @@
         <title>{{ $title }}</title>
         <meta name="description" content="{{ $description }}">
 
+        <x-favicon-links />
+
         <meta property="og:type" content="website">
         <meta property="og:title" content="{{ $title }}">
         <meta property="og:description" content="{{ $description }}">
+        <meta property="og:image" content="{{ $landing['images']['hero']['ogSrc'] }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="1500">
+        <meta property="og:image:alt" content="{{ $landing['images']['hero']['alt'] }}">
+
+        {{-- The hero photo is the likely LCP element; the Vue app mounts it late,
+             so point the preload scanner at the WebP candidates directly. --}}
+        <link
+            rel="preload"
+            as="image"
+            type="image/webp"
+            href="{{ $landing['images']['hero']['webpHref'] }}"
+            imagesrcset="{{ $landing['images']['hero']['webpSrcset'] }}"
+            imagesizes="{{ $landing['images']['hero']['sizes'] }}"
+            fetchpriority="high"
+        >
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <link href="https://api.fontshare.com/v2/css?f[]=clash-grotesk@500,600,700&display=swap" rel="stylesheet">
 
         <!-- Blocking theme script: public pages load light unless dark was chosen explicitly -->
         <script>
@@ -61,7 +102,7 @@
 
         @vite(['resources/css/app.css', 'resources/js/landing/main.js'])
     </head>
-    <body class="font-sans antialiased bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <body class="font-sans antialiased bg-white text-ink">
         <script type="application/json" id="landing-config">@json($landing, $jsonFlags)</script>
 
         <div id="landing-app"></div>

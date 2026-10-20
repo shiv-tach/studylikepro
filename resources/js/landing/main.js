@@ -1,5 +1,10 @@
 import { createApp } from 'vue';
 import App from './App.vue';
+import { createRevealDirective } from './reveal';
+// Public design system (tokens, decorative layers, native-first chrome) shared
+// by the landing page and the public catalog/directory/contact screens. Kept
+// out of app.css so the signed-in product never pays for it.
+import '../../css/landing.css';
 
 // Blade renders the route map and auth state into a JSON island so the Vue app
 // never hardcodes a URL that could drift from routes/web.php.
@@ -19,6 +24,19 @@ const DEFAULT_CONFIG = {
         home: '/',
     },
     support: {},
+    images: {
+        logo: '/images/brand/logo-mark.png',
+        hero: {
+            src: '/images/hero/hero-students-800.jpg',
+            webpHref: '/images/hero/hero-students-800.webp',
+            srcset: '/images/hero/hero-students-480.jpg 480w, /images/hero/hero-students-800.jpg 800w, /images/hero/hero-students-1200.jpg 1200w',
+            webpSrcset: '/images/hero/hero-students-480.webp 480w, /images/hero/hero-students-800.webp 800w, /images/hero/hero-students-1200.webp 1200w',
+            sizes: '(min-width: 1024px) 512px, (min-width: 640px) 448px, calc(100vw - 2.5rem)',
+            width: 1200,
+            height: 1500,
+            alt: 'Two students holding a graded exam paper and a tablet showing their lesson dashboard',
+        },
+    },
 };
 
 function readConfig() {
@@ -35,6 +53,7 @@ function readConfig() {
             ...DEFAULT_CONFIG,
             ...parsed,
             urls: { ...DEFAULT_CONFIG.urls, ...(parsed.urls ?? {}) },
+            images: { ...DEFAULT_CONFIG.images, ...(parsed.images ?? {}) },
         };
     } catch (error) {
         console.error('Landing config could not be parsed; falling back to defaults.', error);
@@ -43,44 +62,10 @@ function readConfig() {
     }
 }
 
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-// Fades and lifts sections into view on first scroll. Anything animated is opt
-// in: without JavaScript, or with reduced motion, the content is simply visible.
-const reveal = {
-    mounted(element, binding) {
-        if (prefersReducedMotion) {
-            return;
-        }
-
-        element.classList.add('lp-reveal');
-
-        if (binding.value) {
-            element.style.transitionDelay = `${binding.value}ms`;
-        }
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        element.classList.add('lp-reveal--visible');
-                        observer.disconnect();
-                    }
-                });
-            },
-            { rootMargin: '0px 0px -10% 0px', threshold: 0.05 },
-        );
-
-        observer.observe(element);
-        element.lpRevealObserver = observer;
-    },
-    unmounted(element) {
-        element.lpRevealObserver?.disconnect();
-    },
-};
-
 const mountPoint = document.getElementById('landing-app');
 
 if (mountPoint) {
-    createApp(App, { config: readConfig() }).directive('reveal', reveal).mount(mountPoint);
+    createApp(App, { config: readConfig() })
+        .directive('reveal', createRevealDirective())
+        .mount(mountPoint);
 }

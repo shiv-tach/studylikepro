@@ -11,6 +11,9 @@ export default defineConfig({
                 // The marketing landing page is its own Vue entry, so the rest of
                 // the app keeps shipping plain Blade + Alpine without Vue.
                 'resources/js/landing/main.js',
+                // The public catalog, teacher directory and contact screens share
+                // one entry and the landing page's design tokens.
+                'resources/js/public/main.js',
                 // The student dashboard is the signed-in shell's Vue page; its
                 // bundle stays out of every other Blade + Alpine screen.
                 'resources/js/student-dashboard/main.js',

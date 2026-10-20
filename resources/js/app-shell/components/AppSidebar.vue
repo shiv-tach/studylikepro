@@ -10,6 +10,7 @@ const props = defineProps({
     navItems: { type: Array, default: () => [] },
     user: { type: Object, required: true },
     dashboardUrl: { type: String, required: true },
+    logoUrl: { type: String, required: true },
 });
 
 const { preset, sidebarOpen, closeSidebar } = useShell();
@@ -32,7 +33,7 @@ const nameClass = computed(() => (preset.value === 'midnight' ? 'text-slate-200'
         <!-- Brand + mobile close -->
         <div :class="[dividerClass, 'flex h-16 items-center justify-between border-b px-6']">
             <a :href="dashboardUrl" class="flex items-center gap-2.5 text-lg font-bold text-primary">
-                <AppLogo class="h-8 w-8" />
+                <AppLogo :src="logoUrl" class="h-9 w-auto" />
                 <span :class="[brandTextClass, 'tracking-tight']">Studylikepro</span>
             </a>
 

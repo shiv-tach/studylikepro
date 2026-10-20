@@ -197,6 +197,41 @@ function teacherProfileConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the public subject page renders its sections, prices
+ * and actions from. The catalog fetches the same shape when a subject is
+ * opened on click.
+ *
+ * @return array<string, mixed>
+ */
+function publicSubjectConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="public-subject-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island the public catalog renders its sticky explorer from.
+ * The explorer fetches the same level/grade shape when a pick changes.
+ *
+ * @return array<string, mixed>
+ */
+function publicSubjectsConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="public-subjects-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Read the config island the learning profile renders its grade and language
  * pickers, the student's answers, the validation messages and the save action
  * from.

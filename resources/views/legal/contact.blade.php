@@ -1,95 +1,122 @@
 @php
-    $card = 'rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900';
-    $field = 'mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
+    // The public contact page is rendered by resources/js/public. Blade owns the
+    // copy, the support details, the CSRF token, the old input and the
+    // validation messages, then hands them over as a JSON island.
+    $config = [
+        'appName' => config('app.name', 'Studylikepro'),
+        'authenticated' => auth()->check(),
+        'csrfToken' => csrf_token(),
+        'sent' => session('status') === 'contact-sent',
+        'old' => [
+            'name' => old('name', auth()->user()?->name),
+            'email' => old('email', auth()->user()?->email),
+            'subject' => old('subject'),
+            'message' => old('message'),
+        ],
+        'errors' => [
+            'name' => $errors->first('name'),
+            'email' => $errors->first('email'),
+            'subject' => $errors->first('subject'),
+            'message' => $errors->first('message'),
+            'website' => $errors->first('website'),
+        ],
+        'support' => [
+            'email' => $supportEmail,
+            'phone' => $supportPhone,
+            'hours' => $supportHours,
+        ],
+        'copy' => [
+            'eyebrow' => __('Support'),
+            'title' => __('Talk to support'),
+            'intro' => __('Booking trouble, payments, refunds, verification or something else — tell us what happened and we will reply by email.'),
+            'sent' => __('Thanks — your message is with our support team. You will hear back at the address you gave us.'),
+            'name' => __('Your name'),
+            'email' => __('Email'),
+            'subject' => __('Subject'),
+            'subjectPlaceholder' => __('e.g. I was charged but the lesson did not happen'),
+            'message' => __('What happened?'),
+            'messagePlaceholder' => __('Lesson date, teacher name, and anything we should look at.'),
+            'send' => __('Send to support'),
+            'otherWays' => __('Other ways to reach us'),
+            'emailLabel' => __('Email'),
+            'phoneLabel' => __('Phone'),
+            'hoursLabel' => __('Hours'),
+            'fasterTitle' => __('Faster than a form'),
+            'fasterTips' => [
+                __('Lesson problem? Use "Report a problem" in the lesson chat — support sees the booking, payment and chat in one place.'),
+                __('Payment or refund question? The lesson receipt lists every charge and refund.'),
+                __('Teacher application? Track the status on your verification page.'),
+            ],
+            'navSubjects' => __('Subjects'),
+            'navTeachers' => __('Teachers'),
+            'navContact' => __('Contact'),
+        ],
+        'urls' => [
+            'home' => route('home'),
+            'subjects' => route('catalog.subjects.index'),
+            'teachers' => route('teachers.index'),
+            'contact' => route('legal.contact'),
+            'contactSend' => route('legal.contact.send'),
+            'login' => route('login'),
+            'registerStudent' => route('register', ['role' => 'student']),
+            'dashboard' => route('dashboard'),
+            'privacy' => route('legal.privacy'),
+            'terms' => route('legal.terms'),
+            'refunds' => route('legal.refunds'),
+        ],
+        'images' => [
+            'logo' => asset('images/brand/logo-mark.png'),
+        ],
+    ];
+
+    $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
 @endphp
 
-<x-public-layout :title="__('Contact support')">
-    <div class="grid gap-6 lg:grid-cols-3">
-        <div class="lg:col-span-2 {{ $card }}">
-            <h1 class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50">{{ __('Talk to support') }}</h1>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Booking trouble, payments, refunds, verification or something else — tell us what happened and we will reply by email.') }}</p>
+<x-public-page
+    :title="__('Contact support')"
+    :description="__('Contact Studylikepro support about a lesson, payment, refund, teacher verification or anything else.')"
+    :vite="['resources/css/app.css', 'resources/js/public/main.js']"
+>
+    <script type="application/json" id="public-contact-config">@json($config, $jsonFlags)</script>
+
+    <div id="public-contact-app"></div>
+
+    {{-- Fallback for crawlers and visitors without JavaScript: the same form,
+         posted natively. --}}
+    <noscript>
+        <div style="max-width:44rem;margin:0 auto;padding:3rem 1.5rem;font-family:system-ui,sans-serif;line-height:1.6">
+            <h1>{{ __('Talk to support') }}</h1>
+            <p>{{ __('Booking trouble, payments, refunds, verification or something else — tell us what happened and we will reply by email.') }}</p>
 
             @if (session('status') === 'contact-sent')
-                <div class="mt-5 rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                    {{ __('Thanks — your message is with our support team. You will hear back at the address you gave us.') }}
-                </div>
+                <p><strong>{{ __('Thanks — your message is with our support team. You will hear back at the address you gave us.') }}</strong></p>
             @endif
 
-            <form method="POST" action="{{ route('legal.contact.send') }}" class="mt-6 space-y-4">
+            <form method="POST" action="{{ route('legal.contact.send') }}">
                 @csrf
-
-                {{-- Honeypot: hidden from people, irresistible to bots. --}}
                 <div class="hidden" aria-hidden="true">
-                    <label for="website">Website</label>
+                    <label for="website">{{ __('Website') }}</label>
                     <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
                 </div>
 
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div>
-                        <x-input-label for="name" :value="__('Your name')" />
-                        <input id="name" name="name" type="text" required value="{{ old('name', auth()->user()?->name) }}" class="{{ $field }}">
-                        @error('name')
-                            <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    <div>
-                        <x-input-label for="email" :value="__('Email')" />
-                        <input id="email" name="email" type="email" required value="{{ old('email', auth()->user()?->email) }}" class="{{ $field }}">
-                        @error('email')
-                            <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-                </div>
+                <p><label for="name">{{ __('Your name') }}</label><br>
+                    <input id="name" name="name" type="text" required value="{{ $config['old']['name'] }}"></p>
+                <p><label for="email">{{ __('Email') }}</label><br>
+                    <input id="email" name="email" type="email" required value="{{ $config['old']['email'] }}"></p>
+                <p><label for="subject">{{ __('Subject') }}</label><br>
+                    <input id="subject" name="subject" type="text" required value="{{ $config['old']['subject'] }}"></p>
+                <p><label for="message">{{ __('What happened?') }}</label><br>
+                    <textarea id="message" name="message" rows="6" required>{{ $config['old']['message'] }}</textarea></p>
 
-                <div>
-                    <x-input-label for="subject" :value="__('Subject')" />
-                    <input id="subject" name="subject" type="text" required value="{{ old('subject') }}" class="{{ $field }}"
-                           placeholder="{{ __('e.g. I was charged but the lesson did not happen') }}">
-                    @error('subject')
-                        <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <x-input-label for="message" :value="__('What happened?')" />
-                    <textarea id="message" name="message" rows="6" required class="{{ $field }}"
-                              placeholder="{{ __('Lesson date, teacher name, and anything we should look at.') }}">{{ old('message') }}</textarea>
-                    @error('message')
-                        <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <x-primary-button>{{ __('Send to support') }}</x-primary-button>
+                <button type="submit">{{ __('Send to support') }}</button>
             </form>
+
+            <h2>{{ __('Other ways to reach us') }}</h2>
+            <ul>
+                <li>{{ __('Email') }}: <a href="mailto:{{ $supportEmail }}">{{ $supportEmail }}</a></li>
+                <li>{{ __('Phone') }}: {{ $supportPhone }}</li>
+                <li>{{ __('Hours') }}: {{ $supportHours }}</li>
+            </ul>
         </div>
-
-        <aside class="space-y-6">
-            <div class="{{ $card }}">
-                <h2 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('Other ways to reach us') }}</h2>
-                <dl class="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                    <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Email') }}</dt>
-                        <dd><a href="mailto:{{ $supportEmail }}" class="text-primary hover:underline">{{ $supportEmail }}</a></dd>
-                    </div>
-                    <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Phone') }}</dt>
-                        <dd>{{ $supportPhone }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Hours') }}</dt>
-                        <dd>{{ $supportHours }}</dd>
-                    </div>
-                </dl>
-            </div>
-
-            <div class="{{ $card }}">
-                <h2 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('Faster than a form') }}</h2>
-                <ul class="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                    <li>{{ __('Lesson problem? Use "Report a problem" in the lesson chat — support sees the booking, payment and chat in one place.') }}</li>
-                    <li>{{ __('Payment or refund question? The lesson receipt lists every charge and refund.') }}</li>
-                    <li>{{ __('Teacher application? Track the status on your verification page.') }}</li>
-                </ul>
-            </div>
-        </aside>
-    </div>
-</x-public-layout>
+    </noscript>
+</x-public-page>

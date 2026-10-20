@@ -15,9 +15,38 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Plus Jakarta Sans', ...defaultTheme.fontFamily.sans],
+                // Display face for the marketing landing page (payments.lk reference).
+                display: ['"Clash Grotesk"', 'Inter', ...defaultTheme.fontFamily.sans],
             },
             colors: {
                 primary: 'rgb(var(--primary) / <alpha-value>)',
+                // Landing-page design tokens — ported from DOC/payments-lk-design-reference.md.
+                // Additive names only; nothing else in the app uses brand/ink/line/go.
+                brand: {
+                    50: '#f0f6fa',
+                    200: '#b8d6e6',
+                    300: '#8abcd7',
+                    400: '#4797c0',
+                    500: '#006ea7',
+                    600: '#005f90',
+                    700: '#004d75',
+                },
+                ink: {
+                    DEFAULT: '#0d1117',
+                    50: '#f6f8fa',
+                    400: '#98a2b0',
+                    500: '#6b7684',
+                    700: '#3f4b57',
+                    800: '#1f2933',
+                },
+                line: '#e6eaef',
+                go: {
+                    DEFAULT: '#00a34d',
+                    ink: '#00823e',
+                },
+            },
+            boxShadow: {
+                brand: '0 8px 24px #006ea747',
             },
         },
     },

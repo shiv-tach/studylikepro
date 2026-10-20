@@ -46,6 +46,23 @@ class SubjectPageService
     }
 
     /**
+     * The grades this subject actually runs in — the ones with at least one
+     * active lesson — in curriculum order. The subject page uses them for the
+     * grade switcher, so a visitor never has to go back to the catalog.
+     *
+     * @return Collection<int, Grade>
+     */
+    public function gradesForSubject(Subject $subject): Collection
+    {
+        return $this->catalog->lessonsFor($subject)
+            ->pluck('grade')
+            ->filter()
+            ->unique('id')
+            ->sortBy(fn (Grade $grade) => [$grade->sort_order, $grade->number])
+            ->values();
+    }
+
+    /**
      * The student's profile grade when it belongs to the subject's level —
      * the student pages scope everything to the profile grade and never let
      * the query string widen it.
@@ -66,11 +83,12 @@ class SubjectPageService
      * teacher preview with next availability, and the grouped service
      * offerings, all keyed for the view.
      *
-     * @return array{subject: Subject, level: ?EducationLevel, grade: ?Grade, lessons: Collection<int, mixed>, teachers: Collection<int, mixed>, teacherTotal: int, nextSlots: array<int, mixed>, offeringGroups: Collection<int, array{type: ServiceType, offerings: Collection<int, ServiceOffering>}>, gradesById: Collection<int, Grade>}
+     * @return array{subject: Subject, level: ?EducationLevel, grade: ?Grade, gradeOptions: Collection<int, Grade>, lessons: Collection<int, mixed>, teachers: Collection<int, mixed>, teacherTotal: int, nextSlots: array<int, mixed>, offeringGroups: Collection<int, array{type: ServiceType, offerings: Collection<int, ServiceOffering>}>, gradesById: Collection<int, Grade>}
      */
     public function payload(Subject $subject, ?Grade $grade, TeacherSearch $search, SlotService $slots): array
     {
         $levels = $this->catalog->levels();
+        $gradeOptions = $this->gradesForSubject($subject);
 
         $lessons = $this->catalog->lessonsFor($subject);
 
@@ -95,6 +113,7 @@ class SubjectPageService
             'subject' => $subject,
             'level' => $levels->firstWhere('id', $subject->education_level_id),
             'grade' => $grade,
+            'gradeOptions' => $gradeOptions,
             'lessons' => $lessons,
             'teachers' => $teachers,
             'teacherTotal' => $search->query($filters)->count(),

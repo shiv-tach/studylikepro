@@ -5,6 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
+        <x-favicon-links />
+
         <title>{{ config('app.name', 'Laravel') }}</title>
 
         <!-- Fonts -->
@@ -27,9 +29,21 @@
     <body class="font-sans text-slate-900 antialiased">
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-slate-100 dark:bg-slate-950">
             <div>
-                <a href="/" class="flex flex-col items-center gap-2">
-                    <x-application-logo class="h-14 w-14 text-primary" />
-                    <span class="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">Studylikepro</span>
+                <a href="/" class="flex flex-col items-center">
+                    <img
+                        src="{{ asset('images/brand/logo-full.png') }}"
+                        alt="Studylikepro"
+                        width="480"
+                        height="425"
+                        class="h-auto w-52 dark:hidden"
+                    >
+                    <img
+                        src="{{ asset('images/brand/logo-full-dark.png') }}"
+                        alt="Studylikepro"
+                        width="480"
+                        height="425"
+                        class="hidden h-auto w-52 dark:block"
+                    >
                 </a>
             </div>
 

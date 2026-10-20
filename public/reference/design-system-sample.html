@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ledgerly — payments.lk design-reference sample</title>
+  <meta name="description" content="A build-ready sample landing page that ports the tokens, components and motion described in DOC/payments-lk-design-reference.md — used to verify the reference reproduces correctly.">
+  <meta name="theme-color" content="#006ea7">
+
+  <!-- Fonts: Inter (body) + Clash Grotesk (display) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://api.fontshare.com/v2/css?f[]=clash-grotesk@500,600,700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind v4 (browser build). Compiles the @theme block below at runtime. -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <!-- ============================================================
+       DESIGN TOKENS  — §2 of the reference, ported verbatim
+       ============================================================ -->
+  <style type="text/tailwindcss">
+    @theme {
+      /* Brand (primary blue) */
+      --color-brand-50:  #f0f6fa;
+      --color-brand-200: #b8d6e6;
+      --color-brand-300: #8abcd7;
+      --color-brand-400: #4797c0;
+      --color-brand-500: #006ea7;
+      --color-brand-600: #005f90;
+      --color-brand-700: #004d75;
+
+      /* Ink (neutral) */
+      --color-ink:     #0d1117;
+      --color-ink-800: #1f2933;
+      --color-ink-700: #3f4b57;
+      --color-ink-500: #6b7684;
+      --color-ink-400: #98a2b0;
+      --color-ink-50:  #f6f8fa;
+
+      /* Support */
+      --color-line:   #e6eaef;
+      --color-go:     #00a34d;
+      --color-go-ink: #00823e;
+      --color-cyan:   #12a0b4;
+
+      /* Type */
+      --font-body:    "Inter", ui-sans-serif, system-ui, sans-serif;
+      --font-display: "Clash Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+      --font-mono:    ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+
+      /* Layered shadow stack */
+      --shadow-xs:    0 1px 2px #0d11170d;
+      --shadow-sm:    0 1px 2px #0d11170f, 0 2px 6px #0d11170a;
+      --shadow-md:    0 2px 4px #0d11170d, 0 8px 20px #0d11170f;
+      --shadow-lg:    0 4px 8px #0d11170d, 0 20px 48px #0d111717;
+      --shadow-xl:    0 8px 16px #0d11170f, 0 36px 80px #0d111724;
+      --shadow-brand: 0 8px 24px #006ea747;
+
+      /* Radii + motion */
+      --radius-sm: .25rem;
+      --radius-md: .375rem;
+      --radius-lg: .5rem;
+      --radius-xl: .75rem;
+      --radius-2xl: 1rem;
+      --ease-out-expo: cubic-bezier(.16, 1, .3, 1);
+    }
+  </style>
+
+  <!-- ============================================================
+       BASE + CUSTOM UTILITIES + KEYFRAMES — §2.3 / §3 / §4 of the reference
+       (plain CSS so the recipes survive independent of Tailwind's scan)
+       ============================================================ -->
+  <style>
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-body);
+      font-feature-settings: "cv05" 1, "ss03" 1;
+      -webkit-font-smoothing: antialiased;
+      color: var(--color-ink);
+    }
+
+    /* Signature hairline replaces `border` everywhere (§2.3) */
+    .hairline { border: 1px solid color-mix(in oklab, var(--color-ink) 9%, transparent); }
+
+    /* Display scale — clamp-based, tracking is part of the look (§2.2).
+       NB: the reference bundles the display FONT with these utilities
+       (see rebuild checklist §9 step 2), so the face is set here. */
+    .text-display-xl   { font-family: var(--font-display); font-size: clamp(2.05rem, 6.2vw, 5rem);  line-height: .98;  letter-spacing: -.035em; }
+    .text-display-hero { font-family: var(--font-display); font-size: clamp(2rem, 4vw, 3.4rem);     line-height: 1.06; letter-spacing: -.03em; }
+    .text-display-lg   { font-family: var(--font-display); font-size: clamp(1.75rem, 3.6vw, 3rem);  line-height: 1.05; letter-spacing: -.028em; }
+
+    /* Motion helpers (§2.3) */
+    .lift { transition: transform .35s var(--ease-out-expo), box-shadow .35s var(--ease-out-expo); }
+    .lift:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    .tilt { transform: perspective(2200px) rotateY(-7deg); transition: transform .35s var(--ease-out-expo); }
+    .tilt:hover { transform: perspective(2200px) rotateY(-3deg); }
+
+    .text-gradient {
+      background: linear-gradient(96deg, #004d75 0%, #006ea7 45%, #12a0b4 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    /* Decorative hero layers (§4.3) */
+    .grid-lines {
+      background-image: linear-gradient(90deg, #0d11170f 1px, transparent 0),
+                        linear-gradient(#0d11170f 1px, transparent 0);
+      background-size: 64px 64px;
+      -webkit-mask-image: radial-gradient(70% 60% at 50% 0, #000 30%, transparent 78%);
+              mask-image: radial-gradient(70% 60% at 50% 0, #000 30%, transparent 78%);
+    }
+    .grid-lines-dark {
+      background-image: linear-gradient(90deg, #ffffff0f 1px, transparent 0),
+                        linear-gradient(#ffffff0f 1px, transparent 0);
+      -webkit-mask-image: radial-gradient(80% 70% at 50% 100%, #000 20%, transparent 82%);
+              mask-image: radial-gradient(80% 70% at 50% 100%, #000 20%, transparent 82%);
+    }
+
+    .aurora { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+    .aurora > span {
+      position: absolute; width: 42rem; height: 42rem; border-radius: 9999px;
+      filter: blur(72px); opacity: .5;
+    }
+    .aurora > span:nth-child(1) { background: radial-gradient(circle, #4797c0, transparent 68%); top: -14rem; left: -10rem; animation: drift-a 24s var(--ease-out-expo) infinite alternate; }
+    .aurora > span:nth-child(2) { background: radial-gradient(circle, #12a0b4, transparent 68%); top: -2rem; right: -8rem;  animation: drift-b 28s var(--ease-out-expo) infinite alternate; }
+    .aurora > span:nth-child(3) { background: radial-gradient(circle, #00a34d, transparent 70%); bottom: -18rem; left: 26%;  animation: drift-c 30s var(--ease-out-expo) infinite alternate; }
+    .aurora-dark > span:nth-child(1) { background: radial-gradient(circle, #006ea7b3, transparent 68%); }
+    .aurora-dark > span:nth-child(2) { background: radial-gradient(circle, #12a0b473, transparent 68%); }
+    .aurora-dark > span:nth-child(3) { background: radial-gradient(circle, #00a34d59, transparent 70%); }
+
+    @keyframes drift-a { from { transform: translate3d(0,0,0) scale(1); }   to { transform: translate3d(6rem,4rem,0) scale(1.12); } }
+    @keyframes drift-b { from { transform: translate3d(0,0,0) scale(1.1); } to { transform: translate3d(-5rem,3rem,0) scale(1); } }
+    @keyframes drift-c { from { transform: translate3d(0,0,0) scale(1); }   to { transform: translate3d(4rem,-5rem,0) scale(1.15); } }
+
+    .circuit {
+      -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 46%, transparent 72%);
+              mask-image: linear-gradient(90deg, #000 0%, #000 46%, transparent 72%);
+    }
+    .circuit .trace { stroke-dasharray: 70 1000; animation: trace 2.8s linear infinite; }
+    .circuit .trace:nth-child(2) { animation-delay: .5s; }
+    .circuit .trace:nth-child(3) { animation-delay: 1.1s; }
+    .circuit .trace:nth-child(4) { animation-delay: 1.7s; }
+    @keyframes trace { to { stroke-dashoffset: -1070; } }
+
+    /* Marquee (§4.3) */
+    .marquee-wrap { mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+    .marquee-track { animation: marquee 28s linear infinite; }
+    .marquee-wrap:hover .marquee-track { animation-play-state: paused; }
+    @keyframes marquee { to { transform: translateX(-50%); } }
+
+    /* Glitch on the headline rate (§4.3) */
+    .glitch { position: relative; display: inline-block; }
+    .glitch::before, .glitch::after {
+      content: attr(data-text);
+      position: absolute; inset: 0;
+      background: none;
+      -webkit-text-fill-color: currentColor;
+      opacity: 0;
+    }
+    .glitch::before { color: var(--color-go); animation: glitch-a 4s step-end infinite; }
+    .glitch::after  { color: var(--color-cyan); animation: glitch-b 4s step-end infinite; }
+    @keyframes glitch-a {
+      0%, 40%, 100% { opacity: 0; transform: translate(0); }
+      42% { opacity: .85; transform: translate(-2px, 1px); }
+      44% { opacity: 0;   transform: translate(2px, -1px); }
+    }
+    @keyframes glitch-b {
+      0%, 58%, 100% { opacity: 0; transform: translate(0); }
+      60% { opacity: .7; transform: translate(2px, -1px); }
+      62% { opacity: 0;  transform: translate(-1px, 1px); }
+    }
+
+    /* Animated product mockups — sc-* vocabulary (§4.20) */
+    .sc-rise { animation: sc-rise 8s var(--ease-out-expo) infinite; }
+    @keyframes sc-rise { 0%, 3% { opacity: 0; transform: translateY(6px); } 12%, 100% { opacity: 1; transform: none; } }
+    .sc-fill { animation: sc-fill 8s var(--ease-out-expo) infinite; }
+    @keyframes sc-fill { 0%, 30% { width: 0; } 70%, 100% { width: 100%; } }
+    .sc-pop { animation: sc-pop 8s var(--ease-out-expo) infinite; }
+    @keyframes sc-pop { 0%, 52% { opacity: 0; transform: scale(.9); } 62%, 100% { opacity: 1; transform: none; } }
+
+    /* Global focus ring (§6.7) */
+    :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+      outline: 2px solid var(--color-brand-500);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+
+    /* Mobile <dialog> sheet (§4.2) */
+    dialog.sheet { margin: 0; height: 100dvh; max-height: none; width: min(20rem, 86vw); max-width: none; padding: 0; background: #fff; box-shadow: var(--shadow-xl); }
+    dialog.sheet::backdrop { background: color-mix(in oklab, #0d1117 40%, transparent); }
+    dialog.sheet[open] { animation: sheet-in .2s ease-out; }
+    @keyframes sheet-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+    /* Reduced motion (§6.3 / §7) */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .aurora > span, .marquee-track, .circuit .trace, .glitch::before, .glitch::after { animation: none !important; }
+      .aurora > span { opacity: .35; }
+      .circuit .trace { opacity: .18; }
+      .marquee-track { flex-wrap: wrap; }
+      .marquee-track > ul:last-child { display: none; }
+      .lift, .tilt { transition: none; }
+      .lift:hover { transform: none; box-shadow: none; }
+      .tilt { transform: none; }
+      .sc-rise, .sc-pop, .sc-fill { animation: none; }
+      dialog.sheet { animation: none; }
+    }
+  </style>
+</head>
+
+<body class="bg-white text-ink" id="top">
+
+  <!-- =====================================================================
+       4.1  Sticky site header
+       ===================================================================== -->
+  <header class="sticky top-0 z-40 border-b border-line/80 bg-white/85 backdrop-blur">
+    <div class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-5">
+      <button type="button" onclick="document.getElementById('nav').showModal()"
+              class="-ml-1.5 flex items-center gap-1.5 rounded-lg px-1.5 py-1.5 text-sm font-medium text-ink-700 hover:bg-ink-50 hover:text-ink lg:hidden">
+        <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/></svg>
+        <span class="sr-only sm:not-sr-only">Menu</span>
+      </button>
+
+      <a href="#top" class="flex shrink-0 items-center gap-2">
+        <span class="flex size-7 items-center justify-center rounded-lg bg-brand-500 text-white">
+          <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 8h16M4 16h10" stroke-linecap="round"/><circle cx="17" cy="16" r="2.4"/></svg>
+        </span>
+        <span class="font-display text-lg font-semibold tracking-tight">Ledgerly</span>
+      </a>
+
+      <nav class="hidden items-center gap-6 text-sm text-ink-700 lg:flex">
+        <a class="hover:text-ink" href="#pricing">Pricing</a>
+        <a class="hover:text-ink" href="#features">Features</a>
+        <a class="hover:text-ink" href="#how">How it works</a>
+        <a class="hover:text-ink" href="#developers">Developers</a>
+        <a class="hidden hover:text-ink xl:inline" href="#faq">FAQ</a>
+      </nav>
+
+      <div class="flex shrink-0 items-center gap-1 text-sm sm:gap-3">
+        <a class="hidden px-2 py-2 whitespace-nowrap text-ink-700 hover:text-ink sm:inline" href="#">Log in</a>
+        <a class="rounded-full bg-brand-500 px-4 py-2 font-medium text-white transition hover:bg-brand-600" href="#pricing">
+          <span class="sm:hidden">Apply</span><span class="hidden sm:inline">Start application</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- =====================================================================
+       4.2  Mobile nav — native <dialog> side sheet
+       ===================================================================== -->
+  <dialog id="nav" class="sheet lg:hidden" aria-labelledby="nav-title">
+    <div class="flex h-full flex-col outline-none">
+      <div class="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-line px-5">
+        <span id="nav-title" class="font-display text-lg font-semibold">Menu</span>
+        <button type="button" onclick="this.closest('dialog').close()" aria-label="Close the menu"
+                class="flex size-9 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-50 hover:text-ink">
+          <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <nav class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-5 text-ink-700">
+        <a class="rounded-lg px-3 py-2.5 hover:bg-ink-50 hover:text-ink" href="#pricing">Pricing</a>
+        <a class="rounded-lg px-3 py-2.5 hover:bg-ink-50 hover:text-ink" href="#features">Features</a>
+        <a class="rounded-lg px-3 py-2.5 hover:bg-ink-50 hover:text-ink" href="#how">How it works</a>
+        <a class="rounded-lg px-3 py-2.5 hover:bg-ink-50 hover:text-ink" href="#developers">Developers</a>
+        <a class="rounded-lg px-3 py-2.5 hover:bg-ink-50 hover:text-ink" href="#faq">FAQ</a>
+      </nav>
+      <div class="shrink-0 border-t border-line px-5 py-4">
+        <a class="block rounded-full bg-brand-500 px-4 py-2.5 text-center font-medium text-white transition hover:bg-brand-600" href="#pricing">Start application</a>
+      </div>
+    </div>
+  </dialog>
+
+  <main>
+    <!-- ===================================================================
+         4.3  Hero
+         =================================================================== -->
+    <section class="relative overflow-hidden border-b border-line bg-white">
+      <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="grid-lines pointer-events-none absolute inset-0" aria-hidden="true"></div>
+      <svg class="circuit pointer-events-none absolute inset-0 h-full w-full text-brand-300/50" viewBox="0 0 1200 600" fill="none" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <path class="trace" d="M0 140 H250 L320 90 H560 L620 150 H900" stroke="currentColor" stroke-width="1.5"/>
+        <path class="trace" d="M0 300 H180 L240 240 H520" stroke="currentColor" stroke-width="1.5"/>
+        <path class="trace" d="M0 460 H300 L360 520 H640 L700 470 H980" stroke="currentColor" stroke-width="1.5"/>
+        <path class="trace" d="M120 600 V420 L200 340 H460" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+
+      <div class="relative mx-auto grid max-w-6xl gap-14 px-5 pb-20 pt-14 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:pb-24 lg:pt-24">
+        <div class="min-w-0">
+          <p class="hairline inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1.5 text-xs font-medium text-brand-700 backdrop-blur">
+            <span class="relative flex size-1.5">
+              <span class="absolute inline-flex size-full animate-ping rounded-full bg-go opacity-70"></span>
+              <span class="relative inline-flex size-1.5 rounded-full bg-go"></span>
+            </span>
+            Modern payment rails for Sri Lanka 🇱🇰
+          </p>
+
+          <h1 class="mt-6 text-display-hero font-semibold">
+            <span class="block text-balance">Accept payments from <span class="glitch text-gradient" data-text="2.29%">2.29%</span>.</span>
+            <span class="block text-balance">No monthly fees, now or ever.</span>
+          </h1>
+
+          <p class="mt-7 max-w-xl text-lg leading-relaxed text-ink-700">
+            One integration for cards, QR and bank transfers — with settlement the next morning and
+            pricing stated once, in plain language. No setup fee, no monthly fee, no surprises.
+          </p>
+
+          <div class="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <a class="shrink-0 rounded-full bg-brand-500 px-7 py-3.5 text-center font-medium whitespace-nowrap text-white transition hover:bg-brand-600"
+               style="box-shadow:var(--shadow-brand)" href="#pricing">Start your application</a>
+            <a class="hairline inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-white/80 px-7 py-3.5 text-center font-medium whitespace-nowrap text-ink backdrop-blur transition hover:bg-white" href="#developers">
+              Open sandbox
+              <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+
+          <dl class="mt-10 flex flex-wrap gap-x-9 gap-y-4">
+            <div><dt class="text-xs text-ink-500">Setup fee</dt><dd class="font-display text-xl font-semibold tabular-nums">Rs. 0</dd></div>
+            <div><dt class="text-xs text-ink-500">Monthly fee</dt><dd class="font-display text-xl font-semibold tabular-nums">Rs. 0</dd></div>
+            <div><dt class="text-xs text-ink-500">Settlement</dt><dd class="font-display text-xl font-semibold">T+1</dd></div>
+            <div><dt class="text-xs text-ink-500">Approval</dt><dd class="font-display text-xl font-semibold">48 hrs</dd></div>
+          </dl>
+        </div>
+
+        <!-- Right column: tilted device mock -->
+        <figure class="w-full max-w-[25rem] overflow-hidden rounded-2xl ring-1 ring-black/5 lg:justify-self-end"
+                style="box-shadow:var(--shadow-xl)">
+          <div class="tilt bg-[#eef1f5] p-5">
+            <div class="overflow-hidden rounded-xl bg-white" style="box-shadow:var(--shadow-md)">
+              <div class="flex items-center justify-between border-b border-line px-4 py-3">
+                <span class="text-[12.5px] font-semibold text-ink-500">Checkout</span>
+                <span class="rounded-full bg-go/10 px-2 py-0.5 text-[11px] font-semibold text-go-ink">Secure</span>
+              </div>
+              <div class="space-y-3 p-4">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12.5px] text-ink-500">Amount</span>
+                  <span class="font-display text-2xl font-semibold tabular-nums">Rs. 4,250</span>
+                </div>
+                <label class="block">
+                  <span class="text-[11px] font-medium text-ink-500">Card number</span>
+                  <span class="mt-1 flex items-center justify-between rounded-lg border border-brand-400 px-3 py-2 font-mono text-[13px]">
+                    4242 4242 4242 4242
+                    <svg viewBox="0 0 24 24" class="size-4 text-ink-400" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg>
+                  </span>
+                </label>
+                <div class="grid grid-cols-2 gap-3">
+                  <span class="rounded-lg border border-line px-3 py-2 font-mono text-[13px] text-ink-700">08 / 28</span>
+                  <span class="rounded-lg border border-line px-3 py-2 font-mono text-[13px] text-ink-700">•••</span>
+                </div>
+                <div class="flex items-center justify-between rounded-lg bg-brand-500 px-3 py-2.5 text-sm font-medium text-white">
+                  Pay Rs. 4,250
+                  <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="sc-pop flex items-center gap-2 text-[11px] font-semibold text-go-ink">
+                  <svg viewBox="0 0 24 24" class="size-3.5" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Paid — settled to your bank T+1
+                </div>
+              </div>
+            </div>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         4.3  Hero marquee — cards & rails accepted
+         =================================================================== -->
+    <section class="border-b border-line bg-white py-8" aria-label="Cards and rails accepted on every Ledgerly checkout">
+      <div class="marquee-wrap relative overflow-hidden">
+        <div class="marquee-track flex w-max items-center">
+          <ul class="flex shrink-0 items-center gap-6 pr-6 opacity-90 sm:gap-9 sm:pr-9">
+            <li class="flex h-8 w-16 items-center justify-center text-sm font-semibold text-ink-400 sm:h-9 sm:w-[4.5rem]">VISA</li>
+            <li class="flex h-8 w-16 items-center justify-center text-sm font-semibold text-ink-400 sm:h-9 sm:w-[4.5rem]">MASTERCARD</li>
+            <li class="flex h-8 w-16 items-center justify-center text-sm font-semibold text-ink-400 sm:h-9 sm:w-[4.5rem]">AMEX</li>
+            <li class="flex h-8 w-16 items-center justify-center text-sm font-semibold text-ink-400 sm:h-9 sm:w-[4.5rem]">LANKAQR</li>
+            <li class="flex h-8 w-16 items-center justify-center text-sm font-semibold text-ink-400 sm:h-9 sm:w-[4.5rem]">UPI</li>
+            <li class="flex h-8 w-16 items-center justify-center text-sm font-semibold text-ink-400 sm:h-9 sm:w-[4.5rem]">RTGS</li>
+          </ul>
+          <ul class="flex shrink-0 items-center gap-6 pr-6 opacity-90 sm:gap-9 sm:pr-9" aria-hidden="true">
+            <li class="flex h-8 w-16 items-center justify-center text-sm font-semibold text-ink-400 sm:h-9 sm:w-[4.5rem]">VISA</li>
+            <li class="flex h-8 w-16 items-center justify-center text-sm font-semibold text-ink-400 sm:h-9 sm:w-[4.5rem]">MASTERCARD</li>
+            <li class="flex h-8 w-16 items-center justify-center text-sm font-semibold text-ink-400 sm:h-9 sm:w-[4.5rem]">AMEX</li>
+            <li class="flex h-8 w-16 items-center justify-center text-sm font-semibold text-ink-400 sm:h-9 sm:w-[4.5rem]">LANKAQR</li>
+            <li class="flex h-8 w-16 items-center justify-center text-sm font-semibold text-ink-400 sm:h-9 sm:w-[4.5rem]">UPI</li>
+            <li class="flex h-8 w-16 items-center justify-center text-sm font-semibold text-ink-400 sm:h-9 sm:w-[4.5rem]">RTGS</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         4.5 / 4.6  Pricing tiers — hairline-divided gap-px grid
+         =================================================================== -->
+    <section id="pricing" class="scroll-mt-20 border-b border-line bg-ink-50 py-16 lg:py-24">
+      <div class="mx-auto max-w-6xl px-5">
+        <p class="text-sm font-medium text-brand-600">Pricing</p>
+        <h2 class="mt-3 max-w-3xl text-display-lg font-semibold">Everything we charge, and everything they charge.</h2>
+        <p class="mt-5 max-w-2xl text-lg leading-relaxed text-ink-700">
+          One headline rate, published on the page. Pick the plan that matches your volume — you can move
+          between them at any time without re-onboarding.
+        </p>
+
+        <ol class="mt-10 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
+          <li class="lift flex flex-col bg-white p-7">
+            <h3 class="font-display text-xl font-semibold">Starter</h3>
+            <p class="mt-2 text-sm leading-relaxed text-ink-700">For shops finding their feet.</p>
+            <p class="mt-6 font-display text-5xl font-semibold tabular-nums">2.49<span class="text-base font-normal text-ink-500">% / card</span></p>
+            <ul class="mt-6 space-y-2.5 text-sm text-ink-700">
+              <li class="flex gap-2.5"><span class="mt-2 size-1.5 shrink-0 rounded-full bg-brand-500"></span>0.99% on QR</li>
+              <li class="flex gap-2.5"><span class="mt-2 size-1.5 shrink-0 rounded-full bg-brand-500"></span>Next-day settlement</li>
+              <li class="flex gap-2.5"><span class="mt-2 size-1.5 shrink-0 rounded-full bg-brand-500"></span>Hosted checkout</li>
+            </ul>
+            <div class="flex-1"></div>
+            <span class="mt-5 inline-flex w-fit rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">Where you start</span>
+          </li>
+
+          <li class="lift flex flex-col bg-white p-7">
+            <h3 class="font-display text-xl font-semibold">Growth</h3>
+            <p class="mt-2 text-sm leading-relaxed text-ink-700">For teams past the first hundred orders.</p>
+            <p class="mt-6 font-display text-5xl font-semibold tabular-nums">2.29<span class="text-base font-normal text-ink-500">% / card</span></p>
+            <ul class="mt-6 space-y-2.5 text-sm text-ink-700">
+              <li class="flex gap-2.5"><span class="mt-2 size-1.5 shrink-0 rounded-full bg-brand-500"></span>Everything in Starter</li>
+              <li class="flex gap-2.5"><span class="mt-2 size-1.5 shrink-0 rounded-full bg-brand-500"></span>Recurring + payment links</li>
+              <li class="flex gap-2.5"><span class="mt-2 size-1.5 shrink-0 rounded-full bg-brand-500"></span>Automated VAT invoices</li>
+            </ul>
+            <div class="flex-1"></div>
+            <span class="mt-5 inline-flex w-fit rounded-full bg-go/10 px-3 py-1 text-xs font-medium text-go-ink">As you grow</span>
+          </li>
+
+          <li class="lift flex flex-col bg-white p-7">
+            <h3 class="font-display text-xl font-semibold">Enterprise</h3>
+            <p class="mt-2 text-sm leading-relaxed text-ink-700">For platforms and marketplaces.</p>
+            <p class="mt-6 font-display text-5xl font-semibold">Talk<span class="text-base font-normal text-ink-500"> to us</span></p>
+            <ul class="mt-6 space-y-2.5 text-sm text-ink-700">
+              <li class="flex gap-2.5"><span class="mt-2 size-1.5 shrink-0 rounded-full bg-brand-500"></span>Volume pricing</li>
+              <li class="flex gap-2.5"><span class="mt-2 size-1.5 shrink-0 rounded-full bg-brand-500"></span>Split payments + payouts</li>
+              <li class="flex gap-2.5"><span class="mt-2 size-1.5 shrink-0 rounded-full bg-brand-500"></span>Dedicated support</li>
+            </ul>
+            <div class="flex-1"></div>
+            <span class="mt-5 inline-flex w-fit rounded-full bg-ink-50 px-3 py-1 text-xs font-medium text-ink-700">When you outgrow it</span>
+          </li>
+        </ol>
+
+        <p class="mt-6 text-xs text-ink-500">
+          Competitor figures are the providers' published rates as at 5 September 2026. Illustrative only.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         4.5 / 4.7 / 4.8  Feature row (asymmetric 2-col) + icon tiles + bullet lists
+         =================================================================== -->
+    <section id="features" class="scroll-mt-20 border-b border-line bg-white py-16 lg:py-24">
+      <div class="mx-auto grid max-w-6xl items-center gap-10 px-5 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-brand-600">Automation</p>
+          <h2 class="mt-3 text-display-lg font-semibold">Tax, invoices and payouts run themselves.</h2>
+          <p class="mt-5 max-w-2xl text-lg leading-relaxed text-ink-700">
+            Every payment writes a VAT-ready invoice, files it against the right tax period and moves the
+            net to your bank — as it happens, not at month end.
+          </p>
+          <ul class="mt-7 space-y-3">
+            <li class="flex gap-3 text-sm leading-relaxed text-ink-700">
+              <span class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-go/10 text-go-ink">
+                <svg viewBox="0 0 24 24" class="size-[10px]" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Automated VAT compliance for Sri Lanka
+            </li>
+            <li class="flex gap-3 text-sm leading-relaxed text-ink-700">
+              <span class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-go/10 text-go-ink">
+                <svg viewBox="0 0 24 24" class="size-[10px]" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Payouts batched and reconciled per order
+            </li>
+            <li class="flex gap-3 text-sm leading-relaxed text-ink-700">
+              <span class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-go/10 text-go-ink">
+                <svg viewBox="0 0 24 24" class="size-[10px]" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Exports for your accountant in one click
+            </li>
+          </ul>
+        </div>
+
+        <!-- Animated product mockup — §4.20 sc-* vocabulary -->
+        <figure class="sc-frame flex flex-col overflow-hidden rounded-2xl bg-white hairline" style="box-shadow:var(--shadow-md)">
+          <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-line px-5 py-3">
+            <figcaption class="text-sm font-semibold">Automated VAT compliance for Sri Lanka</figcaption>
+            <span class="rounded-full bg-ink-50 px-2.5 py-0.5 text-[11px] font-medium text-ink-500">Every invoice, as it happens</span>
+          </div>
+          <div class="flex-1 p-5">
+            <dl class="divide-y divide-line">
+              <div class="flex items-baseline justify-between gap-4 py-2.5">
+                <dt class="text-sm text-ink-500 sc-rise" style="animation-delay:.3s">INV-1042 · Colombo</dt>
+                <dd class="font-medium tabular-nums sc-rise" style="animation-delay:.3s">Rs. 141,600</dd>
+              </div>
+              <div class="flex items-baseline justify-between gap-4 py-2.5">
+                <dt class="text-sm text-ink-500 sc-rise" style="animation-delay:.8s">INV-1043 · Galle</dt>
+                <dd class="font-medium tabular-nums sc-rise" style="animation-delay:.8s">Rs. 78,300</dd>
+              </div>
+              <div class="flex items-baseline justify-between gap-4 py-2.5">
+                <dt class="text-sm text-ink-500 sc-rise" style="animation-delay:1.3s">INV-1044 · Kandy</dt>
+                <dd class="font-medium tabular-nums sc-rise" style="animation-delay:1.3s">Rs. 212,750</dd>
+              </div>
+            </dl>
+            <div class="mt-4">
+              <div class="mb-2 flex items-baseline justify-between text-xs text-ink-500">
+                <span>VAT period 3/4 filed</span><span class="tabular-nums">100%</span>
+              </div>
+              <div class="h-2 overflow-hidden rounded-full bg-ink-50">
+                <div class="sc-fill h-full rounded-full bg-brand-500"></div>
+              </div>
+            </div>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         4.5 / 4.7  How it works — 3 steps in a gap-px grid
+         =================================================================== -->
+    <section id="how" class="scroll-mt-20 border-b border-line bg-ink-50 py-16 lg:py-24">
+      <div class="mx-auto max-w-6xl px-5">
+        <h2 class="max-w-3xl text-display-lg font-semibold">Live in three steps.</h2>
+
+        <ol class="mt-10 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
+          <li class="lift flex flex-col bg-white p-7">
+            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+              <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h16M6 16V8l6-4 6 4v8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h3 class="mt-5 font-display text-xl font-semibold">01 — Apply</h3>
+            <p class="mt-2 text-sm leading-relaxed text-ink-700">Tell us about the business. Approval in about 48 hours.</p>
+          </li>
+          <li class="lift flex flex-col bg-white p-7">
+            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+              <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 7l-5 5 5 5M15 7l5 5-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h3 class="mt-5 font-display text-xl font-semibold">02 — Integrate</h3>
+            <p class="mt-2 text-sm leading-relaxed text-ink-700">Drop in a checkout, or call one endpoint. Keys arrive on approval.</p>
+          </li>
+          <li class="lift flex flex-col bg-white p-7">
+            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+              <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 7h-5M21 7v5" stroke-linecap="round"/></svg>
+            </span>
+            <h3 class="mt-5 font-display text-xl font-semibold">03 — Get paid</h3>
+            <p class="mt-2 text-sm leading-relaxed text-ink-700">Money settles next morning; invoices and VAT are handled.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         4.11  Ranked market comparison — signature component
+         =================================================================== -->
+    <section class="border-b border-line bg-white py-16 lg:py-20">
+      <div class="mx-auto max-w-6xl px-5">
+        <div class="flex flex-wrap items-baseline justify-between gap-4">
+          <h2 class="text-2xl font-semibold md:text-3xl">What Rs. 400,000 a month really costs you</h2>
+          <a class="text-sm font-medium text-brand-600 underline underline-offset-4" href="#pricing">See the full charge sheet</a>
+        </div>
+
+        <ul class="mt-6 space-y-2.5">
+          <li class="hairline grid gap-x-5 gap-y-2 rounded-xl bg-brand-50/60 p-4 sm:grid-cols-[1.5rem_minmax(0,1.2fr)_minmax(0,1fr)_auto] sm:items-center">
+            <span><span role="img" aria-label="Rank 1" class="text-lg">🥇</span></span>
+            <div class="min-w-0">
+              <p class="font-display font-semibold">Ledgerly</p>
+              <p class="mt-0.5 text-sm text-ink-500">2.29% on cards, 0.99% on QR, nothing else</p>
+            </div>
+            <div class="flex h-2.5 overflow-hidden rounded-full bg-ink-50">
+              <div class="h-full bg-brand-500 transition-[width] duration-300" data-bar style="width:41.6%"></div>
+              <div class="h-full bg-go transition-[width] duration-300" data-bar style="width:2.9%"></div>
+            </div>
+            <div class="text-right">
+              <p class="font-display text-xl font-semibold tabular-nums text-ink">Rs. 9,060</p>
+              <p class="text-xs text-ink-500 tabular-nums">Rs. 108,720 / yr
+                <span class="block">Rs. 8,466 cards · Rs. 594 QR</span></p>
+            </div>
+          </li>
+
+          <li class="hairline grid gap-x-5 gap-y-2 rounded-xl bg-white p-4 sm:grid-cols-[1.5rem_minmax(0,1.2fr)_minmax(0,1fr)_auto] sm:items-center">
+            <span><span role="img" aria-label="Rank 2" class="text-lg">🥈</span></span>
+            <div class="min-w-0">
+              <p class="font-display font-semibold">Bank gateway</p>
+              <p class="mt-0.5 text-sm text-ink-500">2.9% on cards plus annual fee</p>
+            </div>
+            <div class="flex h-2.5 overflow-hidden rounded-full bg-ink-50">
+              <div class="h-full bg-ink-500/35 transition-[width] duration-300" data-bar style="width:52.7%"></div>
+            </div>
+            <div class="text-right">
+              <p class="font-display text-xl font-semibold tabular-nums text-ink">Rs. 11,600</p>
+              <p class="text-xs text-ink-500 tabular-nums">Rs. 139,200 / yr</p>
+            </div>
+          </li>
+
+          <li class="hairline grid gap-x-5 gap-y-2 rounded-xl bg-white p-4 sm:grid-cols-[1.5rem_minmax(0,1.2fr)_minmax(0,1fr)_auto] sm:items-center">
+            <span><span role="img" aria-label="Rank 3" class="text-lg">🥉</span></span>
+            <div class="min-w-0">
+              <p class="font-display font-semibold">Global PSP</p>
+              <p class="mt-0.5 text-sm text-ink-500">3.4% + Rs. 30 per transaction</p>
+            </div>
+            <div class="flex h-2.5 overflow-hidden rounded-full bg-ink-50">
+              <div class="h-full bg-ink-500/35 transition-[width] duration-300" data-bar style="width:61.8%"></div>
+            </div>
+            <div class="text-right">
+              <p class="font-display text-xl font-semibold tabular-nums text-ink">Rs. 13,600</p>
+              <p class="text-xs text-ink-500 tabular-nums">Rs. 163,200 / yr</p>
+            </div>
+          </li>
+        </ul>
+
+        <p class="mt-6 text-xs text-ink-500">
+          Competitor figures are the providers' published rates as at 5 September 2026. Illustrative only.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         4.12  Developers — terminal block
+         =================================================================== -->
+    <section id="developers" class="scroll-mt-20 border-b border-line bg-ink-50 py-16 lg:py-24">
+      <div class="mx-auto grid max-w-6xl items-center gap-10 px-5 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-brand-600">Developers</p>
+          <h2 class="mt-3 text-display-lg font-semibold">One endpoint. Keys on approval.</h2>
+          <p class="mt-5 max-w-xl text-lg leading-relaxed text-ink-700">
+            A single POST creates a checkout and returns a URL. Webhooks tell you when it is paid — signed,
+            idempotent and retried for 24 hours.
+          </p>
+          <a class="underline-offset-4 mt-7 inline-block font-medium underline" href="#">Read the API docs</a>
+        </div>
+
+        <div class="overflow-hidden rounded-2xl" style="background:var(--color-ink);box-shadow:var(--shadow-xl)">
+          <div class="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+            <span class="size-2.5 rounded-full bg-white/20"></span>
+            <span class="size-2.5 rounded-full bg-white/20"></span>
+            <span class="size-2.5 rounded-full bg-white/20"></span>
+            <span class="ml-2 font-mono text-[11px] text-white/40">Take your first payment</span>
+          </div>
+          <pre class="overflow-x-auto p-5 font-mono text-[12.5px] leading-relaxed"><code><span class="text-[#7dd3fc]">curl</span> <span class="text-[#86efac]">https://api.ledgerly.lk/v1/checkouts</span> <span class="text-white/55">\</span>
+  <span class="text-white/55">-H</span> <span class="text-[#86efac]">"Authorization: Bearer sk_test_…"</span> <span class="text-white/55">\</span>
+  <span class="text-white/55">-d</span> <span class="text-[#86efac]">'amount=425000&currency=LKR'</span></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         4.13  Interactive calculator — sentence with inline fields
+         =================================================================== -->
+    <section class="border-b border-line bg-white py-16 lg:py-20">
+      <div class="mx-auto max-w-3xl px-5">
+        <h2 class="text-2xl font-semibold md:text-3xl">See what you keep</h2>
+
+        <div class="mt-8 rounded-2xl border border-line bg-white p-7">
+          <p class="flex flex-wrap items-baseline gap-x-2.5 gap-y-2 text-lg text-ink-700">
+            <span>I take</span>
+            <output for="volume" id="volumeOut" class="font-display text-3xl font-semibold tabular-nums text-ink">Rs. 400,000</output>
+            <span>a month, at about</span>
+            <span class="inline-flex items-baseline rounded-lg border border-line bg-white px-2.5 py-1 transition focus-within:border-brand-500">
+              <span class="text-sm text-ink-500">Rs.</span>
+              <label for="ticket" class="sr-only">Average order value</label>
+              <input id="ticket" type="number" min="100" step="100" value="4250"
+                     class="w-20 bg-transparent pl-1 font-display text-xl font-semibold tabular-nums outline-none">
+            </span>
+            <span>an order, with</span>
+            <span class="inline-flex items-baseline rounded-lg border border-line bg-white px-2.5 py-1 transition focus-within:border-brand-500">
+              <label for="qr" class="sr-only">Percent paid by QR</label>
+              <input id="qr" type="number" min="0" max="100" step="1" value="30"
+                     class="w-12 bg-transparent text-right font-display text-xl font-semibold tabular-nums outline-none">
+              <span class="pl-0.5 text-sm text-ink-500">%</span>
+            </span>
+            <span>of it by QR</span>
+          </p>
+
+          <input id="volume" type="range" aria-label="Monthly card volume" min="0" max="100" step="0.5" value="40"
+                 class="mt-5 h-6 w-full cursor-pointer accent-[var(--color-brand-500)]">
+
+          <div class="mt-6 border-t border-line pt-6">
+            <p class="text-sm text-ink-500">You pay us</p>
+            <p class="mt-1 font-display text-5xl font-semibold tabular-nums">
+              <span id="feeOut">Rs. 9,060</span>
+              <span class="text-base font-normal text-ink-500">/ month</span>
+            </p>
+            <p class="mt-4 rounded-xl bg-brand-50 px-5 py-4 text-sm leading-relaxed text-brand-700">
+              <span class="font-semibold">You keep Rs. <span id="keepOut" class="tabular-nums">390,940</span></span>
+              — settled next morning, with VAT-ready invoices generated for every order.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         4.9 / 4.10  FAQ accordion + inline ask form
+         =================================================================== -->
+    <section id="faq" class="scroll-mt-20 border-b border-line bg-ink-50 py-16 lg:py-20">
+      <div class="mx-auto max-w-3xl px-5">
+        <h2 class="text-2xl font-semibold md:text-3xl">Every question, answered.</h2>
+
+        <div class="mt-8 divide-y divide-line border-y border-line">
+          <details class="group py-5" open>
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-medium">
+              Is the headline rate really the whole cost?
+              <span class="text-ink-500 transition group-open:rotate-45" aria-hidden="true">+</span>
+            </summary>
+            <p class="mt-3 leading-relaxed text-ink-700">Yes. 2.29% on cards and 0.99% on QR, with no setup fee, no monthly fee and no annual fee. Nothing is added after the fact.</p>
+          </details>
+          <details class="group py-5">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-medium">
+              How long does approval take?
+              <span class="text-ink-500 transition group-open:rotate-45" aria-hidden="true">+</span>
+            </summary>
+            <p class="mt-3 leading-relaxed text-ink-700">Most applications are reviewed within 48 hours. Once approved, live keys are available immediately in the dashboard.</p>
+          </details>
+          <details class="group py-5">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-medium">
+              When does money reach my bank?
+              <span class="text-ink-500 transition group-open:rotate-45" aria-hidden="true">+</span>
+            </summary>
+            <p class="mt-3 leading-relaxed text-ink-700">Settlement runs once per business day. Payments captured before the cut-off land in your account the next morning.</p>
+          </details>
+        </div>
+
+        <form class="mt-8" onsubmit="return false;">
+          <label for="ask" class="block text-sm font-medium text-ink">Ask a question about Ledgerly</label>
+          <div class="mt-2 flex items-center gap-2 rounded-xl border border-line bg-white py-1.5 pr-1.5 pl-3.5 transition focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-200" style="box-shadow:var(--shadow-sm)">
+            <input id="ask" type="text" maxlength="600" placeholder="For example: how long does approval take?" autocomplete="off" enterkeyhint="send" aria-describedby="ask-note"
+                   oninput="this.form.querySelector('button').disabled = this.value.trim() === ''"
+                   class="min-w-0 flex-1 bg-transparent py-1.5 text-base text-ink outline-none placeholder:text-ink-400 sm:text-sm">
+            <button type="submit" aria-haspopup="dialog" disabled
+                    class="shrink-0 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:bg-ink-400/50">Ask</button>
+          </div>
+          <p id="ask-note" class="mt-2 text-xs leading-relaxed text-ink-500">Our assistant answers from the pages on this site and links to its sources.</p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- =====================================================================
+       4.16  Dark "parent company" band (site footer)
+       ===================================================================== -->
+  <footer class="relative overflow-hidden text-white" style="background:var(--color-ink)">
+    <div class="aurora aurora-dark" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="grid-lines grid-lines-dark pointer-events-none absolute inset-0" aria-hidden="true"></div>
+
+    <div class="relative mx-auto max-w-6xl px-5">
+      <div class="py-16">
+        <h2 class="text-display-lg font-semibold">A <span class="inline-flex h-14 items-center gap-2.5 rounded-2xl bg-white px-5 align-middle font-body text-sm font-normal text-ink-500 transition hover:bg-brand-50">Ledgerly</span> company.</h2>
+        <p class="mt-6 max-w-3xl text-lg leading-relaxed text-white/70">
+          We build payment infrastructure for Sri Lankan businesses — one integration for cards, QR and
+          bank rails, priced once and published openly. Learn more in our <a class="underline underline-offset-4" href="#">pricing</a>
+          and <a class="underline underline-offset-4" href="#">developers</a> documentation.
+        </p>
+
+        <div class="mt-10 grid grid-cols-2 gap-8 text-sm sm:grid-cols-3">
+          <div>
+            <p class="font-display text-3xl font-semibold tabular-nums">12,480</p>
+            <p class="mt-2 text-sm leading-relaxed text-white/55">businesses accepting payments on Ledgerly.</p>
+          </div>
+          <div>
+            <p class="font-display text-3xl font-semibold tabular-nums">Rs. 0</p>
+            <p class="mt-2 text-sm leading-relaxed text-white/55">in monthly or setup fees, on every plan.</p>
+          </div>
+          <div>
+            <p class="font-display text-3xl font-semibold tabular-nums">48 hrs</p>
+            <p class="mt-2 text-sm leading-relaxed text-white/55">typical time from application to live keys.</p>
+          </div>
+        </div>
+
+        <p class="mt-10 text-xs font-semibold tracking-widest text-white/45 uppercase">CALL US</p>
+        <a href="tel:+94110000000" class="mt-2 inline-block font-display text-2xl font-semibold hover:text-brand-200">+94 11 000 0000</a>
+
+        <div class="mt-12 grid grid-cols-2 gap-8 text-sm sm:grid-cols-3">
+          <div>
+            <p class="text-xs font-semibold tracking-widest text-white/45 uppercase">Product</p>
+            <ul class="mt-3">
+              <li><a class="inline-block py-1.5 text-white/65 hover:text-white" href="#pricing">Pricing</a></li>
+              <li><a class="inline-block py-1.5 text-white/65 hover:text-white" href="#features">Features</a></li>
+              <li><a class="inline-block py-1.5 text-white/65 hover:text-white" href="#developers">Developers</a></li>
+            </ul>
+          </div>
+          <div>
+            <p class="text-xs font-semibold tracking-widest text-white/45 uppercase">Company</p>
+            <ul class="mt-3">
+              <li><a class="inline-block py-1.5 text-white/65 hover:text-white" href="#">About</a></li>
+              <li><a class="inline-block py-1.5 text-white/65 hover:text-white" href="#">Blog</a></li>
+              <li><a class="inline-block py-1.5 text-white/65 hover:text-white" href="#">Careers</a></li>
+            </ul>
+          </div>
+          <div>
+            <p class="text-xs font-semibold tracking-widest text-white/45 uppercase">Legal</p>
+            <ul class="mt-3">
+              <li><a class="inline-block py-1.5 text-white/65 hover:text-white" href="#">Privacy</a></li>
+              <li><a class="inline-block py-1.5 text-white/65 hover:text-white" href="#">Terms</a></li>
+              <li><a class="inline-block py-1.5 text-white/65 hover:text-white" href="#">Fact sheet</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-4 border-t border-white/10 py-6 md:flex-row md:items-center md:justify-between">
+        <p class="text-xs text-white/50">© <span id="year">2026</span> Ledgerly (Pvt) Ltd. Card rate 2.29%. Published 5 September 2026.</p>
+        <nav class="flex items-center gap-0.5" aria-label="Language">
+          <a href="#" aria-current="true" class="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-ink">English</a>
+          <a href="#" class="rounded-full px-2.5 py-1 text-xs font-medium text-white/60 hover:bg-white/10 hover:text-white">සිංහල</a>
+          <a href="#" class="rounded-full px-2.5 py-1 text-xs font-medium text-white/60 hover:bg-white/10 hover:text-white">தமிழ்</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =====================================================================
+       4.17  Floating WhatsApp action
+       ===================================================================== -->
+  <div class="fixed right-4 bottom-4 z-40 flex flex-col items-end gap-3 sm:right-5 sm:bottom-5">
+    <button type="button" aria-expanded="false" aria-label="Ask a question or chat with us" title="Ask a question or chat with us"
+            class="flex size-14 items-center justify-center rounded-full bg-[#25D366] text-white transition hover:bg-[#1EBE5B] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#128C7E] motion-safe:hover:scale-105"
+            style="box-shadow:0 12px 28px -10px rgb(13 17 23 / 0.45)">
+      <svg viewBox="0 0 24 24" class="size-7" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.4A10 10 0 1 0 12 2Zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8 8 0 1 1 12 20Zm4.5-5.8c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.5.1-.6.8-.7.9-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7.3 7.3 0 0 1-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.5a1.4 1.4 0 0 0 .2-.4.4.4 0 0 0 0-.4c0-.1-.5-1.3-.7-1.8s-.4-.4-.5-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1 5 5 0 0 0 1 2.6 11 11 0 0 0 4.3 3.8c2 .8 2.4.7 2.8.6a2.5 2.5 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .1-1.2c0-.1-.2-.2-.4-.3Z"/></svg>
+    </button>
+  </div>
+
+  <!-- =====================================================================
+       Behaviour — kept deliberately small (reference §6.1: native-first)
+       ===================================================================== -->
+  <script>
+    // Footer year
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Ranked-bar "race" — animate widths in on load (§4.11)
+    window.addEventListener('load', () => {
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const bars = document.querySelectorAll('[data-bar]');
+      const final = [...bars].map(b => b.style.width);
+      if (!reduce) {
+        bars.forEach(b => (b.style.width = '0%'));
+        requestAnimationFrame(() => {
+          bars.forEach((b, i) => setTimeout(() => (b.style.width = final[i]), 120));
+        });
+      }
+    });
+
+    // Calculator — sentence fields drive the outputs (§4.13)
+    (function () {
+      const volume = document.getElementById('volume');   // slider, % of target scale
+      const ticket = document.getElementById('ticket');   // avg order value
+      const qr = document.getElementById('qr');           // % paid by QR
+      const volumeOut = document.getElementById('volumeOut');
+      const feeOut = document.getElementById('feeOut');
+      const keepOut = document.getElementById('keepOut');
+
+      const rs = n => 'Rs. ' + Math.round(n).toLocaleString('en-LK');
+
+      function render() {
+        // monthly volume scales with the slider (40 -> Rs. 400,000)
+        const monthly = Math.round((Number(volume.value) / 100) * 1_000_000 / 100) * 100 * 10;
+        const monthlyVolume = Math.round(monthly / 1000) * 1000;
+        const qrPct = Math.min(100, Math.max(0, Number(qr.value))) / 100;
+        const cardPart = monthlyVolume * (1 - qrPct);
+        const qrPart = monthlyVolume * qrPct;
+        const fee = cardPart * 0.0229 + qrPart * 0.0099;
+
+        volumeOut.textContent = rs(monthlyVolume);
+        feeOut.textContent = rs(fee);
+        keepOut.textContent = Math.round(monthlyVolume - fee).toLocaleString('en-LK');
+      }
+      [volume, ticket, qr].forEach(el => el.addEventListener('input', render));
+      render();
+    })();
+  </script>
+</body>
+</html>

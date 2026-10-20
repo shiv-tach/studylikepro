@@ -72,6 +72,12 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/subjects', [CatalogController::class, 'index'])->name('catalog.subjects.index');
+// The browse state as an island, so the sticky explorer can swap a level or a
+// grade without a reload. Registered before the subject routes, which would
+// otherwise bind "data" as a subject slug.
+Route::get('/subjects/data', [CatalogController::class, 'indexData'])->name('catalog.subjects.data');
+// The subject page as an island: the catalog opens it on click without a reload.
+Route::get('/subjects/{subject}/data', [CatalogController::class, 'showData'])->name('catalog.subjects.show.data');
 Route::get('/subjects/{subject}', [CatalogController::class, 'show'])->name('catalog.subjects.show');
 
 Route::get('/teachers', [TeacherDirectoryController::class, 'index'])->name('teachers.index');

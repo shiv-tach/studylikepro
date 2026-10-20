@@ -64,6 +64,57 @@ test('choosing a level and grade reveals the subjects that run in that grade', f
         ->assertDontSee('Commerce');
 });
 
+test('the catalog state island matches the catalog page', function () {
+    $this->seed(CatalogSeeder::class);
+
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade10 = Grade::query()->where('education_level_id', $ol->id)->where('number', 10)->firstOrFail();
+    $url = route('catalog.subjects.index', ['level' => 'ol', 'grade' => $grade10->id]);
+
+    $island = publicSubjectsConfig($this->get($url)->assertOk());
+
+    // The explorer fetches this island on every level/grade pick, so it has to
+    // be the page's own cards, counts and basket groups.
+    $state = $this->getJson(route('catalog.subjects.data', ['level' => 'ol', 'grade' => $grade10->id]))
+        ->assertOk()
+        ->json();
+
+    expect($state['url'])->toBe($url)
+        ->and($state['levels'])->toEqual($island['levels'])
+        ->and($state['grades'])->toEqual($island['grades'])
+        ->and($state['subjectGroups'])->toEqual($island['subjectGroups'])
+        ->and($state['counts']['subjects'])->toBeGreaterThan(0)
+        ->and($state['counts']['lessons'])->toBeGreaterThan(0);
+});
+
+test('the catalog data endpoint is not treated as a subject slug', function () {
+    $this->getJson(route('catalog.subjects.data'))
+        ->assertOk()
+        ->assertJsonPath('level', null)
+        ->assertJsonPath('grade', null)
+        ->assertJsonPath('counts.subjects', 0);
+});
+
+test('the subject island lists the grades the subject runs in', function () {
+    $level = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade6 = Grade::query()->where('education_level_id', $level->id)->where('number', 6)->firstOrFail();
+    $grade7 = Grade::query()->where('education_level_id', $level->id)->where('number', 7)->firstOrFail();
+
+    $subject = Subject::factory()->create(['name' => 'Mathematics', 'education_level_id' => $level->id]);
+    Lesson::factory()->for($subject)->create(['grade_id' => $grade6->id, 'name' => 'Fractions']);
+    Lesson::factory()->for($subject)->create(['grade_id' => $grade7->id, 'name' => 'Algebra']);
+
+    $island = publicSubjectConfig(
+        $this->get(route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade6->id]))->assertOk()
+    );
+
+    expect(array_column($island['subject']['grades'], 'label'))->toBe(['Grade 6', 'Grade 7'])
+        ->and($island['subject']['grades'][0]['selected'])->toBeTrue()
+        ->and($island['subject']['grades'][1]['selected'])->toBeFalse()
+        ->and($island['subject']['grade']['catalogUrl'])
+        ->toBe(route('catalog.subjects.index', ['level' => 'ol', 'grade' => $grade6->id]));
+});
+
 test('subjects without active lessons in the chosen grade stay hidden', function () {
     $level = EducationLevel::query()->where('key', 'ol')->firstOrFail();
     $grade = Grade::query()->where('education_level_id', $level->id)->where('number', 10)->firstOrFail();
@@ -98,6 +149,42 @@ test('a subject page lists its active lessons', function () {
         ->assertOk()
         ->assertSee('Mechanics')
         ->assertDontSee('Secret Lesson');
+});
+
+test('the subject page island is the one the catalog opens on click', function () {
+    $level = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade = Grade::query()->where('education_level_id', $level->id)->where('number', 6)->firstOrFail();
+
+    $subject = Subject::factory()->create(['name' => 'Mathematics', 'education_level_id' => $level->id]);
+    Lesson::factory()->for($subject)->create(['grade_id' => $grade->id, 'name' => 'Fractions']);
+
+    $island = publicSubjectConfig(
+        $this->get(route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade->id]))->assertOk()
+    );
+
+    // The click-through fetches this island, so it has to be the page's own:
+    // same sections, same prices, same actions, same links.
+    $url = route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade->id]);
+
+    $opened = $this->getJson(route('catalog.subjects.show.data', ['subject' => $subject, 'grade' => $grade->id]))
+        ->assertOk()
+        ->assertJsonPath('url', $url)
+        ->json();
+
+    unset($island['csrfToken'], $opened['config']['csrfToken']);
+
+    expect($opened['documentTitle'])->toBe(config('app.name').' — Mathematics')
+        ->and($opened['config'])->toEqual($island)
+        ->and($island['subject']['name'])->toBe('Mathematics')
+        ->and($island['lessonGroups'][0]['items'][0]['name'])->toBe('Fractions');
+});
+
+test('signed-in students never receive the public subject island', function () {
+    $subject = Subject::factory()->create(['name' => 'Physics']);
+
+    $this->actingAs(User::factory()->student()->onboarded()->create())
+        ->get(route('catalog.subjects.show.data', $subject))
+        ->assertRedirect(route('student.subjects.show', ['subject' => $subject->slug]));
 });
 
 test('opening a subject from a grade drill-down lists only that grade', function () {

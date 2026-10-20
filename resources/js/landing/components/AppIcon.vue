@@ -19,7 +19,6 @@ const icon = computed(() => icons[props.name] ?? { paths: [], circles: [] });
         stroke-linejoin="round"
         aria-hidden="true"
         focusable="false"
-        class="h-full w-full"
     >
         <path v-for="d in icon.paths" :key="d" :d="d" />
         <circle

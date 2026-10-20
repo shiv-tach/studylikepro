@@ -1,11 +1,11 @@
 <script setup>
 // Mirrors the `x-application-logo` Blade component so the mark looks identical
 // whether it is drawn by Blade or by the Vue shell.
+defineProps({
+    src: { type: String, required: true },
+});
 </script>
 
 <template>
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-        <path fill="currentColor" d="M12 4 2 9l10 5 10-5-10-5Z" />
-        <path fill="currentColor" d="M6 11v3c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6v-3l-6 3-6-3Z" />
-    </svg>
+    <img :src="src" alt="" decoding="async" class="object-contain" />
 </template>

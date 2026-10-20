@@ -239,7 +239,7 @@ it('paginates results and keeps the filters in the links', function () {
 
     $this->get(route('teachers.index', ['sort' => 'price_low']))
         ->assertOk()
-        ->assertSee('?sort=price_low&amp;page=2', false);
+        ->assertSee('?sort=price_low&page=2', false);
 
     $this->get(route('teachers.index', ['sort' => 'price_low', 'page' => 2]))
         ->assertOk()

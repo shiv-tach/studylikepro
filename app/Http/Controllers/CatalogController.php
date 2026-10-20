@@ -7,6 +7,9 @@ use App\Services\CatalogService;
 use App\Services\SlotService;
 use App\Services\SubjectPageService;
 use App\Services\TeacherSearch;
+use App\Support\PublicCatalogConfig;
+use App\Support\PublicSubjectPageConfig;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -23,6 +26,41 @@ class CatalogController extends Controller
      */
     public function index(Request $request): View
     {
+        $state = $this->state($request);
+
+        return view('catalog.index', [
+            ...$state,
+            'config' => PublicCatalogConfig::build($state),
+        ]);
+    }
+
+    /**
+     * The same browse state as an island, so the sticky explorer can swap the
+     * grades and subjects in place without reloading the document.
+     */
+    public function indexData(Request $request): JsonResponse
+    {
+        $state = $this->state($request);
+
+        $url = route('catalog.subjects.index', array_filter([
+            'level' => $state['level']?->key,
+            'grade' => $state['grade']?->id,
+        ]));
+
+        return response()->json(PublicCatalogConfig::state(
+            $state,
+            $url,
+            config('app.name', 'Studylikepro').' — '.__('Explore subjects'),
+        ));
+    }
+
+    /**
+     * The catalog read behind both the page and its island.
+     *
+     * @return array{levels: \Illuminate\Support\Collection<int, mixed>, level: mixed, grade: mixed, baskets: \Illuminate\Support\Collection<int, mixed>, groupedByBasket: bool, subjectGroups: \Illuminate\Support\Collection<int, mixed>}
+     */
+    private function state(Request $request): array
+    {
         $levels = $this->catalog->levels();
         $levelKey = $request->query('level');
         $level = is_string($levelKey) ? $levels->firstWhere('key', $levelKey) : null;
@@ -38,15 +76,14 @@ class CatalogController extends Controller
         $groupedByBasket = $baskets->isNotEmpty()
             && $subjects->contains(fn (Subject $subject) => $baskets->contains('id', $subject->basket_id));
 
-        return view('catalog.index', [
+        return [
             'levels' => $levels,
             'level' => $level,
             'grade' => $grade,
-            'subjects' => $subjects,
             'baskets' => $baskets,
             'groupedByBasket' => $groupedByBasket,
             'subjectGroups' => $this->catalog->groupByBasket($subjects, $groupedByBasket ? $baskets : collect()),
-        ]);
+        ];
     }
 
     /**
@@ -65,9 +102,49 @@ class CatalogController extends Controller
             ]));
         }
 
-        $level = $this->pages->levelFor($subject);
-        $grade = $this->pages->requestedGrade($request, $level);
+        $payload = $this->pages->payload(
+            $subject,
+            $this->pages->requestedGrade($request, $this->pages->levelFor($subject)),
+            $search,
+            $slots,
+        );
 
-        return view('catalog.show', $this->pages->payload($subject, $grade, $search, $slots));
+        return view('catalog.show', [
+            ...$payload,
+            'config' => PublicSubjectPageConfig::build($subject, $payload),
+        ]);
+    }
+
+    /**
+     * The same page as an island, so the catalog opens a subject on click
+     * without reloading the document.
+     */
+    public function showData(Subject $subject, Request $request, TeacherSearch $search, SlotService $slots): JsonResponse|RedirectResponse
+    {
+        abort_unless($subject->is_active, 404);
+
+        if ($request->user()?->isStudent()) {
+            return redirect()->route('student.subjects.show', array_filter([
+                'subject' => $subject->slug,
+                'grade' => $request->query('grade'),
+            ]));
+        }
+
+        $payload = $this->pages->payload(
+            $subject,
+            $this->pages->requestedGrade($request, $this->pages->levelFor($subject)),
+            $search,
+            $slots,
+        );
+        $config = PublicSubjectPageConfig::build($subject, $payload);
+
+        return response()->json([
+            'url' => route('catalog.subjects.show', array_filter([
+                'subject' => $subject,
+                'grade' => $payload['grade']?->id,
+            ])),
+            'documentTitle' => $config['documentTitle'],
+            'config' => $config,
+        ]);
     }
 }

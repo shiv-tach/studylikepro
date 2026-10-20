@@ -20,6 +20,26 @@ export const stats = [
     { value: 'LKR pricing', label: 'Clear rates, receipts and a published refund policy' },
 ];
 
+// Marquee strip beneath the hero — the syllabus the catalog actually covers.
+export const boards = [
+    'Grades 1–13',
+    'Primary',
+    'O/L',
+    'A/L',
+    'Mathematics',
+    'Science',
+    'English',
+    'Sinhala',
+    'Tamil',
+    'ICT',
+    'Commerce',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'Accounting',
+    'Economics',
+];
+
 export const levels = [
     {
         key: 'primary',
@@ -167,6 +187,8 @@ export const profilePreview = {
     grades: 'Grades 6–11',
     rate: 'Per-grade rates set by the teacher',
     availability: 'Availability published week by week',
+    lessons: 'Subjects and lessons inherited from the curriculum',
+    rating: 'Star ratings and reviews from completed lessons',
 };
 
 export const profileHighlights = [

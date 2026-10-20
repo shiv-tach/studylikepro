@@ -5,6 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>{{ config('app.name', 'Studylikepro') }} — {{ $title ?? 'Verified live tutoring' }}</title>
 
+        <x-favicon-links />
+
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,7 +28,7 @@
             <div class="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center gap-5">
                     <a href="/" class="flex items-center gap-2.5">
-                        <x-application-logo class="h-8 w-8 text-primary" />
+                        <x-application-logo class="h-9 w-auto" />
                         <span class="text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100">Studylikepro</span>
                     </a>
                     <nav class="hidden items-center gap-1 sm:flex">

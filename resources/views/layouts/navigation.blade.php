@@ -123,6 +123,7 @@
     // no URL is ever hardcoded in resources/js/app-shell.
     $shell = [
         'appName' => config('app.name', 'Studylikepro'),
+        'logoUrl' => asset('images/brand/logo-mark.png'),
         'csrfToken' => csrf_token(),
         'user' => [
             'name' => $user->name,
