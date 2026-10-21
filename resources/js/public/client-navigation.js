@@ -21,12 +21,13 @@ export async function loadPage(pageUrl) {
 }
 
 /**
- * The catalog state for one level/grade selection.
+ * The catalog page URL for one level/grade selection, i.e. the address the
+ * browser would show after the pick.
  *
  * @param {string} baseUrl the catalog page URL (`urls.subjects`)
  * @param {{ level?: string|null, grade?: number|string|null }} selection
  */
-export async function loadCatalogState(baseUrl, { level = null, grade = null } = {}, signal = undefined) {
+export function catalogUrl(baseUrl, { level = null, grade = null } = {}) {
     const url = new URL(baseUrl, window.location.origin);
 
     if (level) {
@@ -37,7 +38,17 @@ export async function loadCatalogState(baseUrl, { level = null, grade = null } =
         url.searchParams.set('grade', grade);
     }
 
-    return cached(dataUrlFor(url.toString()), catalogCache, signal);
+    return url.toString();
+}
+
+/**
+ * The catalog state for one level/grade selection.
+ *
+ * @param {string} baseUrl the catalog page URL (`urls.subjects`)
+ * @param {{ level?: string|null, grade?: number|string|null }} selection
+ */
+export async function loadCatalogState(baseUrl, selection = {}, signal = undefined) {
+    return cached(dataUrlFor(catalogUrl(baseUrl, selection)), catalogCache, signal);
 }
 
 async function cached(url, cache, signal = undefined) {
@@ -77,7 +88,10 @@ async function fetchIsland(url, signal = undefined) {
     }
 
     if (!response.ok) {
-        throw new Error(`Could not load ${url}: ${response.status}`);
+        const failure = new Error(`Could not load ${url}: ${response.status}`);
+        failure.status = response.status;
+
+        throw failure;
     }
 
     return response.json();

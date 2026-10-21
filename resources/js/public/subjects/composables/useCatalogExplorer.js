@@ -1,5 +1,5 @@
 import { computed, ref, shallowRef } from 'vue';
-import { loadCatalogState } from '../../client-navigation';
+import { catalogUrl, loadCatalogState } from '../../client-navigation';
 
 /**
  * The sticky explorer's state machine. The server stays the source of truth for
@@ -60,6 +60,15 @@ export function createCatalogExplorer(config, urls, emit) {
             return state.value;
         } catch (failure) {
             if (failure.name !== 'AbortError') {
+                // A route cache built before the island routes existed answers
+                // 404 for /subjects/data; the full page still renders the pick,
+                // so let the browser take over instead of dead-ending on it.
+                if (failure.status === 404) {
+                    window.location.assign(catalogUrl(urls.subjects, { level: levelKey, grade: gradeId }));
+
+                    return null;
+                }
+
                 error.value = copy.value.loadFailed ?? 'Could not load this grade.';
             }
 
