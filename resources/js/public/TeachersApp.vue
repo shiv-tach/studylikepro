@@ -246,26 +246,30 @@ const labelClass = 'text-xs font-semibold tracking-widest text-ink-400 uppercase
                             v-for="teacher in config.teachers"
                             :key="teacher.id"
                             :href="teacher.url"
-                            class="lift hairline group flex flex-col rounded-2xl bg-white p-6"
+                            class="lift hairline group flex flex-col overflow-hidden rounded-2xl bg-white"
                         >
-                            <div class="flex items-start gap-3">
+                            <div class="relative aspect-[4/3] w-full overflow-hidden bg-brand-50">
                                 <img
                                     v-if="teacher.avatarUrl"
                                     :src="teacher.avatarUrl"
                                     :alt="teacher.name"
-                                    class="size-12 rounded-xl object-cover"
+                                    class="h-full w-full object-cover object-top"
+                                    loading="lazy"
+                                    decoding="async"
                                 />
                                 <span
                                     v-else
-                                    class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 font-display text-base font-semibold text-brand-600"
+                                    class="flex h-full w-full items-center justify-center font-display text-4xl font-semibold text-brand-600"
+                                    aria-hidden="true"
                                 >{{ teacher.initials }}</span>
-                                <div class="min-w-0">
-                                    <h3 class="truncate font-display text-lg font-semibold text-ink">{{ teacher.name }}</h3>
-                                    <p v-if="teacher.headline" class="mt-0.5 line-clamp-2 text-sm text-ink-500">{{ teacher.headline }}</p>
-                                </div>
                             </div>
 
-                            <div class="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold">
+                            <div class="flex min-w-0 flex-col px-6 pt-5">
+                                <h3 class="truncate font-display text-lg font-semibold text-ink">{{ teacher.name }}</h3>
+                                <p v-if="teacher.headline" class="mt-0.5 line-clamp-2 text-sm text-ink-500">{{ teacher.headline }}</p>
+                            </div>
+
+                            <div class="mt-4 flex flex-wrap items-center gap-2 px-6 text-xs font-semibold">
                                 <span v-if="teacher.rating" class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-brand-700">
                                     ★ {{ teacher.rating }}
                                     <span class="font-medium text-brand-500">({{ teacher.ratingCount }})</span>
@@ -277,7 +281,7 @@ const labelClass = 'text-xs font-semibold tracking-widest text-ink-400 uppercase
                                 </span>
                             </div>
 
-                            <div v-if="teacher.subjects.length" class="mt-4 flex flex-wrap gap-1.5">
+                            <div v-if="teacher.subjects.length" class="mt-4 flex flex-wrap gap-1.5 px-6">
                                 <span
                                     v-for="subject in teacher.subjects"
                                     :key="subject.label"
@@ -288,9 +292,9 @@ const labelClass = 'text-xs font-semibold tracking-widest text-ink-400 uppercase
                                 </span>
                             </div>
 
-                            <p v-if="teacher.metaLabel" class="mt-3 text-xs font-medium text-ink-500">{{ teacher.metaLabel }}</p>
+                            <p v-if="teacher.metaLabel" class="mt-3 px-6 text-xs font-medium text-ink-500">{{ teacher.metaLabel }}</p>
 
-                            <div class="mt-auto flex items-end justify-between gap-3 pt-5">
+                            <div class="mt-auto flex items-end justify-between gap-3 px-6 pb-6 pt-5">
                                 <div>
                                     <p class="font-display text-xl font-semibold text-ink">
                                         {{ teacher.rate }}<span class="text-sm font-normal text-ink-400">{{ copy.perHour }}</span>

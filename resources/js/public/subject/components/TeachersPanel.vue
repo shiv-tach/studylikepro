@@ -50,27 +50,34 @@ const showAll = computed(() => (teachers.value.total ?? 0) > items.value.length)
             <article
                 v-for="teacher in items"
                 :key="teacher.id"
-                class="hairline lift group relative flex flex-col rounded-2xl bg-white p-5"
+                class="hairline lift group relative flex flex-col overflow-hidden rounded-2xl bg-white"
             >
                 <a :href="teacher.url" class="absolute inset-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40">
                     <span class="sr-only">{{ teacher.name }}</span>
                 </a>
 
-                <img
-                    v-if="teacher.avatarUrl"
-                    :src="teacher.avatarUrl"
-                    :alt="teacher.name"
-                    class="size-12 rounded-xl object-cover"
-                />
-                <span
-                    v-else
-                    class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-base font-semibold text-brand-600"
-                    aria-hidden="true"
-                >{{ teacher.initials }}</span>
+                <div class="pointer-events-none relative aspect-[4/3] w-full overflow-hidden bg-brand-50">
+                    <img
+                        v-if="teacher.avatarUrl"
+                        :src="teacher.avatarUrl"
+                        :alt="teacher.name"
+                        class="h-full w-full object-cover object-top"
+                        loading="lazy"
+                        decoding="async"
+                    />
+                    <span
+                        v-else
+                        class="flex h-full w-full items-center justify-center font-display text-4xl font-semibold text-brand-600"
+                        aria-hidden="true"
+                    >{{ teacher.initials }}</span>
+                </div>
 
-                <h3 class="mt-3 truncate text-base font-semibold text-ink">{{ teacher.name }}</h3>
+                <div class="flex min-w-0 flex-col px-6 pt-5">
+                    <h3 class="truncate font-display text-lg font-semibold text-ink">{{ teacher.name }}</h3>
+                    <p v-if="teacher.headline" class="mt-0.5 line-clamp-2 text-sm text-ink-500">{{ teacher.headline }}</p>
+                </div>
 
-                <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+                <div class="mt-4 flex flex-wrap items-center gap-2 px-6 text-xs font-semibold">
                     <span v-if="teacher.rating" class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-brand-600">
                         ★ {{ teacher.rating }}
                         <span class="font-medium text-brand-600/70">({{ teacher.ratingCount }})</span>
@@ -82,10 +89,9 @@ const showAll = computed(() => (teachers.value.total ?? 0) > items.value.length)
                     </span>
                 </div>
 
-                <p v-if="teacher.headline" class="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-700">{{ teacher.headline }}</p>
-                <p v-if="teacher.metaLabel" class="mt-3 text-xs font-medium text-ink-500">{{ teacher.metaLabel }}</p>
+                <p v-if="teacher.metaLabel" class="mt-3 px-6 text-xs font-medium text-ink-500">{{ teacher.metaLabel }}</p>
 
-                <div class="mt-auto flex items-end justify-between gap-3 pt-5">
+                <div class="mt-auto flex items-end justify-between gap-3 px-6 pb-6 pt-5">
                     <div>
                         <p class="text-lg font-semibold text-ink">
                             <span v-if="teacher.rateFrom" class="text-xs font-medium text-ink-400">{{ copy.rateFrom }} </span>{{ teacher.rate }}<span class="text-sm font-medium text-ink-400">{{ copy.perHour }}</span>

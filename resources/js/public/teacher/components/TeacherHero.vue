@@ -29,18 +29,23 @@ const tone = computed(() => statusTone(props.status.state));
             </nav>
 
             <div class="mt-7 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-                <div class="flex min-w-0 items-start gap-4 sm:gap-5">
-                    <img
-                        v-if="teacher.avatarUrl"
-                        :src="teacher.avatarUrl"
-                        :alt="teacher.name"
-                        class="size-20 shrink-0 rounded-2xl object-cover sm:size-24"
-                    />
-                    <span
-                        v-else
-                        class="flex size-20 shrink-0 items-center justify-center rounded-2xl bg-brand-50 text-2xl font-semibold text-brand-600 sm:size-24"
-                        aria-hidden="true"
-                    >{{ teacher.initials }}</span>
+                <div class="flex min-w-0 flex-col items-start gap-5 sm:flex-row sm:gap-6">
+                    <div
+                        class="aspect-[4/3] w-full max-w-sm shrink-0 overflow-hidden rounded-2xl bg-brand-50 sm:aspect-[4/5] sm:w-40 sm:max-w-none lg:w-52"
+                    >
+                        <img
+                            v-if="teacher.avatarUrl"
+                            :src="teacher.avatarUrl"
+                            :alt="teacher.name"
+                            class="h-full w-full object-cover object-top"
+                            decoding="async"
+                        />
+                        <span
+                            v-else
+                            class="flex h-full w-full items-center justify-center font-display text-5xl font-semibold text-brand-600"
+                            aria-hidden="true"
+                        >{{ teacher.initials }}</span>
+                    </div>
 
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
