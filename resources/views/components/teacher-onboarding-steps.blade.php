@@ -21,7 +21,7 @@
                 ? __('Unlocks once you save your profile.')
                 : ($verificationSubmitted
                     ? __('Documents submitted — our team is reviewing them.')
-                    : __('Upload your documents and submit them for review.')),
+                    : __('Upload your documents, choose your subjects and submit them for review.')),
             'url' => route('teacher.verification'),
             'done' => $verificationSubmitted,
             'reachable' => $profileComplete,

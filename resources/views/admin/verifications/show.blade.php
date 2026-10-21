@@ -1,4 +1,5 @@
 @php
+    use App\Enums\ApprovalStatus;
     use App\Enums\VerificationStatus;
 
     $cardBase = 'rounded-2xl border p-6';
@@ -90,8 +91,13 @@
                     <div class="mt-2 space-y-2">
                         @forelse ($profile->subjects as $subject)
                             <div class="rounded-xl border border-slate-200/80 px-4 py-3 dark:border-slate-800">
-                                <div class="flex items-center justify-between gap-3">
-                                    <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ $subject->icon ?? '📘' }} {{ $subject->name }}</span>
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <span class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                        {{ $subject->icon ?? '📘' }} {{ $subject->name }}
+                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $subject->pivot->status->badgeClasses() }}">
+                                            {{ $subject->pivot->status->label() }}
+                                        </span>
+                                    </span>
                                     @if ($subject->pivot->rate_per_hour_minor)
                                         <span class="{{ $chip }}">{{ $money($subject->pivot->rate_per_hour_minor) }}/hr</span>
                                     @endif
@@ -134,11 +140,31 @@
 
                 <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
                     @if ($profile->verification_status === VerificationStatus::Pending)
+                        @php
+                            $pendingSubjects = $profile->subjects->filter(
+                                fn ($subject) => $subject->pivot->status === ApprovalStatus::Pending
+                            );
+                        @endphp
+
                         <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Decision</h3>
                         <p class="mt-1 text-xs text-slate-400">Submitted {{ $profile->submitted_at?->diffForHumans() }}.</p>
 
-                        <form method="POST" action="{{ route('admin.verifications.approve', $profile) }}" class="mt-4">
+                        <form method="POST" action="{{ route('admin.verifications.approve', $profile) }}" class="mt-4 space-y-3">
                             @csrf
+
+                            @if ($pendingSubjects->isNotEmpty())
+                                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Subjects to approve</p>
+                                @foreach ($pendingSubjects as $subject)
+                                    <label class="flex cursor-pointer items-center gap-2.5 rounded-xl border border-slate-200/80 px-3 py-2 text-sm text-slate-700 transition-colors hover:border-primary/40 dark:border-slate-800 dark:text-slate-200">
+                                        <input type="checkbox" name="subject_ids[]" value="{{ $subject->id }}" checked
+                                               class="rounded border-slate-300 text-primary shadow-sm focus:ring-primary dark:border-slate-600 dark:bg-slate-900" />
+                                        <span aria-hidden="true">{{ $subject->icon ?? '📘' }}</span>
+                                        <span class="font-semibold">{{ $subject->name }}</span>
+                                    </label>
+                                @endforeach
+                                <p class="text-xs text-slate-400">Unchecked subjects are marked not approved.</p>
+                            @endif
+
                             <x-primary-button class="w-full justify-center">{{ __('Approve teacher') }}</x-primary-button>
                         </form>
 

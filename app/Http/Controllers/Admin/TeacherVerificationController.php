@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\ApprovalStatus;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RejectVerificationRequest;
@@ -59,12 +60,32 @@ class TeacherVerificationController extends Controller
     }
 
     /**
-     * Approve a pending application.
+     * Approve a pending application. Every pending subject is approved unless
+     * the review form explicitly unchecked it (then it is marked rejected); a
+     * legacy approval that posts no subject list approves them all.
      */
-    public function approve(TeacherProfile $teacherProfile): RedirectResponse
+    public function approve(Request $request, TeacherProfile $teacherProfile): RedirectResponse
     {
         if ($teacherProfile->verification_status !== VerificationStatus::Pending) {
             return back()->with('status', 'verification-not-pending');
+        }
+
+        $pendingSubjects = $teacherProfile->subjects()
+            ->wherePivot('status', ApprovalStatus::Pending)
+            ->get();
+
+        $approvedIds = collect($request->input('subject_ids', $pendingSubjects->pluck('id')->all()))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $pendingSubjects->contains('id', $id))
+            ->values();
+
+        foreach ($pendingSubjects as $subject) {
+            $teacherProfile->subjects()->updateExistingPivot(
+                $subject->id,
+                $approvedIds->contains($subject->id)
+                    ? ['status' => ApprovalStatus::Approved, 'approved_at' => now()]
+                    : ['status' => ApprovalStatus::Rejected]
+            );
         }
 
         $teacherProfile->update([
@@ -73,7 +94,12 @@ class TeacherVerificationController extends Controller
             'verification_notes' => null,
         ]);
 
-        $teacherProfile->user->notify(new TeacherVerificationApproved);
+        $teacherProfile->user->notify(new TeacherVerificationApproved(
+            $teacherProfile->subjects()
+                ->wherePivot('status', ApprovalStatus::Approved)
+                ->pluck('subjects.name')
+                ->all()
+        ));
 
         return redirect()
             ->route('admin.verifications.index')

@@ -19,6 +19,10 @@
         ? \App\Models\TeacherProfile::query()->where('verification_status', \App\Enums\VerificationStatus::Pending)->count()
         : null;
 
+    $pendingSubjectRequests = $user->isAdmin()
+        ? \App\Models\SubjectRequest::query()->where('status', \App\Enums\ApprovalStatus::Pending)->count()
+        : null;
+
     $openDisputes = $user->isAdmin() ? \App\Models\Dispute::query()->open()->count() : null;
 
     $flaggedReviews = $user->isAdmin()
@@ -72,7 +76,7 @@
             ['label' => 'Verification', 'url' => route('teacher.verification'), 'active' => request()->routeIs('teacher.verification*'), 'icon' => 'shield', 'badge' => null],
         ];
     } elseif ($user->isTeacher()) {
-        $navItems[] = ['label' => 'Subjects & lessons', 'url' => route('teacher.subjects.index'), 'active' => request()->routeIs('teacher.subjects*'), 'icon' => 'book', 'badge' => null];
+        $navItems[] = ['label' => 'Subjects', 'url' => route('teacher.subjects.index'), 'active' => request()->routeIs('teacher.subjects*'), 'icon' => 'book', 'badge' => null];
         $navItems[] = ['label' => 'Services & pricing', 'url' => route('teacher.services.index'), 'active' => request()->routeIs('teacher.services*'), 'icon' => 'tag', 'badge' => null];
         $navItems[] = ['label' => 'Plans', 'url' => route('teacher.plans.index'), 'active' => request()->routeIs('teacher.plans*'), 'icon' => 'wallet', 'badge' => null];
         $navItems[] = ['label' => 'Summaries', 'url' => route('teacher.summaries.index'), 'active' => request()->routeIs('teacher.summaries*'), 'icon' => 'pen', 'badge' => null];
@@ -93,6 +97,7 @@
         $navItems[] = ['label' => 'Disputes', 'url' => route('admin.disputes.index'), 'active' => request()->routeIs('admin.disputes*'), 'icon' => 'shield', 'badge' => $openDisputes ?: null];
         $navItems[] = ['label' => 'Moderation', 'url' => route('admin.moderation.index'), 'active' => request()->routeIs('admin.moderation*'), 'icon' => 'flag', 'badge' => $flaggedReviews ?: null];
         $navItems[] = ['label' => 'Verification', 'url' => route('admin.verifications.index'), 'active' => request()->routeIs('admin.verifications*'), 'icon' => 'shield', 'badge' => $pendingVerifications ?: null];
+        $navItems[] = ['label' => 'Subject requests', 'url' => route('admin.subject-requests.index'), 'active' => request()->routeIs('admin.subject-requests*'), 'icon' => 'book', 'badge' => $pendingSubjectRequests ?: null];
         $navItems[] = ['label' => 'Curriculum', 'url' => route('admin.curriculum.index'), 'active' => request()->routeIs('admin.curriculum*'), 'icon' => 'book', 'badge' => null];
         $navItems[] = ['label' => 'Subjects', 'url' => route('admin.subjects.index'), 'active' => request()->routeIs('admin.subjects*'), 'icon' => 'book', 'badge' => null];
         $navItems[] = ['label' => 'Bookings', 'url' => route('admin.bookings.index'), 'active' => request()->routeIs('admin.bookings*'), 'icon' => 'calendar', 'badge' => null];

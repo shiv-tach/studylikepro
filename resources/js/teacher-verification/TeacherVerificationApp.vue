@@ -20,6 +20,7 @@ import DocumentsCard from './components/DocumentsCard.vue';
 import OnboardingSteps from './components/OnboardingSteps.vue';
 import RequirementsCard from './components/RequirementsCard.vue';
 import StatusCard from './components/StatusCard.vue';
+import SubjectsCard from './components/SubjectsCard.vue';
 import SubmitCard from './components/SubmitCard.vue';
 import UploadCard from './components/UploadCard.vue';
 
@@ -93,6 +94,10 @@ async function confirmRemoval() {
 
                 <RevealOnScroll :delay="20">
                     <DocumentsCard @request-remove="pendingRemoval = $event" />
+                </RevealOnScroll>
+
+                <RevealOnScroll :delay="30">
+                    <SubjectsCard />
                 </RevealOnScroll>
 
                 <RevealOnScroll v-if="canEdit" :delay="40">

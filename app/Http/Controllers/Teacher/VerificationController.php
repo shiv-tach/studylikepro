@@ -2,20 +2,27 @@
 
 namespace App\Http\Controllers\Teacher;
 
+use App\Enums\ApprovalStatus;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TeacherDocumentRequest;
+use App\Models\EducationLevel;
+use App\Models\Subject;
 use App\Models\TeacherProfile;
 use App\Models\TeacherVerificationDocument;
+use App\Services\TeacherSubjectService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class VerificationController extends Controller
 {
+    public function __construct(private readonly TeacherSubjectService $teacherSubjects) {}
+
     /**
      * Show the verification documents page.
      */
@@ -33,6 +40,8 @@ class VerificationController extends Controller
             'profile' => $profile->load('documents'),
             'canEditDocuments' => $profile->verification_status->allowsDocumentEditing(),
             'documentTypes' => config('studylikepro.verification_document_types'),
+            'subjectGroups' => $this->subjectGroups(),
+            'selectedSubjectIds' => $this->selectedSubjectIds($profile),
             // The row the page rings and labels "just uploaded" after a redirect.
             'highlightDocumentId' => $request->session()->get('uploaded_document_id'),
         ]);
@@ -117,6 +126,56 @@ class VerificationController extends Controller
     }
 
     /**
+     * Save the subjects the teacher picked while onboarding. The picks stay
+     * editable until the application is submitted; after that the admin
+     * approves them together with the profile.
+     */
+    public function storeSubjects(Request $request): RedirectResponse|JsonResponse
+    {
+        $profile = $request->user()->teacherProfile;
+
+        if (! $profile?->isComplete()) {
+            return redirect()
+                ->route('teacher.profile')
+                ->with('status', 'complete-your-profile');
+        }
+
+        if (! $profile->verification_status->allowsDocumentEditing()) {
+            if ($request->wantsJson()) {
+                return self::lockedResponse();
+            }
+
+            return redirect()
+                ->route('teacher.verification')
+                ->with('status', 'documents-locked');
+        }
+
+        $validated = $request->validate([
+            'subjects' => ['nullable', 'array'],
+            'subjects.*' => ['integer', Rule::exists('subjects', 'id')->where('is_active', true)],
+        ]);
+
+        $this->teacherSubjects->syncSubjects($profile, $validated['subjects'] ?? []);
+
+        $subjectIds = $this->selectedSubjectIds($profile);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'subjectIds' => $subjectIds,
+                'notices' => [[
+                    'tone' => 'emerald',
+                    'title' => __('Subjects saved'),
+                    'message' => __('Our team approves your subjects together with your application.'),
+                ]],
+            ]);
+        }
+
+        return redirect()
+            ->route('teacher.verification')
+            ->with('status', 'subjects-saved');
+    }
+
+    /**
      * Submit the application for admin review.
      */
     public function submit(Request $request): RedirectResponse
@@ -147,6 +206,12 @@ class VerificationController extends Controller
             ]);
         }
 
+        if (! $profile->subjects()->wherePivot('status', '!=', ApprovalStatus::Rejected)->exists()) {
+            return back()->withErrors([
+                'subjects' => 'Choose at least one subject you will teach before submitting.',
+            ]);
+        }
+
         $profile->update([
             'verification_status' => VerificationStatus::Pending,
             'submitted_at' => now(),
@@ -158,6 +223,77 @@ class VerificationController extends Controller
         return redirect()
             ->route('teacher.verification')
             ->with('status', 'submitted-for-review');
+    }
+
+    /**
+     * The catalog grouped by level for the onboarding subject picker: every
+     * active level that has subjects, in level order.
+     *
+     * @return list<array{key: string, name: string, icon: ?string, subjects: list<array{id: int, name: string, icon: ?string}>}>
+     */
+    private function subjectGroups(): array
+    {
+        $levels = EducationLevel::query()->active()->ordered()->get();
+
+        $byLevel = Subject::query()
+            ->active()
+            ->ordered()
+            ->with('educationLevel')
+            ->get()
+            ->groupBy('education_level_id');
+
+        $groups = $levels->map(function (EducationLevel $level) use ($byLevel) {
+            return [
+                'key' => $level->key,
+                'name' => $level->name,
+                'icon' => $level->icon,
+                'subjects' => $byLevel->get($level->id, collect())
+                    ->map(fn (Subject $subject) => [
+                        'id' => $subject->id,
+                        'name' => $subject->name,
+                        'icon' => $subject->icon ?? '📘',
+                    ])
+                    ->values()
+                    ->all(),
+            ];
+        });
+
+        // Subjects that somehow have no level still need a home in the picker.
+        $unassigned = $byLevel->get(null, collect());
+
+        if ($unassigned->isNotEmpty()) {
+            $groups->push([
+                'key' => 'other',
+                'name' => __('Other'),
+                'icon' => '🧭',
+                'subjects' => $unassigned
+                    ->map(fn (Subject $subject) => [
+                        'id' => $subject->id,
+                        'name' => $subject->name,
+                        'icon' => $subject->icon ?? '📘',
+                    ])
+                    ->values()
+                    ->all(),
+            ]);
+        }
+
+        return $groups->filter(fn (array $group) => $group['subjects'] !== [])->values()->all();
+    }
+
+    /**
+     * The ids the picker should show as chosen: pending and approved rows.
+     * Rejected rows appear unticked, so re-ticking them re-requests approval.
+     *
+     * @return list<int>
+     */
+    private function selectedSubjectIds(TeacherProfile $profile): array
+    {
+        return $profile->subjects()
+            ->wherePivot('status', '!=', ApprovalStatus::Rejected)
+            ->pluck('subjects.id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ApprovalStatus;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
 class TeacherSubject extends Pivot
@@ -13,6 +14,7 @@ class TeacherSubject extends Pivot
         return [
             'grade_levels' => 'array',
             'grade_rates' => 'array',
+            'status' => ApprovalStatus::class,
         ];
     }
 }

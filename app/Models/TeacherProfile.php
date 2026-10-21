@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ApprovalStatus;
 use App\Enums\VerificationStatus;
 use Database\Factories\TeacherProfileFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -59,17 +60,39 @@ class TeacherProfile extends Model
         return $this->hasMany(TeacherVerificationDocument::class);
     }
 
+    /**
+     * Every subject on this profile's pivot, whatever its approval state.
+     */
     public function subjects(): BelongsToMany
+    {
+        return $this->subjectsRelation();
+    }
+
+    /**
+     * Only the subjects the admin approved: what search, matching and booking
+     * may use.
+     */
+    public function approvedSubjects(): BelongsToMany
+    {
+        return $this->subjectsRelation()->wherePivot('status', ApprovalStatus::Approved);
+    }
+
+    private function subjectsRelation(): BelongsToMany
     {
         return $this->belongsToMany(Subject::class, 'teacher_subjects')
             ->using(TeacherSubject::class)
-            ->withPivot(['grade_levels', 'rate_per_hour_minor', 'grade_rates'])
+            ->withPivot(['grade_levels', 'rate_per_hour_minor', 'grade_rates', 'status', 'approved_at'])
             ->withTimestamps();
     }
 
     public function lessons(): BelongsToMany
     {
         return $this->belongsToMany(Lesson::class, 'teacher_lessons')->withTimestamps();
+    }
+
+    public function subjectRequests(): HasMany
+    {
+        return $this->hasMany(SubjectRequest::class)->latest();
     }
 
     public function availabilitySlots(): HasMany

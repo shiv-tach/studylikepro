@@ -3,16 +3,35 @@
     $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
     $checkboxClasses = 'rounded border-slate-300 text-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900';
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);
+
+    $addGroups = $availableSubjects->groupBy('education_level_id');
+    $pickerLevels = $levels->filter(fn ($level) => $addGroups->has($level->id))->values();
+    $defaultLevelKey = $pickerLevels->first()?->key;
+    $pendingRequests = $subjectRequests->filter(
+        fn ($subjectRequest) => $subjectRequest->status === \App\Enums\ApprovalStatus::Pending
+    );
 @endphp
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('Subjects & lessons') }}</h2>
+        <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('Subjects') }}</h2>
     </x-slot>
 
     <div class="mx-auto max-w-4xl space-y-6">
-        @if (session('status') === 'subjects-updated')
+        @if (session('status') === 'subjects-requested')
             <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                Subjects updated. Every subject you just added comes loaded with all of its level's grades and lessons — trim below what you don't teach.
+                Subject requests sent. Our team reviews them shortly and you will be notified once they are approved.
+            </div>
+        @elseif (session('status') === 'subject-request-created')
+            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                Request sent. Our team reviews new subject proposals and will notify you once yours is approved.
+            </div>
+        @elseif (session('status') === 'subject-request-cancelled')
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-800/80 dark:bg-slate-900/60 dark:text-slate-200">
+                Request cancelled.
+            </div>
+        @elseif (session('status') === 'no-new-subjects')
+            <div class="rounded-2xl border border-amber-200/80 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+                Those subjects are already on your list or already requested.
             </div>
         @elseif (session('status') === 'subject-setup-updated')
             <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
@@ -20,45 +39,15 @@
             </div>
         @endif
 
-        <!-- Subjects -->
-        <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-            <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">What do you teach?</h3>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Select every subject you can help with. Students and AI matching will find you through these.</p>
-
-            <form method="POST" action="{{ route('teacher.subjects.store') }}" class="mt-5">
-                @csrf
-                @foreach ($subjects->groupBy(fn ($subject) => $subject->educationLevel?->name ?? __('Other')) as $levelName => $levelSubjects)
-                    <p class="mt-4 text-xs font-semibold uppercase tracking-wider text-slate-400 first:mt-0">{{ $levelName }}</p>
-                    <div class="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        @foreach ($levelSubjects as $subject)
-                            <label class="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors hover:border-primary/40 {{ $selectedSubjects->has($subject->id) ? 'border-primary/50 bg-primary/5' : 'border-slate-200/80 dark:border-slate-800' }}">
-                                <input type="checkbox" name="subjects[]" value="{{ $subject->id }}" @checked($selectedSubjects->has($subject->id)) class="{{ $checkboxClasses }}" />
-                                <span class="text-lg">{{ $subject->icon ?? '📘' }}</span>
-                                <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ $subject->name }}</span>
-                            </label>
-                        @endforeach
-                    </div>
-                @endforeach
-                @error('subjects')
-                    <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                @enderror
-
-                <div class="mt-5 flex justify-end">
-                    <x-primary-button>{{ __('Save subjects') }}</x-primary-button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Per-subject setup -->
-        @if ($selectedSubjects->isEmpty())
+        <!-- Approved subjects: lessons, grades and rates -->
+        @if ($subjects->isEmpty())
             <div class="{{ $cardBase }} text-center" :class="{{ $cardTheme }}">
-                <p class="text-sm text-slate-500 dark:text-slate-400">Select your subjects above and save — then you can choose lessons, grade levels, and rates here.</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400">No approved subjects yet. Add subjects below or request new ones — once the team approves them you can choose lessons, grade levels, and rates here.</p>
             </div>
         @else
             @foreach ($subjects as $subject)
-                @continue (! $selectedSubjects->has($subject->id))
                 @php
-                    $pivot = $selectedSubjects->get($subject->id)->pivot;
+                    $pivot = $subject->pivot;
                     $gradeScope = $pivot->grade_levels ?? [];
                     $rate = $pivot->rate_per_hour_minor;
                     $gradeRates = collect($pivot->grade_rates ?? [])
@@ -173,5 +162,162 @@
                 </div>
             @endforeach
         @endif
+
+        <!-- Awaiting approval: onboarding picks and open subject requests -->
+        @if ($pendingSubjects->isNotEmpty() || $pendingRequests->isNotEmpty())
+            <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
+                <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Awaiting approval</h3>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Our team approves these before students can find you through them.</p>
+
+                <ul class="mt-4 space-y-2">
+                    @foreach ($pendingSubjects as $pendingSubject)
+                        <li class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 px-4 py-3 dark:border-slate-800">
+                            <span class="flex flex-wrap items-center gap-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                <span aria-hidden="true">{{ $pendingSubject->icon ?? '📘' }}</span>
+                                {{ $pendingSubject->name }}
+                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $pendingSubject->pivot->status->badgeClasses() }}">
+                                    {{ $pendingSubject->pivot->status->label() }}
+                                </span>
+                            </span>
+                        </li>
+                    @endforeach
+
+                    @foreach ($pendingRequests as $subjectRequest)
+                        <li class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 px-4 py-3 dark:border-slate-800">
+                            <span class="flex flex-wrap items-center gap-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                <span aria-hidden="true">{{ $subjectRequest->subject?->icon ?? '🆕' }}</span>
+                                {{ $subjectRequest->subject?->name ?? $subjectRequest->proposed_name }}
+                                @if ($subjectRequest->isNewSubject())
+                                    <span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">New subject</span>
+                                @endif
+                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $subjectRequest->status->badgeClasses() }}">
+                                    {{ $subjectRequest->status->label() }}
+                                </span>
+                            </span>
+                            <form method="POST" action="{{ route('teacher.subjects.request.cancel', $subjectRequest) }}">
+                                @csrf
+                                <button type="submit" class="text-xs font-semibold text-slate-400 transition-colors hover:text-rose-600 dark:hover:text-rose-400">{{ __('Cancel') }}</button>
+                            </form>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <!-- Subjects the admin did not approve -->
+        @if ($rejectedSubjects->isNotEmpty())
+            <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
+                <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Not approved</h3>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">The team did not approve these during your verification. Add them again below to request approval.</p>
+
+                <ul class="mt-4 space-y-2">
+                    @foreach ($rejectedSubjects as $rejectedSubject)
+                        <li class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200/60 px-4 py-3 dark:border-rose-900/40">
+                            <span class="flex flex-wrap items-center gap-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                <span aria-hidden="true">{{ $rejectedSubject->icon ?? '📘' }}</span>
+                                {{ $rejectedSubject->name }}
+                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $rejectedSubject->pivot->status->badgeClasses() }}">
+                                    {{ $rejectedSubject->pivot->status->label() }}
+                                </span>
+                            </span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <!-- Add catalog subjects; every pick becomes a pending request -->
+        <div class="{{ $cardBase }}" :class="{{ $cardTheme }}"
+             x-data="{ level: @js($defaultLevelKey), query: '' }">
+            <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('Add a subject') }}</h3>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Pick catalog subjects to add to your profile — every one needs admin approval before students can find you through it.</p>
+
+            @if ($pickerLevels->isEmpty())
+                <p class="mt-4 text-sm text-slate-400">You have every catalog subject already — propose something new below.</p>
+            @else
+                <form method="POST" action="{{ route('teacher.subjects.add') }}" class="mt-5">
+                    @csrf
+
+                    <div class="flex flex-wrap gap-2" role="tablist">
+                        @foreach ($pickerLevels as $level)
+                            <button type="button" role="tab" :aria-selected="level === @js($level->key) ? 'true' : 'false'"
+                                    class="rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors"
+                                    :class="level === @js($level->key) ? 'bg-primary text-white shadow-sm shadow-primary/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'"
+                                    @click="level = @js($level->key)">
+                                <span class="mr-1" aria-hidden="true">{{ $level->icon }}</span>{{ $level->name }}
+                            </button>
+                        @endforeach
+                    </div>
+
+                    <label class="relative mt-4 block">
+                        <span class="sr-only">Search subjects</span>
+                        <input type="search" x-model="query" placeholder="Search subjects"
+                               class="block w-full rounded-xl border-slate-300 bg-white py-2 pl-3 pr-3 text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900" />
+                    </label>
+
+                    @foreach ($pickerLevels as $level)
+                        <div x-show="level === @js($level->key)" class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            @foreach ($addGroups->get($level->id, collect()) as $available)
+                                <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200/80 px-4 py-3 transition-colors hover:border-primary/40 dark:border-slate-800"
+                                       x-show="query === '' || @js(Str::lower($available->name)).includes(query.toLowerCase())">
+                                    <input type="checkbox" name="subject_ids[]" value="{{ $available->id }}" class="{{ $checkboxClasses }}" />
+                                    <span class="text-lg" aria-hidden="true">{{ $available->icon ?? '📘' }}</span>
+                                    <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ $available->name }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    @endforeach
+
+                    @error('subject_ids')
+                        <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
+
+                    <div class="mt-5 flex justify-end">
+                        <x-primary-button>{{ __('Request subjects') }}</x-primary-button>
+                    </div>
+                </form>
+            @endif
+        </div>
+
+        <!-- Propose a subject that is not in the catalog -->
+        <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
+            <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('Request a new subject') }}</h3>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Can't find what you teach? Propose it — if the team approves, it is added to the catalog and assigned to you.</p>
+
+            <form method="POST" action="{{ route('teacher.subjects.request') }}" class="mt-5 space-y-4">
+                @csrf
+                <div>
+                    <x-input-label for="proposed_name" :value="__('Subject name')" />
+                    <input id="proposed_name" name="proposed_name" type="text" maxlength="100" value="{{ old('proposed_name') }}"
+                           placeholder="e.g. Advanced ICT"
+                           class="mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900" />
+                    <x-input-error :messages="$errors->get('proposed_name')" class="mt-2" />
+                </div>
+
+                <div>
+                    <x-input-label for="education_level_id" :value="__('Level')" />
+                    <select id="education_level_id" name="education_level_id"
+                            class="mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900">
+                        <option value="">{{ __('Choose a level') }}</option>
+                        @foreach ($levels as $level)
+                            <option value="{{ $level->id }}" @selected(old('education_level_id') == $level->id)>{{ $level->name }}</option>
+                        @endforeach
+                    </select>
+                    <x-input-error :messages="$errors->get('education_level_id')" class="mt-2" />
+                </div>
+
+                <div>
+                    <x-input-label for="note" :value="__('Why do you want to teach it? (optional)')" />
+                    <textarea id="note" name="note" rows="3" maxlength="500"
+                              placeholder="Your background, syllabus, experience..."
+                              class="mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900">{{ old('note') }}</textarea>
+                    <x-input-error :messages="$errors->get('note')" class="mt-2" />
+                </div>
+
+                <div class="flex justify-end">
+                    <x-primary-button>{{ __('Send request') }}</x-primary-button>
+                </div>
+            </form>
+        </div>
     </div>
 </x-app-layout>

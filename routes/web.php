@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\ServicePurchaseController as AdminServicePurchase
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\SubjectBasketController as AdminSubjectBasketController;
 use App\Http\Controllers\Admin\SubjectController as AdminSubjectController;
+use App\Http\Controllers\Admin\SubjectRequestController as AdminSubjectRequestController;
 use App\Http\Controllers\Admin\TeacherInviteController as AdminTeacherInviteController;
 use App\Http\Controllers\Admin\TeacherVerificationController as AdminTeacherVerificationController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -204,10 +205,13 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
         Route::get('/verification', [TeacherVerificationController::class, 'index'])->name('verification');
         Route::post('/verification/documents', [TeacherVerificationController::class, 'store'])->middleware('throttle:uploads')->name('verification.documents.store');
         Route::delete('/verification/documents/{document}', [TeacherVerificationController::class, 'destroy'])->name('verification.documents.destroy');
+        Route::post('/verification/subjects', [TeacherVerificationController::class, 'storeSubjects'])->name('verification.subjects.store');
         Route::post('/verification/submit', [TeacherVerificationController::class, 'submit'])->name('verification.submit');
 
         Route::get('/subjects', [TeacherSubjectsController::class, 'index'])->middleware('onboarded')->name('subjects.index');
-        Route::post('/subjects', [TeacherSubjectsController::class, 'store'])->middleware('onboarded')->name('subjects.store');
+        Route::post('/subjects/add', [TeacherSubjectsController::class, 'addSubjects'])->middleware('onboarded')->name('subjects.add');
+        Route::post('/subjects/request', [TeacherSubjectsController::class, 'storeRequest'])->middleware('onboarded')->name('subjects.request');
+        Route::post('/subjects/request/{subjectRequest}/cancel', [TeacherSubjectsController::class, 'cancelRequest'])->middleware('onboarded')->name('subjects.request.cancel');
         Route::post('/subjects/{subject}', [TeacherSubjectsController::class, 'update'])->middleware('onboarded')->name('subjects.update');
 
         Route::get('/availability', [TeacherAvailabilityController::class, 'index'])->middleware('onboarded')->name('availability.index');
@@ -278,6 +282,10 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended'
         Route::get('/verifications/{teacherProfile}', [AdminTeacherVerificationController::class, 'show'])->name('verifications.show');
         Route::post('/verifications/{teacherProfile}/approve', [AdminTeacherVerificationController::class, 'approve'])->name('verifications.approve');
         Route::post('/verifications/{teacherProfile}/reject', [AdminTeacherVerificationController::class, 'reject'])->name('verifications.reject');
+
+        Route::get('/subject-requests', [AdminSubjectRequestController::class, 'index'])->name('subject-requests.index');
+        Route::post('/subject-requests/{subjectRequest}/approve', [AdminSubjectRequestController::class, 'approve'])->name('subject-requests.approve');
+        Route::post('/subject-requests/{subjectRequest}/reject', [AdminSubjectRequestController::class, 'reject'])->name('subject-requests.reject');
 
         Route::get('/invites', [AdminTeacherInviteController::class, 'index'])->name('invites.index');
         Route::post('/invites', [AdminTeacherInviteController::class, 'store'])->name('invites.store');

@@ -84,13 +84,15 @@ class DemoDataSeeder extends Seeder
             $student->interestedSubjects()->sync([$mathematics->id, $science->id]);
             $student->interestedLessons()->sync($this->lessonIds($mathematics, ['unit-01']));
 
-            $teacherProfile->subjects()->sync([$mathematics->id, $science->id]);
+            $teacherProfile->subjects()->syncWithPivotValues([$mathematics->id, $science->id], ['status' => 'approved']);
             $teacherProfile->subjects()->updateExistingPivot($mathematics->id, [
                 'grade_levels' => $mathematicsGrades,
+                'status' => 'approved',
             ]);
             $teacherProfile->subjects()->updateExistingPivot($science->id, [
                 'grade_levels' => $scienceGrades,
                 'rate_per_hour_minor' => 90000,
+                'status' => 'approved',
             ]);
             $teacherProfile->lessons()->sync(array_merge(
                 $this->lessonIds($mathematics, ['unit-01', 'unit-02', 'unit-03']),
@@ -117,9 +119,10 @@ class DemoDataSeeder extends Seeder
         );
 
         if ($mathematics) {
-            $verifiedProfile->subjects()->sync([$mathematics->id]);
+            $verifiedProfile->subjects()->syncWithPivotValues([$mathematics->id], ['status' => 'approved']);
             $verifiedProfile->subjects()->updateExistingPivot($mathematics->id, [
                 'grade_levels' => $this->gradeIdsFor($mathematics),
+                'status' => 'approved',
             ]);
             $verifiedProfile->lessons()->sync(
                 $this->lessonIds($mathematics, ['unit-01', 'unit-02'])
@@ -148,13 +151,15 @@ class DemoDataSeeder extends Seeder
         $biology = $this->subjectFor('al', 'biology');
 
         if ($chemistry && $biology) {
-            $chemistryProfile->subjects()->sync([$chemistry->id, $biology->id]);
+            $chemistryProfile->subjects()->syncWithPivotValues([$chemistry->id, $biology->id], ['status' => 'approved']);
             $chemistryProfile->subjects()->updateExistingPivot($chemistry->id, [
                 'grade_levels' => $this->gradeIdsFor($chemistry),
                 'rate_per_hour_minor' => 65000,
+                'status' => 'approved',
             ]);
             $chemistryProfile->subjects()->updateExistingPivot($biology->id, [
                 'grade_levels' => $this->gradeIdsFor($biology),
+                'status' => 'approved',
             ]);
             $chemistryProfile->lessons()->sync(array_merge(
                 $this->lessonIds($chemistry, ['unit-01', 'unit-02']),

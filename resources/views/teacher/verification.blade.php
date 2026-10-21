@@ -11,6 +11,8 @@
 
     $profileComplete = (bool) $profile->isComplete();
     $verificationSubmitted = (bool) $profile->hasSubmittedVerification();
+    $selectedSubjectIds = array_map('intval', $selectedSubjectIds);
+    $hasSubjects = $selectedSubjectIds !== [];
 
     $steps = [
         [
@@ -26,7 +28,7 @@
             'label' => __('Verification'),
             'hint' => $verificationSubmitted
                 ? __('Documents submitted — our team is reviewing them.')
-                : __('Upload your documents and submit them for review.'),
+                : __('Upload your documents, choose your subjects and submit them for review.'),
             'url' => route('teacher.verification'),
             'done' => $verificationSubmitted,
             'reachable' => $profileComplete,
@@ -83,6 +85,12 @@
             'title' => __('Document removed'),
             'message' => __('You can upload it again before you submit.'),
         ];
+    } elseif (session('status') === 'subjects-saved') {
+        $notices[] = [
+            'tone' => 'emerald',
+            'title' => __('Subjects saved'),
+            'message' => __('Our team approves your subjects together with your application.'),
+        ];
     } elseif (session('status') === 'submitted-for-review') {
         $notices[] = [
             'tone' => 'emerald',
@@ -137,6 +145,8 @@
             'destroyUrl' => route('teacher.verification.documents.destroy', $document),
         ])->values(),
         'selectedType' => $selectedType,
+        'subjectGroups' => $subjectGroups,
+        'selectedSubjectIds' => $selectedSubjectIds,
         'highlightDocumentId' => $highlightDocumentId !== null ? (int) $highlightDocumentId : null,
         'limits' => [
             'accept' => 'application/pdf,image/jpeg,image/png,image/webp',
@@ -153,6 +163,7 @@
             'type' => $errors->get('type'),
             'document' => $errors->get('document'),
             'agree' => $errors->get('agree'),
+            'subjects' => $errors->get('subjects'),
         ],
         'notices' => $notices,
         'steps' => $steps,
@@ -160,6 +171,7 @@
         'urls' => [
             'upload' => route('teacher.verification.documents.store'),
             'submit' => route('teacher.verification.submit'),
+            'subjects' => route('teacher.verification.subjects.store'),
             'terms' => route('legal.terms'),
             'privacy' => route('legal.privacy'),
             'dashboard' => route('teacher.dashboard'),
@@ -202,6 +214,10 @@
             'reqIdHintDone' => __('On file and ready for review.'),
             'reqIdHintMissing' => __('Upload your ID to unlock submission.'),
             'reqIdAction' => __('Upload now'),
+            'reqSubjects' => __('Subjects you will teach'),
+            'reqSubjectsHintDone' => __('At least one subject selected.'),
+            'reqSubjectsHintMissing' => __('Choose at least one subject before submitting.'),
+            'reqSubjectsAction' => __('Choose now'),
             'reqTerms' => __('Terms and policies accepted'),
             'reqTermsHintDone' => __('Accepted.'),
             'reqTermsHintMissing' => __('Tick the box on the submit card.'),
@@ -233,6 +249,15 @@
             'uploadSuccess' => __('Saved to your documents.'),
             'uploadFailed' => __('That upload did not go through. Please try again.'),
             'uploadDraftNote' => __('Saved as a draft — not sent for review yet.'),
+            'subjectsTitle' => __('What will you teach?'),
+            'subjectsHint' => __('Pick every subject you can teach — you can choose from more than one level. Your selection goes to our team with your documents and is approved together with your application.'),
+            'subjectsLockedHint' => __('Your subjects are locked while the application is under review.'),
+            'subjectsSearch' => __('Search subjects'),
+            'subjectsSelected' => __(':count selected'),
+            'subjectsSelectAll' => __('Select all'),
+            'subjectsClear' => __('Clear'),
+            'subjectsEmpty' => __('No subjects match your search.'),
+            'subjectsSaveFailed' => __('Your subjects could not be saved. Please try again.'),
             'submitTitle' => __('Submit for review'),
             'submitHint' => __('Nothing reaches our team until you submit. After that your documents are locked while we review — usually 1–2 business days.'),
             'termsLead' => __('I have read and accept the'),
@@ -243,6 +268,7 @@
             'submitButton' => __('Submit for review'),
             'submitReady' => __('All requirements met — you can submit now.'),
             'submitBlockedId' => __('Upload your government ID above to enable submission.'),
+            'submitBlockedSubjects' => __('Choose at least one subject you will teach to enable submission.'),
             'submitBlockedTerms' => __('Tick the terms box to enable submission.'),
             'confirmTitle' => __('Submit your application for review?'),
             'confirmBody' => __('Your documents will be locked while our team reviews them, so please make sure they are clear and correct first. Reviews usually take 1–2 business days and you will be notified once your profile is approved.'),
@@ -430,6 +456,37 @@
                     </form>
                 </div>
 
+                <!-- Subjects: what the teacher will teach; approved together with the application. -->
+                <div id="subjects" class="{{ $cardClasses }}">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">What will you teach?</h3>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Pick every subject you can teach — you can choose from more than one level. Our team approves your subjects together with your application.
+                    </p>
+
+                    <form method="POST" action="{{ route('teacher.verification.subjects.store') }}" class="mt-5">
+                        @csrf
+                        @foreach ($subjectGroups as $group)
+                            <p class="mt-4 text-xs font-semibold uppercase tracking-wider text-slate-400 first:mt-0">{{ $group['name'] }}</p>
+                            <div class="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                @foreach ($group['subjects'] as $subject)
+                                    <label class="flex cursor-pointer items-center gap-2.5 rounded-xl border border-slate-200/80 px-3.5 py-2.5 text-sm transition-colors hover:border-primary/40 dark:border-slate-800">
+                                        <input type="checkbox" name="subjects[]" value="{{ $subject['id'] }}"
+                                               @checked(in_array((int) $subject['id'], $selectedSubjectIds, true))
+                                               class="rounded border-slate-300 text-primary shadow-sm focus:ring-primary dark:border-slate-600 dark:bg-slate-900" />
+                                        <span aria-hidden="true">{{ $subject['icon'] }}</span>
+                                        <span class="font-semibold text-slate-700 dark:text-slate-200">{{ $subject['name'] }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        @endforeach
+                        <x-input-error :messages="$errors->get('subjects')" class="mt-2" />
+
+                        <div class="mt-4 flex justify-end">
+                            <x-secondary-button type="submit">{{ __('Save subjects') }}</x-secondary-button>
+                        </div>
+                    </form>
+                </div>
+
                 <!-- Step 2: the final, locking action — visually distinct from uploading. -->
                 <div class="{{ $cardClasses }}">
                     <div class="flex items-start gap-3">
@@ -462,6 +519,22 @@
                                 <span class="flex flex-wrap items-center gap-x-2">
                                     Government ID required
                                     <a href="#upload-documents" class="font-semibold text-primary hover:underline">Upload now</a>
+                                </span>
+                            @endif
+                        </li>
+                        <li class="flex items-center gap-2 {{ $hasSubjects ? 'text-slate-600 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400' }}">
+                            @if ($hasSubjects)
+                                <svg class="h-5 w-5 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>Subjects chosen</span>
+                            @else
+                                <svg class="h-5 w-5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span class="flex flex-wrap items-center gap-x-2">
+                                    At least one subject required
+                                    <a href="#subjects" class="font-semibold text-primary hover:underline">Choose now</a>
                                 </span>
                             @endif
                         </li>
@@ -500,12 +573,22 @@
                         </p>
 
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <p class="text-xs {{ $hasIdProof ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">
-                                {{ $hasIdProof ? 'All requirements met — tick the box to submit.' : 'Upload your government ID above to enable submission.' }}
-                            </p>
+                            @if ($hasIdProof && $hasSubjects)
+                                <p class="text-xs text-emerald-600 dark:text-emerald-400">
+                                    All requirements met — tick the box to submit.
+                                </p>
+                            @elseif (! $hasIdProof)
+                                <p class="text-xs text-amber-600 dark:text-amber-400">
+                                    Upload your government ID above to enable submission.
+                                </p>
+                            @else
+                                <p class="text-xs text-amber-600 dark:text-amber-400">
+                                    Choose at least one subject above to enable submission.
+                                </p>
+                            @endif
                             <button type="submit"
                                     class="inline-flex shrink-0 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all duration-200 hover:bg-primary/90 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
-                                    @if (! $hasIdProof) disabled @endif>
+                                    @if (! $hasIdProof || ! $hasSubjects) disabled @endif>
                                 Submit for review
                             </button>
                         </div>

@@ -38,10 +38,14 @@ export function createVerification(config, { onNotice } = {}) {
     const extensions = limits.extensions ?? ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
 
     const documents = ref([...(config.documents ?? [])]);
+    const subjectGroups = config.subjectGroups ?? [];
+    const subjectIds = ref([...(config.selectedSubjectIds ?? [])].map((id) => Number(id)));
+    const syncingSubjects = ref(false);
     const errors = reactive({
         type: [...(config.errors?.type ?? [])],
         document: [...(config.errors?.document ?? [])],
         agree: [...(config.errors?.agree ?? [])],
+        subjects: [...(config.errors?.subjects ?? [])],
     });
 
     const canEdit = computed(() => config.canEditDocuments === true);
@@ -72,6 +76,7 @@ export function createVerification(config, { onNotice } = {}) {
     }));
 
     const hasIdProof = computed(() => documents.value.some((document) => document.type === 'id_proof'));
+    const hasSubjects = computed(() => subjectIds.value.length > 0);
 
     // The id document is the only one the server insists on, so the checklist
     // lists the three things submission actually waits for.
@@ -94,6 +99,16 @@ export function createVerification(config, { onNotice } = {}) {
                 : { label: copy.reqIdAction, href: '#upload-documents' },
         },
         {
+            key: 'subjects',
+            label: copy.reqSubjects,
+            hint: hasSubjects.value ? copy.reqSubjectsHintDone : copy.reqSubjectsHintMissing,
+            done: hasSubjects.value,
+            required: true,
+            action: hasSubjects.value
+                ? null
+                : { label: copy.reqSubjectsAction, href: '#subjects' },
+        },
+        {
             key: 'terms',
             label: copy.reqTerms,
             hint: agree.value ? copy.reqTermsHintDone : copy.reqTermsHintMissing,
@@ -109,13 +124,17 @@ export function createVerification(config, { onNotice } = {}) {
         return { done, total, percent: Math.round((done / total) * 100) };
     });
 
-    const canSubmit = computed(() => canEdit.value && hasIdProof.value && agree.value);
+    const canSubmit = computed(() => canEdit.value && hasIdProof.value && hasSubjects.value && agree.value);
 
     // Why the submit button is still disabled — shown next to it, so the teacher
     // never has to work it out from a greyed-out button.
     const blockingReason = computed(() => {
         if (!hasIdProof.value) {
             return copy.submitBlockedId;
+        }
+
+        if (!hasSubjects.value) {
+            return copy.submitBlockedSubjects;
         }
 
         if (!agree.value) {
@@ -298,6 +317,50 @@ export function createVerification(config, { onNotice } = {}) {
         onNotice?.(notice);
     }
 
+    /**
+     * Persist the full subject selection. The picker updates optimistically;
+     * a failed request rolls the list back to what the server last reported.
+     *
+     * @returns {Promise<'ok'|'failed'|'fallback'>}
+     */
+    async function syncSubjects(ids) {
+        subjectIds.value = [...ids];
+        syncingSubjects.value = true;
+        errors.subjects = [];
+
+        const body = new FormData();
+        body.append('_token', config.csrfToken ?? '');
+        ids.forEach((id) => body.append('subjects[]', String(id)));
+
+        try {
+            const { response, payload } = await send(config.urls.subjects, { method: 'POST', body });
+
+            if (response.status === 422) {
+                errors.subjects = payload?.errors?.subjects ?? [];
+
+                return 'invalid';
+            }
+
+            if (!response.ok) {
+                (payload?.notices ?? []).forEach(pushNotice);
+                pushNotice({ tone: 'rose', message: payload?.message ?? copy.subjectsSaveFailed });
+                subjectIds.value = [...(payload?.subjectIds ?? config.selectedSubjectIds ?? [])].map((id) => Number(id));
+
+                return 'failed';
+            }
+
+            subjectIds.value = [...(payload?.subjectIds ?? [])].map((id) => Number(id));
+            (payload?.notices ?? []).forEach(pushNotice);
+
+            return 'ok';
+        } catch (error) {
+            // No fetch or no JSON: let the real form post so the picks still land.
+            return 'fallback';
+        } finally {
+            syncingSubjects.value = false;
+        }
+    }
+
     onBeforeUnmount(releasePreview);
 
     return {
@@ -318,6 +381,10 @@ export function createVerification(config, { onNotice } = {}) {
         highlightId,
         uploadResult,
         hasIdProof,
+        subjectGroups,
+        subjectIds,
+        syncingSubjects,
+        hasSubjects,
         requirements,
         progress,
         canSubmit,
@@ -327,6 +394,7 @@ export function createVerification(config, { onNotice } = {}) {
         clearFile,
         upload,
         remove,
+        syncSubjects,
     };
 }
 
