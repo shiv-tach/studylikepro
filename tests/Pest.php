@@ -98,6 +98,40 @@ function lessonsConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the teaching profile renders its form and live public
+ * card preview from. (The student-facing teacher page has its own reader.)
+ *
+ * @return array<string, mixed>
+ */
+function teachingProfileConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="teacher-profile-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island the verification step renders its checklist, documents
+ * and upload cards from.
+ *
+ * @return array<string, mixed>
+ */
+function verificationConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="teacher-verification-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Read the config island the "My purchases" page renders its cards from.
  *
  * @return array<string, mixed>

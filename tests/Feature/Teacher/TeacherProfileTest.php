@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -15,6 +16,51 @@ test('the profile page shows the onboarding form for new teachers', function () 
         ->get(route('teacher.profile'))
         ->assertOk()
         ->assertSee('Set up your teaching profile');
+});
+
+test('the profile page ships the live preview of the public teacher card', function () {
+    $user = User::factory()->teacher()->onboarded()->create(['name' => 'Nimal Perera']);
+    $subject = Subject::query()->active()->first() ?? Subject::factory()->create(['is_active' => true]);
+
+    $user->teacherProfile->subjects()->attach($subject->id, ['grade_levels' => []]);
+
+    $response = $this->actingAs($user)->get(route('teacher.profile'))->assertOk();
+
+    $response->assertSee('id="teacher-profile-app"', false);
+
+    $config = teachingProfileConfig($response);
+
+    expect($config['teacher']['name'])->toBe('Nimal Perera')
+        ->and($config['teacher']['initials'])->toBe('Ni')
+        ->and($config['values']['headline'])->toBe($user->teacherProfile->headline)
+        ->and($config['values']['hourlyRate'])->toBe((int) $user->teacherProfile->hourlyRate())
+        ->and($config['preview']['subjects'])->toHaveCount(1)
+        ->and($config['preview']['currencySymbol'])->not->toBe('')
+        ->and($config['preview']['verificationLabel'])->toBe('Pending review')
+        ->and($config['steps'])->toHaveCount(2)
+        ->and($config['currentStep'])->toBe(1)
+        ->and($config['urls']['update'])->toBe(route('teacher.profile.update'));
+});
+
+test('a rejected save hands the answers and messages back to the preview', function () {
+    $user = User::factory()->teacher()->create();
+
+    $this->actingAs($user)
+        ->from(route('teacher.profile'))
+        ->put(route('teacher.profile.update'), [
+            'headline' => '',
+            'experience_years' => -2,
+            'languages' => [],
+            'hourly_rate' => 50,
+        ])
+        ->assertSessionHasErrors(['headline', 'experience_years', 'languages', 'hourly_rate']);
+
+    $config = teachingProfileConfig($this->actingAs($user)->get(route('teacher.profile'))->assertOk());
+
+    expect($config['values']['hourlyRate'])->toBe(50)
+        ->and($config['values']['headline'])->toBe('')
+        ->and($config['errors']['headline'])->not->toBeEmpty()
+        ->and($config['errors']['languages'])->not->toBeEmpty();
 });
 
 test('teachers can complete their profile', function () {

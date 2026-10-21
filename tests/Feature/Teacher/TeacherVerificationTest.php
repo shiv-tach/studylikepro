@@ -183,6 +183,114 @@ test('the verification page shows the submission checklist and confirmation once
         ->assertSee('Submit your application for review?');
 });
 
+test('the verification page ships the checklist, documents and notices as an island', function () {
+    $user = onboardingTeacher();
+    TeacherVerificationDocument::factory()->for($user->teacherProfile)->create(['type' => 'degree']);
+
+    $response = $this->actingAs($user)->get(route('teacher.verification'))->assertOk();
+
+    $response->assertSee('id="teacher-verification-app"', false);
+
+    $config = verificationConfig($response);
+
+    expect($config['canEditDocuments'])->toBeTrue()
+        ->and($config['status']['current'])->toBe('draft')
+        ->and($config['documents'])->toHaveCount(1)
+        ->and($config['documents'][0]['type'])->toBe('degree')
+        ->and($config['documents'][0]['isRequired'])->toBeFalse()
+        // The id is the only required type, so it is the one offered first.
+        ->and($config['selectedType'])->toBe('id_proof')
+        ->and(collect($config['documentTypes'])->firstWhere('value', 'id_proof')['required'])->toBeTrue()
+        ->and($config['currentStep'])->toBe(2)
+        ->and($config['urls']['upload'])->toBe(route('teacher.verification.documents.store'));
+});
+
+test('an uploaded document is shipped with the flash notice for the toast', function () {
+    Storage::fake('local');
+
+    $user = onboardingTeacher();
+
+    $this->actingAs($user)
+        ->post(route('teacher.verification.documents.store'), [
+            'type' => 'id_proof',
+            'document' => UploadedFile::fake()->image('id-card.jpg'),
+        ])
+        ->assertRedirect(route('teacher.verification'));
+
+    $config = verificationConfig($this->actingAs($user)->get(route('teacher.verification'))->assertOk());
+
+    expect($config['notices'])->toHaveCount(1)
+        ->and($config['notices'][0]['tone'])->toBe('emerald')
+        ->and($config['highlightDocumentId'])->toBe($config['documents'][0]['id'])
+        ->and($config['documents'][0]['originalName'])->toBe('id-card.jpg');
+});
+
+test('the upload returns the new document when the page asks for json', function () {
+    Storage::fake('local');
+
+    $user = onboardingTeacher();
+
+    $response = $this->actingAs($user)
+        ->postJson(route('teacher.verification.documents.store'), [
+            'type' => 'id_proof',
+            'document' => UploadedFile::fake()->image('id-card.jpg'),
+        ])
+        ->assertOk();
+
+    $payload = $response->json();
+
+    expect($payload['document']['type'])->toBe('id_proof')
+        ->and($payload['document']['typeLabel'])->toBe('Government ID')
+        ->and($payload['document']['isRequired'])->toBeTrue()
+        ->and($payload['document']['destroyUrl'])->toContain('/verification/documents/')
+        ->and($payload['notices'][0]['tone'])->toBe('emerald')
+        ->and($payload['notices'][0]['message'])->toContain('submit your application');
+});
+
+test('a json upload reports the validation errors field by field', function () {
+    Storage::fake('local');
+
+    $this->actingAs(onboardingTeacher())
+        ->postJson(route('teacher.verification.documents.store'), [
+            'type' => 'passport',
+            'document' => UploadedFile::fake()->create('virus.exe', 10),
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['type', 'document']);
+});
+
+test('a json upload is refused with a notice once the documents are locked', function () {
+    Storage::fake('local');
+
+    $user = User::factory()->teacher()->create();
+    TeacherProfile::factory()->pending()->for($user)->create();
+
+    $this->actingAs($user)
+        ->postJson(route('teacher.verification.documents.store'), [
+            'type' => 'id_proof',
+            'document' => UploadedFile::fake()->image('id.jpg'),
+        ])
+        ->assertStatus(409)
+        ->assertJsonPath('notices.0.tone', 'amber');
+});
+
+test('a json removal answers with the removed id and a notice', function () {
+    Storage::fake('local');
+
+    $user = onboardingTeacher();
+    $document = TeacherVerificationDocument::factory()->for($user->teacherProfile)->create();
+    Storage::disk('local')->put($document->path, 'file-contents');
+
+    $this->actingAs($user)
+        ->deleteJson(route('teacher.verification.documents.destroy', $document))
+        ->assertOk()
+        ->assertJsonPath('removedId', $document->id)
+        ->assertJsonPath('notices.0.tone', 'slate');
+
+    expect(TeacherVerificationDocument::find($document->id))->toBeNull();
+    Storage::disk('local')->assertMissing($document->path);
+});
+
 test('students cannot access teacher verification routes', function () {
     $this->actingAs(User::factory()->student()->create())
         ->get(route('teacher.verification'))

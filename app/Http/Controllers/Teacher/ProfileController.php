@@ -18,8 +18,13 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): View
     {
+        $user = $request->user();
+        // The preview card shows the teacher's subjects exactly as the public
+        // directory does, so they are loaded up front instead of lazily.
+        $user->loadMissing('teacherProfile.subjects');
+
         return view('teacher.profile', [
-            'profile' => $request->user()->teacherProfile,
+            'profile' => $user->teacherProfile,
         ]);
     }
 

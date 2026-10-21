@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Teacher;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TeacherDocumentRequest;
+use App\Models\TeacherProfile;
 use App\Models\TeacherVerificationDocument;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -31,13 +33,15 @@ class VerificationController extends Controller
             'profile' => $profile->load('documents'),
             'canEditDocuments' => $profile->verification_status->allowsDocumentEditing(),
             'documentTypes' => config('studylikepro.verification_document_types'),
+            // The row the page rings and labels "just uploaded" after a redirect.
+            'highlightDocumentId' => $request->session()->get('uploaded_document_id'),
         ]);
     }
 
     /**
      * Upload a verification document.
      */
-    public function store(TeacherDocumentRequest $request): RedirectResponse
+    public function store(TeacherDocumentRequest $request): RedirectResponse|JsonResponse
     {
         $profile = $request->user()->teacherProfile;
 
@@ -48,6 +52,10 @@ class VerificationController extends Controller
         }
 
         if (! $profile->verification_status->allowsDocumentEditing()) {
+            if ($request->wantsJson()) {
+                return self::lockedResponse();
+            }
+
             return redirect()
                 ->route('teacher.verification')
                 ->with('status', 'documents-locked');
@@ -55,26 +63,53 @@ class VerificationController extends Controller
 
         $file = $request->file('document');
 
-        $profile->documents()->create([
+        $document = $profile->documents()->create([
             'type' => $request->validated('type'),
             'original_name' => $file->getClientOriginalName(),
             'path' => $file->store('verification-documents/'.$profile->id, 'local'),
         ]);
 
+        // Uploads save as a draft; the page can confirm straight away when the
+        // request accepts JSON, and the redirect carries the same news otherwise.
+        if ($request->wantsJson()) {
+            return response()->json([
+                'document' => self::documentPayload($document),
+                'notices' => [[
+                    'tone' => 'emerald',
+                    'title' => __('Document uploaded'),
+                    'message' => self::uploadedNotice($profile),
+                ]],
+            ]);
+        }
+
         return redirect()
             ->route('teacher.verification')
-            ->with('status', 'document-uploaded');
+            ->with('status', 'document-uploaded')
+            ->with('uploaded_document_id', $document->id);
     }
 
     /**
      * Remove a verification document.
      */
-    public function destroy(TeacherVerificationDocument $document): RedirectResponse
+    public function destroy(Request $request, TeacherVerificationDocument $document): RedirectResponse|JsonResponse
     {
         Gate::authorize('delete', $document);
 
+        $label = $document->typeLabel();
+
         Storage::disk('local')->delete($document->path);
         $document->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'removedId' => $document->id,
+                'notices' => [[
+                    'tone' => 'slate',
+                    'title' => __('Document removed'),
+                    'message' => __(':type is no longer on file. You can upload it again before you submit.', ['type' => $label]),
+                ]],
+            ]);
+        }
 
         return redirect()
             ->route('teacher.verification')
@@ -123,5 +158,44 @@ class VerificationController extends Controller
         return redirect()
             ->route('teacher.verification')
             ->with('status', 'submitted-for-review');
+    }
+
+    /**
+     * One document in the shape the Vue page renders and appends.
+     *
+     * @return array<string, mixed>
+     */
+    private static function documentPayload(TeacherVerificationDocument $document): array
+    {
+        return [
+            'id' => $document->id,
+            'type' => $document->type,
+            'typeLabel' => $document->typeLabel(),
+            'originalName' => $document->original_name,
+            'uploadedAt' => $document->created_at?->format('d M Y'),
+            'isRequired' => $document->type === 'id_proof',
+            'destroyUrl' => route('teacher.verification.documents.destroy', $document),
+        ];
+    }
+
+    /**
+     * What the teacher should do next, said inside the upload's confirmation.
+     */
+    private static function uploadedNotice(TeacherProfile $profile): string
+    {
+        return $profile->documents()->where('type', 'id_proof')->exists()
+            ? __('That was the document we needed — submit your application below.')
+            : __('Your government ID is still needed before you can submit.');
+    }
+
+    private static function lockedResponse(): JsonResponse
+    {
+        return response()->json([
+            'notices' => [[
+                'tone' => 'amber',
+                'title' => __('Documents locked'),
+                'message' => __('Your documents are locked while the application is under review.'),
+            ]],
+        ], 409);
     }
 }

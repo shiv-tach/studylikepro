@@ -49,6 +49,12 @@ export default defineConfig({
                 // The student's learning profile at /student/profile: the
                 // answers that scope every lesson, teacher and price.
                 'resources/js/student-profile/main.js',
+                // The teacher's onboarding step 1 at /teacher/profile, with the
+                // live preview of their public directory card; step 2 stays Blade.
+                'resources/js/teacher-profile/main.js',
+                // Onboarding step 2 at /teacher/verification: the documents, the
+                // live checklist and the submit confirmation.
+                'resources/js/teacher-verification/main.js',
                 // The signed-in chrome (sidebar + top bar) that wraps every
                 // x-app-layout screen, so the layout itself is a Vue component.
                 'resources/js/app-shell/main.js',
