@@ -4,10 +4,10 @@ import { onBeforeUnmount, ref } from 'vue';
 const LIFETIME = 7000;
 
 /**
- * The page's floating notices. The server's flash messages arrive as the initial
- * list; anything the page then does without a reload (an async upload or a
- * removal) pushes another one. Every toast auto-dismisses, and the timers are
- * cleared on unmount so a navigation never fires into a dead component.
+ * A page's floating notices. The server's flash messages arrive as the initial
+ * list; anything the page then does without a reload pushes another one. Every
+ * toast auto-dismisses, and the timers are cleared on unmount so a navigation
+ * never fires into a dead component.
  */
 export function useNotices(initial = []) {
     const toasts = ref([]);

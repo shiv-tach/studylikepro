@@ -55,6 +55,10 @@ export default defineConfig({
                 // Onboarding step 2 at /teacher/verification: the documents, the
                 // live checklist and the submit confirmation.
                 'resources/js/teacher-verification/main.js',
+                // The teacher's subject setup at /teacher/subjects: the grade and
+                // lesson scope, the per-grade rates, the request queue and the
+                // subject proposal form.
+                'resources/js/teacher-subjects/main.js',
                 // The signed-in chrome (sidebar + top bar) that wraps every
                 // x-app-layout screen, so the layout itself is a Vue component.
                 'resources/js/app-shell/main.js',

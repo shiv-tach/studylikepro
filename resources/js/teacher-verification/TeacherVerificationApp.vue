@@ -13,7 +13,7 @@ import UiAlert from '../shared/components/UiAlert.vue';
 import UiToastStack from '../shared/components/UiToastStack.vue';
 import { COPY_KEY, CSRF_KEY, URLS_KEY } from './composables/usePageContext';
 import { VERIFICATION_KEY, createVerification } from './composables/useVerification';
-import { useNotices } from './composables/useNotices';
+import { useNotices } from '../shared/composables/useNotices';
 import CompletedCard from './components/CompletedCard.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
 import DocumentsCard from './components/DocumentsCard.vue';

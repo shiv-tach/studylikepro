@@ -315,6 +315,19 @@ One conversation: the messages, the composer, the poller that catches the other 
 * **No-JS fallback:** the view renders the same thread read-only from the `messages.partials.bubble` partial, plus a plain report form.
 * **Contract test:** `tests/Feature/Chat/MessagesThreadTest.php` asserts the island the Vue app depends on.
 
+### Teacher subjects (`/teacher/subjects`)
+
+The teacher's subject workspace: what they teach, the grades and lessons inside each subject, the per-grade rates, the requests waiting on an admin, and the catalog/propose flows. Only the markup moved — `SubjectSetupRequest` and `TeacherSubjectRequest` still own every rule, and each setup card is a real POST form.
+
+* **Entry point:** `resources/js/teacher-subjects/main.js` is its own Vite input; [teacher/subjects.blade.php](file:///d:/Github/studylikepro/resources/views/teacher/subjects.blade.php) calls `@vite(...)` for it, so no other teacher screen pays for this page's code.
+* **Server data:** [SubjectsController](file:///d:/Github/studylikepro/app/Http/Controllers/Teacher/SubjectsController.php) keeps the approval scoping, the catalog exclusions, the eager loading and the money formatting; Blade then renders the `#teacher-subjects-config` JSON island and mounts the app on `#teacher-subjects-app`. The island carries the approved subjects (grades → lessons, saved rates, live counts), the merged pending queue, the rejected rows with their `admin_note`, the catalog grouped by level, the propose form's old values and errors, the flash notices and the route map. Never hardcode a URL in the Vue code — read it from `config.urls`.
+* **Structure:** [TeacherSubjectsApp.vue](file:///d:/Github/studylikepro/resources/js/teacher-subjects/TeacherSubjectsApp.vue) provides the page context and the workspace state, then renders the hero, the three tabs, the setup cards, the request queue and the add flow. Components live in `resources/js/teacher-subjects/components/` (`SubjectsHero`, `SubjectsTabs`, `SubjectSetupCard`, `SubjectSetupForm`, `GradeRateSection`, `LessonScopeSection`, `DefaultRateSection`, `SubjectSaveBar`, `RequestQueue`, `RequestRow`, `AddSubjectsPanel`, `CatalogPicker`, `CatalogSubjectTile`, `ProposeSubjectForm`), reusing [resources/js/shared/](file:///d:/Github/studylikepro/resources/js/shared) (`AppIcon`, `UiAlert`, `UiChip`, `UiEmptyState`, `UiFormField`, `UiSectionHeading`, `UiToastStack`, `RevealOnScroll`, `usePanel`, `useThemePreset`, `useNotices`, `styles.js`).
+* **Workspace state:** `composables/useSubjectsWorkspace.js` (`createSubjectsWorkspace`) owns the reactive grade/rate/lesson copies, the dirty snapshot behind *Reset* and the unsaved markers, the open card, the active tab, the catalog selection (kept across level switches) and the propose values. Nothing there re-implements a server rule: a grade that is unticked disables its rate and lessons, and the server also trims any lesson outside the selected grades.
+* **Scoped validation:** every setup form posts a hidden `editing_subject`, so a rejected save replays `old()` values and shows the grade-rate/lesson messages on the card that failed (the previous Blade page leaked them into every card). A bounced add/propose switches back to the add tab with the old values intact.
+* **Interactivity that stays server-side:** the setup cards, the withdraw action and both add paths are real `method="POST"` forms carrying the island's CSRF token, so CSRF, validation, redirects and the flash messages all stay server-side.
+* **No-JS fallback:** the view renders the same forms as plain Blade — the same field names, grade-rate values, lesson checkboxes and route actions.
+* **Contract test:** `tests/Feature/Teacher/TeacherSubjectsPageTest.php` asserts the island the Vue app depends on; `tests/Feature/Teacher/GradeRatePricingTest.php` still checks the rendered rate inputs.
+
 3. **Database update:** Form submission saves selection permanently.
 
 ---

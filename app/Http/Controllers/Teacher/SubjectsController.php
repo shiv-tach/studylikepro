@@ -32,7 +32,14 @@ class SubjectsController extends Controller
             ])
             ->get();
 
-        $ownedIds = $pivotSubjects->pluck('id')->all();
+        // Only approved and pending picks block the catalog picker: a rejected
+        // subject may be requested again, and approving that request flips the
+        // existing pivot row back to approved (see TeacherSubjectService).
+        $claimedIds = $pivotSubjects
+            ->reject(fn (Subject $subject) => $subject->pivot->status === ApprovalStatus::Rejected)
+            ->pluck('id')
+            ->all();
+
         $openRequestIds = $profile->subjectRequests()
             ->pending()
             ->whereNotNull('subject_id')
@@ -43,8 +50,12 @@ class SubjectsController extends Controller
             ->active()
             ->ordered()
             ->with('educationLevel')
-            ->whereNotIn('id', array_merge($ownedIds, $openRequestIds))
+            ->whereNotIn('id', array_merge($claimedIds, $openRequestIds))
             ->get();
+
+        // The page shows pending requests and the rejected ones (with the
+        // admin's note) separately; approved requests are already granted.
+        $requestRelations = ['subject.educationLevel', 'educationLevel'];
 
         return view('teacher.subjects', [
             'subjects' => $pivotSubjects->filter(fn (Subject $subject) => $subject->pivot->status === ApprovalStatus::Approved)->values(),
@@ -52,10 +63,16 @@ class SubjectsController extends Controller
             'rejectedSubjects' => $pivotSubjects->filter(fn (Subject $subject) => $subject->pivot->status === ApprovalStatus::Rejected)->values(),
             'availableSubjects' => $availableSubjects,
             'levels' => EducationLevel::query()->active()->ordered()->get(),
-            'subjectRequests' => $profile->subjectRequests()
+            'pendingRequests' => $profile->subjectRequests()
+                ->pending()
                 ->latest()
-                ->limit(15)
-                ->with(['subject', 'educationLevel'])
+                ->with($requestRelations)
+                ->get(),
+            'rejectedRequests' => $profile->subjectRequests()
+                ->where('status', ApprovalStatus::Rejected)
+                ->latest()
+                ->limit(10)
+                ->with($requestRelations)
                 ->get(),
             'selectedLessons' => $profile->lessons()->pluck('lessons.id')->all(),
             'baseRateMinor' => (int) $profile->hourly_rate_minor,
@@ -70,8 +87,12 @@ class SubjectsController extends Controller
     {
         $profile = $request->user()->teacherProfile;
 
+        // A rejected pick is not a block: the teacher may ask for it again.
         $blocked = array_map('intval', array_merge(
-            $profile->subjects()->pluck('subjects.id')->all(),
+            $profile->subjects()
+                ->wherePivot('status', '!=', ApprovalStatus::Rejected->value)
+                ->pluck('subjects.id')
+                ->all(),
             $profile->subjectRequests()->pending()->whereNotNull('subject_id')->pluck('subject_id')->all()
         ));
 
@@ -205,6 +226,8 @@ class SubjectsController extends Controller
 
         return redirect()
             ->route('teacher.subjects.index')
-            ->with('status', 'subject-setup-updated');
+            ->with('status', 'subject-setup-updated')
+            // Keep the card the teacher just saved open after the redirect.
+            ->with('saved_subject', $subject->id);
     }
 }

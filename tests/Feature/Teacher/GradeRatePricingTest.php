@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ApprovalStatus;
 use App\Models\Booking;
 use App\Models\EducationLevel;
 use App\Models\Grade;
@@ -36,6 +37,7 @@ function gradeRateScenario(): array
     ]);
 
     $teacher->subjects()->attach($subject->id, [
+        'status' => ApprovalStatus::Approved,
         'grade_levels' => [(string) $grade6->id, (string) $grade10->id],
         'rate_per_hour_minor' => 120000,
         'grade_rates' => [$grade6->id => 150000, $grade10->id => 250000],
@@ -52,7 +54,7 @@ test('teachers can save a rate for every grade they support', function () {
     $math = Subject::factory()->create(['name' => 'Mathematics', 'education_level_id' => $ol->id]);
     $user = User::factory()->teacher()->onboarded()->create();
 
-    $user->teacherProfile->subjects()->sync([$math->id]);
+    $user->teacherProfile->subjects()->attach($math->id, ['status' => ApprovalStatus::Approved]);
 
     $this->actingAs($user)
         ->post(route('teacher.subjects.update', $math), [
@@ -116,7 +118,7 @@ test('a grade rate for another level is rejected', function () {
     $math = Subject::factory()->create(['name' => 'Mathematics', 'education_level_id' => $ol->id]);
     $user = User::factory()->teacher()->onboarded()->create();
 
-    $user->teacherProfile->subjects()->sync([$math->id]);
+    $user->teacherProfile->subjects()->attach($math->id, ['status' => ApprovalStatus::Approved]);
 
     $this->actingAs($user)
         ->post(route('teacher.subjects.update', $math), [
