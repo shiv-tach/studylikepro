@@ -8,6 +8,10 @@
     $ratePerHour = $teacher->effectiveRateFor($subject, $learnerGradeId);
     $feeGross = $bookingFee['booking_fee_minor'];
     $feeNet = $bookingFee['net_minor'];
+    $feeIsPercent = $bookingFee['type'] === \App\Enums\BookingFeeType::Percent;
+    $feeNote = $feeIsPercent
+        ? __(':percent of the lesson price', ['percent' => \App\Enums\BookingFeeType::percentLabel($bookingFee['percent'])])
+        : null;
     $totalMinor = $priceMinor + $feeNet;
 
     // Slot groups, each already labelled in the viewer's timezone.
@@ -83,6 +87,7 @@
             'lessonPrice' => $money($priceMinor),
             'feeValue' => $money($feeNet),
             'feeGross' => $money($feeGross),
+            'feeNote' => $feeNote,
             'feeIsFree' => $feeNet === 0 && $feeGross > 0,
             'feeFreeLabel' => __('Free'),
             'feeHasDiscount' => $feeNet < $feeGross,

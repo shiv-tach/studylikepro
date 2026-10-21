@@ -66,10 +66,6 @@ const messages = computed(() => Object.values(props.config.errors ?? {}).flat())
             <OnboardingSteps :steps="config.steps ?? []" :current="config.currentStep ?? 1" />
         </RevealOnScroll>
 
-        <RevealOnScroll v-if="!profile.isComplete">
-            <OnboardingNoticeCard icon="sparkles" :title="copy.welcomeTitle" :body="copy.welcomeBody" />
-        </RevealOnScroll>
-
         <RevealOnScroll v-if="profile.isComplete && !profile.hasSubmittedVerification">
             <OnboardingNoticeCard
                 icon="clipboard"

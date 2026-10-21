@@ -152,7 +152,7 @@ Rules:
 
 - On payment capture: `platform_fee = round(price × commission%)`, `teacher_payout = price − platform_fee`; commission % is snapshotted onto the booking.
 - Default commission: 15% (editable in admin, P10).
-- Student booking fee: `booking_fee_minor` (default Rs 100, editable in admin, P10) is added to the lesson price at checkout and snapshotted onto the booking with any discount. Admin **special offers** (`booking_fee_promotions`) waive or discount the fee for a set window — evaluated when the slot is reserved, most generous offer wins. The fee is platform revenue: the teacher payout is untouched.
+- Student booking fee: configured in admin (P10) as either a fixed amount (`booking_fee_minor`, default Rs 100) or a percentage of the price being sold (`booking_fee_percent`, 0–100, e.g. 10%). It applies to direct lesson bookings and service purchases alike, is added to the price at checkout and snapshotted onto the booking/purchase with any discount. Admin **special offers** (`booking_fee_promotions`) waive or discount the fee for a set window — evaluated when the slot is reserved, most generous offer wins. The fee is platform revenue: the teacher payout is untouched.
 - Refund defaults: teacher cancellation → 100%; student cancellation ≥ 24 h before start → 100%; inside window → no automatic refund (admin can override via dispute). Refund percentages apply to the full captured amount, booking fee included.
 - Teacher payouts are manual in V1: admin marks a batch as paid (P10); the ledger is automated.
 
@@ -261,7 +261,7 @@ Each has a locked recommendation so implementation can proceed; changing a recom
 - `student_profiles` (grade level, timezone, learning goals, guardian name/phone) + student onboarding form served by the profile page (grade → timezone → goals), with dashboards behind an onboarding gate. *Superseded: onboarding is now a dedicated wizard (level → grade → O/L baskets → learning language → summary) and the profile page is what it claims to be — the place to change those answers. See §14 of [curriculum-and-grade-plan.md](./curriculum-and-grade-plan.md).*
 - `teacher_profiles` (headline, bio, experience, education, languages, timezone, default rate, verification status `draft → pending → approved/rejected`) + teacher onboarding pages (professional info → photo → ID/degree document uploads).
 - `teacher_verification_documents` on the **private** disk; admin-only signed temporary URLs later.
-- Avatar/photo uploads (2 MB, jpg/png/webp) on public disk; delete old file on replace.
+- Avatar/photo uploads (2 MB; 5 MB for teacher profile photos; jpg/png/webp) on public disk; delete old file on replace.
 - Profile pages for both roles; verification status banner on teacher dashboard (pending/rejected + reason + resubmit).
 - Teacher readiness checklist widget: profile complete → subjects → pricing → availability (drives P2/P3).
 

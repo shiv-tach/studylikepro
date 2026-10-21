@@ -119,8 +119,6 @@
             'stepStatusCurrent' => __('In progress'),
             'stepStatusUpNext' => __('Up next'),
             'stepStatusLocked' => __('Locked'),
-            'welcomeTitle' => __('Welcome, teacher!'),
-            'welcomeBody' => __('Step 1 of 2 — tell students about yourself and set your rate. Next you will upload verification documents for review.'),
             'stepCompleteTitle' => __('Step 1 complete — next: verification'),
             'stepCompleteBody' => __('Upload your documents and submit them for review to unlock your dashboard.'),
             'stepCompleteCta' => __('Continue to verification'),
@@ -142,7 +140,7 @@
             'rateHint' => __('Students see :amount per 60-minute lesson before commission.'),
             'rateHintEmpty' => __('Students see your hourly rate per 60-minute lesson before commission.'),
             'photoTitle' => __('Profile photo'),
-            'photoHint' => __('A clear, friendly photo builds trust with students. JPG, PNG or WebP up to 2 MB.'),
+            'photoHint' => __('A clear, friendly photo builds trust with students. JPG, PNG or WebP up to 5 MB.'),
             'photoChoose' => __('Upload photo'),
             'photoReplace' => __('Choose another'),
             'photoClear' => __('Clear'),
@@ -210,20 +208,6 @@
             @endif
 
             <x-teacher-onboarding-steps :current="1" />
-
-            @unless ($profileComplete)
-                <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-                    <div class="flex items-start gap-3">
-                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xl">👨‍🏫</span>
-                        <div>
-                            <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('Welcome, teacher!') }}</h3>
-                            <p class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                                {{ __('Step 1 of 2 — tell students about yourself and set your rate. Next you will upload verification documents for review.') }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            @endunless
 
             @if ($profileComplete && ! $verificationSubmitted)
                 <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
@@ -317,7 +301,7 @@
                 <!-- Photo -->
                 <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
                     <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('Profile photo') }}</h3>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('A clear, friendly photo builds trust with students. JPG, PNG or WebP up to 2 MB.') }}</p>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('A clear, friendly photo builds trust with students. JPG, PNG or WebP up to 5 MB.') }}</p>
 
                     <div class="mt-5 flex items-center gap-4">
                         @if ($user->avatarUrl())

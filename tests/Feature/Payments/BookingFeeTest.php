@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\BookingFeeType;
 use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\BookingFeePromotion;
@@ -237,4 +238,116 @@ it('leaves bookings without a fee reading exactly as before', function () {
         ->and($booking->hasBookingFeeDiscount())->toBeFalse()
         ->and($booking->totalMinor())->toBe(70000)
         ->and($payment->amount_minor)->toBe(70000);
+});
+
+it('charges a percentage of the lesson price when the fee type is percentage', function () {
+    $settings = app(PlatformSettings::class);
+    $settings->set('booking_fee_type', BookingFeeType::Percent->value);
+    $settings->set('booking_fee_percent', 10);
+
+    $booking = reserveFeeBooking(bookingFeeScenario());
+
+    // 10% of the Rs 600 lesson, on top of it, and the payout is untouched.
+    expect($booking->price_minor)->toBe(60000)
+        ->and($booking->booking_fee_minor)->toBe(6000)
+        ->and($booking->booking_fee_discount_minor)->toBe(0)
+        ->and($booking->netBookingFeeMinor())->toBe(6000)
+        ->and($booking->totalMinor())->toBe(66000)
+        ->and($booking->teacher_payout_minor)->toBe(51000);
+});
+
+it('snapshots the percentage fee it was priced with', function () {
+    $settings = app(PlatformSettings::class);
+    $settings->set('booking_fee_type', BookingFeeType::Percent->value);
+    $settings->set('booking_fee_percent', 10);
+
+    $booking = reserveFeeBooking(bookingFeeScenario());
+
+    $settings->set('booking_fee_percent', 25);
+
+    expect($booking->fresh()->booking_fee_minor)->toBe(6000)
+        ->and($booking->fresh()->totalMinor())->toBe(66000)
+        ->and(app(BookingFeeService::class)->netMinor(priceMinor: 60000))->toBe(15000);
+});
+
+it('applies a running offer to a percentage fee', function () {
+    $settings = app(PlatformSettings::class);
+    $settings->set('booking_fee_type', BookingFeeType::Percent->value);
+    $settings->set('booking_fee_percent', 10);
+
+    BookingFeePromotion::factory()->percent(50)->create(['name' => 'Half-price fee']);
+
+    $booking = reserveFeeBooking(bookingFeeScenario());
+
+    expect($booking->booking_fee_minor)->toBe(6000)
+        ->and($booking->booking_fee_discount_minor)->toBe(3000)
+        ->and($booking->netBookingFeeMinor())->toBe(3000)
+        ->and($booking->totalMinor())->toBe(63000)
+        ->and($booking->bookingFeePromotion->name)->toBe('Half-price fee');
+});
+
+it('quotes no fee from a percentage until the price is known', function () {
+    $settings = app(PlatformSettings::class);
+    $settings->set('booking_fee_type', BookingFeeType::Percent->value);
+    $settings->set('booking_fee_percent', 10);
+
+    $quote = app(BookingFeeService::class)->quote();
+
+    expect($quote['type'])->toBe(BookingFeeType::Percent)
+        ->and($quote['percent'])->toBe(10.0)
+        ->and($quote['booking_fee_minor'])->toBe(0)
+        ->and($quote['net_minor'])->toBe(0);
+});
+
+it('lets an admin switch the fee type and percentage from the settings console', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->put(route('admin.settings.update'), [
+            'booking_fee_type' => 'percent',
+            'booking_fee_percent' => 12.5,
+        ])
+        ->assertRedirect(route('admin.settings.edit'))
+        ->assertSessionHas('status', 'settings-saved');
+
+    expect(platform_settings()->string('booking_fee_type'))->toBe('percent')
+        ->and(app(PlatformSettings::class)->float('booking_fee_percent'))->toBe(12.5);
+
+    $booking = reserveFeeBooking(bookingFeeScenario());
+
+    expect($booking->booking_fee_minor)->toBe(7500)
+        ->and($booking->totalMinor())->toBe(67500);
+});
+
+it('rejects an unknown fee type and a percentage above 100', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->put(route('admin.settings.update'), ['booking_fee_type' => 'hourly'])
+        ->assertSessionHasErrors('booking_fee_type');
+
+    $this->actingAs($admin)
+        ->put(route('admin.settings.update'), [
+            'booking_fee_type' => 'percent',
+            'booking_fee_percent' => 150,
+        ])
+        ->assertSessionHasErrors('booking_fee_percent');
+
+    expect(platform_settings()->string('booking_fee_type'))->toBe('fixed')
+        ->and(platform_settings()->float('booking_fee_percent'))->toBe(0.0);
+});
+
+it('previews the percentage fee on the booking page', function () {
+    $settings = app(PlatformSettings::class);
+    $settings->set('booking_fee_type', BookingFeeType::Percent->value);
+    $settings->set('booking_fee_percent', 10);
+
+    $scenario = bookingFeeScenario();
+
+    $this->actingAs($scenario['student'])
+        ->get(route('student.bookings.create', $scenario['teacher']))
+        ->assertOk()
+        ->assertSee('10% of the lesson price')
+        ->assertSee('RS: 60.00')
+        ->assertSee('RS: 660.00');
 });

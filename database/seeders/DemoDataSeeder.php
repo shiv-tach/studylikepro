@@ -263,7 +263,7 @@ class DemoDataSeeder extends Seeder
                 'learner_grade_id' => $lesson?->grade_id,
                 'confirmed_at' => now()->subDay(),
                 ...$bookings->feeBreakdown($price),
-                ...$this->bookingFee(),
+                ...$this->bookingFee($price),
             ]);
         }
 
@@ -287,7 +287,7 @@ class DemoDataSeeder extends Seeder
                 'learner_grade_id' => $lesson?->grade_id,
                 'expires_at' => now()->addMinutes((int) platform_settings()->int('hold_ttl_minutes')),
                 ...$bookings->feeBreakdown($price),
-                ...$this->bookingFee(),
+                ...$this->bookingFee($price),
             ]);
 
             $lesson = $this->lessonFor($chemistry, 'unit-01');
@@ -310,7 +310,7 @@ class DemoDataSeeder extends Seeder
                 'started_at' => $deliveredAt->utc(),
                 'completed_at' => $deliveredAt->addHour()->utc(),
                 ...$bookings->feeBreakdown($price),
-                ...$this->bookingFee(),
+                ...$this->bookingFee($price),
             ]);
 
             $this->seedCapturedPayment($confirmed);
@@ -473,7 +473,7 @@ class DemoDataSeeder extends Seeder
                 'started_at' => $startsAt->utc(),
                 'completed_at' => $startsAt->addMinutes(45)->utc(),
                 ...$bookings->feeBreakdown($price),
-                ...$this->bookingFee(),
+                ...$this->bookingFee($price),
             ]);
 
             $this->seedCapturedPayment($lesson);
@@ -511,9 +511,9 @@ class DemoDataSeeder extends Seeder
      *
      * @return array<string, mixed>
      */
-    private function bookingFee(): array
+    private function bookingFee(int $priceMinor): array
     {
-        $fee = app(BookingFeeService::class)->quote();
+        $fee = app(BookingFeeService::class)->quote(priceMinor: $priceMinor);
 
         return [
             'booking_fee_minor' => $fee['booking_fee_minor'],

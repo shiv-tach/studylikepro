@@ -367,6 +367,15 @@ class TeacherProfile extends Model
     }
 
     /**
+     * The teacher terms are accepted when the application is submitted; the
+     * timestamp is kept so the checklist can show that acceptance back to them.
+     */
+    public function hasAcceptedAgreement(): bool
+    {
+        return $this->agreement_accepted_at !== null;
+    }
+
+    /**
      * Both onboarding steps are done: profile saved and documents submitted.
      */
     public function hasCompletedOnboarding(): bool

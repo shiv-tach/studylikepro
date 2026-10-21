@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\BookingFeeType;
 use App\Models\PlatformSetting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
@@ -18,7 +19,10 @@ class PlatformSettings
     /**
      * Settings the admin console can edit, with their defaults.
      *
-     * @return array<string, array{default: mixed, type: string, group: string, label: string, description: string}>
+     * `options` belongs to `select` settings, while `min`/`max`/`step` bound the
+     * numeric ones (the settings controller and the console both read them).
+     *
+     * @return array<string, array{default: mixed, type: string, group: string, label: string, description: string, options?: array<string, string>, min?: int|float, max?: int|float, step?: string}>
      */
     public static function definitions(): array
     {
@@ -30,12 +34,31 @@ class PlatformSettings
                 'label' => 'Platform commission (%)',
                 'description' => 'Withheld from every lesson payment before the teacher payout.',
             ],
+            'booking_fee_type' => [
+                'default' => (string) config('studylikepro.booking_fee_type'),
+                'type' => 'select',
+                'group' => 'money',
+                'label' => 'Student booking fee type',
+                'description' => 'Charge a fixed amount for every booking, or a percentage of the lesson or service price.',
+                'options' => collect(BookingFeeType::cases())
+                    ->mapWithKeys(fn (BookingFeeType $type) => [$type->value => $type->label()])
+                    ->all(),
+            ],
             'booking_fee_minor' => [
                 'default' => (int) config('studylikepro.booking_fee_minor'),
                 'type' => 'money',
                 'group' => 'money',
-                'label' => 'Student booking fee',
-                'description' => 'Charged to the student on top of the lesson price at checkout. Running special offers can discount or waive it — set 0 to drop it entirely.',
+                'label' => 'Student booking fee (fixed amount)',
+                'description' => 'Charged when the fee type is a fixed amount. Running special offers can discount or waive it — set 0 to drop it entirely.',
+            ],
+            'booking_fee_percent' => [
+                'default' => (float) config('studylikepro.booking_fee_percent'),
+                'type' => 'float',
+                'group' => 'money',
+                'label' => 'Student booking fee (%)',
+                'description' => 'Used when the fee type is percentage — 10 charges 10% of the lesson or service price on top.',
+                'min' => 0,
+                'max' => 100,
             ],
             'currency' => [
                 'default' => (string) config('studylikepro.currency'),
@@ -85,6 +108,8 @@ class PlatformSettings
                 'group' => 'ai',
                 'label' => 'AI confidence threshold',
                 'description' => 'Below this score the student confirms the subject/lesson themselves (0.30–0.95).',
+                'min' => 0,
+                'max' => 1,
             ],
             'plan_expiry_days' => [
                 'default' => (int) config('studylikepro.services.plan_expiry_days'),

@@ -39,7 +39,8 @@ class PurchaseService
             ]);
         }
 
-        $fee = $this->fees->quote();
+        // A percentage fee is priced off what the service costs the student.
+        $fee = $this->fees->quote(priceMinor: (int) $offering->price_minor);
 
         $purchase = ServicePurchase::query()->create([
             'student_id' => $student->id,

@@ -145,6 +145,39 @@ test('teachers can submit their application for review', function () {
         ->and($profile->agreement_version)->toBe((string) config('studylikepro.support.policy_version'));
 });
 
+test('the terms checklist keeps showing acceptance after the application is submitted', function () {
+    $user = onboardingTeacher();
+    TeacherVerificationDocument::factory()->for($user->teacherProfile)->create();
+
+    $this->actingAs($user)->post(route('teacher.verification.submit'), ['agree' => '1']);
+
+    $config = verificationConfig($this->actingAs($user)->get(route('teacher.verification'))->assertOk());
+
+    expect($config['canEditDocuments'])->toBeFalse()
+        ->and($config['values']['agree'])->toBeTrue();
+});
+
+test('the terms checklist stays unticked until the teacher accepts them', function () {
+    $user = onboardingTeacher();
+
+    $config = verificationConfig($this->actingAs($user)->get(route('teacher.verification'))->assertOk());
+
+    expect($config['values']['agree'])->toBeFalse();
+});
+
+test('a failed submission without the terms does not tick the checklist', function () {
+    $user = onboardingTeacher();
+    TeacherVerificationDocument::factory()->for($user->teacherProfile)->create();
+
+    $this->actingAs($user)
+        ->post(route('teacher.verification.submit'))
+        ->assertSessionHasErrors('agree');
+
+    $config = verificationConfig($this->actingAs($user)->get(route('teacher.verification'))->assertOk());
+
+    expect($config['values']['agree'])->toBeFalse();
+});
+
 test('rejected teachers can resubmit their application', function () {
     $user = User::factory()->teacher()->create();
     TeacherProfile::factory()->rejected()->for($user)->create();

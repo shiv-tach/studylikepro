@@ -39,6 +39,16 @@ const controlClasses = 'mt-1 block w-full rounded-xl border-slate-300 bg-white t
             :class="controlClasses"
         ></textarea>
 
+        <select
+            v-else-if="setting.type === 'select'"
+            :id="inputId"
+            v-model="form.values[setting.key]"
+            :name="setting.key"
+            :class="controlClasses"
+        >
+            <option v-for="option in setting.options" :key="option.value" :value="option.value">{{ option.label }}</option>
+        </select>
+
         <input
             v-else
             :id="inputId"
@@ -46,6 +56,8 @@ const controlClasses = 'mt-1 block w-full rounded-xl border-slate-300 bg-white t
             :name="setting.key"
             :type="setting.inputType"
             :step="setting.step"
+            :min="setting.min"
+            :max="setting.max"
             :class="controlClasses"
         >
     </UiFormField>

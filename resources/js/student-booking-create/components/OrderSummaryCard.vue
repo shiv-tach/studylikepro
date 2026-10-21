@@ -58,6 +58,7 @@ const rowValue = 'font-semibold text-slate-800 dark:text-slate-100';
                         <template v-else>{{ summary.feeValue }}</template>
                     </span>
                 </div>
+                <p v-if="summary.feeNote" class="text-right text-xs text-slate-400">{{ summary.feeNote }}</p>
             </div>
 
             <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">

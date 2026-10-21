@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\BookingFeeDiscountType;
+use App\Enums\BookingFeeType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\BookingFeePromotionRequest;
 use App\Models\BookingFeePromotion;
@@ -30,7 +31,9 @@ class BookingFeePromotionController extends Controller
                 ->orderByDesc('id')
                 ->paginate(20),
             'types' => BookingFeeDiscountType::cases(),
+            'bookingFeeType' => BookingFeeType::tryFrom(platform_settings()->string('booking_fee_type')) ?? BookingFeeType::Fixed,
             'bookingFeeMinor' => platform_settings()->int('booking_fee_minor'),
+            'bookingFeePercent' => platform_settings()->float('booking_fee_percent'),
             'feeQuote' => $fees->quote(),
         ]);
     }

@@ -110,19 +110,42 @@ it('builds the admin platform settings console from its island', function () {
         'hold_ttl_minutes',
         'student_cancel_window_hours',
         'cancellation_policy_text',
+        'booking_fee_type',
+        'booking_fee_percent',
     )
         ->and($config['groups'][0]['label'])->toBe('Money')
         ->and($config['urls']['update'])->toBe(route('admin.settings.update'))
         ->and($config['meta']['currencySymbol'])->not->toBe('');
 
     // The money fields are edited in whole currency units, not minor units.
-    $bookingFee = collect($config['groups'])
-        ->flatMap(fn ($group) => $group['items'])
-        ->firstWhere('key', 'booking_fee_minor');
+    $items = collect($config['groups'])->flatMap(fn ($group) => $group['items']);
+
+    $bookingFee = $items->firstWhere('key', 'booking_fee_minor');
 
     expect($bookingFee['type'])->toBe('money')
         ->and($bookingFee['inputType'])->toBe('number')
         ->and($bookingFee['step'])->toBe('0.01');
+
+    // The fee type is a select and the percentage carries its 0-100 bounds.
+    $feeType = $items->firstWhere('key', 'booking_fee_type');
+    $feePercent = $items->firstWhere('key', 'booking_fee_percent');
+
+    expect($feeType['type'])->toBe('select')
+        ->and($feeType['value'])->toBe('fixed')
+        ->and($feeType['options'])->toBe([
+            ['value' => 'fixed', 'label' => 'Fixed amount'],
+            ['value' => 'percent', 'label' => 'Percentage of the price'],
+        ])
+        ->and($feePercent['type'])->toBe('float')
+        ->and($feePercent['min'])->toBe(0)
+        ->and($feePercent['max'])->toBe(100);
+
+    // The noscript twin ships real inputs named after the settings, including
+    // a select for the fee type.
+    $response->assertSee('name="booking_fee_type"', false)
+        ->assertSee('name="booking_fee_percent"', false)
+        ->assertSee('<select id="setting-booking_fee_type"', false)
+        ->assertSee('Percentage of the price');
 });
 
 it('builds the profile page from its island', function () {

@@ -30,8 +30,18 @@
             'description' => $definition['description'],
             'type' => $definition['type'],
             'value' => $inputValue,
-            'inputType' => $definition['type'] === 'string' ? 'text' : 'number',
-            'step' => in_array($definition['type'], ['float', 'money'], true) ? '0.01' : null,
+            'inputType' => match ($definition['type']) {
+                'string' => 'text',
+                'select' => null,
+                default => 'number',
+            },
+            'step' => $definition['step'] ?? (in_array($definition['type'], ['float', 'money'], true) ? '0.01' : null),
+            'min' => $definition['min'] ?? null,
+            'max' => $definition['max'] ?? null,
+            'options' => collect($definition['options'] ?? [])
+                ->map(fn (string $label, string $key) => ['value' => $key, 'label' => $label])
+                ->values()
+                ->all(),
         ];
 
         // Blade's $errors->get() returns an empty array when the key is absent,
@@ -116,12 +126,20 @@
                             @foreach ($group['items'] as $item)
                                 <div>
                                     <x-input-label :for="'setting-'.$item['key']" :value="$item['label']" />
-                                    @if ($item['type'] === 'text')
+                                    @if ($item['type'] === 'select')
+                                        <select id="setting-{{ $item['key'] }}" name="{{ $item['key'] }}" class="{{ $fieldClasses }}">
+                                            @foreach ($item['options'] as $option)
+                                                <option value="{{ $option['value'] }}" @selected((string) $item['value'] === (string) $option['value'])>{{ $option['label'] }}</option>
+                                            @endforeach
+                                        </select>
+                                    @elseif ($item['type'] === 'text')
                                         <textarea id="setting-{{ $item['key'] }}" name="{{ $item['key'] }}" rows="3" class="{{ $fieldClasses }}">{{ $item['value'] }}</textarea>
                                     @else
                                         <x-text-input :id="'setting-'.$item['key']" :name="$item['key']"
                                                       :type="$item['inputType']"
                                                       :step="$item['step']"
+                                                      :min="$item['min']"
+                                                      :max="$item['max']"
                                                       class="mt-1 block w-full"
                                                       :value="$item['value']" />
                                     @endif

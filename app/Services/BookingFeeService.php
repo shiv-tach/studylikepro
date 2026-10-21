@@ -2,13 +2,15 @@
 
 namespace App\Services;
 
+use App\Enums\BookingFeeType;
 use App\Models\BookingFeePromotion;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 
 /**
- * Prices the student-facing booking fee: the admin-configured amount, reduced
- * by whichever running special offer is most generous when the slot is booked.
+ * Prices the student-facing booking fee: the admin-configured amount (a fixed
+ * sum or a percentage of the price being sold), reduced by whichever running
+ * special offer is most generous when the slot is booked.
  */
 class BookingFeeService
 {
@@ -19,12 +21,19 @@ class BookingFeeService
     /**
      * The fee a booking made at the given instant carries.
      *
-     * @return array{booking_fee_minor: int, discount_minor: int, net_minor: int, promotion: BookingFeePromotion|null}
+     * The percentage type needs the price being sold (`$priceMinor`); callers
+     * that only preview the configuration may omit it, in which case no fee is
+     * quoted until a price is known.
+     *
+     * @return array{booking_fee_minor: int, discount_minor: int, net_minor: int, promotion: BookingFeePromotion|null, type: BookingFeeType, percent: float}
      */
-    public function quote(?CarbonInterface $at = null): array
+    public function quote(?CarbonInterface $at = null, ?int $priceMinor = null): array
     {
         $at = $at !== null ? CarbonImmutable::instance($at) : CarbonImmutable::now();
-        $fee = max(0, $this->settings->int('booking_fee_minor'));
+
+        $type = BookingFeeType::tryFrom($this->settings->string('booking_fee_type')) ?? BookingFeeType::Fixed;
+        $percent = min(100, max(0, $this->settings->float('booking_fee_percent')));
+        $fee = $type->feeFor($priceMinor, max(0, $this->settings->int('booking_fee_minor')), $percent);
 
         $promotion = null;
         $discount = 0;
@@ -54,14 +63,16 @@ class BookingFeeService
             'discount_minor' => $discount,
             'net_minor' => $fee - $discount,
             'promotion' => $promotion,
+            'type' => $type,
+            'percent' => $percent,
         ];
     }
 
     /**
      * What the student pays for the fee alone, after any running offer.
      */
-    public function netMinor(?CarbonInterface $at = null): int
+    public function netMinor(?CarbonInterface $at = null, ?int $priceMinor = null): int
     {
-        return $this->quote($at)['net_minor'];
+        return $this->quote($at, $priceMinor)['net_minor'];
     }
 }

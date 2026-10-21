@@ -135,7 +135,8 @@ class BookingService
 
             // The student-facing fee is snapshotted here, together with the
             // special offer that shaped it, so checkout never re-prices a hold.
-            $fee = $this->fees->quote();
+            // A percentage fee is priced off the lesson price just computed.
+            $fee = $this->fees->quote(priceMinor: $price);
 
             return Booking::query()->create([
                 'student_id' => $draft->student->id,

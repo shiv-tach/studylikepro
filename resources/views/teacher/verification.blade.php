@@ -103,6 +103,13 @@
         ];
     }
 
+    // Acceptance is stored on the profile when the application is submitted, so
+    // the checklist keeps showing it as done afterwards. A failed submit keeps
+    // whatever the teacher actually ticked, error included.
+    $agreementAccepted = session()->hasOldInput()
+        ? (bool) old('agree')
+        : $profile->hasAcceptedAgreement();
+
     $payload = [
         'appName' => config('app.name', 'Studylikepro'),
         'csrfToken' => csrf_token(),
@@ -138,7 +145,7 @@
             'extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
         ],
         'values' => [
-            'agree' => (bool) old('agree'),
+            'agree' => $agreementAccepted,
         ],
         // Laravel owns the wording of every message; the app only decides where
         // it is shown, so the two never drift apart.
@@ -458,14 +465,25 @@
                                 </span>
                             @endif
                         </li>
-                        <li class="flex items-center gap-2 text-slate-600 dark:text-slate-300">Terms and policies accepted</li>
+                        <li class="flex items-center gap-2 {{ $agreementAccepted ? 'text-slate-600 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400' }}">
+                            @if ($agreementAccepted)
+                                <svg class="h-5 w-5 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            @else
+                                <svg class="h-5 w-5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            @endif
+                            <span>Terms and policies accepted</span>
+                        </li>
                     </ul>
 
                     <form method="POST" action="{{ route('teacher.verification.submit') }}" class="mt-5 space-y-4">
                         @csrf
 
                         <label class="flex items-start gap-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-800/40 dark:text-slate-300">
-                            <input type="checkbox" name="agree" value="1" required @checked(old('agree'))
+                            <input type="checkbox" name="agree" value="1" required @checked($agreementAccepted)
                                    class="mt-0.5 rounded border-slate-300 text-primary shadow-sm focus:ring-primary dark:border-slate-600 dark:bg-slate-900">
                             <span>
                                 I have read and accept the

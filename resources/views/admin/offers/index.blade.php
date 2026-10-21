@@ -1,10 +1,21 @@
 @php
+    use App\Enums\BookingFeeType;
+
     $cardBase = 'rounded-2xl border p-6';
     $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
     $fieldClasses = 'rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
     $selectClasses = 'mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900';
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);
     $displayTimezone = config('studylikepro.default_display_timezone');
+    $feeIsPercent = $bookingFeeType === BookingFeeType::Percent;
+    // Fixed mode prints the amount; percent mode prints the configured rate
+    // because the rupee figure depends on the lesson/service being sold.
+    $feeHeading = $feeIsPercent
+        ? BookingFeeType::percentLabel($bookingFeePercent)
+        : $money($bookingFeeMinor);
+    $feeCaption = $feeIsPercent
+        ? __('of every lesson and service price.')
+        : __('Charged to students on top of the lesson price.');
     $window = fn ($offer) => ($offer->starts_at?->copy()->setTimezone($displayTimezone)->format('d M Y, H:i') ?? 'Always')
         .' → '.($offer->ends_at?->copy()->setTimezone($displayTimezone)->format('d M Y, H:i') ?? 'Until switched off');
 
@@ -49,25 +60,35 @@
         <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Booking fee per lesson') }}</p>
-                    <p class="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{{ $money($bookingFeeMinor) }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Booking fee') }}</p>
+                    <p class="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{{ $feeHeading }}</p>
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {{ __('Charged to students on top of the lesson price.') }}
+                        {{ $feeCaption }}
                         <a href="{{ route('admin.settings.edit') }}" class="font-semibold text-primary hover:underline">{{ __('Change the default') }}</a>
                     </p>
                 </div>
                 <div class="text-right">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Students pay right now') }}</p>
-                    <p class="mt-1 text-2xl font-extrabold tracking-tight {{ $feeQuote['net_minor'] < $feeQuote['booking_fee_minor'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100' }}">
-                        {{ $money($feeQuote['net_minor']) }}
-                    </p>
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        @if ($feeQuote['promotion'])
-                            {{ __(':offer is running', ['offer' => $feeQuote['promotion']->name]) }}
-                        @else
-                            {{ __('No running offer') }}
-                        @endif
-                    </p>
+                    @if ($feeIsPercent)
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Running offer') }}</p>
+                        <p class="mt-1 text-lg font-extrabold tracking-tight {{ $feeQuote['promotion'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100' }}">
+                            {{ $feeQuote['promotion']?->describeDiscount() ?? __('No running offer') }}
+                        </p>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            {{ __('The discount applies to the fee at checkout.') }}
+                        </p>
+                    @else
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Students pay right now') }}</p>
+                        <p class="mt-1 text-2xl font-extrabold tracking-tight {{ $feeQuote['net_minor'] < $feeQuote['booking_fee_minor'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100' }}">
+                            {{ $money($feeQuote['net_minor']) }}
+                        </p>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            @if ($feeQuote['promotion'])
+                                {{ __(':offer is running', ['offer' => $feeQuote['promotion']->name]) }}
+                            @else
+                                {{ __('No running offer') }}
+                            @endif
+                        </p>
+                    @endif
                 </div>
             </div>
         </div>

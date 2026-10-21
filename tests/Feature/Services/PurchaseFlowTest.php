@@ -17,6 +17,7 @@ use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherProfile;
 use App\Models\User;
 use App\Services\Payments\PaymentService;
+use App\Services\PlatformSettings;
 use App\Services\PurchaseService;
 use App\Services\SessionSchedulingService;
 use Carbon\CarbonImmutable;
@@ -79,6 +80,21 @@ it('creates a pending purchase from an offering with money snapshots', function 
         ->and($purchase->student_id)->toBe($student->id)
         ->and($purchase->teacher_profile_id)->toBe($offering->teacher_profile_id)
         ->and($purchase->platform_fee_minor)->toBeGreaterThan(0);
+});
+
+it('prices a percentage booking fee on the service price', function () {
+    app(PlatformSettings::class)->set('booking_fee_type', 'percent');
+    app(PlatformSettings::class)->set('booking_fee_percent', 10);
+
+    ['student' => $student, 'offering' => $offering] = serviceScenario(overrides: ['price_minor' => 125000]);
+
+    $purchase = app(PurchaseService::class)->create($offering, $student);
+
+    // 10% of the Rs 1,250 service, added to the price the student pays.
+    expect($purchase->price_minor)->toBe(125000)
+        ->and($purchase->booking_fee_minor)->toBe(12500)
+        ->and($purchase->netBookingFeeMinor())->toBe(12500)
+        ->and($purchase->totalMinor())->toBe(137500);
 });
 
 it('activates a purchase when the payment is captured and opens a pending earning', function () {

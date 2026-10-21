@@ -122,6 +122,8 @@ class BookingController extends Controller
 
         $selectedLessonId = $request->integer('lesson_id') ?: null;
 
+        $priceMinor = $this->bookings->priceMinor($teacherProfile, $subject, $duration, $learnerGradeId);
+
         return view('student.bookings.create', [
             'teacher' => $teacherProfile,
             'subjects' => $subjects,
@@ -134,8 +136,9 @@ class BookingController extends Controller
             'durations' => $durations,
             'duration' => $duration,
             'slotsByDate' => $this->bookings->availableSlots($teacherProfile, $duration, $timezone),
-            'priceMinor' => $this->bookings->priceMinor($teacherProfile, $subject, $duration, $learnerGradeId),
-            'bookingFee' => $fees->quote(),
+            'priceMinor' => $priceMinor,
+            // A percentage fee is previewed off the price of the current pick.
+            'bookingFee' => $fees->quote(priceMinor: $priceMinor),
             'timezone' => $timezone,
         ]);
     }

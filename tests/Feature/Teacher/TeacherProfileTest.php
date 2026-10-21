@@ -143,6 +143,45 @@ test('teachers can upload an avatar', function () {
     Storage::disk('public')->assertExists($path);
 });
 
+test('avatar uploads accept files up to 5 MB', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->teacher()->onboarded()->create();
+
+    $this->actingAs($user)
+        ->put(route('teacher.profile.update'), [
+            'headline' => 'Chemistry tutor',
+            'experience_years' => 3,
+            'education' => 'B.Sc. Chemistry',
+            'languages' => ['English'],
+            'hourly_rate' => 500,
+            'avatar' => UploadedFile::fake()->image('photo.jpg', 300, 300)->size(4096),
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('teacher.profile'));
+
+    expect($user->fresh()->avatar_path)->not->toBeNull();
+});
+
+test('avatar uploads reject files larger than 5 MB', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->teacher()->onboarded()->create();
+
+    $this->actingAs($user)
+        ->put(route('teacher.profile.update'), [
+            'headline' => 'Chemistry tutor',
+            'experience_years' => 3,
+            'education' => 'B.Sc. Chemistry',
+            'languages' => ['English'],
+            'hourly_rate' => 500,
+            'avatar' => UploadedFile::fake()->image('photo.jpg', 300, 300)->size(6144),
+        ])
+        ->assertSessionHasErrors('avatar');
+
+    expect($user->fresh()->avatar_path)->toBeNull();
+});
+
 test('students cannot access teacher profile routes', function () {
     $this->actingAs(User::factory()->student()->create())
         ->get(route('teacher.profile'))

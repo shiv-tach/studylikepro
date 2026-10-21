@@ -5,6 +5,7 @@ use App\Models\ActivityLog;
 use App\Models\Booking;
 use App\Models\BookingFeePromotion;
 use App\Models\User;
+use App\Services\PlatformSettings;
 use Carbon\CarbonImmutable;
 
 it('lists special offers next to the fee students pay today', function () {
@@ -22,6 +23,23 @@ it('lists special offers next to the fee students pay today', function () {
         ->assertSee('Students pay right now')
         ->assertSee('Running')
         ->assertSee('Paused');
+});
+
+it('shows the configured percentage instead of a per-lesson amount', function () {
+    app(PlatformSettings::class)->set('booking_fee_type', 'percent');
+    app(PlatformSettings::class)->set('booking_fee_percent', 10);
+
+    $admin = User::factory()->admin()->create();
+    BookingFeePromotion::factory()->percent(50)->create(['name' => 'Half-price fee']);
+
+    $this->actingAs($admin)
+        ->get(route('admin.offers.index'))
+        ->assertOk()
+        ->assertSee('10%')
+        ->assertSee('of every lesson and service price')
+        ->assertSee('Half-price fee')
+        ->assertSee('50% off the booking fee')
+        ->assertDontSee('Students pay right now');
 });
 
 it('creates a waiver offer that makes new bookings free of the fee', function () {

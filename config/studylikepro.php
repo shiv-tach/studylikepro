@@ -35,10 +35,13 @@ return [
 
     'commission_percent' => (int) env('PLATFORM_COMMISSION_PERCENT', 15),
 
-    // Student-facing booking fee added to every lesson at checkout, in minor
-    // units (Rs 100 = 10000). Admins can retune it or waive it via a special
-    // offer; both live in the platform settings / offers console.
+    // Student-facing booking fee added to every lesson at checkout. It is
+    // priced either as a fixed amount in minor units (Rs 100 = 10000) or as a
+    // percentage of the lesson/service price; admins retune both from the
+    // platform settings console. Offers can discount or waive the result.
+    'booking_fee_type' => env('PLATFORM_BOOKING_FEE_TYPE', 'fixed'),
     'booking_fee_minor' => (int) env('PLATFORM_BOOKING_FEE_MINOR', 10000),
+    'booking_fee_percent' => (float) env('PLATFORM_BOOKING_FEE_PERCENT', 0),
 
     /*
     |--------------------------------------------------------------------------
