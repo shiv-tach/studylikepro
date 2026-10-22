@@ -70,10 +70,11 @@
                     ])->filter()->implode(' · ') ?: null,
                     'price' => $money($offering->price_minor),
                     // Buying a paper service starts a marking order; every other
-                    // service goes straight to checkout.
+                    // service goes straight to checkout. The variant picks the
+                    // button the card renders for it.
                     'action' => $type === \App\Enums\ServiceType::PaperMarking
-                        ? ['kind' => 'link', 'label' => __('Submit paper'), 'url' => route('student.marking.create', $offering)]
-                        : ['kind' => 'form', 'label' => __('Buy'), 'url' => route('student.purchases.store', $offering)],
+                        ? ['kind' => 'link', 'variant' => 'outline', 'label' => __('Submit paper'), 'url' => route('student.marking.create', $offering)]
+                        : ['kind' => 'form', 'variant' => 'primary', 'label' => __('Buy'), 'url' => route('student.purchases.store', $offering)],
                 ];
             })->values()->all(),
         ];

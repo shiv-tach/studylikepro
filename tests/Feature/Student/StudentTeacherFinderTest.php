@@ -463,6 +463,7 @@ test('the dedicated teacher page lists the teacher services grouped by type', fu
     expect($lessonGroup['items'][0]['price'])->toBe(platform_settings()->formatMinor(120000));
     expect($lessonGroup['items'][0]['action'])->toBe([
         'kind' => 'form',
+        'variant' => 'primary',
         'label' => 'Buy',
         'url' => route('student.purchases.store', $lessonOffering),
     ]);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Student;
 
+use App\Enums\ApprovalStatus;
 use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CancelBookingRequest;
@@ -87,7 +88,17 @@ class BookingController extends Controller
     {
         Gate::authorize('create', [Booking::class, $teacherProfile]);
 
-        $teacherProfile->load(['user', 'subjects', 'lessons.grade', 'availabilitySlots', 'timeOff']);
+        // Only the subjects the admin approved are bookable: a pending or
+        // rejected subject never reaches the subject picker.
+        $teacherProfile->load([
+            'user',
+            'subjects' => fn ($relation) => $relation
+                ->where('subjects.is_active', true)
+                ->wherePivot('status', ApprovalStatus::Approved),
+            'lessons.grade',
+            'availabilitySlots',
+            'timeOff',
+        ]);
 
         $timezone = $this->timezoneFor($request);
         $subjects = $teacherProfile->subjects->sortBy('name')->values();
@@ -150,7 +161,16 @@ class BookingController extends Controller
     {
         Gate::authorize('create', [Booking::class, $teacherProfile]);
 
-        $teacherProfile->load(['subjects', 'lessons.grade', 'availabilitySlots', 'timeOff']);
+        // Same approval gate as the picker: an unapproved subject cannot be
+        // booked by posting its id around the form.
+        $teacherProfile->load([
+            'subjects' => fn ($relation) => $relation
+                ->where('subjects.is_active', true)
+                ->wherePivot('status', ApprovalStatus::Approved),
+            'lessons.grade',
+            'availabilitySlots',
+            'timeOff',
+        ]);
 
         $subject = $teacherProfile->subjects->firstWhere('id', (int) $request->validated('subject_id'));
 

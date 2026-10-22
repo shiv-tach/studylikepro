@@ -15,9 +15,15 @@ defineProps({
 
 const copy = useCopy();
 const csrfToken = useCsrfToken();
+const panel = usePanel();
 
-const actionClass =
-    'inline-block rounded-lg bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary hover:text-white';
+const primaryClass =
+    'flex w-full items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary/20 transition hover:bg-primary/90';
+
+const outlineClass =
+    'flex w-full items-center justify-center rounded-xl border border-slate-200/80 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary dark:border-slate-800 dark:text-slate-300';
+
+const actionClass = (action) => (action.variant === 'outline' ? outlineClass : primaryClass);
 </script>
 
 <template>
@@ -28,45 +34,63 @@ const actionClass =
             </template>
         </UiSectionHeading>
 
-        <div class="mt-4 space-y-4">
-            <div v-for="group in groups" :key="group.key">
-                <p class="text-xs font-semibold uppercase tracking-wider text-primary">
-                    {{ group.icon }} {{ group.label }}
-                </p>
+        <div class="mt-5 space-y-6">
+            <div
+                v-for="(group, index) in groups"
+                :key="group.key"
+                :class="index > 0 ? 'border-t border-slate-200/80 pt-5 dark:border-slate-800' : ''"
+            >
+                <div class="flex flex-wrap items-center gap-2">
+                    <span
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-base"
+                        aria-hidden="true"
+                    >
+                        {{ group.icon }}
+                    </span>
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ group.label }}</h3>
+                    <span
+                        class="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                    >
+                        {{ group.items.length }}
+                    </span>
+                </div>
 
-                <div class="mt-2 grid gap-2 sm:grid-cols-2">
-                    <div
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                    <article
                         v-for="offering in group.items"
                         :key="offering.id"
-                        class="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 p-3 dark:border-slate-800"
+                        class="flex flex-col rounded-xl border border-slate-200/80 p-4 transition-all duration-300 hover:border-primary/40 hover:shadow-md dark:border-slate-800"
                     >
-                        <div class="min-w-0">
-                            <p class="truncate text-sm font-semibold text-slate-700 dark:text-slate-200">
+                        <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                            <p class="min-w-0 break-words text-sm font-bold text-slate-800 dark:text-slate-100">
                                 {{ offering.title }}
                             </p>
-                            <p v-if="offering.metaLabel" class="mt-0.5 text-xs text-slate-400">
-                                {{ offering.metaLabel }}
+                            <p class="ml-auto shrink-0 whitespace-nowrap text-sm font-extrabold text-slate-800 dark:text-slate-100">
+                                {{ offering.price }}
                             </p>
                         </div>
 
-                        <div class="shrink-0 text-right">
-                            <p class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ offering.price }}</p>
+                        <p v-if="offering.metaLabel" class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                            {{ offering.metaLabel }}
+                        </p>
 
+                        <div class="mt-auto pt-3">
                             <form
                                 v-if="offering.action.kind === 'form'"
                                 method="POST"
                                 :action="offering.action.url"
-                                class="mt-1"
                             >
                                 <input type="hidden" name="_token" :value="csrfToken">
-                                <button type="submit" :class="actionClass">{{ offering.action.label }}</button>
+                                <button type="submit" :class="actionClass(offering.action)">
+                                    {{ offering.action.label }}
+                                </button>
                             </form>
 
-                            <a v-else :href="offering.action.url" :class="[actionClass, 'mt-1']">
+                            <a v-else :href="offering.action.url" :class="actionClass(offering.action)">
                                 {{ offering.action.label }}
                             </a>
                         </div>
-                    </div>
+                    </article>
                 </div>
             </div>
         </div>

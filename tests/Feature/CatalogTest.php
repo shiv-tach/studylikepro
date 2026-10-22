@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ApprovalStatus;
 use App\Enums\ServiceType;
 use App\Models\EducationLevel;
 use App\Models\Grade;
@@ -220,7 +221,10 @@ test('the subject page lists its verified teachers with the subject rate', funct
         'user_id' => User::factory()->teacher()->create(['name' => 'Priya Perera'])->id,
         'hourly_rate_minor' => 90000,
     ]);
-    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) $grade6->id]]);
+    $teacher->subjects()->attach($subject->id, [
+        'status' => ApprovalStatus::Approved,
+        'grade_levels' => [(string) $grade6->id],
+    ]);
 
     TeacherProfile::factory()->approved()->create([
         'user_id' => User::factory()->teacher()->create(['name' => 'Unrelated Tutor'])->id,
@@ -246,7 +250,10 @@ test('the teacher list on a subject page follows the selected grade', function (
     $teacher = TeacherProfile::factory()->approved()->create([
         'user_id' => User::factory()->teacher()->create(['name' => 'Senior Science Teacher'])->id,
     ]);
-    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) $grade11->id]]);
+    $teacher->subjects()->attach($subject->id, [
+        'status' => ApprovalStatus::Approved,
+        'grade_levels' => [(string) $grade11->id],
+    ]);
 
     // No grade chosen: the teacher is offered for the whole subject.
     $this->get(route('catalog.subjects.show', $subject))
@@ -271,7 +278,10 @@ test('the subject page links to the directory filtered by subject and grade', fu
         $teacher = TeacherProfile::factory()->approved()->create([
             'user_id' => User::factory()->teacher()->create(['name' => "English Tutor {$index}"])->id,
         ]);
-        $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) $grade6->id]]);
+        $teacher->subjects()->attach($subject->id, [
+            'status' => ApprovalStatus::Approved,
+            'grade_levels' => [(string) $grade6->id],
+        ]);
     }
 
     $this->get(route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade6->id]))
@@ -288,7 +298,10 @@ test('teacher cards on a subject page offer booking for the shown grade', functi
     Lesson::factory()->for($subject)->create(['grade_id' => $grade7->id]);
 
     $teacher = TeacherProfile::factory()->approved()->create();
-    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) $grade7->id]]);
+    $teacher->subjects()->attach($subject->id, [
+        'status' => ApprovalStatus::Approved,
+        'grade_levels' => [(string) $grade7->id],
+    ]);
 
     $url = route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade7->id]);
 
@@ -519,7 +532,10 @@ test('a subject page sells the services teachers offer for it', function () {
     $teacher = TeacherProfile::factory()->approved()->create([
         'user_id' => User::factory()->teacher()->create(['name' => 'Nimal Silva'])->id,
     ]);
-    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) $grade9->id]]);
+    $teacher->subjects()->attach($subject->id, [
+        'status' => ApprovalStatus::Approved,
+        'grade_levels' => [(string) $grade9->id],
+    ]);
 
     ServiceOffering::factory()->for($teacher, 'teacherProfile')->forType(ServiceType::Lesson)->create([
         'subject_id' => $subject->id,
@@ -596,7 +612,10 @@ test('subject services offer buying to students and sign-up to guests', function
     Lesson::factory()->for($subject)->create(['grade_id' => $grade9->id]);
 
     $teacher = TeacherProfile::factory()->approved()->create();
-    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) $grade9->id]]);
+    $teacher->subjects()->attach($subject->id, [
+        'status' => ApprovalStatus::Approved,
+        'grade_levels' => [(string) $grade9->id],
+    ]);
 
     $discussion = ServiceOffering::factory()->for($teacher, 'teacherProfile')->forType(ServiceType::Qna)->create([
         'subject_id' => $subject->id,

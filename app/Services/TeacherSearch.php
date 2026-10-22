@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ApprovalStatus;
 use App\Models\Subject;
 use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherProfile;
@@ -36,7 +37,10 @@ class TeacherSearch
             ->withCount(['lessons' => fn ($relation) => $relation->where('lessons.is_active', true)])
             ->with([
                 'user',
-                'subjects' => fn ($relation) => $relation->where('subjects.is_active', true),
+                // Only the subjects the admin approved are shown or matched.
+                'subjects' => fn ($relation) => $relation
+                    ->where('subjects.is_active', true)
+                    ->where('teacher_subjects.status', ApprovalStatus::Approved),
                 'availabilitySlots',
                 'timeOff',
             ]);
@@ -53,7 +57,8 @@ class TeacherSearch
             $rateExpression = $this->subjectRateExpression($gradeId);
 
             $query->whereHas('subjects', function (Builder $relation) use ($subject, $rateExpression, $minRate, $maxRate) {
-                $relation->where('subjects.id', $subject->id);
+                $relation->where('subjects.id', $subject->id)
+                    ->where('teacher_subjects.status', ApprovalStatus::Approved);
 
                 if ($minRate !== null) {
                     $relation->whereRaw("{$rateExpression} >= ?", [$minRate]);
@@ -76,6 +81,7 @@ class TeacherSearch
         if (filled($filters['level'] ?? null)) {
             $query->whereHas('subjects', fn (Builder $relation) => $relation
                 ->where('subjects.is_active', true)
+                ->where('teacher_subjects.status', ApprovalStatus::Approved)
                 ->whereHas('educationLevel', fn (Builder $level) => $level->where('key', $filters['level'])));
         }
 
@@ -87,6 +93,7 @@ class TeacherSearch
             // grade_levels is a JSON array of grade ids on the pivot; a quoted
             // LIKE keeps the match exact.
             $query->whereHas('subjects', fn (Builder $relation) => $relation
+                ->where('teacher_subjects.status', ApprovalStatus::Approved)
                 ->where('teacher_subjects.grade_levels', 'like', '%"'.$filters['grade'].'"%'));
         }
 

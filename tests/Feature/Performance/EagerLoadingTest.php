@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ApprovalStatus;
 use App\Enums\BookingStatus;
 use App\Enums\VerificationStatus;
 use App\Models\Booking;
@@ -68,7 +69,7 @@ function eagerLoadingScenario(): array
 
     // The public subject page previews its teachers, so the scenario teacher
     // gets the subject - the card has to render from eager-loaded data too.
-    $scenario['teacher']->subjects()->attach($subject->id, ['grade_levels' => []]);
+    $scenario['teacher']->subjects()->attach($subject->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => []]);
 
     return [...$scenario, 'conversation' => $conversation, 'review' => $review, 'dispute' => $dispute, 'subject' => $subject];
 }

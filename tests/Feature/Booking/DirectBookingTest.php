@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ApprovalStatus;
 use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\Grade;
@@ -43,7 +44,7 @@ function directBookingScenario(int $durationMinutes = 60): array
         'hourly_rate_minor' => 60000,
         'lesson_duration_minutes' => $durationMinutes,
     ]);
-    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) $gradeId]]);
+    $teacher->subjects()->attach($subject->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => [(string) $gradeId]]);
     $teacher->lessons()->attach($lesson->id);
 
     $day = CarbonImmutable::now('UTC')->addDays(2)->startOfDay();
@@ -75,6 +76,37 @@ it('shows the direct booking page with open slots and the lesson price', functio
         ->assertSee('600')
         ->assertSee('18:00')
         ->assertSee('Reserve this slot');
+});
+
+it('only offers the subjects the admin approved on the booking page', function () {
+    $scenario = directBookingScenario();
+
+    $rejected = Subject::factory()->create([
+        'name' => 'Rejected History',
+        'slug' => 'rejected-history',
+        'education_level_id' => $scenario['subject']->education_level_id,
+    ]);
+    $scenario['teacher']->subjects()->attach($rejected->id, [
+        'status' => ApprovalStatus::Rejected,
+        'grade_levels' => [(string) gradeId(11)],
+    ]);
+
+    $this->actingAs($scenario['student'])
+        ->get(route('student.bookings.create', $scenario['teacher']))
+        ->assertOk()
+        ->assertSee('Mathematics')
+        ->assertDontSee('Rejected History');
+
+    // Posting the rejected subject around the picker is refused too.
+    $this->actingAs($scenario['student'])
+        ->post(route('student.bookings.store', $scenario['teacher']), [
+            'subject_id' => $rejected->id,
+            'duration' => 60,
+            'starts_at' => $scenario['slot']->toIso8601String(),
+        ])
+        ->assertSessionHasErrors('subject_id');
+
+    expect(Booking::query()->count())->toBe(0);
 });
 
 it('reserves the chosen slot as a pending payment hold with the commission snapshot', function () {

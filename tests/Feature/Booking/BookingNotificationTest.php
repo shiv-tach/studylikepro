@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ApprovalStatus;
 use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\Lesson;
@@ -82,7 +83,7 @@ function prepareBookingScenario(): array
         'hourly_rate_minor' => 60000,
         'lesson_duration_minutes' => 60,
     ]);
-    $teacher->subjects()->attach($subject->id, ['grade_levels' => [(string) gradeId(11)]]);
+    $teacher->subjects()->attach($subject->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => [(string) gradeId(11)]]);
     $teacher->lessons()->attach($lesson->id);
 
     $day = CarbonImmutable::now('UTC')->addDays(2)->startOfDay();

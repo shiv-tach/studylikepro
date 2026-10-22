@@ -233,6 +233,7 @@ test('price sorting follows the selected grade rate', function () {
         'hourly_rate_minor' => 200000,
     ]);
     $cheapForGrade->subjects()->attach($subject->id, [
+        'status' => ApprovalStatus::Approved,
         'grade_levels' => [(string) $grade6->id],
         'grade_rates' => [$grade6->id => 150000],
     ]);

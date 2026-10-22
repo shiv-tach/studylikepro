@@ -1,7 +1,7 @@
 <?php
 
-use App\Enums\ServiceType;
 use App\Enums\ApprovalStatus;
+use App\Enums\ServiceType;
 use App\Models\EducationLevel;
 use App\Models\Lesson;
 use App\Models\ServiceOffering;
@@ -38,12 +38,15 @@ it('filters teachers by subject and lesson', function () {
     $algebra = Lesson::factory()->create(['subject_id' => $maths->id, 'name' => 'Algebra', 'slug' => 'algebra']);
 
     $mathsTeacher = approvedTeacher('Maths Teacher');
-    $mathsTeacher->subjects()->attach($maths->id, ['grade_levels' => [(string) gradeId(11)]]);
+    $mathsTeacher->subjects()->attach($maths->id, [
+        'status' => ApprovalStatus::Approved,
+        'grade_levels' => [(string) gradeId(11)],
+    ]);
     $mathsTeacher->lessons()->attach($algebra->id);
 
     $other = approvedTeacher('English Teacher');
     $english = Subject::factory()->create(['name' => 'English', 'slug' => 'english']);
-    $other->subjects()->attach($english->id, ['grade_levels' => []]);
+    $other->subjects()->attach($english->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => []]);
 
     $this->get(route('teachers.index', ['subject' => 'mathematics']))
         ->assertOk()
@@ -85,10 +88,10 @@ it('filters teachers by education level and scopes the picker options to it', fu
     ]);
 
     $olTeacher = approvedTeacher('OL Maths Teacher');
-    $olTeacher->subjects()->attach($olMaths->id, ['grade_levels' => [(string) gradeId(6)]]);
+    $olTeacher->subjects()->attach($olMaths->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => [(string) gradeId(6)]]);
 
     $alTeacher = approvedTeacher('AL Physics Teacher');
-    $alTeacher->subjects()->attach($alPhysics->id, ['grade_levels' => [(string) gradeId(12)]]);
+    $alTeacher->subjects()->attach($alPhysics->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => [(string) gradeId(12)]]);
 
     $this->get(route('teachers.index', ['level' => 'ol']))
         ->assertOk()
@@ -139,14 +142,14 @@ it('filters teachers by grade and language', function () {
     $maths = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'mathematics']);
 
     $highSchool = approvedTeacher('High School Tutor', ['languages' => ['English']]);
-    $highSchool->subjects()->attach($maths->id, ['grade_levels' => [(string) gradeId(11)]]);
+    $highSchool->subjects()->attach($maths->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => [(string) gradeId(11)]]);
 
     $college = User::factory()->teacher()->create(['name' => 'College Tutor']);
     $collegeProfile = TeacherProfile::factory()->approved()->create([
         'user_id' => $college->id,
         'languages' => ['Tamil'],
     ]);
-    $collegeProfile->subjects()->attach($maths->id, ['grade_levels' => [(string) gradeId(13)]]);
+    $collegeProfile->subjects()->attach($maths->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => [(string) gradeId(13)]]);
 
     $this->get(route('teachers.index', ['grade' => gradeId(11)]))
         ->assertOk()
@@ -169,11 +172,11 @@ it('ranks teachers who teach the filtered grade above teachers who do not', func
     ]);
 
     $teaches = approvedTeacher('Teaches The Grade', ['hourly_rate_minor' => 70000, 'rating_avg' => 4.2, 'rating_count' => 4]);
-    $teaches->subjects()->attach($maths->id, ['grade_levels' => [(string) gradeId(11)]]);
+    $teaches->subjects()->attach($maths->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => [(string) gradeId(11)]]);
     $teaches->lessons()->attach($algebra->id);
 
     $pivotOnly = approvedTeacher('Pivot Only', ['hourly_rate_minor' => 70000, 'rating_avg' => 4.9, 'rating_count' => 9]);
-    $pivotOnly->subjects()->attach($maths->id, ['grade_levels' => [(string) gradeId(11)]]);
+    $pivotOnly->subjects()->attach($maths->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => [(string) gradeId(11)]]);
 
     $this->get(route('teachers.index', ['grade' => gradeId(11)]))
         ->assertOk()
@@ -184,10 +187,10 @@ it('filters teachers by price range using the subject override when a subject is
     $maths = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'mathematics']);
 
     $cheap = approvedTeacher('Cheap Override Teacher', ['hourly_rate_minor' => 80000]);
-    $cheap->subjects()->attach($maths->id, ['grade_levels' => [], 'rate_per_hour_minor' => 40000]);
+    $cheap->subjects()->attach($maths->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => [], 'rate_per_hour_minor' => 40000]);
 
     $pricey = approvedTeacher('Pricey Teacher', ['hourly_rate_minor' => 90000]);
-    $pricey->subjects()->attach($maths->id, ['grade_levels' => []]);
+    $pricey->subjects()->attach($maths->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => []]);
 
     $this->get(route('teachers.index', ['subject' => 'mathematics', 'max_rate' => 500]))
         ->assertOk()
