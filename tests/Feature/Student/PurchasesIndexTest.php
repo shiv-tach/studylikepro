@@ -41,7 +41,7 @@ function walletScenario(
     $offering = ServiceOffering::factory()->forType(ServiceType::from($type))->create([
         'teacher_profile_id' => $teacher->id,
         'subject_id' => $subject->id,
-        'lesson_id' => in_array($type, [ServiceType::Lesson->value, ServiceType::Summary->value], true)
+        'lesson_id' => $type === ServiceType::Lesson->value
             ? $lesson->id
             : null,
         'price_minor' => 120000,
@@ -84,7 +84,6 @@ test('the purchase island carries the tabs, the type chips and the route map', f
     expect(collect($config['typeOptions'])->pluck('label')->all())->toBe([
         'All services',
         'Lesson plans',
-        'Lesson summaries',
         'Paper marking',
         'Paper discussions',
         'Q&A sessions',
@@ -206,35 +205,6 @@ test('a hold whose time ran out leaves the active tab and reads as expired', fun
     expect($card['balance'])->toBeNull();
 });
 
-test('a paid summary reports delivery, an unpaid one does not', function () {
-    $scenario = walletScenario(
-        purchaseOverrides: [
-            'status' => PurchaseStatus::PendingPayment,
-            'paid_at' => null,
-        ],
-        type: ServiceType::Summary->value,
-    );
-
-    $student = $scenario['student'];
-
-    $unpaid = purchasesConfig(
-        $this->actingAs($student)->get(route('student.purchases.index'))->assertOk()
-    );
-
-    expect(collect($unpaid['purchases'])->firstWhere('id', $scenario['purchase']->id)['delivery'])->toBeNull();
-
-    // Paying for it is what puts the teacher to work, so only then does the
-    // card say anything about the summary being written.
-    $scenario['purchase']->update(['status' => PurchaseStatus::Active, 'paid_at' => now()]);
-
-    $paid = purchasesConfig(
-        $this->actingAs($student)->get(route('student.purchases.index'))->assertOk()
-    );
-
-    expect(collect($paid['purchases'])->firstWhere('id', $scenario['purchase']->id)['delivery'])
-        ->toBe(['label' => 'Summary being written', 'tone' => 'amber']);
-});
-
 test('the summary tiles split the wallet into payable, usable and finished', function () {
     $scenario = walletScenario();
 
@@ -303,7 +273,6 @@ test('each tab and chip link keeps the other filters applied', function () {
     expect(collect($config['typeOptions'])->pluck('url', 'value')->all())->toBe([
         '' => route('student.purchases.index', ['tab' => 'past']),
         'lesson' => route('student.purchases.index', ['tab' => 'past', 'type' => 'lesson']),
-        'summary' => route('student.purchases.index', ['tab' => 'past', 'type' => 'summary']),
         'paper_marking' => route('student.purchases.index', ['tab' => 'past', 'type' => 'paper_marking']),
         'paper_discussion' => route('student.purchases.index', ['tab' => 'past', 'type' => 'paper_discussion']),
         'qna' => route('student.purchases.index', ['tab' => 'past', 'type' => 'qna']),

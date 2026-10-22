@@ -197,7 +197,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Service catalog (lesson plans, summaries, paper marking, Q&A)
+    | Service catalog (lesson plans, paper marking, Q&A)
     |--------------------------------------------------------------------------
     |
     | Defaults for the teacher-managed service catalog. Teachers override the
@@ -219,8 +219,6 @@ return [
         'marking_default_turnaround_hours' => (int) env('SERVICES_MARKING_TURNAROUND_HOURS', 72),
         'marking_max_files' => (int) env('SERVICES_MARKING_MAX_FILES', 10),
         'marking_default_max_pages' => (int) env('SERVICES_MARKING_MAX_PAGES', 20),
-        // Summary delivery promise.
-        'summary_delivery_days' => (int) env('SERVICES_SUMMARY_DELIVERY_DAYS', 7),
         // Q&A sessions reuse the standard lesson durations.
     ],
 

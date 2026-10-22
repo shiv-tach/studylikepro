@@ -98,8 +98,8 @@ class EarningsService
 
     /**
      * Record the payout a captured service purchase owes the teacher. The row
-     * stays pending until the service is delivered (plan completed, summary
-     * delivered, paper returned), mirroring booking earnings. Idempotent.
+     * stays pending until the service is delivered (plan completed, paper
+     * returned), mirroring booking earnings. Idempotent.
      */
     public function recordForPurchase(ServicePurchase $purchase, ?Payment $payment = null): TeacherEarning
     {

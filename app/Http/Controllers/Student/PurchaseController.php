@@ -17,7 +17,7 @@ use Illuminate\View\View;
 
 /**
  * My Purchases — the student's service catalog wallet: lesson plans with
- * remaining balances, summaries, paper marking orders, discussions and Q&A.
+ * remaining balances, paper marking orders, discussions and Q&A.
  */
 class PurchaseController extends Controller
 {
@@ -33,7 +33,7 @@ class PurchaseController extends Controller
         $tab = ($filters['tab'] ?? null) === 'past' ? 'past' : 'active';
 
         $purchases = $this->bucket($request->user()->servicePurchases(), $tab)
-            ->with(['offering', 'teacherProfile.user', 'subject', 'lesson', 'summary', 'markingOrder'])
+            ->with(['offering', 'teacherProfile.user', 'subject', 'lesson', 'markingOrder'])
             ->when($filters['type'] ?? null, fn ($query, string $type) => $query->where('service_type', $type))
             ->latest()
             ->paginate(8)
@@ -88,7 +88,6 @@ class PurchaseController extends Controller
             'teacherProfile.user',
             'subject',
             'lesson',
-            'summary',
             'markingOrder',
             'sessions.subject',
             'sessions.lesson',

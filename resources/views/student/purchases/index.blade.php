@@ -28,7 +28,6 @@
     // result is exactly what tells the student they have none of that kind yet.
     $typeIcon = fn (ServiceType $type) => match ($type) {
         ServiceType::Lesson => 'graduation',
-        ServiceType::Summary => 'book',
         ServiceType::PaperMarking => 'clipboard',
         ServiceType::PaperDiscussion => 'users',
         ServiceType::Qna => 'sparkles',
@@ -85,9 +84,6 @@
         // The teacher only starts work once the purchase is paid for, so an
         // unpaid hold says nothing about what has been delivered yet.
         $delivery = $purchase->paid_at === null ? null : match (true) {
-            $purchase->type() === ServiceType::Summary => $purchase->summary?->isDelivered()
-                ? ['label' => __('Summary ready to read'), 'tone' => 'emerald']
-                : ['label' => __('Summary being written'), 'tone' => 'amber'],
             $purchase->type() === ServiceType::PaperMarking && $purchase->markingOrder !== null => match (true) {
                 $purchase->markingOrder->status === MarkingOrderStatus::Returned => ['label' => __('Marked paper ready'), 'tone' => 'emerald'],
                 $purchase->markingOrder->isOverdue() => ['label' => __('Past the turnaround deadline'), 'tone' => 'rose'],
@@ -119,12 +115,6 @@
                 'url' => route('student.purchase-sessions.create', $purchase),
                 'label' => __('Book a session'),
                 'variant' => 'primary',
-            ],
-            $purchase->type() === ServiceType::Summary => [
-                'kind' => 'link',
-                'url' => route('student.summaries.show', $purchase),
-                'label' => $purchase->summary?->isDelivered() ? __('Read your summary') : __('See progress'),
-                'variant' => 'outline',
             ],
             $purchase->markingOrder !== null => [
                 'kind' => 'link',
@@ -204,7 +194,7 @@
             'holdExpired' => __('Hold expired'),
             'refresh' => __('Refresh'),
             'emptyTitle' => __('No purchases yet'),
-            'emptyBody' => __('Pick a teacher and choose one of their services — a lesson plan, a summary, paper marking or a discussion — and it lands here the moment you buy it.'),
+            'emptyBody' => __('Pick a teacher and choose one of their services — a lesson plan, paper marking or a discussion — and it lands here the moment you buy it.'),
             'emptyCta' => __('Find a teacher'),
             'filteredTitle' => __('Nothing matches this filter'),
             'filteredBody' => __('Try another service type, or switch between Active and Past.'),
@@ -227,7 +217,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('My purchases') }}</h2>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Lesson plans, summaries, paper marking, discussions and Q&A.') }}</p>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Lesson plans, paper marking, discussions and Q&A.') }}</p>
             </div>
 
             <a href="{{ route('student.teachers.index') }}"

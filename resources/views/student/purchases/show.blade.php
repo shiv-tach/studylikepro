@@ -144,21 +144,9 @@
         ? ['deadline' => $purchase->expires_at->toIso8601String(), 'amount' => $money($purchase->totalMinor())]
         : null;
 
-    // Whatever the teacher owes this purchase: a written summary or a marked
-    // paper, each linking to the screen that tracks its delivery.
+    // Whatever the teacher owes this purchase: a marked paper, linking to the
+    // screen that tracks its delivery.
     $delivery = match (true) {
-        $purchase->type() === ServiceType::Summary => [
-            'icon' => 'book',
-            'title' => __('Lesson summary'),
-            'body' => $purchase->summary?->isDelivered()
-                ? __('Delivered — tap to read.')
-                : __('Your teacher is writing it — you will be notified when it is ready.'),
-            'badge' => [
-                'label' => $purchase->summary?->isDelivered() ? __('Ready') : __('In progress'),
-                'tone' => $purchase->summary?->isDelivered() ? 'emerald' : 'amber',
-            ],
-            'url' => route('student.summaries.show', $purchase),
-        ],
         $purchase->type() === ServiceType::PaperMarking && $purchase->markingOrder !== null => [
             'icon' => 'clipboard',
             'title' => __('Paper marking'),

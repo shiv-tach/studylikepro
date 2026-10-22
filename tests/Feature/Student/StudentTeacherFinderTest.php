@@ -431,9 +431,9 @@ test('the dedicated teacher page lists the teacher services grouped by type', fu
             'price_minor' => 120000,
         ]);
 
-    $summaryOffering = ServiceOffering::factory()
+    $discussionOffering = ServiceOffering::factory()
         ->for($teacher, 'teacherProfile')
-        ->forType(ServiceType::Summary)
+        ->forType(ServiceType::PaperDiscussion)
         ->create([
             'subject_id' => $lesson->subject_id,
             'lesson_id' => $lesson->id,
@@ -449,12 +449,12 @@ test('the dedicated teacher page lists the teacher services grouped by type', fu
 
     $groups = collect($config['serviceGroups'])->keyBy('key');
     $lessonGroup = $groups[ServiceType::Lesson->value];
-    $summaryGroup = $groups[ServiceType::Summary->value];
+    $discussionGroup = $groups[ServiceType::PaperDiscussion->value];
 
     expect($lessonGroup['icon'].' '.$lessonGroup['label'])
         ->toBe(ServiceType::Lesson->icon().' '.ServiceType::Lesson->label());
-    expect($summaryGroup['icon'].' '.$summaryGroup['label'])
-        ->toBe(ServiceType::Summary->icon().' '.ServiceType::Summary->label());
+    expect($discussionGroup['icon'].' '.$discussionGroup['label'])
+        ->toBe(ServiceType::PaperDiscussion->icon().' '.ServiceType::PaperDiscussion->label());
 
     expect($lessonGroup['items'][0]['title'])->toBe('Grade Eight Numbers');
     expect($lessonGroup['items'][0]['price'])->toBe(platform_settings()->formatMinor(120000));
@@ -464,8 +464,8 @@ test('the dedicated teacher page lists the teacher services grouped by type', fu
         'url' => route('student.purchases.store', $lessonOffering),
     ]);
 
-    expect($summaryGroup['items'][0]['price'])->toBe(platform_settings()->formatMinor(35000));
-    expect($summaryGroup['items'][0]['action']['url'])->toBe(route('student.purchases.store', $summaryOffering));
+    expect($discussionGroup['items'][0]['price'])->toBe(platform_settings()->formatMinor(35000));
+    expect($discussionGroup['items'][0]['action']['url'])->toBe(route('student.purchases.store', $discussionOffering));
 });
 
 test('the dedicated teacher page hides services for other grades', function () {
@@ -487,7 +487,7 @@ test('the dedicated teacher page hides services for other grades', function () {
 
     ServiceOffering::factory()
         ->for($teacher, 'teacherProfile')
-        ->forType(ServiceType::Summary)
+        ->forType(ServiceType::PaperDiscussion)
         ->create([
             'subject_id' => $grade9->subject_id,
             'lesson_id' => $grade9->id,

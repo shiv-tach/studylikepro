@@ -2,7 +2,7 @@
 
 **Companion to:** [overview.md](./overview.md)
 **Design rules:** [DESIGN_SYSTEM_AND_THEMING_GUIDE.md](../DESIGN_SYSTEM_AND_THEMING_GUIDE.md)
-**Progress:** Phase 0 (foundation, roles, rebrand) ✅ · Phase 1 (profiles & onboarding) ✅ · Phase 2 (catalog, teacher subjects, admin verification) ✅ · Phase 3 (teacher discovery, availability, pricing) ✅ · Phase 4 (tutoring requests & AI matching) ✅ · Phase 5 (booking & scheduling engine) ✅ · Phase 6 (payments, commission, refunds & earnings) ✅ · Phase 7 (live classes) ✅ · Phase 8 (chat & notifications) ✅ · Phase 9 (reviews, ratings & lesson history) ✅ · Phase 10 (admin console: management, disputes, reports & settings) ✅ · Phase 11 (hardening, UAT & launch) ✅ · Phase 12 (Sri Lankan curriculum: levels, grades & per-grade lessons) ✅ · Phase 13 (service catalog: lesson plans, summaries, paper marking & Q&A) ✅. Launch artefacts: [deployment.md](./deployment.md) runbook and [uat-checklist.md](./uat-checklist.md). See also the companion plans [curriculum-and-grade-plan.md](./curriculum-and-grade-plan.md) and the service-catalog expansion below.
+**Progress:** Phase 0 (foundation, roles, rebrand) ✅ · Phase 1 (profiles & onboarding) ✅ · Phase 2 (catalog, teacher subjects, admin verification) ✅ · Phase 3 (teacher discovery, availability, pricing) ✅ · Phase 4 (tutoring requests & AI matching) ✅ · Phase 5 (booking & scheduling engine) ✅ · Phase 6 (payments, commission, refunds & earnings) ✅ · Phase 7 (live classes) ✅ · Phase 8 (chat & notifications) ✅ · Phase 9 (reviews, ratings & lesson history) ✅ · Phase 10 (admin console: management, disputes, reports & settings) ✅ · Phase 11 (hardening, UAT & launch) ✅ · Phase 12 (Sri Lankan curriculum: levels, grades & per-grade lessons) ✅ · Phase 13 (service catalog: lesson plans, paper marking & Q&A) ✅. Launch artefacts: [deployment.md](./deployment.md) runbook and [uat-checklist.md](./uat-checklist.md). See also the companion plans [curriculum-and-grade-plan.md](./curriculum-and-grade-plan.md) and the service-catalog expansion below.
 
 **Goal in one sentence:** A two-sided tutoring marketplace where a student uploads a question, AI identifies the lesson, the platform matches a verified teacher, the student books and pays for a live 1-on-1 lesson, and both sides rate and track the outcome — with an admin console running verification, payments, disputes, and commission.
 
@@ -543,35 +543,34 @@ Full plan, decisions and phase-by-phase record: [curriculum-and-grade-plan.md](.
 
 Group sessions, subscriptions/lesson packages, recurring bookings, automated teacher payouts, mobile apps, multi-currency/multi-language, referrals/coupons, homework grading, recordings library, AI chat tutor, WebRTC/Laravel Reverb realtime chat upgrade, Meilisearch, parent multi-child dashboards, teacher-student blocking, advanced analytics warehouse.
 
-*Post-V2 backlog (service catalog follow-ups):* async Q&A threads, bundled (marking + discussion) packages, per-grade service pricing, standalone summary sales without tutoring, summary templates, marking rubrics.
+*Post-V2 backlog (service catalog follow-ups):* async Q&A threads, bundled (marking + discussion) packages, per-grade service pricing, marking rubrics.
 
 ---
 
-## 10b. Phase 13 — Service Catalog: Lesson Plans, Summaries, Paper Marking & Q&A ✅
+## 10b. Phase 13 — Service Catalog: Lesson Plans, Paper Marking & Q&A ✅
 
 **Companion plan:** the session plan that drove this phase (service catalog V2). This section is the shipped record.
 
-**Goal:** the four main selling parts become teacher-priced catalog services. A lesson is a time allocation (e.g. 4 hours) the teacher prices flat and the student consumes as one session or several customized sessions; a summary is a separate paid artifact per lesson; paper marking (per subject) is bought per paper with a separately paid live discussion after the marked paper returns; Q&A is a live session scoped to a lesson or a whole subject. All prices are teacher-customized and the student side reflects them immediately. The legacy fixed-slot direct booking is retired from the UI; the machinery beneath it (bookings, availability, classrooms, chat, reviews) is reused for every live session.
+**Goal:** the main selling parts become teacher-priced catalog services. A lesson is a time allocation (e.g. 4 hours) the teacher prices flat and the student consumes as one session or several customized sessions; paper marking (per subject) is bought per paper with a separately paid live discussion after the marked paper returns; Q&A is a live session scoped to a lesson or a whole subject. All prices are teacher-customized and the student side reflects them immediately. The legacy fixed-slot direct booking is retired from the UI; the machinery beneath it (bookings, availability, classrooms, chat, reviews) is reused for every live session.
 
 **Domain model added**
 
-- `service_offerings` — a teacher's priced catalog entry (`service_type`: lesson/summary/paper_marking/paper_discussion/qna, subject/lesson scope, flat `price_minor`, lesson-plan `allocation_minutes` + `default_session_minutes` + `max_sessions`, marking `max_pages` + `turnaround_hours`).
+- `service_offerings` — a teacher's priced catalog entry (`service_type`: lesson/paper_marking/paper_discussion/qna, subject/lesson scope, flat `price_minor`, lesson-plan `allocation_minutes` + `default_session_minutes` + `max_sessions`, marking `max_pages` + `turnaround_hours`).
 - `service_purchases` — the payable unit for every service: money + commission/booking-fee snapshots, plan balance (`allocation_minutes`/`used_minutes`), expiry, status lifecycle (`pending_payment → active → completed | cancelled | expired | disputed → resolved`). Also implements the `Payable` contract so the existing gateway charges it directly.
 - `paper_marking_orders` — upload → paid deadline → marked → returned → accepted / disputed → resolved.
-- `lesson_summaries` — draft → delivered; delivery completes the purchase.
 - `bookings`, `payments`, `refunds`, `teacher_earnings` gained nullable `service_purchase_id` links (`booking_id` is now nullable on payments/refunds/earnings so purchase-level money works without a booking).
 
 **Flows shipped**
 
 - Lesson plans: buy the allocation upfront, then book sessions against the balance; cancelled sessions return time; expiry refunds the unused balance pro-rata (`studylikepro:expire-service-purchases`).
-- Summaries, paper marking, paper discussion, Q&A: purchase → deliver (artifact or live session) → earning becomes eligible.
-- Teacher console: *Services & pricing* (5 offering types with per-type validation), *Plans*, *Summaries*, *Marking* inbox.
-- Student side: teacher profile *Services & pricing* section with live prices and Buy buttons, *My purchases* dashboard with plan balances, session booking, summary reader, marking upload/accept/dispute.
+- Paper marking, paper discussion, Q&A: purchase → deliver (artifact or live session) → earning becomes eligible.
+- Teacher console: *Services & pricing* (4 offering types with per-type validation), *Plans*, *Marking* inbox.
+- Student side: teacher profile *Services & pricing* section with live prices and Buy buttons, *My purchases* dashboard with plan balances, session booking, marking upload/accept/dispute.
 - Admin: *Services*, *Purchases* (refund/cancel) and *Marking* (resolve/refund) consoles.
 
-**Money rules:** prices snapshot at purchase time (teacher edits affect new purchases only); commission, platform fee and booking fee reuse the booking engine's math; refunds flow through `RefundService` (notification + earnings reversal now handle purchase-level refunds); teacher earnings for purchases become eligible on delivery (plan completion, summary delivery, marked paper returned).
+**Money rules:** prices snapshot at purchase time (teacher edits affect new purchases only); commission, platform fee and booking fee reuse the booking engine's math; refunds flow through `RefundService` (notification + earnings reversal now handle purchase-level refunds); teacher earnings for purchases become eligible on delivery (plan completion, marked paper returned).
 
-**Tests:** `PurchaseFlowTest` (checkout, plan balance, completion, prorated expiry refund), `PaperMarkingFlowTest`, `SummaryFlowTest`, `ServiceOfferingConsoleTest` — 41 tests for the catalog, all green with the full suite.
+**Tests:** `PurchaseFlowTest` (checkout, plan balance, completion, prorated expiry refund), `PaperMarkingFlowTest`, `ServiceOfferingConsoleTest` — the catalog suite stays green with the full suite.
 
 **UAT:** section H of [uat-checklist.md](./uat-checklist.md).
 
@@ -579,9 +578,9 @@ Group sessions, subscriptions/lesson packages, recurring bookings, automated tea
 
 ## 11. Launch Acceptance Checklist (maps to overview)
 
-**Student:** register → profile (grade) → pick subjects/lessons for that grade → upload question → AI suggests lesson → browse verified teachers → view teacher profile → book slot → pay → join live class → chat → rate → see lesson history → buy a lesson plan (one or several sessions), a lesson summary, paper marking or a Q&A session from the teacher's service catalog.
+**Student:** register → profile (grade) → pick subjects/lessons for that grade → upload question → AI suggests lesson → browse verified teachers → view teacher profile → book slot → pay → join live class → chat → rate → see lesson history → buy a lesson plan (one or several sessions), paper marking or a Q&A session from the teacher's service catalog.
 
-**Teacher:** register → profile + docs → admin verifies → manage subjects/grades/lessons → set availability + pricing → publish services & pricing (lesson plans, summaries, marking, discussions, Q&A) → receive request (grade-scoped) → accept/reject → teach live lesson → write summaries → mark papers → view earnings → see reviews.
+**Teacher:** register → profile + docs → admin verifies → manage subjects/grades/lessons → set availability + pricing → publish services & pricing (lesson plans, marking, discussions, Q&A) → receive request (grade-scoped) → accept/reject → teach live lesson → mark papers → view earnings → see reviews.
 
 **Admin:** verify teachers → manage students → manage bookings → manage payments → resolve disputes → issue refunds → configure commission → view reports → manage the curriculum (levels, grades, subjects, lessons).
 

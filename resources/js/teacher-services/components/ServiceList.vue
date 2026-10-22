@@ -1,7 +1,9 @@
 <script setup>
 /**
- * The grid for the selected tab, plus the three empty states that actually help:
- * no subjects yet, nothing of this type yet, and nothing matching the filters.
+ * The catalog for the selected tab — one compact row per service by default,
+ * the card grid when the teacher picks it in the toolbar — plus the three empty
+ * states that actually help: no subjects yet, nothing of this type yet, and
+ * nothing matching the filters.
  */
 import { computed } from 'vue';
 import AppIcon from '../../shared/components/AppIcon.vue';
@@ -16,6 +18,7 @@ const props = defineProps({
     hasSubjects: { type: Boolean, default: true },
     tab: { type: String, default: 'all' },
     tabType: { type: Object, default: null },
+    view: { type: String, default: 'list' },
     hasFilters: { type: Boolean, default: false },
 });
 
@@ -104,7 +107,10 @@ function onDelete(offering) {
             </button>
         </div>
 
-        <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div
+            v-else
+            :class="view === 'card' ? 'grid gap-4 md:grid-cols-2 xl:grid-cols-3' : 'flex flex-col gap-3'"
+        >
             <RevealOnScroll
                 v-for="(offering, index) in offerings"
                 :key="offering.id"
@@ -112,6 +118,7 @@ function onDelete(offering) {
             >
                 <ServiceCard
                     :offering="offering"
+                    :view="view"
                     @edit="emit('edit', $event)"
                     @delete="onDelete"
                 />

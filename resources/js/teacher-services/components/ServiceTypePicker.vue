@@ -1,6 +1,6 @@
 <script setup>
 /**
- * Step one of a new service: pick what is being sold. Five tiles, each with the
+ * Step one of a new service: pick what is being sold. Four tiles, each with the
  * type's icon and a one-line explanation, so the teacher never has to guess
  * which combination of fields belongs to which service.
  */

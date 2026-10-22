@@ -159,15 +159,15 @@ Automated equivalents: `tests/Feature/CatalogTest.php`, `tests/Feature/Admin/Cur
 
 ---
 
-## H. Service catalog — lesson plans, summaries, paper marking & Q&A
+## H. Service catalog — lesson plans, paper marking & Q&A
 
 Automated equivalents: `tests/Feature/Services/PurchaseFlowTest.php`, `tests/Feature/Marking/PaperMarkingFlowTest.php`,
-`tests/Feature/Summaries/SummaryFlowTest.php`, `tests/Feature/Teacher/ServiceOfferingConsoleTest.php`.
+`tests/Feature/Teacher/ServiceOfferingConsoleTest.php`.
 
 | # | Step | Expected | ✅ |
 | --- | --- | --- | --- |
 | H1 | Teacher opens *Services & pricing* and creates a **lesson plan** for a lesson | Picks a lesson, sets the total allocation (e.g. 4h), a flat price, the default session length and a session cap; it saves and the price is in rupees | ☐ |
-| H2 | Same teacher adds a **summary**, **paper marking**, **paper discussion** and **Q&A** offering | Each type shows its type-specific fields (lesson scope for summary, subject scope + turnaround for marking, lesson-or-subject for Q&A); wrong scopes are rejected | ☐ |
+| H2 | Same teacher adds a **paper marking**, **paper discussion** and **Q&A** offering | Each type shows its type-specific fields (subject scope + turnaround for marking, lesson-or-subject for Q&A); wrong scopes are rejected | ☐ |
 | H3 | Student opens the teacher profile | The *Services & pricing* section lists every active offering with its price; the teacher raises a price | ☐ |
 | H4 | Teacher raises a price, then the student reloads | The new price shows immediately; a purchase made before the change keeps the old price snapshot | ☐ |
 | H5 | Student buys the lesson plan and pays (test mode) | Purchase becomes Active with the full allocation and a validity date; "My purchases" shows the balance bar | ☐ |
@@ -175,16 +175,15 @@ Automated equivalents: `tests/Feature/Services/PurchaseFlowTest.php`, `tests/Fea
 | H7 | Teacher completes the final session | The plan completes; the teacher's earning becomes available; the student sees the plan under *Past* | ☐ |
 | H8 | Student cancels a plan session | Time returns to the plan balance and can be rebooked | ☐ |
 | H9 | Let a plan expire with time left (force `expires_at` into the past and run the scheduler) | Future sessions are cancelled; the unused time is refunded pro-rata; the purchase is Expired | ☐ |
-| H10 | Student buys a **summary** for a lesson | Purchase activates; teacher writes the draft and delivers; the student reads it; earning becomes eligible | ☐ |
-| H11 | Student buys **paper marking**, uploads a paper and pays | Order Submitted with a paid deadline; the teacher sees it in the marking inbox | ☐ |
-| H12 | Teacher uploads the marked paper, feedback and marks | Order Returned; the purchase completes and the earning is eligible; the student can download the marked files | ☐ |
-| H13 | Student accepts the marked paper | Order Accepted | ☐ |
-| H14 | Student disputes the marked paper | Order Disputed; the purchase is flagged; the admin resolves either way — refund path issues the refund, accept path keeps the result | ☐ |
-| H15 | Student buys a **paper discussion** after receiving the marked paper | The live session books against the purchase and runs in the classroom like any lesson | ☐ |
-| H16 | Student buys a **Q&A** (lesson-scoped, then subject-scoped) | The session books against the purchase; the subject-scoped Q&A shows no lesson on the booking | ☐ |
-| H17 | Admin opens *Services*, *Purchases* and *Marking* consoles | Filtering works; a purchase can be refunded and cancelled; a disputed marking order can be resolved; an offering with purchases cannot be deleted | ☐ |
-| H18 | Visitor opens a subject page (e.g. `/subjects/ol-mathematics?grade=9`) | A *Services for Mathematics in Grade 9* section groups the active offerings of verified teachers by type (lesson plans, summaries, paper marking, paper discussions, Q&A) with price, grade/lesson scope chips and the teacher's name; other grades' offerings, deactivated offerings and unapproved teachers stay hidden; with no offerings yet the empty state links to the teacher directory | ☐ |
-| H19 | Same page, signed in as a student | The student is redirected to `/student/subjects/ol-mathematics` inside their workspace; there each offering shows *Buy now* (heading into that purchase's checkout) and paper marking shows *Submit a paper*; the teacher cards' "Book now" opens the booking page; the guest still gets the public page with *Sign up to buy* | ☐ |
+| H10 | Student buys **paper marking**, uploads a paper and pays | Order Submitted with a paid deadline; the teacher sees it in the marking inbox | ☐ |
+| H11 | Teacher uploads the marked paper, feedback and marks | Order Returned; the purchase completes and the earning is eligible; the student can download the marked files | ☐ |
+| H12 | Student accepts the marked paper | Order Accepted | ☐ |
+| H13 | Student disputes the marked paper | Order Disputed; the purchase is flagged; the admin resolves either way — refund path issues the refund, accept path keeps the result | ☐ |
+| H14 | Student buys a **paper discussion** after receiving the marked paper | The live session books against the purchase and runs in the classroom like any lesson | ☐ |
+| H15 | Student buys a **Q&A** (lesson-scoped, then subject-scoped) | The session books against the purchase; the subject-scoped Q&A shows no lesson on the booking | ☐ |
+| H16 | Admin opens *Services*, *Purchases* and *Marking* consoles | Filtering works; a purchase can be refunded and cancelled; a disputed marking order can be resolved; an offering with purchases cannot be deleted | ☐ |
+| H17 | Visitor opens a subject page (e.g. `/subjects/ol-mathematics?grade=9`) | A *Services for Mathematics in Grade 9* section groups the active offerings of verified teachers by type (lesson plans, paper marking, paper discussions, Q&A) with price, grade/lesson scope chips and the teacher's name; other grades' offerings, deactivated offerings and unapproved teachers stay hidden; with no offerings yet the empty state links to the teacher directory | ☐ |
+| H18 | Same page, signed in as a student | The student is redirected to `/student/subjects/ol-mathematics` inside their workspace; there each offering shows *Buy now* (heading into that purchase's checkout) and paper marking shows *Submit a paper*; the teacher cards' "Book now" opens the booking page; the guest still gets the public page with *Sign up to buy* | ☐ |
 
 ---
 

@@ -181,6 +181,12 @@ export const icons = {
     pause: {
         paths: ['M9 5.5v13M15 5.5v13'],
     },
+    grid: {
+        paths: ['M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z'],
+    },
+    list: {
+        paths: ['M8.5 6.5h11M8.5 12h11M8.5 17.5h11', 'M4.6 6.5h.01M4.6 12h.01M4.6 17.5h.01'],
+    },
 };
 
 export default icons;

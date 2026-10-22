@@ -8,7 +8,6 @@ use App\Enums\ServiceType;
 use App\Models\Booking;
 use App\Models\Grade;
 use App\Models\Lesson;
-use App\Models\LessonSummary;
 use App\Models\PaperMarkingOrder;
 use App\Models\Payment;
 use App\Models\ServiceOffering;
@@ -48,7 +47,7 @@ function purchaseDetailScenario(
     $offering = ServiceOffering::factory()->forType(ServiceType::from($type))->create([
         'teacher_profile_id' => $teacher->id,
         'subject_id' => $subject->id,
-        'lesson_id' => in_array($type, [ServiceType::Lesson->value, ServiceType::Summary->value], true)
+        'lesson_id' => $type === ServiceType::Lesson->value
             ? $lesson->id
             : null,
         'price_minor' => 120000,
@@ -282,38 +281,6 @@ test('a plan with no time left is done and keeps no booking link', function () {
     expect($config['plan']['remainingTone'])->toBe('emerald');
     expect($config['plan']['progress']['percent'])->toBe(100);
     expect($config['plan']['bookUrl'])->toBeNull();
-});
-
-test('a summary purchase links to its delivery screen and reports whether it is ready', function () {
-    $scenario = purchaseDetailScenario(type: ServiceType::Summary->value);
-
-    $student = $scenario['student'];
-    $purchase = $scenario['purchase'];
-
-    $writing = purchaseShowConfig(
-        $this->actingAs($student)->get(route('student.purchases.show', $purchase))->assertOk()
-    );
-
-    expect($writing['delivery']['icon'])->toBe('book');
-    expect($writing['delivery']['title'])->toBe('Lesson summary');
-    expect($writing['delivery']['url'])->toBe(route('student.summaries.show', $purchase));
-    expect($writing['delivery']['badge'])->toBe(['label' => 'In progress', 'tone' => 'amber']);
-    expect($writing['delivery']['body'])->toBe('Your teacher is writing it — you will be notified when it is ready.');
-
-    LessonSummary::factory()->create([
-        'purchase_id' => $purchase->id,
-        'teacher_profile_id' => $scenario['teacher']->id,
-        'subject_id' => $scenario['subject']->id,
-        'lesson_id' => $scenario['lesson']->id,
-        'status' => LessonSummary::STATUS_DELIVERED,
-    ]);
-
-    $delivered = purchaseShowConfig(
-        $this->actingAs($student)->get(route('student.purchases.show', $purchase))->assertOk()
-    );
-
-    expect($delivered['delivery']['badge'])->toBe(['label' => 'Ready', 'tone' => 'emerald']);
-    expect($delivered['delivery']['body'])->toBe('Delivered — tap to read.');
 });
 
 test('a marking purchase reports the state of its order', function () {

@@ -137,16 +137,6 @@ class UpsertServiceOfferingRequest extends FormRequest
                 }
             }
 
-            if ($type === ServiceType::Summary) {
-                if (! $hasLesson && ! $validator->errors()->has('lesson_id')) {
-                    $validator->errors()->add('lesson_id', __('Lesson summaries need a lesson.'));
-                }
-
-                if (! $hasGrade && ! $validator->errors()->has('grade_id')) {
-                    $validator->errors()->add('grade_id', __('Lesson summaries need a grade.'));
-                }
-            }
-
             if ($type === ServiceType::PaperMarking && ! $hasSubject && ! $validator->errors()->has('subject_id')) {
                 $validator->errors()->add('subject_id', __('Paper marking needs a subject.'));
             }

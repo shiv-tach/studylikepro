@@ -41,7 +41,7 @@ function serviceScenario(string $type = ServiceType::Lesson->value, array $overr
         ->create([
             'teacher_profile_id' => $teacher->id,
             'subject_id' => $subject->id,
-            'lesson_id' => in_array($type, [ServiceType::Summary->value, ServiceType::Lesson->value], true)
+            'lesson_id' => $type === ServiceType::Lesson->value
                 ? $lesson->id
                 : null,
             ...$overrides,

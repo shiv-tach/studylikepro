@@ -43,7 +43,6 @@ use App\Http\Controllers\Student\PurchaseController as StudentPurchaseController
 use App\Http\Controllers\Student\PurchaseSessionController as StudentPurchaseSessionController;
 use App\Http\Controllers\Student\ReceiptController;
 use App\Http\Controllers\Student\ReviewController as StudentReviewController;
-use App\Http\Controllers\Student\SummaryController as StudentSummaryController;
 use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
 use App\Http\Controllers\Student\TeacherFinderController;
 use App\Http\Controllers\Student\TeacherProfileController as StudentTeacherProfileController;
@@ -59,7 +58,6 @@ use App\Http\Controllers\Teacher\RequestInboxController as TeacherRequestInboxCo
 use App\Http\Controllers\Teacher\ReviewController as TeacherReviewController;
 use App\Http\Controllers\Teacher\ServiceOfferingController as TeacherServiceOfferingController;
 use App\Http\Controllers\Teacher\SubjectsController as TeacherSubjectsController;
-use App\Http\Controllers\Teacher\SummaryController as TeacherSummaryController;
 use App\Http\Controllers\Teacher\VerificationController as TeacherVerificationController;
 use App\Http\Controllers\TeacherDirectoryController;
 use App\Http\Controllers\VerificationDocumentController;
@@ -166,7 +164,7 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_STUDENT, 'not-suspende
         Route::post('/lessons/{booking}/checkout', [StudentPaymentController::class, 'checkout'])->middleware(['onboarded', 'throttle:checkout'])->name('bookings.checkout');
         Route::get('/payments/{payment}', [StudentPaymentController::class, 'show'])->middleware('onboarded')->name('payments.checkout');
 
-        // Service catalog: lesson plans, summaries, paper marking, discussions & Q&A.
+        // Service catalog: lesson plans, paper marking, discussions & Q&A.
         Route::get('/purchases', [StudentPurchaseController::class, 'index'])->middleware('onboarded')->name('purchases.index');
         Route::get('/purchases/{purchase}', [StudentPurchaseController::class, 'show'])->middleware('onboarded')->name('purchases.show');
         Route::post('/offerings/{offering}/purchase', [StudentPurchaseController::class, 'store'])->middleware(['onboarded', 'throttle:checkout'])->name('purchases.store');
@@ -180,9 +178,6 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_STUDENT, 'not-suspende
         Route::get('/purchases/{purchase}/sessions/create', [StudentPurchaseSessionController::class, 'create'])->middleware('onboarded')->name('purchase-sessions.create');
         Route::post('/purchases/{purchase}/sessions', [StudentPurchaseSessionController::class, 'store'])->middleware('onboarded')->name('purchase-sessions.store');
         Route::post('/purchase-sessions/{booking}/cancel', [StudentPurchaseSessionController::class, 'cancel'])->middleware('onboarded')->name('purchase-sessions.cancel');
-
-        // Lesson summaries (student side).
-        Route::get('/purchases/{purchase}/summary', [StudentSummaryController::class, 'show'])->middleware('onboarded')->name('summaries.show');
 
         // Paper marking (student side).
         Route::get('/marking/{offering}/create', [StudentPaperMarkingController::class, 'create'])->middleware('onboarded')->name('marking.create');
@@ -235,8 +230,8 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
         Route::get('/reviews', [TeacherReviewController::class, 'index'])->middleware('onboarded')->name('reviews.index');
         Route::post('/reviews/{review}/flag', [TeacherReviewController::class, 'flag'])->middleware('onboarded')->name('reviews.flag');
 
-        // Services & pricing: lesson plans, summaries, paper marking,
-        // paper discussions and Q&A offerings.
+        // Services & pricing: lesson plans, paper marking, paper discussions
+        // and Q&A offerings.
         Route::get('/services', [TeacherServiceOfferingController::class, 'index'])->middleware('onboarded')->name('services.index');
         Route::post('/services', [TeacherServiceOfferingController::class, 'store'])->middleware('onboarded')->name('services.store');
         Route::put('/services/{offering}', [TeacherServiceOfferingController::class, 'update'])->middleware('onboarded')->name('services.update');
@@ -246,12 +241,6 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
         // Purchased plans and their sessions.
         Route::get('/plans', [TeacherPlanController::class, 'index'])->middleware('onboarded')->name('plans.index');
         Route::get('/plans/{purchase}', [TeacherPlanController::class, 'show'])->middleware('onboarded')->name('plans.show');
-
-        // Lesson summaries console.
-        Route::get('/summaries', [TeacherSummaryController::class, 'index'])->middleware('onboarded')->name('summaries.index');
-        Route::get('/summaries/{summary}', [TeacherSummaryController::class, 'edit'])->middleware('onboarded')->name('summaries.edit');
-        Route::put('/summaries/{summary}', [TeacherSummaryController::class, 'update'])->middleware('onboarded')->name('summaries.update');
-        Route::post('/summaries/{summary}/deliver', [TeacherSummaryController::class, 'deliver'])->middleware('onboarded')->name('summaries.deliver');
 
         // Paper marking inbox.
         Route::get('/marking', [TeacherPaperMarkingController::class, 'index'])->middleware('onboarded')->name('marking.index');

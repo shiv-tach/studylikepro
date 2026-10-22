@@ -125,8 +125,8 @@ class SubjectPageService
 
     /**
      * The service catalog on the subject page: what verified teachers sell for
-     * this subject — lesson plans, summaries, paper marking, discussions and
-     * Q&A — narrowed to the grade the visitor is scoped to. Grouped in service
+     * this subject — lesson plans, paper marking, discussions and Q&A —
+     * narrowed to the grade the visitor is scoped to. Grouped in service
      * type order so the page reads like the teacher's own services list.
      *
      * @return Collection<int, array{type: ServiceType, offerings: Collection<int, ServiceOffering>}>

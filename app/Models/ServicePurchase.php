@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 /**
  * A paid service purchase: the money-carrying unit for every service type.
  * Live sessions (lesson, Q&A, paper discussion) reference it from bookings;
- * artifacts (summary, marked paper) reference it from their own tables.
+ * the marked paper references it from its own table.
  */
 class ServicePurchase extends Model implements Payable
 {
@@ -126,11 +126,6 @@ class ServicePurchase extends Model implements Payable
     public function markingOrder(): HasOne
     {
         return $this->hasOne(PaperMarkingOrder::class, 'purchase_id');
-    }
-
-    public function summary(): HasOne
-    {
-        return $this->hasOne(LessonSummary::class, 'purchase_id');
     }
 
     public function scopeAwaitingPayment(Builder $query): Builder

@@ -2,7 +2,8 @@
 /**
  * Search and availability sit above the list. The status control is a real
  * toggle group (aria-pressed) rather than a select, so a teacher can switch
- * between active and paused without opening a menu.
+ * between active and paused without opening a menu. The layout control beside
+ * it swaps the catalog between the default list and a card grid.
  */
 import AppIcon from '../../shared/components/AppIcon.vue';
 import { useCopy } from '../composables/usePageContext';
@@ -11,11 +12,12 @@ import { PRIMARY_BUTTON } from '../styles';
 defineProps({
     search: { type: String, default: '' },
     status: { type: String, default: 'all' },
+    view: { type: String, default: 'list' },
     resultLabel: { type: String, default: '' },
     canCreate: { type: Boolean, default: true },
 });
 
-const emit = defineEmits(['update:search', 'update:status', 'create']);
+const emit = defineEmits(['update:search', 'update:status', 'update:view', 'create']);
 
 const copy = useCopy();
 
@@ -23,6 +25,11 @@ const statuses = [
     { key: 'all', label: () => copy.toolbar?.statusAll },
     { key: 'active', label: () => copy.toolbar?.statusActive },
     { key: 'paused', label: () => copy.toolbar?.statusPaused },
+];
+
+const views = [
+    { key: 'list', icon: 'list', label: () => copy.toolbar?.viewList },
+    { key: 'card', icon: 'grid', label: () => copy.toolbar?.viewCard },
 ];
 </script>
 
@@ -76,6 +83,28 @@ const statuses = [
         <p class="shrink-0 px-1 text-xs font-medium text-slate-500 dark:text-slate-400" role="status">
             {{ resultLabel }}
         </p>
+
+        <div
+            role="group"
+            :aria-label="copy.toolbar?.viewLabel"
+            class="flex shrink-0 rounded-xl bg-slate-100 p-1 dark:bg-slate-800"
+        >
+            <button
+                v-for="option in views"
+                :key="option.key"
+                type="button"
+                :aria-pressed="view === option.key ? 'true' : 'false'"
+                :aria-label="option.label()"
+                :title="option.label()"
+                class="rounded-lg p-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                :class="view === option.key
+                    ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-900 dark:text-slate-100'
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'"
+                @click="emit('update:view', option.key)"
+            >
+                <span class="block h-4 w-4" aria-hidden="true"><AppIcon :name="option.icon" /></span>
+            </button>
+        </div>
 
         <button v-if="canCreate" type="button" :class="[PRIMARY_BUTTON, 'shrink-0']" @click="emit('create')">
             <span class="h-4 w-4" aria-hidden="true"><AppIcon name="plus" /></span>

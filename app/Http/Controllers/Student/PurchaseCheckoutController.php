@@ -15,8 +15,8 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 /**
- * Checkout for service purchases (lesson plans, summaries, paper marking,
- * discussions and Q&A). Mirrors the booking checkout flow.
+ * Checkout for service purchases (lesson plans, paper marking, discussions
+ * and Q&A). Mirrors the booking checkout flow.
  */
 class PurchaseCheckoutController extends Controller
 {

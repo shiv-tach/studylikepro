@@ -55,7 +55,7 @@ function submittedMarkingOrder(?User $student = null, ?TeacherProfile $teacher =
  * Pay a pending-payment purchase the way a captured gateway payment would:
  * activate it and seat its earning. The payments ledger still requires a
  * booking_id, so the earning rides a stand-in booking row until that
- * constraint is relaxed (mirrors tests/Feature/Summaries/SummaryFlowTest.php).
+ * constraint is relaxed (mirrors the service purchase flow tests).
  */
 function payForPurchase(ServicePurchase $purchase): void
 {
@@ -292,7 +292,7 @@ it('renders the submission page with per-file validation errors after a rejected
 it('404s the submission page for a non-marking offering', function () {
     $teacher = TeacherProfile::factory()->approved()->create();
     $offering = ServiceOffering::factory()
-        ->forType(ServiceType::Summary)
+        ->forType(ServiceType::Qna)
         ->create(['teacher_profile_id' => $teacher->id]);
 
     $this->actingAs(User::factory()->student()->onboarded()->create())

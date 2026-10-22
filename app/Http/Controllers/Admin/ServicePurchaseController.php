@@ -54,7 +54,7 @@ class ServicePurchaseController extends Controller
     {
         $purchase->load([
             'student', 'teacherProfile.user', 'offering', 'subject', 'lesson',
-            'sessions', 'payments.refunds', 'summary', 'markingOrder',
+            'sessions', 'payments.refunds', 'markingOrder',
         ]);
 
         return view('admin.purchases.show', [

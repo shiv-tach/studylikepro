@@ -41,6 +41,7 @@ const {
     activeTabType,
     search,
     status,
+    view,
     tabs,
     filteredOfferings,
     hasFilters,
@@ -85,6 +86,7 @@ function createFromActiveTab() {
         <ServiceToolbar
             v-model:search="search"
             v-model:status="status"
+            v-model:view="view"
             :result-label="resultLabel"
             :can-create="config.hasSubjects"
             @create="createFromActiveTab"
@@ -95,6 +97,7 @@ function createFromActiveTab() {
             :has-subjects="config.hasSubjects"
             :tab="activeTab"
             :tab-type="activeTabType"
+            :view="view"
             :has-filters="hasFilters"
             @create="openCreate($event)"
             @edit="openEdit"

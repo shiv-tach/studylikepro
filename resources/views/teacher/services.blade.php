@@ -10,7 +10,6 @@
 
     $typeIcons = [
         \App\Enums\ServiceType::Lesson->value => 'graduation',
-        \App\Enums\ServiceType::Summary->value => 'clipboard',
         \App\Enums\ServiceType::PaperMarking->value => 'check-circle',
         \App\Enums\ServiceType::PaperDiscussion->value => 'chat',
         \App\Enums\ServiceType::Qna->value => 'video',
@@ -18,7 +17,6 @@
 
     $typeHints = [
         \App\Enums\ServiceType::Lesson->value => __('A fixed pool of lesson time students book in sessions. The price covers the whole plan.'),
-        \App\Enums\ServiceType::Summary->value => __('A written summary of one lesson, delivered asynchronously.'),
         \App\Enums\ServiceType::PaperMarking->value => __('Marking per paper, with a turnaround promise.'),
         \App\Enums\ServiceType::PaperDiscussion->value => __('A live one-on-one session discussing a marked paper.'),
         \App\Enums\ServiceType::Qna->value => __('A live one-on-one session answering questions on a subject or one lesson.'),
@@ -260,6 +258,9 @@
             'statusPaused' => __('Paused'),
             'resultsOne' => __(':count service'),
             'results' => __(':count services'),
+            'viewLabel' => __('Catalog layout'),
+            'viewList' => __('List view'),
+            'viewCard' => __('Card view'),
         ],
         'card' => [
             'active' => __('Active'),

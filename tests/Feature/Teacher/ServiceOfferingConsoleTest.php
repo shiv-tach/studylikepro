@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ServiceType;
 use App\Models\Grade;
 use App\Models\Lesson;
 use App\Models\ServiceOffering;
@@ -46,7 +47,7 @@ it('shows the services manager with server-rendered grade, subject and lesson op
 
     $config = teacherServicesConfig($response);
 
-    expect($config['types'])->toHaveCount(5)
+    expect($config['types'])->toHaveCount(4)
         ->and(collect($config['types'])->firstWhere('value', 'lesson')['label'])->toBe('Lesson plan')
         ->and($config['options']['grades'])->not->toBeEmpty()
         ->and($config['options']['subjects'][0]['name'])->toBe($this->subject->name)
@@ -98,7 +99,7 @@ it('scopes a rejected edit to the offering that was being edited', function () {
     $this->actingAs($this->teacher)
         ->from(route('teacher.services.index'))
         ->put(route('teacher.services.update', $offering), [
-            'service_type' => 'summary',
+            'service_type' => 'qna',
             'title' => '',
             'price' => '2500',
             'subject_id' => $this->subject->id,
@@ -138,23 +139,6 @@ it('creates every service type and converts rupees to minor units', function () 
                 'default_session_minutes' => 60,
                 'max_sessions' => 8,
                 'lesson_id' => $this->lesson->id,
-                'grade_id' => $this->gradeId,
-            ],
-        ],
-        [
-            [
-                'service_type' => 'summary',
-                'title' => 'Algebra summary',
-                'price' => '1500',
-                'subject_id' => $this->subject->id,
-                'lesson_id' => $this->lesson->id,
-                'grade_id' => $this->gradeId,
-            ],
-            [
-                'service_type' => 'summary',
-                'price_minor' => 150000,
-                'allocation_minutes' => null,
-                'max_sessions' => null,
                 'grade_id' => $this->gradeId,
             ],
         ],
@@ -222,7 +206,7 @@ it('creates every service type and converts rupees to minor units', function () 
         ]);
     }
 
-    expect(ServiceOffering::count())->toBe(5);
+    expect(ServiceOffering::count())->toBe(4);
 });
 
 it('lets a Q&A scope to a single lesson without a subject', function () {
@@ -335,20 +319,19 @@ it('requires a lesson or a subject for Q&A', function () {
 });
 
 it('rejects a duplicate offering for the same type and scope', function () {
-    ServiceOffering::factory()->create([
+    ServiceOffering::factory()->forType(ServiceType::Qna)->create([
         'teacher_profile_id' => $this->profile->id,
         'subject_id' => $this->subject->id,
-        'lesson_id' => $this->lesson->id,
+        'lesson_id' => null,
         'grade_id' => $this->gradeId,
     ]);
 
     $this->actingAs($this->teacher)
         ->post(route('teacher.services.store'), [
-            'service_type' => 'summary',
-            'title' => 'Another summary',
+            'service_type' => 'qna',
+            'title' => 'Another Q&A',
             'price' => '1200',
             'subject_id' => $this->subject->id,
-            'lesson_id' => $this->lesson->id,
             'grade_id' => $this->gradeId,
         ])
         ->assertSessionHasErrors('service_type');
@@ -398,8 +381,8 @@ it('updates an offering', function () {
 
     $this->actingAs($this->teacher)
         ->put(route('teacher.services.update', $offering), [
-            'service_type' => 'summary',
-            'title' => 'Renamed summary',
+            'service_type' => 'qna',
+            'title' => 'Renamed Q&A',
             'price' => '2500',
             'subject_id' => $this->subject->id,
             'lesson_id' => $this->lesson->id,
@@ -410,7 +393,7 @@ it('updates an offering', function () {
 
     $this->assertDatabaseHas('service_offerings', [
         'id' => $offering->id,
-        'title' => 'Renamed summary',
+        'title' => 'Renamed Q&A',
         'price_minor' => 250000,
         'grade_id' => $this->gradeId,
     ]);
@@ -470,7 +453,7 @@ it('forbids another teacher from updating or deleting an offering', function () 
 
     $this->actingAs($intruder)
         ->put(route('teacher.services.update', $offering), [
-            'service_type' => 'summary',
+            'service_type' => 'qna',
             'title' => 'Hijacked',
             'price' => '100',
             'subject_id' => $this->subject->id,

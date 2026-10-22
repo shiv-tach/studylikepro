@@ -19,7 +19,7 @@ class ServiceOfferingFactory extends Factory
     {
         return [
             'teacher_profile_id' => TeacherProfile::factory(),
-            'service_type' => ServiceType::Summary,
+            'service_type' => ServiceType::Qna,
             'subject_id' => Subject::factory(),
             'lesson_id' => null,
             'grade_id' => null,

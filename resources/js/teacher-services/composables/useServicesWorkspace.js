@@ -2,11 +2,11 @@ import { computed, reactive, ref, watch } from 'vue';
 import { format, plural } from './usePageContext';
 
 /**
- * The whole page's client state: which tab and filters are active, which
- * service the composer is editing, the cascade between grade / subject /
- * lesson, the hours + minutes split, and the live preview. Everything that can
- * be decided on the server (labels, routes, limits) arrives in the island; this
- * module only mirrors it.
+ * The whole page's client state: which tab, filters and catalog layout are
+ * active, which service the composer is editing, the cascade between grade /
+ * subject / lesson, the hours + minutes split, and the live preview. Everything
+ * that can be decided on the server (labels, routes, limits) arrives in the
+ * island; this module only mirrors it.
  */
 export function createServicesWorkspace(config) {
     const copy = config.copy ?? {};
@@ -14,10 +14,32 @@ export function createServicesWorkspace(config) {
     const options = config.options ?? {};
     const limits = config.limits ?? {};
     const offerings = config.offerings ?? [];
+    const VIEW_STORAGE_KEY = 'teacherServicesView';
+    const VIEWS = ['list', 'card'];
 
     const activeTab = ref('all');
     const search = ref('');
     const status = ref('all');
+    const view = ref(readStoredView());
+
+    /** The catalog opens as a list; a teacher's pick survives the next visit. */
+    function readStoredView() {
+        try {
+            const stored = window.localStorage.getItem(VIEW_STORAGE_KEY);
+
+            return VIEWS.includes(stored) ? stored : 'list';
+        } catch (error) {
+            return 'list';
+        }
+    }
+
+    watch(view, (next) => {
+        try {
+            window.localStorage.setItem(VIEW_STORAGE_KEY, next);
+        } catch (error) {
+            // Private mode or blocked storage: the toggle still works per page.
+        }
+    });
 
     const countsByType = computed(() => {
         const counts = {};
@@ -227,7 +249,7 @@ export function createServicesWorkspace(config) {
         values.maxPages = null;
         values.turnaroundHours = null;
 
-        if (!['lesson', 'summary', 'qna'].includes(type)) {
+        if (!['lesson', 'qna'].includes(type)) {
             values.lessonId = null;
         }
 
@@ -405,6 +427,7 @@ export function createServicesWorkspace(config) {
         activeTabType,
         search,
         status,
+        view,
         tabs,
         filteredOfferings,
         hasFilters,

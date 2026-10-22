@@ -18,8 +18,8 @@ use Illuminate\View\View;
 class ServiceOfferingController extends Controller
 {
     /**
-     * Manage the teacher's service catalog: lesson plans, summaries,
-     * paper marking, paper discussions and Q&A.
+     * Manage the teacher's service catalog: lesson plans, paper marking,
+     * paper discussions and Q&A.
      */
     public function index(Request $request): View
     {
