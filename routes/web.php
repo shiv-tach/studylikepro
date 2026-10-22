@@ -5,8 +5,8 @@ use App\Http\Controllers\Admin\BookingController as AdminBookingController;
 use App\Http\Controllers\Admin\BookingFeePromotionController as AdminBookingFeePromotionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DisputeController as AdminDisputeController;
-use App\Http\Controllers\Admin\EducationLevelController as AdminEducationLevelController;
 use App\Http\Controllers\Admin\EarningsController as AdminEarningsController;
+use App\Http\Controllers\Admin\EducationLevelController as AdminEducationLevelController;
 use App\Http\Controllers\Admin\LessonController as AdminLessonController;
 use App\Http\Controllers\Admin\ModerationController as AdminModerationController;
 use App\Http\Controllers\Admin\PaperMarkingController as AdminPaperMarkingController;
@@ -29,7 +29,6 @@ use App\Http\Controllers\LegalController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\RequestAttachmentController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Student\BookingController as StudentBookingController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
@@ -46,7 +45,6 @@ use App\Http\Controllers\Student\ReviewController as StudentReviewController;
 use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
 use App\Http\Controllers\Student\TeacherFinderController;
 use App\Http\Controllers\Student\TeacherProfileController as StudentTeacherProfileController;
-use App\Http\Controllers\Student\TutoringRequestController;
 use App\Http\Controllers\Teacher\AvailabilityController as TeacherAvailabilityController;
 use App\Http\Controllers\Teacher\BookingController as TeacherBookingController;
 use App\Http\Controllers\Teacher\DashboardController as TeacherDashboardController;
@@ -54,7 +52,6 @@ use App\Http\Controllers\Teacher\EarningsController as TeacherEarningsController
 use App\Http\Controllers\Teacher\PaperMarkingController as TeacherPaperMarkingController;
 use App\Http\Controllers\Teacher\PlanController as TeacherPlanController;
 use App\Http\Controllers\Teacher\ProfileController as TeacherProfileController;
-use App\Http\Controllers\Teacher\RequestInboxController as TeacherRequestInboxController;
 use App\Http\Controllers\Teacher\ReviewController as TeacherReviewController;
 use App\Http\Controllers\Teacher\ServiceOfferingController as TeacherServiceOfferingController;
 use App\Http\Controllers\Teacher\SubjectsController as TeacherSubjectsController;
@@ -143,13 +140,6 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_STUDENT, 'not-suspende
         Route::get('/find-a-teacher', TeacherFinderController::class)->middleware('onboarded')->name('teachers.index');
         Route::get('/teachers/{teacherProfile}', StudentTeacherProfileController::class)->middleware('onboarded')->name('teachers.show');
 
-        Route::get('/requests', [TutoringRequestController::class, 'index'])->middleware('onboarded')->name('requests.index');
-        Route::get('/requests/create', [TutoringRequestController::class, 'create'])->middleware('onboarded')->name('requests.create');
-        Route::post('/requests', [TutoringRequestController::class, 'store'])->middleware(['onboarded', 'throttle:requests'])->name('requests.store');
-        Route::get('/requests/{tutoringRequest}', [TutoringRequestController::class, 'show'])->middleware('onboarded')->name('requests.show');
-        Route::put('/requests/{tutoringRequest}/lesson', [TutoringRequestController::class, 'updateLesson'])->middleware('onboarded')->name('requests.lesson.update');
-        Route::post('/requests/{tutoringRequest}/cancel', [TutoringRequestController::class, 'cancel'])->middleware('onboarded')->name('requests.cancel');
-
         Route::get('/lessons', [StudentBookingController::class, 'index'])->middleware('onboarded')->name('bookings.index');
         Route::get('/lessons/book/{teacherProfile}', [StudentBookingController::class, 'create'])->middleware('onboarded')->name('bookings.create');
         Route::post('/lessons/book/{teacherProfile}', [StudentBookingController::class, 'store'])->middleware('onboarded')->name('bookings.store');
@@ -215,9 +205,6 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
         Route::delete('/availability/slots/{slot}', [TeacherAvailabilityController::class, 'destroySlot'])->middleware('onboarded')->name('availability.slots.destroy');
         Route::post('/availability/time-off', [TeacherAvailabilityController::class, 'storeTimeOff'])->middleware('onboarded')->name('availability.time-off.store');
         Route::delete('/availability/time-off/{timeOff}', [TeacherAvailabilityController::class, 'destroyTimeOff'])->middleware('onboarded')->name('availability.time-off.destroy');
-
-        Route::get('/requests', [TeacherRequestInboxController::class, 'index'])->middleware('onboarded')->name('requests.index');
-        Route::post('/requests/{tutoringRequest}/respond', [TeacherRequestInboxController::class, 'respond'])->middleware('onboarded')->name('requests.respond');
 
         Route::get('/schedule', [TeacherBookingController::class, 'index'])->middleware('onboarded')->name('schedule.index');
         Route::get('/schedule/{booking}', [TeacherBookingController::class, 'show'])->middleware('onboarded')->name('bookings.show');
@@ -360,7 +347,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/settings/notifications', [SettingsController::class, 'updateNotifications'])->name('settings.notifications.update');
 
     Route::get('/verification-documents/{document}', [VerificationDocumentController::class, 'show'])->name('verification-documents.show');
-    Route::get('/request-attachments/{attachment}', [RequestAttachmentController::class, 'show'])->name('request-attachments.show');
 
     Route::get('/receipts/{booking}', [ReceiptController::class, 'show'])->name('receipts.show');
     Route::match(['get', 'post'], '/payments/{payment}/return', [StudentPaymentController::class, 'return'])->name('payments.return');

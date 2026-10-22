@@ -90,12 +90,6 @@ const status = computed(() => statusClasses[props.lesson?.status] ?? statusClass
                     <span class="h-4 w-4"><AppIcon name="users" /></span>
                     Find a teacher
                 </a>
-                <a
-                    :href="urls.ask"
-                    class="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 px-4 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-slate-800/80 dark:text-slate-300"
-                >
-                    Ask a question
-                </a>
             </div>
         </template>
     </section>

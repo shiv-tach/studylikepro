@@ -30,8 +30,8 @@ class SettingsController extends Controller
                 // same bounds as the other numeric fields apply.
                 'money' => ['nullable', 'numeric', 'min:0', 'max:100000'],
                 'int' => ['nullable', 'integer', 'min:0', 'max:100000'],
-                // Float settings carry their own bounds (AI confidence is 0-1, the
-                // booking fee percentage is 0-100).
+                // Float settings carry their own bounds (the booking fee
+                // percentage is 0-100).
                 'float' => ['nullable', 'numeric', 'min:'.($definition['min'] ?? 0), 'max:'.($definition['max'] ?? 1)],
                 'select' => ['nullable', 'string', Rule::in(array_keys($definition['options'] ?? []))],
                 default => ['nullable', 'string', 'max:500'],

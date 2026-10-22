@@ -34,19 +34,19 @@ defineProps({
                         <span class="absolute inline-flex size-full animate-ping rounded-full bg-go opacity-70"></span>
                         <span class="relative inline-flex size-1.5 rounded-full bg-go"></span>
                     </span>
-                    AI-powered tutor matching
+                    Verified 1-on-1 tutoring
                 </p>
 
                 <h1 class="mt-6 text-display-hero font-semibold">
-                    <span class="block text-balance">Stuck on a question?</span>
+                    <span class="block text-balance">Stuck on a topic?</span>
                     <span class="block text-balance">
                         Get a <span class="glitch text-gradient" data-text="verified tutor">verified tutor</span> — not a guess.
                     </span>
                 </h1>
 
                 <p class="mt-7 max-w-xl text-lg leading-relaxed text-ink-700">
-                    Upload a photo of the question, let AI pinpoint the lesson, and book a live 1-on-1 lesson with a
-                    verified Sri Lankan teacher. Pay securely in rupees — and keep the receipt.
+                    Find the lesson for your grade and book a live 1-on-1 lesson with a verified Sri Lankan teacher.
+                    Pay securely in rupees — and keep the receipt.
                 </p>
 
                 <div class="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">

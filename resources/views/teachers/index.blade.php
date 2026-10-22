@@ -115,7 +115,7 @@
             'perHour' => __('/hr'),
             'view' => __('View'),
             'signInTitle' => __('Sign in to book a lesson'),
-            'signInBody' => __('Create a free student account to request lessons, chat with teachers, and manage your bookings.'),
+            'signInBody' => __('Create a free student account to book lessons, chat with teachers, and manage your bookings.'),
             'getStarted' => __('Get started free'),
             'logIn' => __('Log in'),
             'navSubjects' => __('Subjects'),

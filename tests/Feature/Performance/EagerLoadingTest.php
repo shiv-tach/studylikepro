@@ -1,8 +1,6 @@
 <?php
 
 use App\Enums\BookingStatus;
-use App\Enums\ClassificationStatus;
-use App\Enums\RequestStatus;
 use App\Enums\VerificationStatus;
 use App\Models\Booking;
 use App\Models\Dispute;
@@ -100,8 +98,6 @@ it('renders the student pages from eager-loaded data', function () {
         route('student.teachers.index'),
         route('student.teachers.show', $scenario['teacher']),
         route('student.subjects.show', $scenario['subject']),
-        route('student.requests.index'),
-        route('student.requests.create'),
         route('student.bookings.index'),
         route('student.bookings.show', $scenario['booking']),
         route('student.reviews.show', $scenario['booking']),
@@ -125,7 +121,6 @@ it('renders the teacher pages from eager-loaded data', function () {
         route('teacher.verification'),
         route('teacher.subjects.index'),
         route('teacher.availability.index'),
-        route('teacher.requests.index'),
         route('teacher.schedule.index'),
         route('teacher.bookings.show', $scenario['booking']),
         route('teacher.earnings.index'),
@@ -181,18 +176,6 @@ it('renders the remaining detail pages from eager-loaded data', function () {
     $scenario = eagerLoadingScenario();
     $student = $scenario['student'];
 
-    $request = $student->tutoringRequests()->create([
-        'subject_id' => $scenario['subject']->id,
-        'description' => 'I need help with quadratic equations before my exam next week.',
-        'preferred_windows' => [[
-            'starts_at' => now()->addDay()->setTime(17, 0)->toIso8601String(),
-            'ends_at' => now()->addDay()->setTime(19, 0)->toIso8601String(),
-        ]],
-        'status' => RequestStatus::Open,
-        'classification_status' => ClassificationStatus::Pending,
-        'expires_at' => now()->addDays(7),
-    ]);
-
     $room = classroomScenario();
 
     $pending = TeacherProfile::factory()->create([
@@ -204,7 +187,6 @@ it('renders the remaining detail pages from eager-loaded data', function () {
     $admin = User::factory()->admin()->create();
 
     foreach ([
-        [route('student.requests.show', $request), $student],
         [route('classroom.show', $room['booking']), $room['student']],
         [route('classroom.show', $room['booking']), $room['teacherUser']],
     ] as [$url, $actor]) {

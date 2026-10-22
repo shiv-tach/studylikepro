@@ -1,13 +1,13 @@
 <script setup>
 /**
- * The closing nudge on the subject page: upload a question and let the platform
- * match the student with a verified teacher for a live lesson.
+ * The closing nudge on the subject page: find a verified teacher who teaches
+ * this subject for the student's grade.
  */
 import { usePanel } from '../../shared/composables/usePanel';
 import { useCopy } from '../composables/usePageContext';
 
 defineProps({
-    askUrl: { type: String, default: null },
+    teachersUrl: { type: String, default: null },
 });
 
 const panel = usePanel();
@@ -25,7 +25,7 @@ const copy = useCopy();
             </div>
 
             <a
-                :href="askUrl"
+                :href="teachersUrl"
                 class="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary/20 transition hover:bg-primary/90"
             >
                 {{ copy.ctaAction }}

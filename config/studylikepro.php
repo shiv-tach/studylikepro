@@ -94,25 +94,11 @@ return [
     'throttle' => [
         'login' => (int) env('THROTTLE_LOGIN', 20),
         'register' => (int) env('THROTTLE_REGISTER', 10),
-        'requests' => (int) env('THROTTLE_REQUESTS', 10),
         'uploads' => (int) env('THROTTLE_UPLOADS', 30),
         'messages' => (int) env('THROTTLE_MESSAGES', 60),
         'checkout' => (int) env('THROTTLE_CHECKOUT', 15),
         'contact' => (int) env('THROTTLE_CONTACT', 5),
         'webhooks' => (int) env('THROTTLE_WEBHOOKS', 120),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Tutoring requests
-    |--------------------------------------------------------------------------
-    */
-
-    'requests' => [
-        'max_attachments' => 3,
-        'open_for_days' => 7,
-        'hold_ttl_minutes' => 30,
-        'daily_submission_limit' => (int) env('REQUEST_DAILY_LIMIT', 10),
     ],
 
     /*
@@ -123,6 +109,7 @@ return [
 
     'booking' => [
         'max_advance_days' => 30,
+        'hold_ttl_minutes' => 30,
         'student_cancel_window_hours' => (int) env('BOOKING_CANCEL_WINDOW_HOURS', 24),
         'teacher_start_early_minutes' => 30,
         'auto_complete_grace_minutes' => (int) env('BOOKING_AUTO_COMPLETE_GRACE_MINUTES', 20),
@@ -180,17 +167,6 @@ return [
     'reviews' => [
         // How long a student can change their mind about a review.
         'edit_window_days' => (int) env('REVIEW_EDIT_WINDOW_DAYS', 7),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | AI lesson classification
-    |--------------------------------------------------------------------------
-    */
-
-    'ai' => [
-        'min_confidence' => (float) env('AI_MIN_CONFIDENCE', 0.55),
-        'cache_ttl_minutes' => 60,
     ],
 
     'lesson_durations' => [30, 45, 60, 90],

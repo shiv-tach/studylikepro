@@ -107,11 +107,6 @@ class TeacherProfile extends Model
         return $this->hasMany(TeacherTimeOff::class)->orderBy('starts_on');
     }
 
-    public function requestResponses(): HasMany
-    {
-        return $this->hasMany(RequestResponse::class)->latest();
-    }
-
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class)->latest('starts_at');

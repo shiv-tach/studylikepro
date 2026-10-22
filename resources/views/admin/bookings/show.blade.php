@@ -84,13 +84,9 @@
                         </dd>
                     </div>
                     <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Origin') }}</dt>
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Booking type') }}</dt>
                         <dd class="mt-1 text-sm text-slate-700 dark:text-slate-200">
-                            @if ($booking->tutoringRequest)
-                                {{ __('From request #:id', ['id' => $booking->tutoring_request_id]) }}
-                            @else
-                                {{ __('Direct booking') }}
-                            @endif
+                            {{ __('Direct booking') }}
                         </dd>
                     </div>
                 </dl>

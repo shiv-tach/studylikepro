@@ -26,7 +26,7 @@
         @endif
 
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <p class="text-sm text-slate-500 dark:text-slate-400">The catalog students browse and AI matches questions against.</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">The catalog students browse and book lessons from.</p>
             <button @click="showCreate = ! showCreate"
                     class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition hover:bg-primary/90">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

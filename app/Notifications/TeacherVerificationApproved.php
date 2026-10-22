@@ -25,7 +25,7 @@ class TeacherVerificationApproved extends Notification implements ShouldQueue
             ->line('Your teacher profile has been reviewed and verified.')
             ->when($this->approvedSubjects !== [], fn (MailMessage $mail) => $mail
                 ->line('Approved subjects: '.implode(', ', $this->approvedSubjects).'.'))
-            ->line('You now appear in student search and can receive tutoring requests.')
+            ->line('You now appear in student search and can be booked for live lessons.')
             ->action('Go to your dashboard', route('teacher.dashboard'))
             ->line('Keep your subjects and availability up to date to attract more students.');
     }

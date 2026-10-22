@@ -8,7 +8,6 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('studylikepro:expire-requests')->everyTenMinutes();
 Schedule::command('studylikepro:expire-holds')->everyMinute();
 Schedule::command('studylikepro:expire-service-purchases')->everyTenMinutes();
 Schedule::command('studylikepro:complete-lessons')->everyTenMinutes();

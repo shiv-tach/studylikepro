@@ -105,22 +105,16 @@ export const levels = [
 
 export const steps = [
     {
-        icon: 'camera',
-        title: 'Upload your question',
-        summary: 'Snap a photo of the problem that has you stuck.',
-        detail: 'Take a picture of the exercise or question — there is no long form to fill in before you get help. Upload it and keep going with the rest of your homework.',
-    },
-    {
-        icon: 'sparkles',
-        title: 'AI identifies the lesson',
-        summary: 'The subject and grade-appropriate lesson are pinpointed for you.',
-        detail: 'The question is matched against the curriculum, so you see the exact subject and lesson it belongs to instead of guessing which topic to search for.',
+        icon: 'book',
+        title: 'Choose your subject & lesson',
+        summary: 'Browse the catalog for your own grade.',
+        detail: 'Primary, O/L and A/L are separate catalogs, so the subjects and lessons you see always match the grade on your profile.',
     },
     {
         icon: 'users',
-        title: 'Match with a verified teacher',
+        title: 'Compare verified teachers',
         summary: 'Only teachers who teach that lesson show up.',
-        detail: 'Every tutor on Studylikepro is onboarded by invitation, submits verification documents and is approved by our team before they can accept a single lesson.',
+        detail: 'Filter by subject, lesson and availability. Every tutor on Studylikepro is onboarded by invitation, submits verification documents and is approved by our team before they can accept a single lesson.',
     },
     {
         icon: 'calendar',
@@ -155,9 +149,9 @@ export const features = [
         description: 'Tutors are invited, document-checked and approved by our team before they can accept a lesson.',
     },
     {
-        icon: 'sparkles',
-        title: 'AI question matching',
-        description: 'Upload a question and let the classifier find the subject and grade-appropriate lesson for you.',
+        icon: 'search',
+        title: 'Grade-aware teacher search',
+        description: 'Filter verified teachers by the subject, lesson and grade you need — only tutors who actually teach it appear.',
     },
     {
         icon: 'layers',
@@ -201,7 +195,7 @@ export const profileHighlights = [
 // Sample copy — replace with real student reviews before launch.
 export const testimonials = [
     {
-        quote: 'I photograph the question I am stuck on and get a lesson with a teacher who actually teaches it. No more guessing which topic to search.',
+        quote: 'I pick my lesson, see which teachers actually teach it, and book a slot that fits my week. No more guessing which topic to search.',
         name: 'Student',
         meta: 'O/L · Grade 10',
     },
@@ -219,8 +213,8 @@ export const testimonials = [
 
 export const faqs = [
     {
-        question: 'How does AI question matching work?',
-        answer: 'You upload a photo of the question. The classifier reads it and suggests the subject and the lesson it belongs to, using the curriculum catalog for the grade you selected. You can change the suggestion before you book.',
+        question: 'How do I find the right teacher?',
+        answer: 'Browse the catalog for your grade, open the subject and lesson you need, and compare the verified teachers who teach it. Each profile shows their availability, rates and reviews, and you can book one of their published slots directly.',
     },
     {
         question: 'Who is allowed to teach on Studylikepro?',

@@ -12,7 +12,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('teacher_profile_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('tutoring_request_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('subject_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('topic_id')->nullable()->constrained()->nullOnDelete();
             $table->dateTime('starts_at');

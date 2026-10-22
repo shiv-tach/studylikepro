@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Enums\BookingStatus;
-use App\Enums\RequestStatus;
 use App\Events\BookingCancelled;
 use App\Events\BookingCompleted;
 use App\Events\BookingConfirmed;
@@ -156,10 +155,6 @@ class BookingTransitionService
             'completed_at' => now(),
         ])->save();
 
-        if ($booking->tutoringRequest && $booking->tutoringRequest->status === RequestStatus::Matched) {
-            $booking->tutoringRequest->update(['status' => RequestStatus::Closed]);
-        }
-
         $this->meetings->close($booking);
 
         BookingCompleted::dispatch($booking, $automatic);
@@ -207,15 +202,6 @@ class BookingTransitionService
             'cancelled_by' => $by,
             'cancellation_reason' => $reason,
         ])->save();
-
-        // An abandoned lesson puts the student's question back in front of teachers.
-        $request = $booking->tutoringRequest;
-
-        if ($request
-            && $request->status === RequestStatus::Matched
-            && $request->expires_at?->isFuture()) {
-            $request->update(['status' => RequestStatus::Open]);
-        }
 
         $this->meetings->close($booking);
 

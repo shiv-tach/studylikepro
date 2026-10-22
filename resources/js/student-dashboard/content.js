@@ -17,16 +17,10 @@ export const roadmapSteps = [
         phase: 'Phase 2',
     },
     {
-        key: 'question',
-        title: 'Upload your question',
-        description: 'Add a photo and AI suggests the exact lesson.',
-        phase: 'Phase 4',
-    },
-    {
         key: 'booking',
         title: 'Book & pay securely',
         description: 'Pick an available time and pay through the payment gateway.',
-        phase: 'Phase 5–6',
+        phase: 'Phase 4–5',
     },
     {
         key: 'lesson',
@@ -43,8 +37,7 @@ export const roadmapSteps = [
 ];
 
 export const flowSteps = [
-    { emoji: '📷', title: 'Upload your question', description: 'Snap a photo of what you are stuck on.' },
-    { emoji: '🤖', title: 'AI identifies the lesson', description: 'Know exactly what to learn next.' },
+    { emoji: '🔎', title: 'Find the right lesson', description: 'Browse subjects and lessons for your grade.' },
     { emoji: '👨‍🏫', title: 'Match with a verified teacher', description: 'Only approved tutors appear.' },
     { emoji: '🕐', title: 'Choose a time & pay', description: 'Real availability, secure checkout.' },
     { emoji: '🎥', title: 'Live lesson, then review', description: 'Learn 1-on-1 and rate your tutor.' },

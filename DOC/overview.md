@@ -3,7 +3,6 @@ Student
 •	Parent/student profile 
 •	Subject selection 
 • Grade & lesson selection (Sri Lankan grades 1–13)
-•	Create tutoring request 
 •	Browse teachers 
 •	Teacher profile 
 •	Booking 
@@ -19,8 +18,6 @@ Teacher
 • Grades & lessons (auto-assigned from the curriculum)
 •	Availability 
 •	Pricing (base rate, per-subject and per-grade rates) 
-•	Requests 
-•	Accept/reject 
 •	Live lesson 
 •	Earnings 
 •	Reviews 

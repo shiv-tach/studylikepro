@@ -26,9 +26,7 @@
 
     $cards = collect($bookings->items())->map(function ($booking) use ($money, $timezone) {
         $title = collect([$booking->subject?->name, $booking->lesson?->name])->filter()->implode(' · ')
-            ?: ($booking->tutoringRequest?->description
-                ? Str::limit($booking->tutoringRequest->description, 60)
-                : __('Tutoring lesson'));
+            ?: __('Tutoring lesson');
 
         return [
             'id' => $booking->id,

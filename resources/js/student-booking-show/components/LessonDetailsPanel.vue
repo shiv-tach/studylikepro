@@ -49,10 +49,5 @@ const valueClass = 'mt-1 font-semibold text-slate-700 dark:text-slate-200';
                 <dd :class="valueClass">{{ details.reference }}</dd>
             </div>
         </dl>
-
-        <p v-if="details.requestUrl" class="mt-5 border-t border-slate-200 pt-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            {{ copy.requestLead }}
-            <a :href="details.requestUrl" class="font-semibold text-primary hover:underline">{{ copy.requestLink }}</a>.
-        </p>
     </section>
 </template>

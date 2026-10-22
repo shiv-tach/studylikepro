@@ -18,7 +18,7 @@ demands it.
 | Node (build time only) | Node 20+ for `npm ci && npm run build` | The built assets are committed to the release, not to git. |
 | Object storage | S3-compatible bucket for avatars and chat photos (optional) | Keeps uploads off the app server; set `FILESYSTEM_DISK`, `AWS_*`. |
 | SMTP | Any transactional provider | `MAIL_MAILER=smtp` + host/user/password, and a verified `MAIL_FROM_ADDRESS`. |
-| Supervisor | Keeps `php artisan queue:work` alive | Notifications, AI classification, meeting creation and receipts are queued. |
+| Supervisor | Keeps `php artisan queue:work` alive | Notifications, meeting creation and receipts are queued. |
 | Cron | `php artisan schedule:run` every minute | Holds, reminders, digests, auto-completion, reconciliation. |
 
 ---
@@ -70,10 +70,6 @@ RAZORPAY_WEBHOOK_SECRET=
 
 MEETING_PROVIDER=daily
 DAILY_API_KEY=
-
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-4o-mini
-AI_MIN_CONFIDENCE=0.55
 ```
 
 Then run the first deploy:
@@ -165,7 +161,6 @@ Scheduled work that must be running:
 | --- | --- | --- |
 | `studylikepro:expire-holds` | every minute | Releases unpaid slots |
 | `studylikepro:send-lesson-reminders` | every 5 minutes | Day-ahead and final reminders |
-| `studylikepro:expire-requests` | every 10 minutes | Closes stale tutoring requests |
 | `studylikepro:complete-lessons` | every 10 minutes | Closes lessons nobody ended |
 | `payments:reconcile` | every 15 minutes | Re-checks open orders with the gateway |
 | `studylikepro:send-daily-digest` | daily 07:00 | Per-user digest email |
@@ -242,8 +237,6 @@ Configure these once, then re-check after any URL change:
 - **Daily.co** → API key with room-creation rights into `DAILY_API_KEY`. Rooms are
   private and tokens expire shortly after the lesson, so no domain allow-list is
   needed; the join links only ever go to the two participants.
-- **OpenAI** → key into `OPENAI_API_KEY`, spend limit set, and the model pinned in
-  `OPENAI_MODEL`.
 - **Mail** → SPF, DKIM and DMARC records for the sending domain, and a verified
   sender. Send one digest to a real inbox and check it is not in spam.
 

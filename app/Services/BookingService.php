@@ -141,7 +141,6 @@ class BookingService
             return Booking::query()->create([
                 'student_id' => $draft->student->id,
                 'teacher_profile_id' => $draft->teacher->id,
-                'tutoring_request_id' => $draft->tutoringRequest?->id,
                 'subject_id' => $draft->subject?->id,
                 'lesson_id' => $draft->lesson?->id,
                 'starts_at' => $startsAt,

@@ -162,7 +162,6 @@
                 ? null
                 : __('This teacher does not take your grade right now. Find a verified teacher who does.'),
             'bookUrl' => $canBook ? route('student.bookings.create', $teacher) : null,
-            'requestUrl' => $canBook ? route('student.requests.create') : null,
             'fallbackUrl' => $gradeScoped ? null : route('student.teachers.index'),
         ],
         // The trail the page top renders: a student can always step back up the
@@ -193,8 +192,7 @@
             'noReviews' => __('No reviews yet — this teacher is new to Studylikepro.'),
             'outOfFive' => __(':rating out of 5'),
             'bookSlot' => __('Book a slot'),
-            'sendRequest' => __('Send lesson request'),
-            'pickSlotHint' => __('Pick one of the open slots above, or send your question for the teacher to match a time.'),
+            'pickSlotHint' => __('Pick one of the open slots above to book a live lesson.'),
             'findTeacher' => __('Find a teacher'),
         ],
         'urls' => [

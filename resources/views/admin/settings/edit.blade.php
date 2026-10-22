@@ -9,7 +9,6 @@
         'money' => __('Money'),
         'bookings' => __('Bookings'),
         'refunds' => __('Cancellations & refunds'),
-        'ai' => __('AI matching'),
         'services' => __('Services'),
     ];
 

@@ -1,11 +1,9 @@
 <?php
 
 use App\Enums\BookingStatus;
-use App\Enums\RequestStatus;
 use App\Events\BookingConfirmed;
 use App\Events\BookingExpired;
 use App\Models\Booking;
-use App\Models\TutoringRequest;
 use App\Services\BookingTransitionService;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Validation\ValidationException;
@@ -97,23 +95,6 @@ it('refuses to start a hold that has not been paid for', function () {
     ]);
 
     expect(fn () => transitions()->start($booking))->toThrow(ValidationException::class);
-});
-
-it('completes a lesson and closes the request it answered', function () {
-    $request = TutoringRequest::factory()->create(['status' => RequestStatus::Matched]);
-
-    $booking = Booking::factory()->create([
-        'tutoring_request_id' => $request->id,
-        'status' => BookingStatus::InProgress,
-        'starts_at' => now()->subHour(),
-        'ends_at' => now()->subMinutes(5),
-    ]);
-
-    transitions()->complete($booking);
-
-    expect($booking->refresh()->status)->toBe(BookingStatus::Completed)
-        ->and($booking->completed_at)->not->toBeNull()
-        ->and($request->refresh()->status)->toBe(RequestStatus::Closed);
 });
 
 it('refuses to complete a lesson before it starts', function () {

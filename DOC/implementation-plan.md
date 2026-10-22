@@ -68,8 +68,8 @@ V1 assumptions to confirm (see Section 5): single market, single currency, Engli
 | Lessons & grade scope | P2 (pivot) + P12 (auto-assigned from the curriculum) |
 | Availability | P3 |
 | Pricing | P3 |
-| Requests | P4 |
-| Accept/reject | P4 (proposal) + P5 (booking states) |
+| Requests | Replaced by direct booking (P5) |
+| Accept/reject | Removed with the request inbox |
 | Live lesson | P7 |
 | Earnings | P6 |
 | Reviews | P9 |
@@ -334,7 +334,7 @@ Each has a locked recommendation so implementation can proceed; changing a recom
 
 **DoD:** upload a chemistry photo → topic identified → matching teacher accepts → student sees a payable booking hold, all covered by tests.
 
-**Status (shipped):** ✅ request/attachment/response/booking schema + status enums, `TopicClassifier` contract with the OpenAI implementation and `ClassifyTutoringRequestJob` (image-hash cache, manual-pick fallback on failure or low confidence, raw response kept for audit), `RequestMatcher` + `RequestResponseService` (accept creates the 30-minute `pending_payment` hold in a `lockForUpdate` transaction and expires sibling proposals), student request flow (photo upload, AI states, proposals, hold card), teacher request inbox with suggested slots, mail + database notifications, and the `expire-requests` / `expire-holds` scheduled commands. Client-side image downscaling is deferred (the server enforces 3 files × 5 MB, jpg/png/webp); the profile "Book lesson" CTA is still wired in P5, and first-paid-wins lands with payments in P6.
+**Status (superseded):** the tutoring-request flow described above has been removed. Students now book directly from a verified teacher's published availability: the request, attachment, response and AI-classification models, routes, notifications, tables and scheduler command are gone, and bookings are created by the standard booking stepper. The direct-booking flow and its tests live in [Booking](../tests/Feature/Booking) and the Phase 5 sections below.
 
 ---
 
@@ -479,14 +479,14 @@ Each has a locked recommendation so implementation can proceed; changing a recom
 - **Security:** policy coverage test, rate limits (auth, uploads, AI, messages), upload validation review, signed URLs for private files, webhook verification re-check, mass-assignment review, XSS audit, basic security headers, secret scan.
 - **Compliance & content:** privacy policy, terms, refund/cancellation policy pages, teacher agreement checkbox, branded email templates, contact page.
 - **Ops:** staging → production deploy (MySQL/Postgres, Redis optional, SMTP, object storage, queue worker under supervisor, scheduler cron, `storage:link`), daily backups + restore drill, log rotation, uptime + error monitoring, rollback plan, webhook URLs configured in provider dashboards.
-- **UAT on staging:** register both roles → verify → search → request with photo → AI classify → accept → pay (test mode) → join → chat → complete → review → refund → dispute; then a small live-mode payment smoke test.
+- **UAT on staging:** register both roles → verify → search → book a slot → pay (test mode) → join → chat → complete → review → refund → dispute; then a small live-mode payment smoke test.
 
 **DoD:** all tests green, UAT checklist 100% signed off, monitoring + backups live, launch announced.
 
 **Status (shipped):**
-- **E2E acceptance run** — `tests/Feature/Acceptance/CoreFlowTest.php` drives the whole story through real routes: register → profile → interests → question photo → AI classification → teacher application → admin approval → subjects/availability → accept → checkout → signed webhook → classroom → chat → start/complete → earnings → review, plus a refund/dispute/report walk-through. The human version is [uat-checklist.md](./uat-checklist.md); the go-live steps are in [deployment.md](./deployment.md).
+- **E2E acceptance run** — `tests/Feature/Acceptance/CoreFlowTest.php` drives the whole story through real routes: register → profile → interests → teacher application → admin approval → subjects/availability → direct booking → checkout → signed webhook → classroom → chat → start/complete → earnings → review, plus a refund/dispute/report walk-through. The human version is [uat-checklist.md](./uat-checklist.md); the go-live steps are in [deployment.md](./deployment.md).
 - **Performance** — pagination verified on every user-facing list; the index audit added nothing new (bookings `teacher_profile_id+starts_at`, `student_id+starts_at`, `status+starts_at`; messages `conversation_id+id`; payments `gateway_order_id`/`gateway_payment_id` unique; requests `lesson_id+status`, `status+expires_at`). `tests/Feature/Performance/EagerLoadingTest.php` renders 40+ pages with `preventLazyLoading()` on and mass-assignment protection enabled — zero violations, so no N+1 fixes were needed. The catalog (levels, grades, subjects + lessons) is cached with `CatalogService` and flushed on every curriculum write; platform settings were already cached. Uploads are bounded by dimensions as well as size; the production bundle is ~96 kB CSS + ~92 kB JS (~15 kB + ~34 kB gzipped).
-- **Security** — `SecurityHeaders` middleware (nosniff, frame options, referrer policy, Permissions-Policy scoped to the video provider, HSTS over HTTPS, CSP allow-listing fonts and the payment vendor); named rate limits for login, registration, requests, uploads, chat, checkout, contact and webhooks; upload validation reviewed (raster-only, size + dimension caps, private vs public disks deliberate); webhook signatures re-checked (constant-time compare, single application per event id); mass-assignment audit found no `create($request->all())` patterns; XSS audit found no raw Blade echoes; a repository secret-scan test and a policy-coverage suite now run in CI.
+- **Security** — `SecurityHeaders` middleware (nosniff, frame options, referrer policy, Permissions-Policy scoped to the video provider, HSTS over HTTPS, CSP allow-listing fonts and the payment vendor); named rate limits for login, registration, uploads, chat, checkout, contact and webhooks; upload validation reviewed (raster-only, size + dimension caps, private vs public disks deliberate); webhook signatures re-checked (constant-time compare, single application per event id); mass-assignment audit found no `create($request->all())` patterns; XSS audit found no raw Blade echoes; a repository secret-scan test and a policy-coverage suite now run in CI.
 - **Compliance & content** — `/privacy`, `/terms`, `/refund-policy` (figures read from platform settings), `/contact` (stored + notified + throttled), footer links everywhere, teacher agreement checkbox with versioned acceptance recorded on the profile, branded markdown mail theme.
 - **Ops** — deployment runbook covering servers, env checklist, first deploy, release/rollback, Supervisor, scheduler, backups + restore drill template, logging/monitoring and the post-deploy smoke test.
 

@@ -5,7 +5,6 @@ namespace App\Support;
 use App\Models\Lesson;
 use App\Models\Subject;
 use App\Models\TeacherProfile;
-use App\Models\TutoringRequest;
 use App\Models\User;
 use Carbon\CarbonInterface;
 
@@ -21,7 +20,6 @@ final readonly class BookingDraft
         public CarbonInterface $endsAt,
         public ?Subject $subject = null,
         public ?Lesson $lesson = null,
-        public ?TutoringRequest $tutoringRequest = null,
         public ?string $learnerName = null,
         public ?int $learnerGradeId = null,
         public ?int $priceMinor = null,

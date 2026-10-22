@@ -10,7 +10,7 @@ use App\Models\TeacherProfile;
 use App\Models\User;
 use App\Notifications\BookingRequestReceived;
 use App\Services\BookingFeeService;
-use App\Services\RequestMatcher;
+use App\Services\SlotService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Notification;
 
@@ -110,8 +110,8 @@ it('reserves the chosen slot as a pending payment hold with the commission snaps
         ->and($booking->ends_at->timestamp)->toBe($scenario['slot']->addHour()->timestamp)
         ->and($booking->expires_at->lessThanOrEqualTo(now()->addMinutes(31)))->toBeTrue();
 
-    expect(app(RequestMatcher::class)->isSlotOpen($scenario['teacher'], $booking->starts_at, $booking->ends_at))
-        ->toBeFalse();
+    expect(app(SlotService::class)->blockedRanges($scenario['teacher'], $booking->starts_at, $booking->ends_at))
+        ->not->toBeEmpty();
 
     Notification::assertSentTo($scenario['teacherUser'], BookingRequestReceived::class);
 });

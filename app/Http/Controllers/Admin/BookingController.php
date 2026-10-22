@@ -77,7 +77,6 @@ class BookingController extends Controller
             'teacherProfile.user',
             'subject',
             'lesson',
-            'tutoringRequest',
             'payments.refunds',
             'refunds',
             'earning',

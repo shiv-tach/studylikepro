@@ -8,25 +8,6 @@ use Illuminate\Http\UploadedFile;
  * The named limits from config/studylikepro.php, exercised one by one. Each
  * test lowers the limit so a handful of requests is enough to trip it.
  */
-it('rate limits tutoring request submissions', function () {
-    config(['studylikepro.throttle.requests' => 2]);
-
-    $student = User::factory()->student()->onboarded()->create();
-
-    $payload = fn (string $description) => [
-        'description' => $description,
-        'windows' => [[
-            'date' => now()->addDay()->toDateString(),
-            'from' => '10:00',
-            'to' => '11:00',
-        ]],
-    ];
-
-    $this->actingAs($student)->post(route('student.requests.store'), $payload('Please help me with algebra before my exam.'))->assertRedirect();
-    $this->actingAs($student)->post(route('student.requests.store'), $payload('Please help me with geometry before my exam.'))->assertRedirect();
-    $this->actingAs($student)->post(route('student.requests.store'), $payload('Please help me with calculus before my exam.'))->assertStatus(429);
-});
-
 it('rate limits chat messages', function () {
     config(['studylikepro.throttle.messages' => 2]);
 

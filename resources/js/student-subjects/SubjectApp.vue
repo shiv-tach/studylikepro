@@ -43,7 +43,7 @@ provide(CSRF_KEY, props.config.csrfToken ?? '');
         </RevealOnScroll>
 
         <RevealOnScroll :delay="100">
-            <SubjectCta :ask-url="config.urls.ask" />
+            <SubjectCta :teachers-url="config.teachers.directoryUrl" />
         </RevealOnScroll>
     </div>
 </template>

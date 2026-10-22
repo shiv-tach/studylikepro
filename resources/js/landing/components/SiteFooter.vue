@@ -52,8 +52,8 @@ const columns = computed(() => [
                     </span>
                 </h2>
                 <p class="mt-6 max-w-3xl text-lg leading-relaxed text-white/70">
-                    Live 1-on-1 tutoring on demand, mapped to the Sri Lankan syllabus from Grade 1 to A/L. Upload a
-                    question, let AI pinpoint the lesson, and book a verified teacher — paid securely in rupees.
+                    Live 1-on-1 tutoring on demand, mapped to the Sri Lankan syllabus from Grade 1 to A/L. Find the
+                    lesson for your grade and book a verified teacher — paid securely in rupees.
                 </p>
 
                 <div class="mt-10 grid grid-cols-2 gap-8 text-sm sm:grid-cols-3">

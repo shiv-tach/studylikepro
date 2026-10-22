@@ -42,7 +42,7 @@
 
             <div class="mt-12 rounded-2xl border border-slate-200/80 bg-white p-6">
                 <h2 class="text-base font-bold text-slate-800">{{ __('Want help with :subject?', ['subject' => $subject->name]) }}</h2>
-                <p class="mt-1 text-sm text-slate-500">{{ __('Upload a question and we will match you with a verified teacher for a live lesson.') }}</p>
+                <p class="mt-1 text-sm text-slate-500">{{ __('Find a verified teacher who teaches this subject for your grade and book a live lesson.') }}</p>
                 <p class="mt-4">
                     @auth
                         <a href="{{ route('dashboard') }}" class="font-semibold text-primary hover:underline">{{ __('Go to my dashboard') }}</a>

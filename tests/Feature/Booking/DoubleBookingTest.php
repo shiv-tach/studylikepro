@@ -8,7 +8,7 @@ use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherProfile;
 use App\Models\User;
 use App\Notifications\BookingExpired;
-use App\Services\RequestMatcher;
+use App\Services\SlotService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Notification;
 
@@ -167,7 +167,7 @@ it('keeps a live hold blocking the slot until it is paid or expires', function (
     $this->artisan('studylikepro:expire-holds')->assertSuccessful();
 
     expect($hold->refresh()->status)->toBe(BookingStatus::PendingPayment)
-        ->and(app(RequestMatcher::class)->isSlotOpen($scenario['teacher'], $scenario['slot'], $scenario['slot']->addHour()))->toBeFalse();
+        ->and(app(SlotService::class)->blockedRanges($scenario['teacher'], $scenario['slot'], $scenario['slot']->addHour()))->not->toBeEmpty();
 });
 
 it('releases the slot and warns the student when a hold expires', function () {

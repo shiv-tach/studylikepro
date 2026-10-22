@@ -26,21 +26,19 @@ Automated equivalent: `tests/Feature/Acceptance/CoreFlowTest.php` (runs in CI).
 | A1f | Open *My subjects* after finishing | The picked category subjects appear under their basket headers marked *chosen* and every compulsory subject is listed; each card opens its subject page | ☐ |
 | A2 | Change the learning profile (grade, language, goals) | Grade picker groups grades under Primary · O/L · A/L · Other; the language select keeps the wizard's answer; saving returns to the profile | ☐ |
 | A3 | Pick a subject and a lesson | Only your level's subjects and your grade's lessons are offered; choices persist after a reload | ☐ |
-| A4 | Create a request with a question photo attached | Request page shows *Classifying…* then the subject, lesson and confidence | ☐ |
-| A5 | Trust the AI suggestion | Request status becomes Open; matching teachers notified | ☐ |
-| A6 | Override the suggestion on another request | The chosen subject/lesson replaces the guess; only lessons of the request's grade are offered | ☐ |
+| A4 | Open a verified teacher from *Find a teacher* and click **Book a slot** | The booking page shows the learner grade read-only from the learning profile; only that grade's lessons and rate are offered | ☐ |
+| A5 | Pick a published slot and confirm the booking | A pending-payment hold appears in *My lessons* with the payment countdown; the teacher sees the hold in *Schedule* | ☐ |
+| A6 | Try to book the same slot in a second session | The slot is rejected because it is held; the first hold is untouched | ☐ |
 | A7 | Register as a teacher, complete the teaching profile | Step 1 is marked completed in the 2-step progress; verification page opens | ☐ |
 | A8 | Try the dashboard or another teacher page before submitting verification | Redirected back to verification; step 2 shows as in progress | ☐ |
-| A9 | Upload a government ID and submit for review | Terms checkbox required; status Pending and the teacher area unlocks with both steps completed | ☐ |
-| A10 | Admin approves the application | Teacher sees "Approved"; appears in `/teachers` | ☐ |
-| A11 | Teacher adds subjects (grades and lessons auto-assign), sets a rate per grade and availability | Subject panels show grade chips with a rate input each and lesson checkboxes pre-selected; weekly slots appear | ☐ |
-| A12 | Teacher opens the request inbox | The student's question and photo are visible | ☐ |
-| A13 | Teacher accepts with a slot | A booking hold exists; the student is notified | ☐ |
-| A14 | Student pays from the checkout page (test mode) | Booking confirmed, "Payment received", receipt available | ☐ |
-| A15 | Both open **Join** in the classroom | Classroom page loads with the lesson countdown and the correct join link per role | ☐ |
-| A16 | Both exchange chat messages | Messages appear without a reload (5s poll), unread badges behave | ☐ |
-| A17 | Teacher starts and completes the lesson | Status Completed; earnings row becomes available; system message in the chat | ☐ |
-| A18 | Student leaves a review | Rating appears on the teacher profile; history shows the lesson | ☐ |
+| A9 | Pick at least one subject, upload a government ID and submit for review | Subjects are required; the terms checkbox is required; status Pending and the teacher area unlocks with both steps completed | ☐ |
+| A10 | Admin approves the application | Teacher sees "Approved"; the pending subjects are approved and the teacher appears in `/teachers` | ☐ |
+| A11 | Teacher configures grades, lessons, a rate per grade and availability | Subject panels show grade chips with a rate input each and lesson checkboxes pre-selected; weekly slots appear | ☐ |
+| A12 | Student pays from the checkout page (test mode) | Booking confirmed, "Payment received", receipt available | ☐ |
+| A13 | Both open **Join** in the classroom | Classroom page loads with the lesson countdown and the correct join link per role | ☐ |
+| A14 | Both exchange chat messages | Messages appear without a reload (5s poll), unread badges behave | ☐ |
+| A15 | Teacher starts and completes the lesson | Status Completed; earnings row becomes available; system message in the chat | ☐ |
+| A16 | Student leaves a review | Rating appears on the teacher profile; history shows the lesson | ☐ |
 
 ---
 
@@ -122,7 +120,7 @@ Automated equivalent: `tests/Feature/Acceptance/CoreFlowTest.php` (runs in CI).
 
 Automated equivalents: `tests/Feature/CatalogTest.php`, `tests/Feature/Admin/CurriculumLevelTest.php`, `tests/Feature/Admin/GradeLessonTest.php`,
 `tests/Feature/Admin/SubjectBasketTest.php`, `tests/Feature/Teacher/GradeLessonAssignmentTest.php`, `tests/Feature/Student/GradeScopedCatalogTest.php`,
-`tests/Feature/Student/BasketSubjectsTest.php`, `tests/Feature/Matching/GradeMatchTest.php`, `tests/Feature/TeacherDiscoveryTest.php`,
+`tests/Feature/Student/BasketSubjectsTest.php`, `tests/Feature/TeacherDiscoveryTest.php`,
 `tests/Feature/Student/StudentTeacherFinderTest.php`.
 
 | # | Step | Expected | ✅ |
@@ -130,9 +128,7 @@ Automated equivalents: `tests/Feature/CatalogTest.php`, `tests/Feature/Admin/Cur
 | G1 | Admin opens `/admin/curriculum` | The four levels (Primary, O/L, A/L, Other) with their active subject, grade and lesson counts | ☐ |
 | G2 | Admin edits **O/L Mathematics** and reads the Grade 6 tab | The real lesson list (12 lessons in Grade 6, 10 in Grade 7, …); add, copy-to-grade, bulk-activate and move-lesson tools all work; the change is visible on the student side after a reload | ☐ |
 | G3 | Teacher selects **O/L Mathematics** while setting up subjects | Grades 6–11 and every lesson are auto-assigned; unchecking Grade 10 detaches its lessons when saved | ☐ |
-| G4 | Teacher opens the request inbox with a Grade 8 request pending | Only requests for grades the teacher covers appear, each with its grade chip; the nav badge count matches | ☐ |
-| G5 | Grade 8 student opens interests, the request form and the booking page | Interests lists only O/L Grade 8 subjects; the request form and booking page offer only Grade 8 lessons; a Grade 11 lesson cannot be submitted, confirmed or booked | ☐ |
-| G6 | Grade 8 request where the lesson is only taught by a Grade 11-only teacher | That teacher is neither notified nor shown the request in the inbox | ☐ |
+| G5 | Grade 8 student opens interests and the booking page | Interests lists only O/L Grade 8 subjects; the booking page offers only Grade 8 lessons; a Grade 11 lesson cannot be booked | ☐ |
 | G7 | Admin renames lessons in the matrix | Teacher and student pickers show the new names (catalog cache flushed), and directory cards show "Grades 6-11 · N lessons" | ☐ |
 | G8 | Visitor opens `/subjects` | The four levels (Primary, O/L, A/L, Other) are offered; picking a level reveals its grades; picking a grade lists only the subjects that run in it (e.g. Commerce for Grade 10–11, not Grade 6), each with the grade's lesson count; opening one lists that grade's lessons with a "View all grades" link | ☐ |
 | G9 | Visitor opens a subject (e.g. `/subjects/english?grade=6`) | Verified teachers for that subject and grade are listed with their hourly rate for the selected grade, teaching scope and next availability; "See all N teachers" opens the directory pre-filtered; each card opens the teacher profile to book | ☐ |
@@ -153,7 +149,6 @@ Automated equivalents: `tests/Feature/CatalogTest.php`, `tests/Feature/Admin/Cur
 | G19 | Grade 8 student opens *Find a teacher* from the dashboard | The page lists only verified teachers who take Grade 8 (their Grade 8 hourly rate shown); the subject picker offers Grade 8 subjects; picking a date and time window keeps only teachers genuinely free then; "Earliest availability" puts the soonest open slot first; the `grade` query parameter cannot widen the list | ☐ |
 | G20 | Grade 8 student opens a teacher from the finder | The profile opens inside the student area (`/student/teachers/…`) showing only Grade 8 subjects, lessons and rates ("Grade 8 lessons & rates"); *Book a slot* opens the booking page; the student is redirected from `/teachers` and `/teachers/{id}`; a guest still gets the full public profile with the log-in CTA; a teacher who does not take Grade 8 gets a notice linking back to *Find a teacher* | ☐ |
 | G21 | Grade 8 student opens `/student/lessons/book/{teacher}` | The grade shows as a read-only value taken from the learning profile (no grade picker); adding `?learner_grade_id=…` to the URL or posting one leaves the lessons and the rate at Grade 8; *Change grade* opens the learning profile, and the page then follows the new grade | ☐ |
-| G22 | Grade 8 student opens `/student/requests/create` | The learner grade shows read-only from the learning profile (no grade picker); posting another `grade_id` still stores the request at Grade 8, so matching and the AI lesson scope stay at that grade | ☐ |
 | G23 | Grade 9 student opens interests and clicks a subject card | The dedicated subject page opens inside the student area at `/student/subjects/{slug}` (e.g. `/student/subjects/ol-mathematics`) with only the profile grade's lessons, services and teachers | ☐ |
 | G24 | Student opens the public `/subjects/{slug}?grade=…` URL (from a bookmark or the marketing site) | They are redirected into `/student/subjects/{slug}`; the query-string grade never widens the page — lessons, services and rates stay on the profile grade | ☐ |
 

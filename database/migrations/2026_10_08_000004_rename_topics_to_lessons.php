@@ -20,7 +20,6 @@ return new class extends Migration
         $this->renameTopicsToLessons();
         $this->rebuildTeacherPivot();
         $this->rebuildStudentPivot();
-        $this->renameTutoringRequestTopic();
         $this->renameBookingTopic();
     }
 
@@ -31,7 +30,6 @@ return new class extends Migration
         // constraints against the restored "topics" name.
         $this->renameLessonsToTopics();
         $this->renameBookingTopicBack();
-        $this->renameTutoringRequestTopicBack();
         $this->rebuildStudentPivotBack();
         $this->rebuildTeacherPivotBack();
     }
@@ -168,56 +166,6 @@ return new class extends Migration
         );
 
         Schema::drop('student_lesson_interests');
-    }
-
-    private function renameTutoringRequestTopic(): void
-    {
-        if ($this->isMysql()) {
-            DB::statement('ALTER TABLE `tutoring_requests` DROP FOREIGN KEY `tutoring_requests_topic_id_foreign`');
-        }
-
-        $this->renameColumn('tutoring_requests', 'topic_id', 'lesson_id', nullable: true);
-
-        Schema::table('tutoring_requests', function (Blueprint $table) {
-            $table->foreignId('grade_id')->nullable()->after('subject_id')->constrained()->nullOnDelete();
-        });
-
-        Schema::table('tutoring_requests', function (Blueprint $table) {
-            $table->dropIndex('tutoring_requests_topic_id_status_index');
-        });
-
-        Schema::table('tutoring_requests', function (Blueprint $table) {
-            $table->index(['lesson_id', 'status']);
-        });
-
-        if ($this->isMysql()) {
-            DB::statement('ALTER TABLE `tutoring_requests` ADD CONSTRAINT `tutoring_requests_lesson_id_foreign` FOREIGN KEY (`lesson_id`) REFERENCES `lessons` (`id`) ON DELETE SET NULL');
-        }
-    }
-
-    private function renameTutoringRequestTopicBack(): void
-    {
-        if ($this->isMysql()) {
-            DB::statement('ALTER TABLE `tutoring_requests` DROP FOREIGN KEY `tutoring_requests_lesson_id_foreign`');
-        }
-
-        Schema::table('tutoring_requests', function (Blueprint $table) {
-            $table->dropIndex('tutoring_requests_lesson_id_status_index');
-        });
-
-        $this->renameColumn('tutoring_requests', 'lesson_id', 'topic_id', nullable: true);
-
-        Schema::table('tutoring_requests', function (Blueprint $table) {
-            $table->index(['topic_id', 'status']);
-        });
-
-        Schema::table('tutoring_requests', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('grade_id');
-        });
-
-        if ($this->isMysql()) {
-            DB::statement('ALTER TABLE `tutoring_requests` ADD CONSTRAINT `tutoring_requests_topic_id_foreign` FOREIGN KEY (`topic_id`) REFERENCES `topics` (`id`) ON DELETE SET NULL');
-        }
     }
 
     private function renameBookingTopic(): void

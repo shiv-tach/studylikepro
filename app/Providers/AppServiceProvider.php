@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Contracts\LessonClassifier;
 use App\Contracts\MeetingProvider;
 use App\Contracts\PaymentGateway;
 use App\Models\EducationLevel;
@@ -10,7 +9,6 @@ use App\Models\Lesson;
 use App\Models\Subject;
 use App\Models\SubjectBasket;
 use App\Services\ActivityLogger;
-use App\Services\AI\OpenAILessonClassifier;
 use App\Services\CatalogService;
 use App\Services\ConversationService;
 use App\Services\Meetings\DailyMeetingProvider;
@@ -34,8 +32,6 @@ class AppServiceProvider extends ServiceProvider
         // One instance per request: controllers describe an action and the
         // audit middleware picks that description up on the way out.
         $this->app->singleton(ActivityLogger::class);
-
-        $this->app->bind(LessonClassifier::class, OpenAILessonClassifier::class);
 
         $this->app->bind(PaymentGateway::class, function () {
             return match (config('studylikepro.payments.gateway')) {
@@ -93,9 +89,6 @@ class AppServiceProvider extends ServiceProvider
             ->by(Str::lower((string) $request->input('email')).'|'.$request->ip()));
 
         RateLimiter::for('register', fn (Request $request) => Limit::perMinute($limit('register'))->by($request->ip()));
-
-        RateLimiter::for('requests', fn (Request $request) => Limit::perMinute($limit('requests'))
-            ->by($request->user()?->id ?: $request->ip()));
 
         RateLimiter::for('uploads', fn (Request $request) => Limit::perMinute($limit('uploads'))
             ->by($request->user()?->id ?: $request->ip()));

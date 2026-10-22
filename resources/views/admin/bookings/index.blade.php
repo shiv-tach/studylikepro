@@ -98,9 +98,6 @@
                                     <p class="text-xs text-slate-500 dark:text-slate-400">
                                         {{ $booking->subject?->name }}@if ($booking->lesson) · {{ $booking->lesson->name }}@endif
                                     </p>
-                                    @if ($booking->tutoring_request_id)
-                                        <p class="text-xs text-slate-400">{{ __('From request #:id', ['id' => $booking->tutoring_request_id]) }}</p>
-                                    @endif
                                 </td>
                                 <td class="px-6 py-4">
                                     <p class="font-semibold text-slate-800 dark:text-slate-100">{{ $booking->student->name }}</p>

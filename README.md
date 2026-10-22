@@ -1,6 +1,6 @@
 # Studylikepro
 
-Tutoring marketplace MVP — a student uploads a question, AI identifies the lesson, the platform matches a verified teacher, the student books and pays for a live 1-on-1 lesson, and both sides rate and track the outcome.
+Tutoring marketplace MVP — a student finds the subject and lesson for their grade, picks a verified teacher, books and pays for a live 1-on-1 lesson, and both sides rate and track the outcome.
 
 Built with Laravel 12, Blade, Alpine.js, Vue 3 (the marketing landing page), Tailwind CSS, Vite, and Pest.
 
@@ -8,11 +8,11 @@ Built with Laravel 12, Blade, Alpine.js, Vue 3 (the marketing landing page), Tai
 
 | Role | Capabilities |
 | --- | --- |
-| Student | Registration, profile with learner grade, subject/lesson selection for that grade, tutoring requests with question uploads, teacher discovery, booking, payment, live classes, chat, ratings, lesson history |
-| Teacher | Invite-only registration, verification, subjects with grades & lessons, availability, pricing, requests, accept/reject, live lessons, earnings, reviews |
+| Student | Registration, profile with learner grade, subject/lesson selection for that grade, teacher discovery, direct booking, payment, live classes, chat, ratings, lesson history |
+| Teacher | Invite-only registration, verification, subjects with grades & lessons, availability, pricing, live lessons, earnings, reviews |
 | Admin | Teacher verification, student/booking/payment management, disputes, refunds, commission, reports, curriculum management (levels, grades, subjects, lessons) |
 
-Core flow: 📷 Upload question → 🤖 AI identifies the lesson → 👨‍🏫 Find matching verified teacher → 🕐 Choose available time → 💳 Pay → 🎥 Live lesson → ⭐ Review
+Core flow: 📚 Choose subject & lesson → 👨‍🏫 Find a verified teacher → 🕐 Pick an available slot → 💳 Pay → 🎥 Live lesson → ⭐ Review
 
 ## Getting started
 
@@ -42,11 +42,7 @@ Local demo accounts (created by the demo seeder in the `local` environment):
 
 ### Curriculum & grades
 
-The catalog follows the Sri Lankan structure: **Primary** (Grades 1–5), **O/L** (Grades 6–11), **A/L** (Grades 12–13) and **Other**. A subject belongs to one level and has a lesson list **per grade** (e.g. O/L Mathematics: 12 lessons in Grade 6, 10 in Grade 7), curated by admins on the grade-tab matrix in `/admin/curriculum` → subject editor. In the O/L, the optional subjects of Grades 10–11 sit in the three exam **baskets** (Category I, II and III) and a student picks one subject from each: step 3 of `/subjects` and the student interests page group the subjects under *Compulsory subjects* plus the three categories (each with a "pick one" chip and its description), saving is limited to one per basket, and admins rename/reorder/describe the baskets on `/admin/curriculum` and assign subjects to them either in the subject editor or, level-wide, in the **Subject baskets** panel on `/admin/subjects?level=ol`. Choosing a subject as a teacher auto-assigns its grades and lessons, and students only ever see the subjects of their level and the lessons of their grade — in interests, the request form, the AI suggestion (the classifier prompt is scoped to the student's grade) and the booking page. New rows come from `CatalogSeeder`, which ships placeholder lesson names until the real syllabus names are entered in the matrix.
-
-### AI lesson matching
-
-Requests are classified on the queue (`ClassifyTutoringRequestJob`), so a worker must be running — `composer dev` starts one, or use `php artisan queue:work --stop-when-empty` for a one-off drain. Set `OPENAI_API_KEY` to enable classification; with no key (or on any API failure) the job marks the request `failed` and the student picks the subject/lesson manually, so the flow never blocks.
+The catalog follows the Sri Lankan structure: **Primary** (Grades 1–5), **O/L** (Grades 6–11), **A/L** (Grades 12–13) and **Other**. A subject belongs to one level and has a lesson list **per grade** (e.g. O/L Mathematics: 12 lessons in Grade 6, 10 in Grade 7), curated by admins on the grade-tab matrix in `/admin/curriculum` → subject editor. In the O/L, the optional subjects of Grades 10–11 sit in the three exam **baskets** (Category I, II and III) and a student picks one subject from each: step 3 of `/subjects` and the student interests page group the subjects under *Compulsory subjects* plus the three categories (each with a "pick one" chip and its description), saving is limited to one per basket, and admins rename/reorder/describe the baskets on `/admin/curriculum` and assign subjects to them either in the subject editor or, level-wide, in the **Subject baskets** panel on `/admin/subjects?level=ol`. Choosing a subject as a teacher auto-assigns its grades and lessons, and students only ever see the subjects of their level and the lessons of their grade — in interests, the teacher finder and the booking page. New rows come from `CatalogSeeder`, which ships placeholder lesson names until the real syllabus names are entered in the matrix.
 
 ### Bookings
 
@@ -58,7 +54,6 @@ Scheduled jobs that keep the schedule and the money honest:
 
 | Command | Cadence | What it does |
 | --- | --- | --- |
-| `studylikepro:expire-requests` | 10 min | Expires stale tutoring requests and their pending proposals |
 | `studylikepro:expire-holds` | 1 min | Releases unpaid holds and notifies the student |
 | `studylikepro:complete-lessons` | 10 min | Auto-completes lessons past their end time + grace period |
 | `studylikepro:send-lesson-reminders` | 5 min | Reminds both parties a day ahead and again an hour before a confirmed lesson |
@@ -87,7 +82,7 @@ Lifecycle events are mirrored into the thread as system messages: payment receiv
 
 In-app notification centre at `/notifications`, reachable from the header bell (unread badge, latest five, *mark all read*). Every notification stores a title, a body and a deep link; opening one marks it read and forwards you to the lesson, receipt or earnings page it refers to.
 
-Delivery runs through `App\Notifications\Notification`, which gives every notification the **database channel always** and the **mail channel only while the user has email switched on** — the global toggle lives in *Settings → Notifications* (`notification_preferences.email`, on by default). The catalogue covers requests published/accepted/declined, bookings created/confirmed/cancelled/expired, day-ahead and final reminders, payment receipts (in the confirmation mail) and failures, lesson completion with a review prompt, refunds, verification results, payout paid, disputes raised and reported reviews; verification mails stay email-only, and everything else is queued (`composer dev` runs a worker).
+Delivery runs through `App\Notifications\Notification`, which gives every notification the **database channel always** and the **mail channel only while the user has email switched on** — the global toggle lives in *Settings → Notifications* (`notification_preferences.email`, on by default). The catalogue covers bookings created/confirmed/cancelled/expired, day-ahead and final reminders, payment receipts (in the confirmation mail) and failures, lesson completion with a review prompt, refunds, verification results, payout paid, disputes raised and reported reviews; verification mails stay email-only, and everything else is queued (`composer dev` runs a worker).
 
 ### Reviews & ratings
 
@@ -111,13 +106,13 @@ The console runs the marketplace without touching the database: `/admin` with **
 - **Moderation** (`/admin/moderation`) — reported reviews next to the verification queue. **Hide review** takes it off the profile and recalculates the teacher's rating immediately; **Keep review** dismisses the report and republishes it.
 - **Reports** (`/admin/reports`) — date-range KPIs (collected, refunded, net, commission, payments, lessons booked/completed, new and active users, payouts, payouts due), a daily collections bar chart, a lessons-by-status breakdown, teacher performance ranked by gross, and CSV exports of bookings, payments, refunds, payouts and teacher performance.
 - **Audit log** (`/admin/activity`) — every state-changing console request with the admin, the action, a human sentence, the subject and the sanitised input (passwords, tokens, gateway payloads and signatures are never stored). Filter by admin, action, description or date range.
-- **Settings** — commission percentage, currency, hold TTL, cancellation window, refund percentages, policy copy and the AI confidence threshold (`ai_min_confidence`, float 0–1) that decides when a classification is trusted; each save records what changed in the audit log.
+- **Settings** — commission percentage, currency, hold TTL, cancellation window, refund percentages and policy copy; each save records what changed in the audit log.
 
 ### Security & hardening
 
 - **Browser headers** (`SecurityHeaders`) on every response: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, a `Permissions-Policy` that only delegates camera/microphone to the video provider, HSTS over HTTPS, and a Content-Security-Policy that names our own origin, Google Fonts and the Razorpay checkout — everything else is blocked. `SECURITY_CSP_ENABLED=false` switches the policy off if a provider ever needs it.
-- **Rate limits** (`config/studylikepro.php → throttle`, all per account or per IP): login, registration, request submissions, uploads, chat messages, checkout attempts, the contact form and provider webhooks. Uploads are additionally bounded by count, size and pixel dimensions, and only raster formats are accepted.
-- **Private files stay private.** Question photos and teacher verification documents live on the `local` disk and are streamed through policy-checked routes — never a public URL. Avatars and chat photos (which the counterparty is meant to see) are the only public uploads.
+- **Rate limits** (`config/studylikepro.php → throttle`, all per account or per IP): login, registration, uploads, chat messages, checkout attempts, the contact form and provider webhooks. Uploads are additionally bounded by count, size and pixel dimensions, and only raster formats are accepted.
+- **Private files stay private.** Teacher verification documents live on the `local` disk and are streamed through a policy-checked route — never a public URL. Avatars and chat photos (which the counterparty is meant to see) are the only public uploads.
 - **Money and accounts**: provider webhooks are HMAC-verified with a constant-time comparison and stored once per event id; refunds clamp to what is actually refundable; suspension blocks the next sign-in *and* ends an open session.
 - **Audit trail**: every state-changing admin action is recorded with who, what, when and the sanitised input (passwords, tokens, gateway payloads and signatures are never stored).
 - **Secrets**: a test fails the build if a key-shaped string (`sk-…`, `rzp_live_…`, `AKIA…`, private keys) lands in the repository, and `.env` stays out of version control.

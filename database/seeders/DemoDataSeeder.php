@@ -3,11 +3,8 @@
 namespace Database\Seeders;
 
 use App\Enums\BookingStatus;
-use App\Enums\ClassificationStatus;
 use App\Enums\MeetingStatus;
 use App\Enums\PaymentStatus;
-use App\Enums\RequestStatus;
-use App\Enums\ResponseStatus;
 use App\Enums\VerificationStatus;
 use App\Models\Booking;
 use App\Models\Dispute;
@@ -189,7 +186,6 @@ class DemoDataSeeder extends Seeder
             [0, '15:00', '18:00'],
         ], offsetDays: 14);
 
-        $this->seedDemoRequest($student, $verifiedProfile, $mathematics);
         $this->seedDemoBookings($student, $verifiedProfile, $chemistryProfile);
         $this->seedReviewHistory($verifiedProfile);
         $this->seedSupportQueues($student, $verifiedProfile, $chemistryProfile);
@@ -564,77 +560,6 @@ class DemoDataSeeder extends Seeder
         }
 
         return CarbonImmutable::now($timezone)->addDays(2)->startOfDay();
-    }
-
-    /**
-     * An already-matched open request with one pending teacher proposal.
-     */
-    private function seedDemoRequest(User $student, TeacherProfile $teacher, ?Subject $subject): void
-    {
-        if ($subject === null || $student->tutoringRequests()->exists()) {
-            return;
-        }
-
-        $lesson = $this->lessonFor($subject, 'unit-01');
-
-        if ($lesson === null) {
-            return;
-        }
-
-        $timezone = 'Asia/Colombo';
-        $windowStart = null;
-
-        for ($days = 1; $days <= 8; $days++) {
-            $candidate = CarbonImmutable::now($timezone)->startOfDay()->addDays($days);
-
-            if ($candidate->dayOfWeek === CarbonInterface::TUESDAY) {
-                $windowStart = $candidate->setTime(16, 0);
-
-                break;
-            }
-        }
-
-        if ($windowStart === null) {
-            return;
-        }
-
-        $windowEnd = $windowStart->setTime(19, 0);
-
-        $tutoringRequest = $student->tutoringRequests()->create([
-            'subject_id' => $subject->id,
-            'grade_id' => $lesson->grade_id,
-            'lesson_id' => $lesson->id,
-            'description' => 'I keep losing marks on quadratic factorising — especially when the middle term splits into fractions. My board exam is next month and I want to fix the basics before we move on.',
-            'classification_status' => ClassificationStatus::Completed,
-            'ai_confidence' => 0.92,
-            'ai_payload' => [
-                'raw' => ['source' => 'demo-seeder'],
-                'subject_id' => $subject->id,
-                'lesson_id' => $lesson->id,
-                'confidence' => 0.92,
-                'alternates' => [],
-            ],
-            'preferred_windows' => [[
-                'starts_at' => $windowStart->utc()->toIso8601String(),
-                'ends_at' => $windowEnd->utc()->toIso8601String(),
-            ]],
-            'budget_minor' => 75000,
-            'status' => RequestStatus::Open,
-            'expires_at' => $windowStart->addDay(),
-        ]);
-
-        $startsAt = $windowStart->setTime(17, 30);
-        $endsAt = $startsAt->addMinutes($teacher->lessonDuration());
-
-        $tutoringRequest->responses()->create([
-            'teacher_profile_id' => $teacher->id,
-            'status' => ResponseStatus::Pending,
-            'message' => 'Happy to help. Bring your latest test paper along — we will rebuild factorising from the basics, then drill exam questions.',
-            'starts_at' => $startsAt->utc(),
-            'ends_at' => $endsAt->utc(),
-            'price_minor' => $teacher->effectiveRateFor($subject),
-            'responded_at' => now()->subHours(2),
-        ]);
     }
 
     /**

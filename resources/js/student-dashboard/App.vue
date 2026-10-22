@@ -31,14 +31,6 @@ const statTiles = computed(() => [
         href: urls.value.subjects,
     },
     {
-        key: 'requests',
-        label: 'Open requests',
-        value: stats.value.openRequests,
-        icon: 'clipboard',
-        tone: 'primary',
-        href: urls.value.requests,
-    },
-    {
         key: 'upcoming',
         label: 'Upcoming lessons',
         value: stats.value.upcomingLessons,
@@ -63,7 +55,6 @@ const completedSteps = computed(() => {
     return [
         'profile',
         counts.subjects > 0 ? 'subjects' : null,
-        counts.openRequests > 0 || counts.upcomingLessons > 0 || counts.completedLessons > 0 ? 'question' : null,
         counts.upcomingLessons > 0 || counts.completedLessons > 0 ? 'booking' : null,
         counts.completedLessons > 0 ? 'lesson' : null,
         counts.reviewedLessons > 0 ? 'review' : null,

@@ -50,7 +50,7 @@
     $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
 
     $title = config('app.name', 'Study Like Pro');
-    $description = 'Upload a question, let AI pinpoint the lesson, and book a live 1-on-1 lesson with a verified teacher. Grades 1–13 on the Sri Lankan syllabus, paid securely in rupees.';
+    $description = 'Find the lesson for your grade and book a live 1-on-1 lesson with a verified teacher. Grades 1–13 on the Sri Lankan syllabus, paid securely in rupees.';
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">

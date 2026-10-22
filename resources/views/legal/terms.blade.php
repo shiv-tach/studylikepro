@@ -58,7 +58,7 @@
         <section class="{{ $card }}">
             <h2 class="{{ $heading }}">{{ __('Content you upload') }}</h2>
             <div class="{{ $body }}">
-                <p>{{ __('You keep ownership of the questions, files and messages you upload, and you grant us a licence to store, process and show them to the other party in the lesson and to our support team when a report is raised. Do not upload material you do not have the right to share, and do not upload other people\'s personal documents.') }}</p>
+                <p>{{ __('You keep ownership of the files and messages you upload, and you grant us a licence to store, process and show them to the other party in the lesson and to our support team when a report is raised. Do not upload material you do not have the right to share, and do not upload other people\'s personal documents.') }}</p>
                 <p>{{ __('Lesson recordings, platform content and the Studylikepro name and logo belong to us or our licensors.') }}</p>
             </div>
         </section>

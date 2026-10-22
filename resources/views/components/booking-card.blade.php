@@ -4,7 +4,7 @@
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);
 
     $title = collect([$booking->subject?->name, $booking->lesson?->name])->filter()->implode(' · ')
-        ?: ($booking->tutoringRequest?->description ? Str::limit($booking->tutoringRequest->description, 60) : __('Tutoring lesson'));
+        ?: __('Tutoring lesson');
 
     $counterpart = match ($perspective) {
         'teacher' => $booking->learner_name ?: $booking->student->name,

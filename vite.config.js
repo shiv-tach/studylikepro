@@ -20,9 +20,6 @@ export default defineConfig({
                 // "My subjects" and the student subject page share one Vue
                 // entry: whichever mount point the page renders boots.
                 'resources/js/student-subjects/main.js',
-                // The request list and the question form share one Vue entry,
-                // mounted only on the pages that render their island.
-                'resources/js/student-requests/main.js',
                 // "My lessons" is the student's booking list; its bundle stays
                 // out of the other booking screens.
                 'resources/js/student-lessons/main.js',

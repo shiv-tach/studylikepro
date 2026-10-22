@@ -10,7 +10,7 @@ const panel = usePanel();
         <h2 id="dashboard-flow" class="text-base font-bold text-slate-800 dark:text-slate-200">
             The Studylikepro flow
         </h2>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">One journey from question to lesson.</p>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">One journey from finding a teacher to your lesson.</p>
 
         <ul class="mt-5 space-y-4">
             <li v-for="step in flowSteps" :key="step.title" class="flex items-start gap-3">

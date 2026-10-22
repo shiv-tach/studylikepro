@@ -68,7 +68,7 @@ class PlatformSettings
                 'description' => 'ISO currency code used for payments and payouts (LKR for the Sri Lankan market).',
             ],
             'hold_ttl_minutes' => [
-                'default' => (int) config('studylikepro.requests.hold_ttl_minutes'),
+                'default' => (int) config('studylikepro.booking.hold_ttl_minutes'),
                 'type' => 'int',
                 'group' => 'bookings',
                 'label' => 'Payment hold (minutes)',
@@ -101,15 +101,6 @@ class PlatformSettings
                 'group' => 'refunds',
                 'label' => 'Cancellation policy text',
                 'description' => 'Shown on booking pages and receipts.',
-            ],
-            'ai_min_confidence' => [
-                'default' => (float) config('studylikepro.ai.min_confidence'),
-                'type' => 'float',
-                'group' => 'ai',
-                'label' => 'AI confidence threshold',
-                'description' => 'Below this score the student confirms the subject/lesson themselves (0.30–0.95).',
-                'min' => 0,
-                'max' => 1,
             ],
             'plan_expiry_days' => [
                 'default' => (int) config('studylikepro.services.plan_expiry_days'),

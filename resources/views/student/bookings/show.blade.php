@@ -104,7 +104,6 @@
         'learnerGrade' => $booking->learnerGrade?->label,
         'bookedOn' => $booking->created_at->format('d M Y, H:i'),
         'reference' => '#'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
-        'requestUrl' => $booking->tutoringRequest ? route('student.requests.show', $booking->tutoring_request_id) : null,
     ];
 
     // Booking::timeline() builds the steps; only the timestamps are converted here.
@@ -267,8 +266,6 @@
             'learnerLabel' => __('Learner'),
             'bookedOnLabel' => __('Booked on'),
             'referenceLabel' => __('Reference'),
-            'requestLead' => __('This lesson answers'),
-            'requestLink' => __('your tutoring request'),
             'timelineTitle' => __('Status timeline'),
             'pendingLabel' => __('pending'),
             'paymentLabel' => __('Payment'),

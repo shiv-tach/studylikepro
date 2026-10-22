@@ -30,7 +30,7 @@
                         Verification: {{ $status?->label() ?? 'Not started' }}
                     </span>
                 </div>
-                <p class="mt-2 text-sm text-white/90">Set up your teaching profile, get verified, and start receiving tutoring requests from students who need your subjects.</p>
+                <p class="mt-2 text-sm text-white/90">Set up your teaching profile, get verified, and start teaching students who need your subjects.</p>
             </div>
             <div class="absolute right-0 top-0 -mr-6 -mt-6 h-36 w-36 rounded-full bg-white/10 blur-xl"></div>
             <div class="absolute right-20 bottom-0 -mb-10 h-28 w-28 rounded-full bg-white/10 blur-lg"></div>
@@ -38,20 +38,6 @@
 
         <!-- Quick actions -->
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <a href="{{ route('teacher.requests.index') }}" class="group {{ $cardBase }}"
-               :class="{{ $cardTheme }}">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Requests</span>
-                    @if ($openRequestMatches)
-                        <span class="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">{{ $openRequestMatches }} waiting</span>
-                    @else
-                        <span class="{{ $chip }}">None waiting</span>
-                    @endif
-                </div>
-                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">Request inbox</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Questions matched to your lessons and hours.</p>
-            </a>
-
             <a href="{{ route('teacher.schedule.index') }}" class="group {{ $cardBase }}"
                :class="{{ $cardTheme }}">
                 <div class="flex items-center justify-between">
@@ -138,7 +124,7 @@
                     @if ($status === \App\Enums\VerificationStatus::Pending)
                         Your documents were submitted {{ $profile->submitted_at?->diffForHumans() }} and are waiting for admin review. We will notify you once approved.
                     @elseif ($status === \App\Enums\VerificationStatus::Approved)
-                        You are verified — students can find you and send tutoring requests.
+                        You are verified — students can find you and book your open slots.
                     @elseif ($status === \App\Enums\VerificationStatus::Rejected)
                         {{ $profile->verification_notes ?: 'Please review your documents and resubmit.' }}
                     @else
@@ -167,8 +153,8 @@
                         ['Subjects & lessons', 'Choose the subjects and lessons you want to teach.', 'Phase 2'],
                         ['Get verified', 'An admin reviews your application and approves you.', 'Phase 2'],
                         ['Availability & pricing', 'Publish weekly slots and set your hourly rate.', 'Phase 3'],
-                        ['Receive requests', 'Accept or reject tutoring requests that match your lessons.', 'Phase 4'],
-                        ['Teach live & get paid', 'Run lessons in private video rooms and track earnings.', 'Phase 6–7'],
+                        ['Get booked', 'Students book your open slots for a live lesson.', 'Phase 4'],
+                        ['Teach live & get paid', 'Run lessons in private video rooms and track earnings.', 'Phase 5–6'],
                     ];
                 @endphp
 

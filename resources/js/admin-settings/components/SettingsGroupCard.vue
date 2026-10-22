@@ -1,7 +1,7 @@
 <script setup>
 /**
  * One group of platform settings (Money, Bookings, Cancellations & refunds,
- * AI matching, Services) on a card surface that follows the theme preset.
+ * Services) on a card surface that follows the theme preset.
  */
 import { usePanel } from '../../shared/composables/usePanel';
 import SettingField from './SettingField.vue';

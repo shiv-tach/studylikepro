@@ -17,7 +17,7 @@
                 <ul class="list-disc space-y-2 pl-5">
                     <li>{{ __('Account details: your name, email address and a securely hashed password.') }}</li>
                     <li>{{ __('Profile details: for students, grade level, learning goals and the subjects and lessons you pick; for teachers, headline, experience, education, languages, subjects, lessons, availability and rates.') }}</li>
-                    <li>{{ __('Lesson content: the questions and photos you upload, your messages in lesson chats, and the details of every booking.') }}</li>
+                    <li>{{ __('Lesson content: your messages in lesson chats and the details of every booking.') }}</li>
                     <li>{{ __('Payment records: amounts, currency, status and the payment provider\'s reference. Card and UPI details are handled by the payment provider — they never reach our servers.') }}</li>
                     <li>{{ __('Technical data: IP address and request metadata, kept for security and abuse prevention.') }}</li>
                 </ul>
@@ -28,7 +28,7 @@
             <h2 class="{{ $heading }}">{{ __('Why we collect it') }}</h2>
             <div class="{{ $body }}">
                 <ul class="list-disc space-y-2 pl-5">
-                    <li>{{ __('To match a request with a verified teacher, schedule the lesson, take the payment and give you access to the classroom.') }}</li>
+                    <li>{{ __('To match you with a verified teacher, schedule the lesson, take the payment and give you access to the classroom.') }}</li>
                     <li>{{ __('To keep both sides safe: verification documents, chat reports and refund decisions are all part of running a marketplace.') }}</li>
                     <li>{{ __('To send service messages — booking confirmations, reminders, receipts and refund updates. You can turn the email copies off in Settings; the in-app record always stays.') }}</li>
                     <li>{{ __('To improve teaching quality with aggregated, non-identifying statistics such as average rating per subject.') }}</li>
@@ -44,17 +44,16 @@
                     <li>{{ __('The other party in the lesson — your first name, profile and the lesson details.') }}</li>
                     <li>{{ __('The payment provider, for collecting payments and issuing refunds.') }}</li>
                     <li>{{ __('The video provider, to create the private lesson room and its join links.') }}</li>
-                    <li>{{ __('The AI provider, to read your uploaded question and suggest a subject and lesson.') }}</li>
                     <li>{{ __('Email and infrastructure providers, to deliver notifications and host the service.') }}</li>
                 </ul>
-                <p>{{ __('We do not sell personal data, and we do not use your questions or chats to train third-party models.') }}</p>
+                <p>{{ __('We do not sell personal data, and we do not use your chats to train third-party models.') }}</p>
             </div>
         </section>
 
         <section class="{{ $card }}">
             <h2 class="{{ $heading }}">{{ __('How long we keep it') }}</h2>
             <div class="{{ $body }}">
-                <p>{{ __('Account and lesson records are kept while your account is open and for as long as tax and accounting rules require afterwards. Verification documents are kept while a teacher is active and are deleted on request once verification is no longer needed. Question photos and chat attachments stay with the lesson they belong to so a later dispute can be reviewed fairly.') }}</p>
+                <p>{{ __('Account and lesson records are kept while your account is open and for as long as tax and accounting rules require afterwards. Verification documents are kept while a teacher is active and are deleted on request once verification is no longer needed. Chat attachments stay with the lesson they belong to so a later dispute can be reviewed fairly.') }}</p>
             </div>
         </section>
 

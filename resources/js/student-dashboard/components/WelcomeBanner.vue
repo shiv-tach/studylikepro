@@ -26,8 +26,8 @@ const chips = computed(() =>
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">{{ appName }}</p>
             <h1 id="dashboard-welcome" class="mt-1 text-xl font-bold md:text-2xl">Welcome, {{ user.name }}! 👋</h1>
             <p class="mt-2 text-sm text-white/90">
-                Studylikepro connects you with verified tutors for live 1-on-1 lessons. Upload a question, get matched
-                to the right lesson, and book a time that works for you.
+                Studylikepro connects you with verified tutors for live 1-on-1 lessons. Find the right subject,
+                book a time that works for you, and join the classroom.
             </p>
 
             <ul v-if="chips.length" class="mt-4 flex flex-wrap gap-2">
@@ -42,11 +42,11 @@ const chips = computed(() =>
 
             <div class="mt-6 flex flex-wrap gap-3">
                 <a
-                    :href="urls.ask"
+                    :href="urls.subjects"
                     class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-primary shadow-sm transition-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
                 >
-                    <span class="h-4 w-4"><AppIcon name="camera" /></span>
-                    Ask a question
+                    <span class="h-4 w-4"><AppIcon name="book" /></span>
+                    Explore my subjects
                 </a>
                 <a
                     :href="urls.teachers"

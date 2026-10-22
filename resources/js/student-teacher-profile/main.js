@@ -26,7 +26,6 @@ const DEFAULT_CONFIG = {
         lessonLength: null,
         notice: null,
         bookUrl: null,
-        requestUrl: null,
         fallbackUrl: null,
     },
     breadcrumbs: [],

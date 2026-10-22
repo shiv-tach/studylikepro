@@ -200,8 +200,8 @@
             'lessonsEmptyForGrade' => __('No :grade lessons for this subject yet.', ['grade' => $grade?->label]),
             'lessonsEmpty' => __('Lessons for this subject are being prepared.'),
             'ctaTitle' => __('Want help with :subject?', ['subject' => $subject->name]),
-            'ctaBody' => __('Upload a question and we will match you with a verified teacher for a live lesson.'),
-            'ctaAction' => __('Ask a question'),
+            'ctaBody' => __('Find a verified teacher who teaches this subject for your grade and book a live lesson.'),
+            'ctaAction' => __('Find a teacher'),
         ],
         'serviceGroups' => $serviceGroups,
         'teachers' => [
@@ -214,7 +214,6 @@
         'breadcrumbs' => $breadcrumbs,
         'urls' => [
             'interests' => route('student.interests.edit'),
-            'ask' => route('student.requests.create'),
         ],
     ];
 

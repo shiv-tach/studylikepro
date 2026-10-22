@@ -4,26 +4,6 @@
     // a JSON island, so no URL or figure is ever hardcoded in the Vue app.
     $quickActions = [
         [
-            'key' => 'ask',
-            'urlKey' => 'ask',
-            'eyebrow' => __('Ask'),
-            'label' => __('Ask a question'),
-            'description' => __('Describe it or upload a photo — AI finds the lesson.'),
-            'icon' => 'camera',
-            'tone' => 'primary',
-            'badge' => null,
-        ],
-        [
-            'key' => 'requests',
-            'urlKey' => 'requests',
-            'eyebrow' => __('Requests'),
-            'label' => __('My requests'),
-            'description' => __('Track teacher proposals and your held slots.'),
-            'icon' => 'clipboard',
-            'tone' => 'amber',
-            'badge' => $openRequestCount > 0 ? __(':count open', ['count' => $openRequestCount]) : __('None open'),
-        ],
-        [
             'key' => 'lessons',
             'urlKey' => 'bookings',
             'eyebrow' => __('Lessons'),
@@ -87,7 +67,6 @@
         'flash' => ['profileCompleted' => session('status') === 'profile-completed'],
         'stats' => [
             'subjects' => $subjectCount,
-            'openRequests' => $openRequestCount,
             'upcomingLessons' => $upcomingLessonCount,
             'completedLessons' => $completedLessonCount,
             'reviewedLessons' => $reviewedLessonCount,
@@ -96,8 +75,6 @@
         'awaitingReview' => $awaitingReview,
         'quickActions' => $quickActions,
         'urls' => [
-            'ask' => route('student.requests.create'),
-            'requests' => route('student.requests.index'),
             'bookings' => route('student.bookings.index'),
             'pastBookings' => route('student.bookings.index', ['tab' => 'past']),
             'profile' => route('student.profile'),
@@ -127,7 +104,7 @@
                     {{ __('My Learning') }}
                 </h2>
                 <p class="text-xs text-slate-500 dark:text-slate-400">
-                    {{ __('Every lesson, request and next step in one place.') }}
+                    {{ __('Every lesson and next step in one place.') }}
                 </p>
             </div>
         </div>
@@ -146,8 +123,6 @@
                 {{ __('The dashboard needs JavaScript. Your main destinations are:') }}
             </p>
             <ul class="mt-4 space-y-2 text-sm font-semibold text-primary">
-                <li><a class="hover:underline" href="{{ route('student.requests.create') }}">{{ __('Ask a question') }}</a></li>
-                <li><a class="hover:underline" href="{{ route('student.requests.index') }}">{{ __('My requests') }}</a></li>
                 <li><a class="hover:underline" href="{{ route('student.bookings.index') }}">{{ __('My lessons') }}</a></li>
                 <li><a class="hover:underline" href="{{ route('student.interests.edit') }}">{{ __('My subjects') }}</a></li>
                 <li><a class="hover:underline" href="{{ route('student.teachers.index') }}">{{ __('Find a teacher') }}</a></li>

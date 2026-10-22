@@ -1,10 +1,8 @@
 <?php
 
 use App\Enums\BookingStatus;
-use App\Enums\RequestStatus;
 use App\Models\Booking;
 use App\Models\TeacherProfile;
-use App\Models\TutoringRequest;
 use App\Models\User;
 use App\Notifications\BookingCancelled;
 use App\Services\BookingTransitionService;
@@ -152,52 +150,4 @@ it('refuses to cancel a lesson that is already finished', function () {
         ->assertStatus(403);
 
     expect($scenario['booking']->refresh()->status)->toBe(BookingStatus::Completed);
-});
-
-it('puts the student question back in front of teachers when the lesson is cancelled', function () {
-    Notification::fake();
-
-    $scenario = cancellableBooking(hours: 48, status: BookingStatus::PendingPayment);
-
-    $request = TutoringRequest::factory()->create([
-        'student_id' => $scenario['student']->id,
-        'status' => RequestStatus::Matched,
-        'expires_at' => now()->addDays(3),
-    ]);
-
-    $booking = $scenario['booking'];
-    $booking->forceFill([
-        'tutoring_request_id' => $request->id,
-        'expires_at' => now()->addMinutes(20),
-    ])->save();
-
-    $this->actingAs($scenario['student'])
-        ->post(route('student.bookings.cancel', $booking))
-        ->assertSessionHasNoErrors();
-
-    expect($request->refresh()->status)->toBe(RequestStatus::Open);
-});
-
-it('leaves an expired question closed when its lesson is cancelled', function () {
-    Notification::fake();
-
-    $scenario = cancellableBooking(hours: 48, status: BookingStatus::PendingPayment);
-
-    $request = TutoringRequest::factory()->create([
-        'student_id' => $scenario['student']->id,
-        'status' => RequestStatus::Matched,
-        'expires_at' => now()->subDay(),
-    ]);
-
-    $booking = $scenario['booking'];
-    $booking->forceFill([
-        'tutoring_request_id' => $request->id,
-        'expires_at' => now()->addMinutes(20),
-    ])->save();
-
-    $this->actingAs($scenario['student'])
-        ->post(route('student.bookings.cancel', $booking))
-        ->assertSessionHasNoErrors();
-
-    expect($request->refresh()->status)->toBe(RequestStatus::Matched);
 });

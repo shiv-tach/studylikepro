@@ -27,11 +27,10 @@ test('the dashboard island carries the figures and the route map the Vue app ren
     );
 
     expect($config['urls']['teachers'])->toBe(route('student.teachers.index'));
-    expect($config['urls']['ask'])->toBe(route('student.requests.create'));
     expect($config['theme']['preset'])->toBe('classic');
     expect($config['stats']['upcomingLessons'])->toBe(1);
     expect(collect($config['quickActions'])->pluck('urlKey')->all())
-        ->toEqualCanonicalizing(['ask', 'requests', 'bookings', 'profile', 'theme', 'subjects', 'teachers']);
+        ->toEqualCanonicalizing(['bookings', 'profile', 'theme', 'subjects', 'teachers']);
 });
 
 test('the next lesson card is handed the lesson, the teacher and its links', function () {

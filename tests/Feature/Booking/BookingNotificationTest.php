@@ -6,7 +6,6 @@ use App\Models\Lesson;
 use App\Models\Subject;
 use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherProfile;
-use App\Models\TutoringRequest;
 use App\Models\User;
 use App\Notifications\BookingConfirmed;
 use App\Notifications\BookingRequestReceived;
@@ -27,22 +26,6 @@ it('tells both parties the moment a hold is paid for', function () {
     expect($booking->refresh()->status)->toBe(BookingStatus::Confirmed);
 
     Notification::assertSentTo($booking->student, BookingConfirmed::class);
-    Notification::assertSentTo($booking->teacherProfile->user, BookingConfirmed::class);
-});
-
-it('does not tell a teacher about the hold their own accepted request created', function () {
-    Notification::fake();
-
-    $request = TutoringRequest::factory()->create();
-
-    $booking = Booking::factory()->hold()->create([
-        'tutoring_request_id' => $request->id,
-        'student_id' => $request->student_id,
-    ]);
-
-    app(BookingTransitionService::class)->confirm($booking);
-
-    Notification::assertNotSentTo($booking->teacherProfile->user, BookingRequestReceived::class);
     Notification::assertSentTo($booking->teacherProfile->user, BookingConfirmed::class);
 });
 

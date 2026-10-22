@@ -197,7 +197,7 @@
             'statusBodies' => [
                 'draft' => __('Upload your documents below, then submit your application. Verification keeps quality high and builds student trust.'),
                 'pending' => __('Thanks! We received your application on :submitted. Our team reviews documents within 1–2 business days, and you will be notified when your profile is approved.'),
-                'approved' => __('Your profile was approved on :verified. Verified teachers appear in student search and can receive tutoring requests.'),
+                'approved' => __('Your profile was approved on :verified. Verified teachers appear in student search and can be booked for live lessons.'),
                 'rejected' => __('Our team could not approve the application yet. Please address the notes below, update your documents, and resubmit.'),
             ],
             'reviewerNotes' => __('What our team said'),
@@ -335,7 +335,7 @@
                 @elseif ($status === \App\Enums\VerificationStatus::Approved)
                     <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">You are verified 🎉</h3>
                     <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                        Your profile was approved {{ $profile->verified_at?->diffForHumans() }}. Verified teachers appear in student search and can receive tutoring requests.
+                        Your profile was approved {{ $profile->verified_at?->diffForHumans() }}. Verified teachers appear in student search and can be booked for live lessons.
                     </p>
                 @elseif ($status === \App\Enums\VerificationStatus::Rejected)
                     <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Action needed</h3>

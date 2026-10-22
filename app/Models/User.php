@@ -183,11 +183,6 @@ class User extends Authenticatable
         return $this->belongsToMany(Lesson::class, 'student_lesson_interests')->withTimestamps();
     }
 
-    public function tutoringRequests(): HasMany
-    {
-        return $this->hasMany(TutoringRequest::class, 'student_id')->latest();
-    }
-
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class, 'student_id')->latest('starts_at');

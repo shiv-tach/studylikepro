@@ -2,7 +2,7 @@
 
 **Companion to:** [overview.md](./overview.md) · [implementation-plan.md](./implementation-plan.md)
 **Design rules:** [DESIGN_SYSTEM_AND_THEMING_GUIDE.md](../DESIGN_SYSTEM_AND_THEMING_GUIDE.md)
-**Status:** Phases A–F implemented (taxonomy foundation, admin curriculum management, teacher assignment, grade-aware student side, grade-scoped matching/AI/search, and the legacy-column cleanup + docs/UAT sweep), plus the O/L basket categories (§13).
+**Status:** Phases A–F implemented (taxonomy foundation, admin curriculum management, teacher assignment, grade-aware student side, grade-scoped matching/AI/search, and the legacy-column cleanup + docs/UAT sweep), plus the O/L basket categories (§13). **Update:** the tutoring-request/AI-classification flow referenced in §7–§8 was later removed; students now book directly from a teacher's availability, so request-specific references below are kept as history only.
 
 **Goal in one sentence:** Replace the flat subject→topic catalog with the Sri Lankan education structure — *Primary (Grades 1–5), O/L (Grades 6–11), A/L (Grades 12–13), Other* — where every subject belongs to a level and has a **grade-by-grade lesson list** (e.g. O/L Mathematics: Grade 6 → 12 lessons, Grade 7 → 10 lessons), so that admins curate the curriculum once, teachers pick "O/L Mathematics" and instantly inherit its grades + lessons, and students are shown only the subjects and lessons that exist for *their* grade.
 

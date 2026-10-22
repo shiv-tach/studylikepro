@@ -149,8 +149,8 @@ class SubjectController extends Controller
 
     /**
      * Delete a subject. Its lessons, teacher selections and student interests
-     * cascade away; tutoring requests and bookings detach via their nullOnDelete
-     * foreign keys so their history survives.
+     * cascade away; bookings detach via their nullOnDelete foreign keys so their
+     * history survives.
      */
     public function destroy(Subject $subject, ActivityLogger $activity): RedirectResponse
     {

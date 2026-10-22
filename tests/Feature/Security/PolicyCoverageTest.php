@@ -1,8 +1,6 @@
 <?php
 
 use App\Enums\BookingStatus;
-use App\Enums\ClassificationStatus;
-use App\Enums\RequestStatus;
 use App\Models\Booking;
 use App\Models\TeacherVerificationDocument;
 use App\Models\User;
@@ -61,41 +59,18 @@ it('turns strangers away from every lesson-scoped route', function () {
         ->and($conversation->messages()->where('body', 'Hello?')->doesntExist())->toBeTrue();
 });
 
-it('keeps teacher documents and question photos private', function () {
+it('keeps teacher documents private', function () {
     $teacherUser = User::factory()->teacher()->onboarded()->create();
     $document = TeacherVerificationDocument::factory()->for($teacherUser->teacherProfile)->create();
 
-    $requestScenario = paidBookingScenario();
-    $studentRequest = $requestScenario['student']->tutoringRequests()->create([
-        'subject_id' => $requestScenario['booking']->subject_id,
-        'description' => 'A private question that only the owner and their teacher should read.',
-        'preferred_windows' => [[
-            'starts_at' => now()->addDay()->setTime(17, 0)->toIso8601String(),
-            'ends_at' => now()->addDay()->setTime(19, 0)->toIso8601String(),
-        ]],
-        'status' => RequestStatus::Open,
-        'classification_status' => ClassificationStatus::Pending,
-        'expires_at' => now()->addDays(7),
-    ]);
-
-    $attachment = $studentRequest->attachments()->create([
-        'path' => 'tutoring-requests/demo.png',
-        'original_name' => 'question.png',
-        'mime_type' => 'image/png',
-        'size' => 1024,
-    ]);
-
     Storage::disk('local')->put($document->path, 'id-document-bytes');
-    Storage::disk('local')->put($attachment->path, 'question-image-bytes');
 
     $stranger = User::factory()->student()->onboarded()->create();
 
     $this->actingAs($stranger)->get(route('verification-documents.show', $document))->assertForbidden();
-    $this->actingAs($stranger)->get(route('request-attachments.show', $attachment))->assertForbidden();
 
     // The owner keeps access.
     $this->actingAs($teacherUser)->get(route('verification-documents.show', $document))->assertOk();
-    $this->actingAs($requestScenario['student'])->get(route('request-attachments.show', $attachment))->assertOk();
 });
 
 it('keeps every role inside its own section', function () {
@@ -108,7 +83,6 @@ it('keeps every role inside its own section', function () {
         route('teacher.verification'),
         route('teacher.subjects.index'),
         route('teacher.availability.index'),
-        route('teacher.requests.index'),
         route('teacher.schedule.index'),
         route('teacher.earnings.index'),
         route('teacher.reviews.index'),
@@ -117,7 +91,6 @@ it('keeps every role inside its own section', function () {
     $studentOnly = [
         route('student.profile'),
         route('student.interests.edit'),
-        route('student.requests.index'),
         route('student.bookings.index'),
     ];
 

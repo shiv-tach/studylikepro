@@ -10,7 +10,6 @@ const DEFAULT_CONFIG = {
     flash: { profileCompleted: false },
     stats: {
         subjects: 0,
-        openRequests: 0,
         upcomingLessons: 0,
         completedLessons: 0,
         reviewedLessons: 0,

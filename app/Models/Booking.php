@@ -28,7 +28,6 @@ class Booking extends Model implements Payable
     protected $fillable = [
         'student_id',
         'teacher_profile_id',
-        'tutoring_request_id',
         'subject_id',
         'lesson_id',
         'service_purchase_id',
@@ -102,11 +101,6 @@ class Booking extends Model implements Payable
     public function bookingFeePromotion(): BelongsTo
     {
         return $this->belongsTo(BookingFeePromotion::class);
-    }
-
-    public function tutoringRequest(): BelongsTo
-    {
-        return $this->belongsTo(TutoringRequest::class);
     }
 
     public function payment(): HasOne

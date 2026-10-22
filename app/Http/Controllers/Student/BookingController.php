@@ -220,7 +220,7 @@ class BookingController extends Controller
     {
         Gate::authorize('view', $booking);
 
-        $booking->load(['teacherProfile.user', 'subject', 'lesson', 'tutoringRequest', 'review', 'conversation', 'bookingFeePromotion']);
+        $booking->load(['teacherProfile.user', 'subject', 'lesson', 'review', 'conversation', 'bookingFeePromotion']);
 
         return view('student.bookings.show', [
             'booking' => $booking,

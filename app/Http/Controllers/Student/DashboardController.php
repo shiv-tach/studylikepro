@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Student;
 
 use App\Enums\BookingStatus;
-use App\Enums\RequestStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use Illuminate\Http\Request;
@@ -48,7 +47,6 @@ class DashboardController extends Controller
             'displayTimezone' => $timezone,
             'themePreset' => $user->theme['preset'],
             'subjectCount' => $user->interestedSubjects()->count(),
-            'openRequestCount' => $user->tutoringRequests()->where('status', RequestStatus::Open->value)->count(),
             'upcomingLessonCount' => (clone $upcoming)->count(),
             'completedLessonCount' => $user->bookings()->where('status', BookingStatus::Completed->value)->count(),
             'reviewedLessonCount' => $user->bookings()

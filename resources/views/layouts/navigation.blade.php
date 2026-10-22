@@ -29,10 +29,6 @@
         ? \App\Models\Review::query()->flagged()->whereNull('hidden_at')->count()
         : null;
 
-    $openRequestMatches = $user->isTeacher() && $user->teacherProfile?->isApproved()
-        ? app(\App\Services\RequestMatcher::class)->openMatchCount($user->teacherProfile)
-        : null;
-
     $upcomingLessons = $user->isStudent()
         ? $user->bookings()->upcoming()->whereIn('status', ['pending_payment', 'confirmed', 'in_progress'])->count()
         : null;
@@ -61,7 +57,6 @@
         ];
     } elseif ($user->isStudent()) {
         $navItems[] = ['label' => 'My subjects', 'url' => route('student.interests.edit'), 'active' => request()->routeIs('student.interests*'), 'icon' => 'book', 'badge' => null];
-        $navItems[] = ['label' => 'My requests', 'url' => route('student.requests.index'), 'active' => request()->routeIs('student.requests*'), 'icon' => 'doc', 'badge' => null];
         $navItems[] = ['label' => 'My lessons', 'url' => route('student.bookings.index'), 'active' => request()->routeIs('student.bookings*'), 'icon' => 'calendar', 'badge' => $upcomingLessons ?: null];
         $navItems[] = ['label' => 'My purchases', 'url' => route('student.purchases.index'), 'active' => request()->routeIs('student.purchases*') || request()->routeIs('student.purchase-sessions*') || request()->routeIs('student.marking*'), 'icon' => 'wallet', 'badge' => null];
         $navItems[] = ['label' => 'Messages', 'url' => route('messages.index'), 'active' => request()->routeIs('messages.*'), 'icon' => 'chat', 'badge' => ($unreadMessageCount ?? 0) ?: null];
@@ -81,7 +76,6 @@
         $navItems[] = ['label' => 'Plans', 'url' => route('teacher.plans.index'), 'active' => request()->routeIs('teacher.plans*'), 'icon' => 'wallet', 'badge' => null];
         $navItems[] = ['label' => 'Marking', 'url' => route('teacher.marking.index'), 'active' => request()->routeIs('teacher.marking*'), 'icon' => 'check', 'badge' => null];
         $navItems[] = ['label' => 'Availability', 'url' => route('teacher.availability.index'), 'active' => request()->routeIs('teacher.availability*'), 'icon' => 'calendar', 'badge' => null];
-        $navItems[] = ['label' => 'Requests', 'url' => route('teacher.requests.index'), 'active' => request()->routeIs('teacher.requests*'), 'icon' => 'doc', 'badge' => $openRequestMatches ?: null];
         $navItems[] = ['label' => 'Schedule', 'url' => route('teacher.schedule.index'), 'active' => request()->routeIs('teacher.schedule*') || request()->routeIs('teacher.bookings*'), 'icon' => 'clock', 'badge' => $unpaidHolds ?: null];
         $navItems[] = ['label' => 'Messages', 'url' => route('messages.index'), 'active' => request()->routeIs('messages.*'), 'icon' => 'chat', 'badge' => ($unreadMessageCount ?? 0) ?: null];
         $navItems[] = ['label' => 'Reviews', 'url' => route('teacher.reviews.index'), 'active' => request()->routeIs('teacher.reviews*'), 'icon' => 'star', 'badge' => ($user->teacherProfile?->rating_count ?? 0) ?: null];

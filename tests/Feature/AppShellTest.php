@@ -28,7 +28,7 @@ test('the shell island carries the user, the route map and the student menu', fu
     expect($config['urls']['notificationOpen'])->toContain('NOTIFICATION_ID');
 
     expect(collect($config['navItems'])->pluck('label')->all())
-        ->toContain('My subjects', 'My requests', 'My lessons', 'Find a teacher');
+        ->toContain('My subjects', 'My lessons', 'Find a teacher');
 });
 
 test('an onboarding teacher only gets the two setup steps in the sidebar', function () {

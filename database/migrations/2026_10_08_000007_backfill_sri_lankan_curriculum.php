@@ -73,7 +73,6 @@ return new class extends Migration
         $this->remapTeacherGrades($subjectLevels, $grades);
         $this->backfillStudentGrades($grades);
         $this->backfillBookingGrades($grades);
-        $this->backfillRequestGrades();
     }
 
     public function down(): void
@@ -99,7 +98,6 @@ return new class extends Migration
 
         DB::table('subjects')->update(['education_level_id' => null]);
         DB::table('lessons')->update(['grade_id' => null]);
-        DB::table('tutoring_requests')->update(['grade_id' => null]);
         DB::table('student_profiles')->update(['grade_id' => null]);
         DB::table('bookings')->update(['learner_grade_id' => null]);
     }
@@ -220,23 +218,6 @@ return new class extends Migration
 
             if ($gradeId !== null) {
                 DB::table('bookings')->where('id', $booking->id)->update(['learner_grade_id' => $gradeId]);
-            }
-        }
-    }
-
-    private function backfillRequestGrades(): void
-    {
-        $requests = DB::table('tutoring_requests')
-            ->whereNull('grade_id')
-            ->whereNotNull('lesson_id')
-            ->get(['id', 'lesson_id', 'student_id']);
-
-        foreach ($requests as $request) {
-            $gradeId = DB::table('lessons')->where('id', $request->lesson_id)->value('grade_id')
-                ?? DB::table('student_profiles')->where('user_id', $request->student_id)->value('grade_id');
-
-            if ($gradeId !== null) {
-                DB::table('tutoring_requests')->where('id', $request->id)->update(['grade_id' => $gradeId]);
             }
         }
     }

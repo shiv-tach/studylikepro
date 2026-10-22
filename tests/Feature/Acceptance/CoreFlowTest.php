@@ -1,11 +1,9 @@
 <?php
 
 use App\Enums\BookingStatus;
-use App\Enums\ClassificationStatus;
 use App\Enums\DisputeStatus;
 use App\Enums\EarningStatus;
 use App\Enums\PaymentStatus;
-use App\Enums\RequestStatus;
 use App\Enums\VerificationStatus;
 use App\Models\Booking;
 use App\Models\Dispute;
@@ -17,7 +15,6 @@ use App\Models\Review;
 use App\Models\Subject;
 use App\Models\TeacherEarning;
 use App\Models\TeacherProfile;
-use App\Models\TutoringRequest;
 use App\Models\User;
 use App\Notifications\DisputeResolved;
 use App\Services\AdminCsvExporter;
@@ -27,22 +24,19 @@ use App\Services\ReviewService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 /**
  * The launch acceptance run from section 11 of the plan, executed against the
- * real routes: a student uploads a question, the AI picks the lesson, a verified
- * teacher takes the lesson, the money moves, the lesson happens, the review
- * lands — and support can refund and resolve afterwards.
+ * real routes: a student books a verified teacher's slot directly, the money
+ * moves, the lesson happens, the review lands — and support can refund and
+ * resolve afterwards.
  *
- * Everything here goes through HTTP; only the two external providers are faked
- * (OpenAI via Http::fake, payments and video by the offline gateways).
+ * Everything here goes through HTTP; only the payment and video providers are
+ * faked by the offline gateways.
  */
 beforeEach(function () {
-    Http::preventStrayRequests();
-
-    // A tiny catalog: one O/L subject, one lesson, and the model is told to pick it.
+    // A tiny catalog: one O/L subject and one lesson for the booking.
     $this->subject = Subject::factory()->create([
         'name' => 'Mathematics',
         'slug' => 'mathematics',
@@ -57,20 +51,6 @@ beforeEach(function () {
 
     // The evening slot the whole story hangs on: two days out, 18:00–20:00 Sri Lanka time.
     $this->windowStart = CarbonImmutable::now('Asia/Colombo')->addDays(2)->setTime(18, 0);
-
-    Http::fake([
-        '*/chat/completions' => Http::response([
-            'choices' => [[
-                'message' => ['content' => json_encode([
-                    'subject' => 'Mathematics',
-                    'lesson' => 'Algebra',
-                    'confidence' => 0.93,
-                    'alternates' => [],
-                ])],
-                'finish_reason' => 'stop',
-            ]],
-        ]),
-    ]);
 });
 
 /**
@@ -130,7 +110,7 @@ function payForBooking(Booking $booking, User $student): Payment
 
 /**
  * A verified teacher with the catalog attached and an evening availability
- * window, ready to answer requests. Returns the user; the profile is on it.
+ * window, ready to be booked. Returns the user; the profile is on it.
  */
 function verifiedTeacher(Subject $subject, Lesson $lesson, CarbonImmutable $windowStart): User
 {
@@ -160,6 +140,15 @@ function verifiedTeacher(Subject $subject, Lesson $lesson, CarbonImmutable $wind
 
     $teacherUser->refresh()->unsetRelation('teacherProfile');
 
+    // The application cannot be submitted until at least one subject is picked.
+    test()->actingAs($teacherUser)
+        ->post(route('teacher.verification.subjects.store'), [
+            'subjects' => [$subject->id],
+        ])
+        ->assertRedirect();
+
+    $teacherUser->refresh()->unsetRelation('teacherProfile');
+
     test()->actingAs($teacherUser)
         ->post(route('teacher.verification.submit'), ['agree' => '1'])
         ->assertRedirect();
@@ -175,11 +164,7 @@ function verifiedTeacher(Subject $subject, Lesson $lesson, CarbonImmutable $wind
 
     expect($profile->refresh()->verification_status)->toBe(VerificationStatus::Approved);
 
-    // Teach this subject, at this rate, on the evening the student asked for.
-    test()->actingAs($teacherUser)->post(route('teacher.subjects.store'), [
-        'subjects' => [$subject->id],
-    ])->assertRedirect(route('teacher.subjects.index'));
-
+    // Teach this subject's lesson, at this rate, on the evening the student booked.
     $teacherUser->refresh()->unsetRelation('teacherProfile');
 
     test()->actingAs($teacherUser)->post(route('teacher.subjects.update', $subject), [
@@ -197,7 +182,7 @@ function verifiedTeacher(Subject $subject, Lesson $lesson, CarbonImmutable $wind
     return $teacherUser;
 }
 
-it('runs the core flow from question photo to review', function () {
+it('runs the core flow from direct booking to review', function () {
     // 1. Student signs up, finishes the onboarding wizard and picks what they need help with.
     $student = signUp(User::ROLE_STUDENT, ['name' => 'Aarav Mehta']);
 
@@ -215,45 +200,21 @@ it('runs the core flow from question photo to review', function () {
     // 2. A teacher applies, uploads ID, accepts the terms and gets verified.
     $teacherUser = verifiedTeacher($this->subject, $this->lesson, $this->windowStart);
 
-    // 3. The student uploads the question photo; the AI classifies it inline.
-    $this->actingAs($student)->post(route('student.requests.store'), [
-        'description' => 'I keep losing marks on quadratic factorising. Can we work through last year\'s paper?',
-        'budget' => '900',
-        'attachments' => [UploadedFile::fake()->image('question.png', 900, 1200)],
-        'windows' => [[
-            'date' => $this->windowStart->toDateString(),
-            'from' => '18:00',
-            'to' => '20:00',
-        ]],
-    ])->assertRedirect();
-
-    $request = TutoringRequest::query()->firstOrFail();
-
-    expect($request->classification_status)->toBe(ClassificationStatus::Completed)
-        ->and($request->subject_id)->toBe($this->subject->id)
-        ->and($request->lesson_id)->toBe($this->lesson->id)
-        ->and($request->status)->toBe(RequestStatus::Open)
-        ->and($request->attachments()->count())->toBe(1);
-
-    // The teacher sees the question in their inbox, including the photo.
-    $this->actingAs($teacherUser)
-        ->get(route('teacher.requests.index'))
-        ->assertOk()
-        ->assertSee('quadratic factorising');
-
-    $attachment = $request->attachments()->firstOrFail();
-    $this->actingAs($teacherUser)->get(route('request-attachments.show', $attachment))->assertOk();
-
-    // 4. The teacher proposes the slot; the student gets a payable hold.
-    $this->actingAs($teacherUser)->post(route('teacher.requests.respond', $request), [
-        'action' => 'accept',
+    // 3. The student books the teacher's open slot; that creates a payable hold.
+    $this->actingAs($student)->post(route('student.bookings.store', $teacherUser->teacherProfile), [
+        'subject_id' => $this->subject->id,
+        'lesson_id' => $this->lesson->id,
+        'duration' => 60,
         'starts_at' => $this->windowStart->toIso8601String(),
-        'message' => 'Bring the paper and we will work through question 4 first.',
-    ])->assertRedirect(route('teacher.requests.index'));
+        'learner_name' => 'Aarav Mehta',
+    ])->assertSessionHasNoErrors();
 
     $booking = Booking::query()->firstOrFail();
 
     expect($booking->status)->toBe(BookingStatus::PendingPayment)
+        ->and($booking->student_id)->toBe($student->id)
+        ->and($booking->subject_id)->toBe($this->subject->id)
+        ->and($booking->lesson_id)->toBe($this->lesson->id)
         ->and($booking->price_minor)->toBe(80000);
 
     $this->actingAs($student)
