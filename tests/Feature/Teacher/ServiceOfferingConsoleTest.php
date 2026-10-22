@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ApprovalStatus;
 use App\Enums\ServiceType;
 use App\Models\Grade;
 use App\Models\Lesson;
@@ -16,7 +17,7 @@ beforeEach(function () {
     $this->lesson = Lesson::factory()->create(['subject_id' => $this->subject->id]);
     $this->gradeId = (int) $this->lesson->grade_id;
 
-    $this->profile->subjects()->attach($this->subject->id);
+    $this->profile->subjects()->attach($this->subject->id, ['status' => ApprovalStatus::Approved]);
     $this->profile->lessons()->attach($this->lesson->id);
 });
 
@@ -63,6 +64,55 @@ it('shows the services manager with server-rendered grade, subject and lesson op
         ->and($config['offerings'][0]['toggleUrl'])->toBe(route('teacher.services.toggle', $offering))
         ->and($config['urls']['store'])->toBe(route('teacher.services.store'))
         ->and($config['urls']['subjects'])->toBe(route('teacher.subjects.index'));
+});
+
+it('only offers approved subjects and their lessons to the composer', function () {
+    $pending = Subject::factory()->create();
+    $pendingLesson = Lesson::factory()->create(['subject_id' => $pending->id]);
+
+    $this->profile->subjects()->attach($pending->id, ['status' => ApprovalStatus::Pending]);
+    $this->profile->lessons()->attach($pendingLesson->id);
+
+    $config = teacherServicesConfig(
+        $this->actingAs($this->teacher)->get(route('teacher.services.index'))
+    );
+
+    expect(collect($config['options']['subjects'])->pluck('id')->all())->toBe([(int) $this->subject->id])
+        ->and(collect($config['options']['lessons'])->pluck('id')->all())->toBe([(int) $this->lesson->id])
+        ->and($config['hasSubjects'])->toBeTrue()
+        ->and($config['subjectsAwaitingApproval'])->toBeFalse();
+});
+
+it('asks a teacher whose subjects are still pending to wait for approval', function () {
+    $pendingOnly = User::factory()->teacher()->onboarded()->create();
+    $pendingOnly->teacherProfile->subjects()->attach($this->subject->id, ['status' => ApprovalStatus::Pending]);
+
+    $config = teacherServicesConfig(
+        $this->actingAs($pendingOnly)->get(route('teacher.services.index'))
+    );
+
+    expect($config['hasSubjects'])->toBeFalse()
+        ->and($config['subjectsAwaitingApproval'])->toBeTrue()
+        ->and($config['options']['subjects'])->toBe([])
+        ->and($config['options']['lessons'])->toBe([]);
+});
+
+it('refuses a service for a subject that is not approved', function () {
+    $pending = Subject::factory()->create();
+
+    $this->profile->subjects()->attach($pending->id, ['status' => ApprovalStatus::Pending]);
+
+    $this->actingAs($this->teacher)
+        ->from(route('teacher.services.index'))
+        ->post(route('teacher.services.store'), [
+            'service_type' => 'qna',
+            'title' => 'Unapproved Q&A',
+            'price' => '1000',
+            'subject_id' => $pending->id,
+        ])
+        ->assertSessionHasErrors('subject_id');
+
+    expect(ServiceOffering::count())->toBe(0);
 });
 
 it('reopens the create composer with the posted type after a rejected save', function () {
@@ -448,7 +498,7 @@ it('forbids another teacher from updating or deleting an offering', function () 
 
     $intruder = User::factory()->teacher()->onboarded()->create();
     // Valid input for a teacher who teaches the scope — only the policy stands in the way.
-    $intruder->teacherProfile->subjects()->attach($this->subject->id);
+    $intruder->teacherProfile->subjects()->attach($this->subject->id, ['status' => ApprovalStatus::Approved]);
     $intruder->teacherProfile->lessons()->attach($this->lesson->id);
 
     $this->actingAs($intruder)

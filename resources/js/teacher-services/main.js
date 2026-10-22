@@ -13,6 +13,7 @@ const DEFAULT_CONFIG = {
     theme: { preset: 'classic' },
     notices: [],
     hasSubjects: false,
+    subjectsAwaitingApproval: false,
     stats: {},
     types: [],
     offerings: [],

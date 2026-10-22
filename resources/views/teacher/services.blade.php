@@ -278,6 +278,9 @@
             'noSubjectsTitle' => __('Add subjects first'),
             'noSubjectsBody' => __('Every service is priced per subject or lesson, so add your subjects and lessons before creating one.'),
             'noSubjectsCta' => __('Set up subjects & lessons'),
+            'noApprovedSubjectsTitle' => __('Subjects awaiting approval'),
+            'noApprovedSubjectsBody' => __('Your subjects are still being reviewed. You can add a service as soon as an admin approves one of them.'),
+            'noApprovedSubjectsCta' => __('Review your subjects'),
             'emptyAllTitle' => __('No services yet'),
             'emptyAllBody' => __('Create your first service so students can buy a lesson plan, a summary, paper marking or a live session.'),
             'emptyTypeTitle' => __('No :type yet'),
@@ -388,6 +391,7 @@
         'theme' => ['preset' => $themePreset],
         'notices' => $notices,
         'hasSubjects' => $subjects->isNotEmpty(),
+        'subjectsAwaitingApproval' => $subjectsAwaitingApproval,
         'stats' => [
             'total' => $offeringsPayload->count(),
             'active' => $activeCount,
@@ -462,7 +466,15 @@
                 </div>
             @endforeach
 
-            @if (! $config['hasSubjects'])
+            @if ($config['subjectsAwaitingApproval'])
+                <div class="rounded-2xl border border-slate-200/80 bg-white p-6 text-center dark:border-slate-800/80 dark:bg-slate-900">
+                    <p class="font-semibold text-slate-700 dark:text-slate-200">{{ $config['copy']['list']['noApprovedSubjectsTitle'] }}</p>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $config['copy']['list']['noApprovedSubjectsBody'] }}</p>
+                    <a href="{{ $config['urls']['subjects'] }}" class="mt-3 inline-block text-sm font-semibold text-primary">
+                        {{ $config['copy']['list']['noApprovedSubjectsCta'] }}
+                    </a>
+                </div>
+            @elseif (! $config['hasSubjects'])
                 <div class="rounded-2xl border border-slate-200/80 bg-white p-6 text-center dark:border-slate-800/80 dark:bg-slate-900">
                     <p class="text-sm text-slate-500 dark:text-slate-400">{{ $config['copy']['list']['noSubjectsBody'] }}</p>
                     <a href="{{ $config['urls']['subjects'] }}" class="mt-3 inline-block text-sm font-semibold text-primary">

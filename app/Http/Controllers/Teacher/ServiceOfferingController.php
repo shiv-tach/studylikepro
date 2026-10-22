@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Teacher;
 
+use App\Enums\ApprovalStatus;
 use App\Enums\ServiceType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpsertServiceOfferingRequest;
@@ -25,7 +26,13 @@ class ServiceOfferingController extends Controller
     {
         $profile = $request->user()->teacherProfile;
 
-        $subjects = $profile->subjects()->with('educationLevel')->get();
+        // A service may only be priced against subjects the admin approved:
+        // pending and rejected picks are not published to students yet.
+        $pivotSubjects = $profile->subjects()->with('educationLevel')->get();
+
+        $subjects = $pivotSubjects
+            ->filter(fn (Subject $subject) => $subject->pivot->status === ApprovalStatus::Approved)
+            ->values();
 
         // Reuse this loaded collection inside gradeIdsFor() instead of
         // re-querying per subject.
@@ -34,6 +41,7 @@ class ServiceOfferingController extends Controller
         $lessons = $profile->lessons()
             ->active()
             ->ordered()
+            ->whereIn('lessons.subject_id', $subjects->modelKeys())
             ->with('grade')
             ->get();
 
@@ -95,6 +103,7 @@ class ServiceOfferingController extends Controller
             'gradeOptions' => $gradeOptions,
             'subjectOptions' => $subjectOptions,
             'lessonOptions' => $lessonOptions,
+            'subjectsAwaitingApproval' => $subjects->isEmpty() && $pivotSubjects->isNotEmpty(),
             'offerings' => $offerings,
             'types' => ServiceType::cases(),
             'durations' => config('studylikepro.lesson_durations'),

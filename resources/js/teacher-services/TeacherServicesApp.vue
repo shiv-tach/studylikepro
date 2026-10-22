@@ -95,6 +95,7 @@ function createFromActiveTab() {
         <ServiceList
             :offerings="filteredOfferings"
             :has-subjects="config.hasSubjects"
+            :subjects-awaiting-approval="config.subjectsAwaitingApproval"
             :tab="activeTab"
             :tab-type="activeTabType"
             :view="view"

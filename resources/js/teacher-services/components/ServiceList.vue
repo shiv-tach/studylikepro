@@ -1,9 +1,9 @@
 <script setup>
 /**
  * The catalog for the selected tab — one compact row per service by default,
- * the card grid when the teacher picks it in the toolbar — plus the three empty
- * states that actually help: no subjects yet, nothing of this type yet, and
- * nothing matching the filters.
+ * the card grid when the teacher picks it in the toolbar — plus the empty
+ * states that actually help: subjects awaiting approval, no subjects yet,
+ * nothing of this type yet, and nothing matching the filters.
  */
 import { computed } from 'vue';
 import AppIcon from '../../shared/components/AppIcon.vue';
@@ -16,6 +16,7 @@ import ServiceCard from './ServiceCard.vue';
 const props = defineProps({
     offerings: { type: Array, default: () => [] },
     hasSubjects: { type: Boolean, default: true },
+    subjectsAwaitingApproval: { type: Boolean, default: false },
     tab: { type: String, default: 'all' },
     tabType: { type: Object, default: null },
     view: { type: String, default: 'list' },
@@ -81,7 +82,19 @@ function onDelete(offering) {
         role="tabpanel"
         :aria-labelledby="`teacher-services-tab-${tab}`"
     >
-        <div v-if="!hasSubjects" :class="[panel, EMPTY_RING, 'flex flex-col items-center gap-3 text-center']">
+        <div v-if="subjectsAwaitingApproval" :class="[panel, EMPTY_RING, 'flex flex-col items-center gap-3 text-center']">
+            <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 p-3 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
+                <AppIcon name="clock" />
+            </span>
+            <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ copy.list?.noApprovedSubjectsTitle }}</h2>
+            <p class="max-w-md text-sm text-slate-500 dark:text-slate-400">{{ copy.list?.noApprovedSubjectsBody }}</p>
+            <a :href="urls.subjects" :class="[SECONDARY_BUTTON, 'mt-1']">
+                {{ copy.list?.noApprovedSubjectsCta }}
+                <span class="h-4 w-4" aria-hidden="true"><AppIcon name="arrow-right" /></span>
+            </a>
+        </div>
+
+        <div v-else-if="!hasSubjects" :class="[panel, EMPTY_RING, 'flex flex-col items-center gap-3 text-center']">
             <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 p-3 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
                 <AppIcon name="book" />
             </span>

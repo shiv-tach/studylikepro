@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\ApprovalStatus;
 use App\Enums\ServiceType;
 use App\Models\Lesson;
 use App\Models\Subject;
@@ -171,17 +172,27 @@ class UpsertServiceOfferingRequest extends FormRequest
 
         if ($hasSubject) {
             $subject = Subject::query()->find((int) $this->input('subject_id'));
+            $status = $subject === null
+                ? null
+                : $profile->subjects()->where('subjects.id', $subject->id)->first()?->pivot->status;
 
-            if ($subject === null || ! $profile->subjects()->where('subjects.id', $subject->id)->exists()) {
+            if ($status === null) {
                 $validator->errors()->add('subject_id', __('You do not teach this subject yet.'));
+            } elseif ($status !== ApprovalStatus::Approved) {
+                $validator->errors()->add('subject_id', __('This subject is not approved yet, so it cannot back a service.'));
             }
         }
 
         if ($hasLesson) {
             $lesson = Lesson::query()->find((int) $this->input('lesson_id'));
+            $lessonSubjectStatus = $lesson === null
+                ? null
+                : $profile->subjects()->where('subjects.id', $lesson->subject_id)->first()?->pivot->status;
 
             if ($lesson === null || ! $profile->lessons()->where('lessons.id', $lesson->id)->exists()) {
                 $validator->errors()->add('lesson_id', __('You do not teach this lesson yet.'));
+            } elseif ($lessonSubjectStatus !== ApprovalStatus::Approved) {
+                $validator->errors()->add('lesson_id', __('The subject for this lesson is not approved yet.'));
             } elseif ($hasSubject && (int) $lesson->subject_id !== (int) $this->input('subject_id')) {
                 $validator->errors()->add('lesson_id', __('This lesson belongs to a different subject.'));
             } elseif ($hasGrade && (int) $lesson->grade_id !== (int) $this->input('grade_id')) {
