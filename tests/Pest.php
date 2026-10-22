@@ -149,6 +149,23 @@ function teacherSubjectsConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the teacher services catalog renders its tabs,
+ * offerings and composer from.
+ *
+ * @return array<string, mixed>
+ */
+function teacherServicesConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="teacher-services-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Read the config island the "My purchases" page renders its cards from.
  *
  * @return array<string, mixed>

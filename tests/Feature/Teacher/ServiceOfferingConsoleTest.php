@@ -20,32 +20,101 @@ beforeEach(function () {
 });
 
 it('shows the services manager with server-rendered grade, subject and lesson options', function () {
-    ServiceOffering::factory()->create([
+    $offering = ServiceOffering::factory()->create([
+        'teacher_profile_id' => $this->profile->id,
+        'subject_id' => $this->subject->id,
+        'lesson_id' => $this->lesson->id,
+        'title' => 'Algebra boost',
+    ]);
+
+    $response = $this->actingAs($this->teacher)
+        ->get(route('teacher.services.index'))
+        ->assertOk()
+        ->assertSee('Services & pricing')
+        ->assertSee('id="teacher-services-config"', false)
+        ->assertSee('id="teacher-services-app"', false)
+        ->assertSee('Lesson plans')
+        ->assertSee('Paper marking')
+        ->assertSee('Q&A sessions')
+        ->assertSee('Pick a grade')
+        // The no-JS twin keeps the real field names, so the fallback posts the
+        // same request as the Vue composer.
+        ->assertSee('name="grade_id"', false)
+        ->assertSee('name="subject_id"', false)
+        ->assertSee('name="lesson_id"', false)
+        ->assertDontSee('x-for="g in grades"', false);
+
+    $config = teacherServicesConfig($response);
+
+    expect($config['types'])->toHaveCount(5)
+        ->and(collect($config['types'])->firstWhere('value', 'lesson')['label'])->toBe('Lesson plan')
+        ->and($config['options']['grades'])->not->toBeEmpty()
+        ->and($config['options']['subjects'][0]['name'])->toBe($this->subject->name)
+        ->and($config['options']['lessons'][0]['id'])->toBe((int) $this->lesson->id)
+        ->and($config['offerings'])->toHaveCount(1)
+        ->and($config['offerings'][0]['id'])->toBe((int) $offering->id)
+        ->and($config['offerings'][0]['title'])->toBe('Algebra boost')
+        ->and($config['offerings'][0]['subjectName'])->toBe($this->subject->name)
+        ->and($config['offerings'][0]['lessonName'])->toBe($this->lesson->name)
+        ->and($config['offerings'][0]['priceLabel'])->toContain(number_format($offering->price_minor / 100, 2))
+        ->and($config['offerings'][0]['updateUrl'])->toBe(route('teacher.services.update', $offering))
+        ->and($config['offerings'][0]['deleteUrl'])->toBe(route('teacher.services.destroy', $offering))
+        ->and($config['offerings'][0]['toggleUrl'])->toBe(route('teacher.services.toggle', $offering))
+        ->and($config['urls']['store'])->toBe(route('teacher.services.store'))
+        ->and($config['urls']['subjects'])->toBe(route('teacher.subjects.index'));
+});
+
+it('reopens the create composer with the posted type after a rejected save', function () {
+    $this->actingAs($this->teacher)
+        ->from(route('teacher.services.index'))
+        ->post(route('teacher.services.store'), [
+            'service_type' => 'lesson',
+            'title' => 'Missing lesson',
+            'price' => '8000',
+            'subject_id' => $this->subject->id,
+            'grade_id' => $this->gradeId,
+            'allocation_minutes' => 240,
+        ])
+        ->assertSessionHasErrors('lesson_id');
+
+    $config = teacherServicesConfig(
+        $this->actingAs($this->teacher)->get(route('teacher.services.index'))
+    );
+
+    expect($config['openComposer'])->toBe(['mode' => 'create', 'type' => 'lesson'])
+        ->and($config['editingOfferingId'])->toBeNull()
+        ->and($config['form']['type'])->toBe('lesson')
+        ->and($config['form']['values']['title'])->toBe('Missing lesson')
+        ->and($config['errors']['lesson_id'])->not->toBeEmpty();
+});
+
+it('scopes a rejected edit to the offering that was being edited', function () {
+    $offering = ServiceOffering::factory()->create([
         'teacher_profile_id' => $this->profile->id,
         'subject_id' => $this->subject->id,
         'lesson_id' => $this->lesson->id,
     ]);
 
     $this->actingAs($this->teacher)
-        ->get(route('teacher.services.index'))
-        ->assertOk()
-        ->assertSee('Services & pricing')
-        ->assertSee('Lesson plans')
-        ->assertSee('Paper marking')
-        ->assertSee('Q&A sessions')
-        ->assertSee('Grade')
-        ->assertSee('Pick a grade')
-        // The cascade options are rendered server-side so the selects are never
-        // empty, with data attributes for the Alpine visibility filter.
-        ->assertSee('>'.$this->lesson->grade->label.'<', false)
-        ->assertSee($this->subject->name)
-        ->assertSee($this->lesson->name)
-        ->assertSee('data-grades=', false)
-        ->assertSee('data-subject=', false)
-        ->assertSee('name="grade_id"', false)
-        ->assertSee('x-ref="subjectSelect"', false)
-        ->assertSee('x-ref="lessonSelect"', false)
-        ->assertDontSee('x-for="g in grades"', false);
+        ->from(route('teacher.services.index'))
+        ->put(route('teacher.services.update', $offering), [
+            'service_type' => 'summary',
+            'title' => '',
+            'price' => '2500',
+            'subject_id' => $this->subject->id,
+            'lesson_id' => $this->lesson->id,
+            'grade_id' => $this->gradeId,
+            'editing_offering' => $offering->id,
+        ])
+        ->assertSessionHasErrors('title');
+
+    $config = teacherServicesConfig(
+        $this->actingAs($this->teacher)->get(route('teacher.services.index'))
+    );
+
+    expect($config['openComposer'])->toBe(['mode' => 'edit', 'offeringId' => (int) $offering->id])
+        ->and($config['editingOfferingId'])->toBe((int) $offering->id)
+        ->and($config['errors']['title'])->not->toBeEmpty();
 });
 
 it('creates every service type and converts rupees to minor units', function () {

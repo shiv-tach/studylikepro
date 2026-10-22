@@ -1,4 +1,7 @@
 @php
+    // The no-JavaScript twin of the Vue composer. It keeps the same field names,
+    // the same routes and the same validation, but the grade/subject/lesson
+    // cascade is not filtered — every option is shown at once.
     $isEdit = $offering !== null;
     $action = $isEdit ? route('teacher.services.update', $offering) : route('teacher.services.store');
     $fieldClasses = 'rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
@@ -31,62 +34,13 @@
             ];
         }
     }
-
-    $allocation = (int) old('allocation_minutes', $offering?->allocation_minutes ?? 60);
-    $hours = (int) floor($allocation / 60);
-    $minutes = $allocation % 60;
 @endphp
 
-<form method="POST" action="{{ $action }}" class="mt-5 space-y-4 rounded-xl border border-slate-200/80 p-4 dark:border-slate-800"
-      x-data="{
-        gradeId: '{{ old('grade_id', $offering?->grade_id ?? '') }}',
-        subjectId: '{{ old('subject_id', $offering?->subject_id ?? '') }}',
-        lessonId: '{{ old('lesson_id', $offering?->lesson_id ?? '') }}',
-        hours: {{ $hours }},
-        minutes: {{ $minutes }},
-        init() {
-            this.applyScopeFilters();
-            this.$watch('gradeId', () => this.applyScopeFilters());
-            this.$watch('subjectId', () => this.applyScopeFilters());
-        },
-        applyScopeFilters() {
-            const gid = this.gradeId ? parseInt(this.gradeId) : null;
-            const sid = this.subjectId ? parseInt(this.subjectId) : null;
-
-            const subjects = this.$refs.subjectSelect;
-            if (subjects) {
-                let keepSubject = ! this.subjectId;
-                Array.from(subjects.options).forEach((option) => {
-                    if (! option.dataset.grades) return;
-                    const grades = (option.dataset.grades || '').split(',').filter(Boolean).map(Number);
-                    const visible = ! gid || grades.length === 0 || grades.includes(gid);
-                    option.hidden = ! visible;
-                    option.disabled = ! visible;
-                    if (visible && option.value && parseInt(option.value) === sid) keepSubject = true;
-                });
-                if (! keepSubject) this.subjectId = '';
-            }
-
-            const lessons = this.$refs.lessonSelect;
-            if (lessons) {
-                const currentSubject = this.subjectId ? parseInt(this.subjectId) : null;
-                let keepLesson = ! this.lessonId;
-                Array.from(lessons.options).forEach((option) => {
-                    if (! option.dataset.subject) return;
-                    const subject = parseInt(option.dataset.subject);
-                    const grade = parseInt(option.dataset.grade);
-                    const visible = (! currentSubject || subject === currentSubject) && (! gid || grade === gid);
-                    option.hidden = ! visible;
-                    option.disabled = ! visible;
-                    if (visible && option.value && option.value === this.lessonId) keepLesson = true;
-                });
-                if (! keepLesson) this.lessonId = '';
-            }
-        },
-    }">
+<form method="POST" action="{{ $action }}" class="mt-5 space-y-4 rounded-xl border border-slate-200/80 p-4 dark:border-slate-800">
     @csrf
     @if ($isEdit)
         @method('PUT')
+        <input type="hidden" name="editing_offering" value="{{ $offering->id }}">
     @endif
 
     <input type="hidden" name="service_type" value="{{ $type->value }}">
@@ -94,30 +48,21 @@
     <div class="grid gap-4 sm:grid-cols-3">
         <div>
             <x-input-label :value="__('Grade')" />
-            <select name="grade_id" x-model="gradeId" class="mt-1 block w-full {{ $fieldClasses }}">
+            <select name="grade_id" class="mt-1 block w-full {{ $fieldClasses }}">
                 <option value="">{{ $type->requiresLesson() ? __('Pick a grade') : __('All grades') }}</option>
                 @foreach ($gradeOptions as $grade)
                     <option value="{{ $grade['id'] }}" @selected((int) old('grade_id', $offering?->grade_id ?? 0) === $grade['id'])>{{ $grade['label'] }}</option>
                 @endforeach
             </select>
-            <p class="mt-1 text-xs text-slate-400">
-                {{ $type->requiresLesson() ? __('Required — lessons are per grade.') : __('Optional — narrows the subjects below.') }}
-            </p>
             <x-input-error :messages="$errors->get('grade_id')" class="mt-2" />
         </div>
 
         <div>
             <x-input-label :value="__('Subject')" />
-            <select name="subject_id" x-model="subjectId" x-ref="subjectSelect" class="mt-1 block w-full {{ $fieldClasses }}">
-                @if ($type->allowsLessonOrSubject())
-                    <option value="">{{ __('No subject — lesson only') }}</option>
-                @else
-                    <option value="">{{ __('Pick a subject') }}</option>
-                @endif
+            <select name="subject_id" class="mt-1 block w-full {{ $fieldClasses }}">
+                <option value="">{{ $type->allowsLessonOrSubject() ? __('No subject — lesson only') : __('Pick a subject') }}</option>
                 @foreach ($subjectOptions as $subject)
-                    <option value="{{ $subject['id'] }}"
-                            data-grades="{{ implode(',', $subject['grades']) }}"
-                            @selected((int) old('subject_id', $offering?->subject_id ?? 0) === $subject['id'])>
+                    <option value="{{ $subject['id'] }}" @selected((int) old('subject_id', $offering?->subject_id ?? 0) === $subject['id'])>
                         {{ $subject['name'] }}{{ $subject['level_name'] ? ' — '.$subject['level_name'] : '' }}
                     </option>
                 @endforeach
@@ -128,13 +73,10 @@
         @if ($type->requiresLesson() || $type->allowsLessonOrSubject())
             <div>
                 <x-input-label :value="__('Lesson')" />
-                <select name="lesson_id" x-model="lessonId" x-ref="lessonSelect" class="mt-1 block w-full {{ $fieldClasses }}">
+                <select name="lesson_id" class="mt-1 block w-full {{ $fieldClasses }}">
                     <option value="">{{ $type->allowsLessonOrSubject() ? __('Whole subject') : __('Pick a lesson') }}</option>
                     @foreach ($lessonOptions as $lesson)
-                        <option value="{{ $lesson['id'] }}"
-                                data-subject="{{ $lesson['subject_id'] }}"
-                                data-grade="{{ $lesson['grade_id'] }}"
-                                @selected((int) old('lesson_id', $offering?->lesson_id ?? 0) === $lesson['id'])>
+                        <option value="{{ $lesson['id'] }}" @selected((int) old('lesson_id', $offering?->lesson_id ?? 0) === $lesson['id'])>
                             {{ $lesson['name'] }}
                         </option>
                     @endforeach
@@ -155,13 +97,9 @@
 
         <div>
             <x-input-label :value="__('Price (rupees)')" />
-            <div class="relative mt-1">
-                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-slate-400">{{ platform_settings()->currencySymbol() }}</span>
-                <input name="price" type="number" min="1" max="1000000"
-                       value="{{ old('price', $offering ? (int) round($offering->price_minor / 100) : '') }}"
-                       class="block w-full rounded-xl border-slate-300 bg-white pl-8 text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900" />
-            </div>
-            <p class="mt-1 text-xs text-slate-400">{{ $type === \App\Enums\ServiceType::Lesson ? __('Flat price for the whole plan.') : ($type === \App\Enums\ServiceType::PaperMarking ? __('Flat price per paper.') : __('Flat price per session.')) }}</p>
+            <input name="price" type="number" min="1" max="1000000"
+                   value="{{ old('price', $offering ? (int) round($offering->price_minor / 100) : '') }}"
+                   class="mt-1 block w-full {{ $fieldClasses }}" />
             <x-input-error :messages="$errors->get('price')" class="mt-2" />
         </div>
     </div>
@@ -176,20 +114,10 @@
     @if ($type === \App\Enums\ServiceType::Lesson)
         <div class="grid gap-4 sm:grid-cols-3">
             <div>
-                <x-input-label :value="__('Total time')" />
-                <div class="mt-1 flex items-center gap-2">
-                    <select x-model.number="hours" class="{{ $fieldClasses }}">
-                        @for ($hour = 1; $hour <= 100; $hour++)
-                            <option value="{{ $hour }}">{{ $hour }}h</option>
-                        @endfor
-                    </select>
-                    <select x-model.number="minutes" class="{{ $fieldClasses }}">
-                        <option value="0">0m</option>
-                        <option value="30">30m</option>
-                    </select>
-                </div>
-                <input type="hidden" name="allocation_minutes" :value="hours * 60 + minutes">
-                <p class="mt-1 text-xs text-slate-400">{{ __('Students book this total time in sessions, at least 30 minutes.') }}</p>
+                <x-input-label :value="__('Total time (minutes)')" />
+                <input name="allocation_minutes" type="number" min="30" max="6000" step="30"
+                       value="{{ old('allocation_minutes', $offering?->allocation_minutes ?? 60) }}"
+                       class="mt-1 block w-full {{ $fieldClasses }}" />
                 <x-input-error :messages="$errors->get('allocation_minutes')" class="mt-2" />
             </div>
 
@@ -254,3 +182,4 @@
         <x-primary-button>{{ $isEdit ? __('Save changes') : __('Add service') }}</x-primary-button>
     </div>
 </form>
+

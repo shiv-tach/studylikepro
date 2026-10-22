@@ -59,6 +59,10 @@ export default defineConfig({
                 // lesson scope, the per-grade rates, the request queue and the
                 // subject proposal form.
                 'resources/js/teacher-subjects/main.js',
+                // The services catalog at /teacher/services: the tabbed list,
+                // the type picker and the composer that creates or edits an
+                // offering.
+                'resources/js/teacher-services/main.js',
                 // The signed-in chrome (sidebar + top bar) that wraps every
                 // x-app-layout screen, so the layout itself is a Vue component.
                 'resources/js/app-shell/main.js',

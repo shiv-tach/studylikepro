@@ -77,12 +77,15 @@ class ServiceOfferingController extends Controller
             ->values()
             ->all();
 
+        // A flat, ordered list keeps the Vue catalog free to group by type and
+        // filter without re-querying. `purchases_count` decides whether a row
+        // may still be deleted or only paused.
         $offerings = ServiceOffering::query()
             ->where('teacher_profile_id', $profile->id)
+            ->withCount('purchases')
             ->ordered()
             ->with(['subject', 'lesson', 'grade'])
-            ->get()
-            ->groupBy(fn (ServiceOffering $offering) => $offering->service_type->value);
+            ->get();
 
         return view('teacher.services', [
             'profile' => $profile,
