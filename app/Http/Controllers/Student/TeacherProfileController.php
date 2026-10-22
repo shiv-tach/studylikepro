@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Student;
 
+use App\Enums\ApprovalStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Subject;
 use App\Models\TeacherProfile;
@@ -23,9 +24,13 @@ class TeacherProfileController extends Controller
 
         $teacherProfile->load([
             'user',
-            'subjects' => fn ($relation) => $relation->where('subjects.is_active', true)->with([
-                'educationLevel.grades' => fn ($query) => $query->where('is_active', true)->ordered(),
-            ]),
+            // Only the subjects the admin approved are part of the profile.
+            'subjects' => fn ($relation) => $relation
+                ->where('subjects.is_active', true)
+                ->wherePivot('status', ApprovalStatus::Approved)
+                ->with([
+                    'educationLevel.grades' => fn ($query) => $query->where('is_active', true)->ordered(),
+                ]),
             'lessons.grade',
         ]);
 

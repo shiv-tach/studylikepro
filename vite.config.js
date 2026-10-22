@@ -60,6 +60,11 @@ export default defineConfig({
                 // the type picker and the composer that creates or edits an
                 // offering.
                 'resources/js/teacher-services/main.js',
+                // The teacher's order book at /teacher/orders and one order in
+                // detail: the status rail, the money breakdown, the plan balance
+                // and the sessions booked against the order.
+                'resources/js/teacher-orders/main.js',
+                'resources/js/teacher-order-show/main.js',
                 // The signed-in chrome (sidebar + top bar) that wraps every
                 // x-app-layout screen, so the layout itself is a Vue component.
                 'resources/js/app-shell/main.js',

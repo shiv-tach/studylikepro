@@ -166,6 +166,40 @@ function teacherServicesConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the teacher order book renders its status rail, search
+ * and order cards from.
+ *
+ * @return array<string, mixed>
+ */
+function teacherOrdersConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="teacher-orders-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island the teacher order detail page renders its timeline,
+ * money, plan, student, offering, session and marking panels from.
+ *
+ * @return array<string, mixed>
+ */
+function teacherOrderShowConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="teacher-order-show-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Read the config island the "My purchases" page renders its cards from.
  *
  * @return array<string, mixed>

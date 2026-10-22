@@ -20,6 +20,7 @@ const status = useLiveAvailability(props.config.availability, copy);
     <main class="flex-1">
         <TeacherHero
             :teacher="config.teacher"
+            :services="config.services"
             :breadcrumbs="config.breadcrumbs"
             :status="status"
             :copy="copy"

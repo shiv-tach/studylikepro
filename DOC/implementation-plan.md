@@ -564,7 +564,7 @@ Group sessions, subscriptions/lesson packages, recurring bookings, automated tea
 
 - Lesson plans: buy the allocation upfront, then book sessions against the balance; cancelled sessions return time; expiry refunds the unused balance pro-rata (`studylikepro:expire-service-purchases`).
 - Paper marking, paper discussion, Q&A: purchase → deliver (artifact or live session) → earning becomes eligible.
-- Teacher console: *Services & pricing* (4 offering types with per-type validation), *Plans*, *Marking* inbox.
+- Teacher console: *Services & pricing* (4 offering types with per-type validation), *Orders*, *Marking* inbox.
 - Student side: teacher profile *Services & pricing* section with live prices and Buy buttons, *My purchases* dashboard with plan balances, session booking, marking upload/accept/dispute.
 - Admin: *Services*, *Purchases* (refund/cancel) and *Marking* (resolve/refund) consoles.
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ApprovalStatus;
 use App\Enums\BookingStatus;
 use App\Enums\ServiceType;
 use App\Models\Booking;
@@ -44,6 +45,7 @@ function finderTeacher(string $name, int $gradeNumber, array $profileAttributes 
     ]);
 
     $teacher->subjects()->attach(($subject ?? Subject::factory()->create())->id, [
+        'status' => ApprovalStatus::Approved,
         'grade_levels' => [(string) gradeId($gradeNumber)],
     ]);
 
@@ -273,6 +275,7 @@ function gradeSplitTeacher(): TeacherProfile
     ]);
 
     $teacher->subjects()->attach($maths->id, [
+        'status' => ApprovalStatus::Approved,
         'grade_levels' => [(string) gradeId(8), (string) gradeId(9)],
         'grade_rates' => [gradeId(8) => 40000],
     ]);
@@ -509,7 +512,7 @@ test('the dedicated teacher page hides services for other grades', function () {
 
     // ...and stays hidden when the teacher only takes that subject for other grades.
     $science = Subject::factory()->create(['name' => 'Science', 'slug' => 'science']);
-    $teacher->subjects()->attach($science->id, ['grade_levels' => [(string) gradeId(9)]]);
+    $teacher->subjects()->attach($science->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => [(string) gradeId(9)]]);
 
     ServiceOffering::factory()
         ->for($teacher, 'teacherProfile')

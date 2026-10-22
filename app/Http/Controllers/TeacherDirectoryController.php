@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ApprovalStatus;
 use App\Http\Requests\TeacherSearchRequest;
 use App\Models\Subject;
 use App\Models\TeacherProfile;
@@ -63,16 +64,24 @@ class TeacherDirectoryController extends Controller
 
         $teacherProfile->load([
             'user',
-            'subjects' => fn ($relation) => $relation->where('subjects.is_active', true)->with([
-                'educationLevel.grades' => fn ($query) => $query->where('is_active', true)->ordered(),
-            ]),
+            // Only the subjects the admin approved are part of the public profile.
+            'subjects' => fn ($relation) => $relation
+                ->where('subjects.is_active', true)
+                ->wherePivot('status', ApprovalStatus::Approved)
+                ->with([
+                    'educationLevel.grades' => fn ($query) => $query->where('is_active', true)->ordered(),
+                ]),
         ]);
 
         $reviews = $teacherProfile->visibleReviews()->with('booking.lesson', 'booking.subject', 'student')->limit(5)->get();
 
+        // The service badges on the hero: one per category with an active offering.
+        $offerings = $teacherProfile->offerings()->active()->get(['service_type']);
+
         return view('teachers.show', [
             'teacher' => $teacherProfile,
             'config' => PublicTeacherPageConfig::build($teacherProfile, [
+                'offerings' => $offerings,
                 'gradesById' => $teacherProfile->subjects
                     ->flatMap(fn (Subject $subject) => $subject->educationLevel?->grades ?? collect())
                     ->keyBy('id'),

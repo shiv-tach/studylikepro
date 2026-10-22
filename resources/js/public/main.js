@@ -63,6 +63,7 @@ const PAGE_DEFAULTS = {
     'public-teacher-config': {
         ...DEFAULTS,
         teacher: {},
+        services: { title: '', badges: [] },
         grades: { summary: null, count: 0, groups: [] },
         availability: {
             timezone: '',

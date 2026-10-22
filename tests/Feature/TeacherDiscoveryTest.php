@@ -1,7 +1,10 @@
 <?php
 
+use App\Enums\ServiceType;
+use App\Enums\ApprovalStatus;
 use App\Models\EducationLevel;
 use App\Models\Lesson;
+use App\Models\ServiceOffering;
 use App\Models\Subject;
 use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherProfile;
@@ -259,7 +262,7 @@ it('shows an approved teacher profile with rates and availability', function () 
         'languages' => ['English', 'Sinhala'],
         'timezone' => 'Asia/Colombo',
     ]);
-    $profile->subjects()->attach($maths->id, ['grade_levels' => [(string) gradeId(11)], 'rate_per_hour_minor' => 80000]);
+    $profile->subjects()->attach($maths->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => [(string) gradeId(11)], 'rate_per_hour_minor' => 80000]);
     TeacherAvailabilitySlot::factory()->on(1, '18:00', '20:00')->create(['teacher_profile_id' => $profile->id]);
     TeacherTimeOff::factory()->create(['teacher_profile_id' => $profile->id]);
 
@@ -279,7 +282,7 @@ it('renders the public teacher profile inside the landing page shell', function 
         'hourly_rate_minor' => 70000,
         'timezone' => 'Asia/Colombo',
     ]);
-    $profile->subjects()->attach($maths->id, ['grade_levels' => [(string) gradeId(11)], 'rate_per_hour_minor' => 80000]);
+    $profile->subjects()->attach($maths->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => [(string) gradeId(11)], 'rate_per_hour_minor' => 80000]);
     TeacherAvailabilitySlot::factory()->on(1, '18:00', '20:00')->create(['teacher_profile_id' => $profile->id]);
 
     $response = $this->get(route('teachers.show', $profile))->assertOk();
@@ -301,6 +304,51 @@ it('renders the public teacher profile inside the landing page shell', function 
         ->and($config['availability']['status']['state'])->toBeIn(['now', 'soon', 'later'])
         ->and($config['availability']['timezoneLabel'])->toBe('Your time (Asia/Colombo)')
         ->and($config['booking']['action']['url'])->toBe(route('login'));
+});
+
+it('only shows the subjects the admin approved on the public profile', function () {
+    $history = Subject::factory()->create(['name' => 'History', 'slug' => 'history']);
+    $maths = Subject::factory()->create(['name' => 'Unapproved Mathematics', 'slug' => 'unapproved-mathematics']);
+
+    $profile = approvedTeacher('Priya Verma', ['timezone' => 'Asia/Colombo']);
+    $profile->subjects()->attach($history->id, [
+        'status' => ApprovalStatus::Approved,
+        'grade_levels' => [(string) gradeId(11)],
+    ]);
+    $profile->subjects()->attach($maths->id, [
+        'status' => ApprovalStatus::Rejected,
+        'grade_levels' => [(string) gradeId(11)],
+    ]);
+
+    $this->get(route('teachers.show', $profile))
+        ->assertOk()
+        ->assertSee('History')
+        ->assertDontSee('Unapproved Mathematics');
+});
+
+it('shows a service badge for each category with an active offering', function () {
+    $maths = Subject::factory()->create(['name' => 'Mathematics', 'slug' => 'mathematics']);
+    $profile = approvedTeacher('Priya Verma', ['timezone' => 'Asia/Colombo']);
+    $profile->subjects()->attach($maths->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => [(string) gradeId(11)], 'rate_per_hour_minor' => 70000]);
+
+    ServiceOffering::factory()->forType(ServiceType::Lesson)
+        ->create(['teacher_profile_id' => $profile->id, 'subject_id' => $maths->id]);
+    ServiceOffering::factory()->forType(ServiceType::PaperDiscussion)
+        ->create(['teacher_profile_id' => $profile->id, 'subject_id' => $maths->id]);
+    // A deactivated category is not sold, so it gets no badge.
+    ServiceOffering::factory()->forType(ServiceType::PaperMarking)->inactive()
+        ->create(['teacher_profile_id' => $profile->id, 'subject_id' => $maths->id]);
+
+    $response = $this->get(route('teachers.show', $profile))->assertOk();
+    $response->assertSee('Services offered');
+
+    preg_match('/<script type="application\/json" id="public-teacher-config">(.*?)<\/script>/s', $response->getContent(), $matches);
+    $config = json_decode($matches[1], true);
+
+    expect(collect($config['services']['badges'])->pluck('key')->all())
+        ->toBe([ServiceType::Lesson->value, ServiceType::PaperDiscussion->value])
+        ->and(collect($config['services']['badges'])->pluck('label')->all())
+        ->toBe(['Lesson plan', 'Paper discussion']);
 });
 
 it('hides teacher profiles that are not approved', function () {

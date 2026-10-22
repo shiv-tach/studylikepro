@@ -5,6 +5,7 @@ import { statusTone } from '../statusTone';
 
 const props = defineProps({
     teacher: { type: Object, required: true },
+    services: { type: Object, default: () => ({ title: '', badges: [] }) },
     breadcrumbs: { type: Array, default: () => [] },
     status: { type: Object, required: true },
     copy: { type: Object, required: true },
@@ -73,6 +74,22 @@ const tone = computed(() => statusTone(props.status.state));
                             <span class="rounded-full bg-ink-50 px-2.5 py-0.5 text-ink-500">{{ teacher.lessonsTaught }}</span>
                             <span class="rounded-full bg-ink-50 px-2.5 py-0.5 text-ink-500">{{ teacher.experience }}</span>
                             <span class="rounded-full bg-ink-50 px-2.5 py-0.5 text-ink-500">{{ teacher.rateChip }}</span>
+                        </div>
+
+                        <!-- The service categories this teacher actually sells:
+                             a badge only appears when the category has an active offering. -->
+                        <div v-if="services.badges.length" class="mt-3 flex flex-wrap items-center gap-2">
+                            <span class="text-[10px] font-semibold tracking-widest text-ink-400 uppercase">{{ services.title }}</span>
+                            <ul class="flex flex-wrap items-center gap-2">
+                                <li
+                                    v-for="badge in services.badges"
+                                    :key="badge.key"
+                                    class="inline-flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-0.5 text-[11px] font-semibold text-ink-700"
+                                >
+                                    <AppIcon :name="badge.icon" class="h-3.5 w-3.5 text-brand-500" />
+                                    {{ badge.label }}
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </div>

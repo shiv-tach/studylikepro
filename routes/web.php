@@ -50,7 +50,7 @@ use App\Http\Controllers\Teacher\BookingController as TeacherBookingController;
 use App\Http\Controllers\Teacher\DashboardController as TeacherDashboardController;
 use App\Http\Controllers\Teacher\EarningsController as TeacherEarningsController;
 use App\Http\Controllers\Teacher\PaperMarkingController as TeacherPaperMarkingController;
-use App\Http\Controllers\Teacher\PlanController as TeacherPlanController;
+use App\Http\Controllers\Teacher\OrderController as TeacherOrderController;
 use App\Http\Controllers\Teacher\ProfileController as TeacherProfileController;
 use App\Http\Controllers\Teacher\ReviewController as TeacherReviewController;
 use App\Http\Controllers\Teacher\ServiceOfferingController as TeacherServiceOfferingController;
@@ -225,9 +225,9 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
         Route::delete('/services/{offering}', [TeacherServiceOfferingController::class, 'destroy'])->middleware('onboarded')->name('services.destroy');
         Route::post('/services/{offering}/toggle', [TeacherServiceOfferingController::class, 'toggle'])->middleware('onboarded')->name('services.toggle');
 
-        // Purchased plans and their sessions.
-        Route::get('/plans', [TeacherPlanController::class, 'index'])->middleware('onboarded')->name('plans.index');
-        Route::get('/plans/{purchase}', [TeacherPlanController::class, 'show'])->middleware('onboarded')->name('plans.show');
+        // Orders: student purchases and their sessions.
+        Route::get('/orders', [TeacherOrderController::class, 'index'])->middleware('onboarded')->name('orders.index');
+        Route::get('/orders/{purchase}', [TeacherOrderController::class, 'show'])->middleware('onboarded')->name('orders.show');
 
         // Paper marking inbox.
         Route::get('/marking', [TeacherPaperMarkingController::class, 'index'])->middleware('onboarded')->name('marking.index');

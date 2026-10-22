@@ -2,8 +2,10 @@
 
 namespace App\Support;
 
+use App\Enums\ServiceType;
 use App\Models\Booking;
 use App\Models\Grade;
+use App\Models\ServiceOffering;
 use App\Models\Subject;
 use App\Models\TeacherProfile;
 use Carbon\CarbonImmutable;
@@ -22,7 +24,7 @@ use Illuminate\Support\Str;
 final class PublicTeacherPageConfig
 {
     /**
-     * @param  array{gradesById?: Collection<int, Grade>, availability?: array<int, array<string, mixed>>, windows?: array<int, array{start: CarbonImmutable, end: CarbonImmutable}>, reviews?: Collection<int, mixed>, breakdown?: array<int, int>, slotLimit?: int}  $payload
+     * @param  array{gradesById?: Collection<int, Grade>, availability?: array<int, array<string, mixed>>, windows?: array<int, array{start: CarbonImmutable, end: CarbonImmutable}>, reviews?: Collection<int, mixed>, breakdown?: array<int, int>, slotLimit?: int, offerings?: Collection<int, ServiceOffering>}  $payload
      */
     public static function build(TeacherProfile $teacher, array $payload): array
     {
@@ -43,6 +45,7 @@ final class PublicTeacherPageConfig
             'appName' => config('app.name', 'Studylikepro'),
             'authenticated' => auth()->check(),
             'teacher' => self::teacher($teacher, $money, $copy),
+            'services' => self::services($payload['offerings'] ?? collect(), $copy),
             'grades' => self::grades($teacher, $gradesById, $money),
             'availability' => $availability,
             'reviews' => self::reviews($teacher, $payload['reviews'] ?? collect(), $payload['breakdown'] ?? []),
@@ -96,6 +99,40 @@ final class PublicTeacherPageConfig
                 ['label' => __('Languages'), 'value' => implode(', ', $teacher->languages ?? [])],
                 ['label' => __('Lesson length'), 'value' => $teacher->lessonDuration().' '.__('minutes')],
             ],
+        ];
+    }
+
+    /**
+     * One badge per service category this teacher sells: a category appears
+     * only when it has at least one active offering.
+     *
+     * @param  Collection<int, ServiceOffering>  $offerings
+     * @return array<string, mixed>
+     */
+    private static function services(Collection $offerings, array $copy): array
+    {
+        $activeTypes = $offerings
+            ->map(fn (ServiceOffering $offering) => $offering->service_type->value)
+            ->unique();
+
+        $badges = collect(ServiceType::cases())
+            ->filter(fn (ServiceType $type) => $activeTypes->contains($type->value))
+            ->map(fn (ServiceType $type) => [
+                'key' => $type->value,
+                'label' => $type->label(),
+                'icon' => match ($type) {
+                    ServiceType::Lesson => 'graduation',
+                    ServiceType::PaperMarking => 'clipboard',
+                    ServiceType::PaperDiscussion => 'chat',
+                    ServiceType::Qna => 'sparkles',
+                },
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'title' => $copy['servicesTitle'],
+            'badges' => $badges,
         ];
     }
 
@@ -415,6 +452,7 @@ final class PublicTeacherPageConfig
             'live' => __('Live'),
             'liveNote' => __('Updates live'),
             'aboutTitle' => __('About'),
+            'servicesTitle' => __('Services offered'),
             'gradesTitle' => __('Grades taught'),
             'gradesIntro' => __('Only the grades this teacher takes are listed, each with the rate you would pay.'),
             'gradesEmpty' => __('This teacher is still setting up their grades.'),

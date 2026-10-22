@@ -46,6 +46,17 @@
                     @endif
                 </p>
 
+                @if ($config['services']['badges'])
+                    <div class="mt-3">
+                        <p class="text-[10px] font-semibold tracking-widest text-ink-400 uppercase">{{ $config['services']['title'] }}</p>
+                        <ul class="mt-2 flex flex-wrap gap-2">
+                            @foreach ($config['services']['badges'] as $badge)
+                                <li class="rounded-full bg-ink-50 px-3 py-1 text-xs font-semibold text-ink-700">{{ $badge['label'] }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
                 @if ($teacher->bio)
                     <p class="mt-4 text-sm leading-relaxed text-ink-700">{{ $teacher->bio }}</p>
                 @endif
