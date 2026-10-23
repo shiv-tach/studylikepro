@@ -63,7 +63,7 @@
                 : null,
             'emptyTitle' => __('No lesson chats yet'),
             'emptyBody' => __('A chat opens automatically with every confirmed lesson, so you can swap notes before you meet.'),
-            'emptyCta' => $isTeacher ? __('Open my schedule') : __('See my lessons'),
+            'emptyCta' => $isTeacher ? __('Open my lessons') : __('See my lessons'),
         ],
         'urls' => [
             'empty' => $isTeacher ? route('teacher.schedule.index') : route('student.bookings.index'),

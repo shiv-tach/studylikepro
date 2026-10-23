@@ -1,8 +1,9 @@
 <script setup>
 /**
- * The ordered "Do next" queue. It only holds lessons that need a decision:
- * a finished lesson to close, one running now, an open classroom, one starting
- * within the hour, or a hold about to lapse. Everything else waits in the agenda.
+ * The ordered "Needs your attention" queue. It only holds lessons that need a
+ * decision: a finished lesson to close, one running now, an open classroom, one
+ * starting within the hour, or a hold about to lapse. Everything else waits in
+ * the agenda.
  */
 import AppIcon from '../../shared/components/AppIcon.vue';
 import UiSectionHeading from '../../shared/components/UiSectionHeading.vue';

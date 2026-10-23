@@ -10,7 +10,7 @@ import { nextTick, ref } from 'vue';
 const props = defineProps({
     tabs: { type: Array, default: () => [] },
     active: { type: String, required: true },
-    label: { type: String, default: 'Schedule views' },
+    label: { type: String, default: 'Lesson views' },
 });
 
 const emit = defineEmits(['update:active']);

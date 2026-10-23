@@ -14,6 +14,7 @@ const DEFAULT_CONFIG = {
     flash: null,
     errors: { status: null },
     stats: {},
+    today: { dateLabel: '', count: 0, countLabel: '', minutesLabel: '', lessons: [] },
     next: null,
     priority: [],
     agenda: [],
@@ -40,6 +41,7 @@ function readConfig() {
             theme: { ...DEFAULT_CONFIG.theme, ...(parsed.theme ?? {}) },
             errors: { ...DEFAULT_CONFIG.errors, ...(parsed.errors ?? {}) },
             stats: { ...DEFAULT_CONFIG.stats, ...(parsed.stats ?? {}) },
+            today: { ...DEFAULT_CONFIG.today, ...(parsed.today ?? {}) },
             copy: { ...DEFAULT_CONFIG.copy, ...(parsed.copy ?? {}) },
             urls: { ...DEFAULT_CONFIG.urls, ...(parsed.urls ?? {}) },
         };

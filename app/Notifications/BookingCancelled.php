@@ -29,7 +29,7 @@ class BookingCancelled extends Notification implements ShouldQueue
             ->when($this->reason, fn (MailMessage $message) => $message->line('Reason: '.$this->reason))
             ->line('Nothing else is needed from you. You can book another time any time.')
             ->action(
-                $notifiable->id === $this->booking->student_id ? 'Find another teacher' : 'Open my schedule',
+                $notifiable->id === $this->booking->student_id ? 'Find another teacher' : 'Open my lessons',
                 $notifiable->id === $this->booking->student_id
                     ? route('teachers.index')
                     : route('teacher.schedule.index'),

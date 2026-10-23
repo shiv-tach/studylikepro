@@ -2,10 +2,11 @@
 /**
  * The teacher's schedule at /teacher/schedule.
  *
- * Blade decides what is next, what needs an action, every formatted time and
- * price, and which transitions are legal; this app only lays the answer out:
- * the hero, the next-lesson spotlight, the ranked "Do next" queue, and three
- * instant views (upcoming agenda, unpaid holds, recent history).
+ * Blade decides what is on today, what is next, what needs an action, every
+ * formatted time and price, and which transitions are legal; this app only lays
+ * the answer out: the hero, today's lessons, the next-lesson spotlight, the
+ * ranked "Needs your attention" queue, and three instant views (upcoming
+ * agenda, unpaid holds, recent history).
  */
 import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
 import { THEME_PRESET_KEY, useThemePreset } from '../shared/composables/useThemePreset';
@@ -23,6 +24,7 @@ import PriorityStack from './components/PriorityStack.vue';
 import ScheduleEmptyState from './components/ScheduleEmptyState.vue';
 import ScheduleHero from './components/ScheduleHero.vue';
 import ScheduleTabs from './components/ScheduleTabs.vue';
+import TodaySection from './components/TodaySection.vue';
 
 const props = defineProps({
     config: { type: Object, required: true },
@@ -75,15 +77,19 @@ onBeforeUnmount(() => window.removeEventListener('hashchange', syncFromHash));
             <UiAlert tone="rose" icon="alert" role="alert">{{ config.errors.status }}</UiAlert>
         </RevealOnScroll>
 
-        <RevealOnScroll v-if="config.next" :delay="20">
+        <RevealOnScroll :delay="20">
+            <TodaySection :today="config.today" />
+        </RevealOnScroll>
+
+        <RevealOnScroll v-if="config.next" :delay="30">
             <NextLessonSpotlight :lesson="config.next" />
         </RevealOnScroll>
 
-        <RevealOnScroll :delay="30">
+        <RevealOnScroll :delay="40">
             <PriorityStack :items="config.priority" :idle="config.agenda.length === 0" />
         </RevealOnScroll>
 
-        <RevealOnScroll :delay="40">
+        <RevealOnScroll :delay="50">
             <ScheduleTabs v-model:active="active" :tabs="config.tabs" :label="copy.tabs?.label" />
         </RevealOnScroll>
 

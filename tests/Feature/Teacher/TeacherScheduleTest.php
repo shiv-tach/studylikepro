@@ -167,6 +167,50 @@ it('builds the next-lesson spotlight and the three views', function () {
         ->and($config['csrfToken'])->not->toBe('');
 });
 
+it('lists the whole day in the today section', function () {
+    $this->travelTo(Carbon::parse('2026-03-10 09:00:00'));
+
+    $teacherUser = User::factory()->teacher()->onboarded()->create();
+    $teacher = $teacherUser->teacherProfile;
+    $teacher->update(['timezone' => 'Asia/Colombo']);
+
+    // Delivered earlier today: the section shows the day, not just what is left.
+    Booking::factory()->create([
+        'teacher_profile_id' => $teacher->id,
+        'status' => BookingStatus::Completed,
+        'starts_at' => Carbon::parse('2026-03-10 02:00:00'),
+        'ends_at' => Carbon::parse('2026-03-10 03:00:00'),
+        'learner_name' => 'Aarav Mehta',
+    ]);
+
+    Booking::factory()->create([
+        'teacher_profile_id' => $teacher->id,
+        'status' => BookingStatus::Confirmed,
+        'starts_at' => Carbon::parse('2026-03-10 11:00:00'),
+        'ends_at' => Carbon::parse('2026-03-10 12:00:00'),
+        'learner_name' => 'Diya Kapoor',
+    ]);
+
+    Booking::factory()->create([
+        'teacher_profile_id' => $teacher->id,
+        'status' => BookingStatus::Confirmed,
+        'starts_at' => Carbon::parse('2026-03-11 11:00:00'),
+        'ends_at' => Carbon::parse('2026-03-11 12:00:00'),
+        'learner_name' => 'Kabir Singh',
+    ]);
+
+    $config = teacherScheduleConfig(
+        $this->actingAs($teacherUser)->get(route('teacher.schedule.index'))->assertOk()
+    );
+
+    expect($config['today'])
+        ->toMatchArray(['count' => 2, 'countLabel' => '2 lessons today', 'minutesLabel' => '120 min booked'])
+        ->and(array_column($config['today']['lessons'], 'learnerName'))->toBe(['Aarav Mehta', 'Diya Kapoor'])
+        ->and($config['today']['lessons'][0]['status'])->toBe('completed')
+        ->and($config['next']['eyebrow'])->toBe('Next lesson')
+        ->and($config['copy']['priority']['title'])->toBe('Needs your attention');
+});
+
 it('ranks a finished lesson above a hold that is about to lapse', function () {
     $teacherUser = User::factory()->teacher()->onboarded()->create();
     $teacher = $teacherUser->teacherProfile;

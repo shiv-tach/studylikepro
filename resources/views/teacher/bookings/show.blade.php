@@ -10,7 +10,7 @@
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <a href="{{ route('teacher.schedule.index') }}" class="text-xs font-semibold text-slate-400 transition-colors hover:text-primary">&larr; {{ __('My schedule') }}</a>
+                <a href="{{ route('teacher.schedule.index') }}" class="text-xs font-semibold text-slate-400 transition-colors hover:text-primary">&larr; {{ __('My lessons') }}</a>
                 <h2 class="mt-1 font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ $booking->learner_name ?: $booking->student->name }}</h2>
             </div>
             <x-booking-status-badge :status="$booking->status" class="px-3 py-1 text-xs" />

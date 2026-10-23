@@ -83,7 +83,7 @@ final class TeacherBookingShowConfig
             'flash' => BookingDisplay::flash(),
             'error' => session('errors')?->first('status') ?: null,
             'header' => [
-                'backLabel' => __('My schedule'),
+                'backLabel' => __('My lessons'),
                 'backUrl' => route('teacher.schedule.index'),
                 'learner' => $learner,
                 'learnerInitials' => BookingDisplay::initials($learner),
@@ -258,8 +258,8 @@ final class TeacherBookingShowConfig
                     ])
                     : __('The payment window has closed and the slot will be released.'),
                 'deadline' => $expires?->toIso8601String(),
-                'countdownPrefix' => __('Hold ends in :time'),
-                'countdownZero' => __('Hold ended'),
+                'countdownPrefix' => __('Payment time ends in :time'),
+                'countdownZero' => __('Payment time ran out'),
                 'secondary' => self::cancelAction($actions),
             ]);
         }
@@ -268,7 +268,7 @@ final class TeacherBookingShowConfig
             return self::nextItem('closed', 'slate', 'check-circle', __('Lesson closed'), [
                 'body' => self::closedBody($booking),
                 'secondary' => [
-                    self::linkAction(__('Back to schedule'), route('teacher.schedule.index'), 'ghost'),
+                    self::linkAction(__('Back to my lessons'), route('teacher.schedule.index'), 'ghost'),
                 ],
             ]);
         }
@@ -418,8 +418,8 @@ final class TeacherBookingShowConfig
         }
 
         if ($status === BookingStatus::PendingPayment && $booking->expires_at?->isFuture()) {
-            $items[] = self::priorityItem(60, 'hold', 'amber', 'alert', __('Hold expiring'),
-                __('The slot is reserved until the student pays. It is released automatically when the hold lapses.'),
+            $items[] = self::priorityItem(60, 'hold', 'amber', 'alert', __('Payment time nearly up'),
+                __('The time slot is reserved until the student pays. It is released automatically if they do not pay.'),
                 self::cancelAction($actions),
                 $booking->learner_name ?: $booking->student->name);
         }
@@ -711,7 +711,7 @@ final class TeacherBookingShowConfig
                 'eyebrow' => __('Lesson detail'),
                 'timezone' => __('Times shown in :timezone.', ['timezone' => $timezone]),
                 'reference' => __('Reference'),
-                'back' => __('Back to my schedule'),
+                'back' => __('Back to my lessons'),
                 'payout' => __('You earn'),
             ],
             'next' => [

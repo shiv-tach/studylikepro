@@ -29,7 +29,7 @@ class BookingRequestReceived extends Notification implements ShouldQueue
             ->line('Lesson: '.($this->booking->lesson?->name ?? $this->booking->subject?->name ?? 'Tutoring lesson'))
             ->line('You earn '.platform_settings()->formatMinor($this->booking->teacher_payout_minor).' once the lesson is delivered.')
             ->line('The slot is held for '.platform_settings()->int('hold_ttl_minutes').' minutes while they pay. It confirms automatically.')
-            ->action('Open my schedule', route('teacher.bookings.show', $this->booking));
+            ->action('Open my lessons', route('teacher.bookings.show', $this->booking));
     }
 
     /**

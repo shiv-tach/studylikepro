@@ -12,8 +12,9 @@ use Illuminate\Support\Collection;
  *
  * Blade still owns every label, timezone-formatted time, money value and route,
  * so the Vue app never formats a date or hardcodes a URL. The page is built
- * around two questions — what is next, and what needs the teacher now — so the
- * payload carries a ranked priority queue beside the plain agenda.
+ * around three questions — what is on today, what is next, and what needs the
+ * teacher now — so the payload carries the day's own list and a ranked priority
+ * queue beside the plain agenda.
  *
  * The action flags mirror BookingPolicy and BookingTransitionService: the page
  * only offers a transition the controller would actually accept.
@@ -24,7 +25,8 @@ final class TeacherScheduleConfig
      * @param  Collection<int, Booking>  $upcoming  Confirmed and in-progress lessons, soonest first.
      * @param  Collection<int, Booking>  $holds  Unpaid holds that have not lapsed.
      * @param  Collection<int, Booking>  $past  The most recent finished lessons.
-     * @param  Collection<int, Booking>  $week  Confirmed lessons in the next seven days (dates only).
+     * @param  Collection<int, Booking>  $today  Every lesson on the teacher's current day, finished ones included.
+     * @param  Collection<int, Booking>  $week  Booked and delivered lessons in the next seven days (dates only).
      */
     public static function build(
         string $timezone,
@@ -32,6 +34,7 @@ final class TeacherScheduleConfig
         Collection $upcoming,
         Collection $holds,
         Collection $past,
+        Collection $today,
         Collection $week,
     ): array {
         $earlyMinutes = (int) config('studylikepro.booking.teacher_start_early_minutes');
@@ -47,7 +50,8 @@ final class TeacherScheduleConfig
             'theme' => ['preset' => $preset],
             'flash' => self::flash(),
             'errors' => ['status' => session('errors')?->first('status') ?: null],
-            'stats' => self::stats($week, $holds, $timezone),
+            'stats' => self::stats($today, $week, $holds),
+            'today' => self::today($today, $timezone, $earlyMinutes),
             'next' => self::next($cards->all(), $upcoming),
             'priority' => self::priority($upcoming, $holds, $timezone, $earlyMinutes),
             'agenda' => self::agenda($upcoming, $timezone, $earlyMinutes),
@@ -66,6 +70,31 @@ final class TeacherScheduleConfig
                 'dashboard' => route('teacher.dashboard'),
                 'messages' => route('messages.index'),
             ],
+        ];
+    }
+
+    /**
+     * The teacher's own day: every lesson that falls on it in their timezone,
+     * including the ones already delivered, so the top of the page can answer
+     * "what am I doing today?" without opening a tab.
+     *
+     * @param  Collection<int, Booking>  $today
+     * @return array<string, mixed>
+     */
+    private static function today(Collection $today, string $timezone, int $earlyMinutes): array
+    {
+        $cards = $today
+            ->map(fn (Booking $booking) => self::card($booking, $timezone, $earlyMinutes))
+            ->values();
+
+        return [
+            'dateLabel' => now()->copy()->setTimezone($timezone)->format('D d M'),
+            'count' => $cards->count(),
+            'countLabel' => trans_choice(':count lesson today|:count lessons today', $cards->count(), ['count' => $cards->count()]),
+            'minutesLabel' => __(':minutes min booked', [
+                'minutes' => (int) $today->sum(fn (Booking $booking) => $booking->durationMinutes()),
+            ]),
+            'lessons' => $cards->all(),
         ];
     }
 
@@ -99,7 +128,7 @@ final class TeacherScheduleConfig
             ...$card,
             'eyebrow' => $booking->status === BookingStatus::InProgress
                 ? __('Happening now')
-                : __('Up next'),
+                : __('Next lesson'),
             'isLive' => $booking->status === BookingStatus::InProgress,
             'startsInLabel' => $booking->starts_at->isFuture()
                 ? __('Starts in')
@@ -172,7 +201,7 @@ final class TeacherScheduleConfig
             }
 
             $items[] = self::priorityItem(60, 'hold_expiring', self::holdCard($booking, $timezone, $earlyMinutes), [
-                'eyebrow' => __('Hold expiring'),
+                'eyebrow' => __('Payment time nearly up'),
                 'body' => __('The slot is reserved until :time. If the student does not pay, the slot is released.', [
                     'time' => $booking->expires_at->copy()->setTimezone($timezone)->format('H:i'),
                 ]),
@@ -406,18 +435,16 @@ final class TeacherScheduleConfig
     }
 
     /**
+     * "Today" is counted from the day's own collection, so the hero chip and the
+     * Today section can never disagree about how full the day is.
+     *
+     * @param  Collection<int, Booking>  $today
      * @param  Collection<int, Booking>  $week
      * @param  Collection<int, Booking>  $holds
      * @return array<string, int>
      */
-    private static function stats(Collection $week, Collection $holds, string $timezone): array
+    private static function stats(Collection $today, Collection $week, Collection $holds): array
     {
-        $todayKey = now()->copy()->setTimezone($timezone)->toDateString();
-
-        $today = $week->filter(
-            fn (Booking $booking) => $booking->starts_at->copy()->setTimezone($timezone)->toDateString() === $todayKey,
-        );
-
         return [
             'todayCount' => $today->count(),
             'todayMinutes' => (int) $today->sum(fn (Booking $booking) => $booking->durationMinutes()),
@@ -445,9 +472,9 @@ final class TeacherScheduleConfig
     {
         return [
             'hero' => [
-                'eyebrow' => __('My schedule'),
+                'eyebrow' => __('My lessons'),
                 'title' => __('What is next, and what needs you'),
-                'intro' => __('Your booked lessons, the holds students are still paying for and the history behind you — ordered by what to do next.'),
+                'intro' => __('Your booked lessons, the payments students still owe and the history behind you — ordered by what to do next.'),
                 'timezone' => __('Times shown in :timezone.', ['timezone' => $timezone]),
                 'availability' => __('Edit availability'),
                 'today' => __('Today'),
@@ -457,7 +484,7 @@ final class TeacherScheduleConfig
                 'today' => ':count lesson today|:count lessons today',
                 'week' => ':count lesson in the next 7 days|:count lessons in the next 7 days',
                 'minutes' => ':minutes min booked',
-                'holds' => ':count hold awaiting payment|:count holds awaiting payment',
+                'holds' => ':count unpaid booking|:count unpaid bookings',
             ],
             'next' => [
                 'title' => __('Next lesson'),
@@ -467,8 +494,15 @@ final class TeacherScheduleConfig
                 'startsIn' => __('Starts in :time'),
                 'started' => __('Started'),
             ],
+            'today' => [
+                'title' => __('Today'),
+                'description' => __('Every lesson on your calendar today, in your timezone.'),
+                'emptyTitle' => __('Nothing booked today'),
+                'emptyBody' => __('Your day is clear. Open availability if you want to fill it.'),
+                'availability' => __('Edit availability'),
+            ],
             'priority' => [
-                'title' => __('Do next'),
+                'title' => __('Needs your attention'),
                 'description' => __('The lessons that need a decision now — most urgent first.'),
                 'emptyTitle' => __('Nothing needs you right now'),
                 'emptyBody' => __('Your next lesson is booked and nothing is waiting on you. This list fills itself as lessons start and finish.'),
@@ -484,11 +518,11 @@ final class TeacherScheduleConfig
             ],
             'holds' => [
                 'title' => __('Awaiting payment'),
-                'description' => __('Students holding a slot. Each one frees up automatically if payment does not arrive.'),
-                'emptyTitle' => __('No unpaid holds'),
+                'description' => __('Students who reserved a time but have not paid yet. Each one frees up automatically if payment does not arrive.'),
+                'emptyTitle' => __('No unpaid bookings'),
                 'emptyBody' => __('Every slot is either booked and paid, or still open in your availability.'),
                 'payWithin' => __('Pay within :time'),
-                'expired' => __('Hold expired'),
+                'expired' => __('Payment time ran out'),
                 'expires' => __('Expires :time', ['time' => '']),
             ],
             'history' => [
@@ -511,7 +545,7 @@ final class TeacherScheduleConfig
                 'busy' => __('Sending…'),
             ],
             'tabs' => [
-                'label' => __('Schedule views'),
+                'label' => __('Lesson views'),
             ],
         ];
     }

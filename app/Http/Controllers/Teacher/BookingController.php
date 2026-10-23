@@ -20,8 +20,8 @@ class BookingController extends Controller
     public function __construct(private readonly BookingTransitionService $transitions) {}
 
     /**
-     * The teaching schedule: what is next, what needs an action, the unpaid
-     * holds and the recent history. The payload is built by
+     * The teaching schedule: what is on today, what is next, what needs an
+     * action, the unpaid holds and the recent history. The payload is built by
      * TeacherScheduleConfig so the Vue app receives labels, times, money and
      * URLs it never has to compute itself.
      */
@@ -61,8 +61,26 @@ class BookingController extends Controller
             ->startOfDay()
             ->setTimezone(config('app.timezone'));
 
+        // "Today" keeps the lessons that already finished, because the point of
+        // the section is to show the whole working day rather than only what is
+        // still to come.
+        $today = $teacher->bookings()
+            ->whereIn('status', [
+                BookingStatus::Confirmed->value,
+                BookingStatus::InProgress->value,
+                BookingStatus::Completed->value,
+            ])
+            ->whereBetween('starts_at', [$weekStart, $weekStart->copy()->addDay()])
+            ->with(['student', 'subject', 'lesson', 'learnerGrade'])
+            ->reorder('starts_at')
+            ->get();
+
         $week = $teacher->bookings()
-            ->whereIn('status', [BookingStatus::Confirmed->value, BookingStatus::InProgress->value])
+            ->whereIn('status', [
+                BookingStatus::Confirmed->value,
+                BookingStatus::InProgress->value,
+                BookingStatus::Completed->value,
+            ])
             ->whereBetween('starts_at', [$weekStart, $weekStart->copy()->addDays(7)])
             ->get(['starts_at', 'ends_at']);
 
@@ -73,12 +91,14 @@ class BookingController extends Controller
                 $upcoming,
                 $holds,
                 $past,
+                $today,
                 $week,
             ),
             'timezone' => $timezone,
             'upcoming' => $upcoming,
             'holds' => $holds,
             'past' => $past,
+            'today' => $today,
         ]);
     }
 

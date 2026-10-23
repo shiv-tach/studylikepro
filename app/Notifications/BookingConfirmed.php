@@ -37,7 +37,7 @@ class BookingConfirmed extends Notification implements ShouldQueue
         }
 
         return $message->action(
-            $isStudent ? 'View my lesson' : 'Open my schedule',
+            $isStudent ? 'View my lesson' : 'Open my lessons',
             $isStudent
                 ? route('student.bookings.show', $this->booking)
                 : route('teacher.bookings.show', $this->booking),

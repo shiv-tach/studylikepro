@@ -41,15 +41,15 @@
             <a href="{{ route('teacher.schedule.index') }}" class="group {{ $cardBase }}"
                :class="{{ $cardTheme }}">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Schedule</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Lessons</span>
                     @if ($upcomingLessonsCount > 0)
                         <span class="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">{{ $upcomingLessonsCount }} booked</span>
                     @else
                         <span class="{{ $chip }}">Nothing booked</span>
                     @endif
                 </div>
-                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">My schedule</h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Upcoming lessons, unpaid holds and earnings per lesson.</p>
+                <h3 class="mt-3 text-sm font-bold text-slate-800 dark:text-slate-100">My lessons</h3>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Upcoming lessons, unpaid bookings and earnings per lesson.</p>
             </a>
 
             <a href="{{ route('teacher.profile') }}" class="group {{ $cardBase }}"

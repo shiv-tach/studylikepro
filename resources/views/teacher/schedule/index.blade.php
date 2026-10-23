@@ -19,7 +19,7 @@
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('My schedule') }}</h2>
+                <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('My lessons') }}</h2>
                 <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     {{ __('Times shown in :timezone.', ['timezone' => $timezone]) }}
                 </p>

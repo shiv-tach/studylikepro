@@ -1,7 +1,8 @@
 <script setup>
 /**
- * One row of the "Do next" queue: why it is urgent, who it is with, and the two
- * or three things the teacher can do about it without leaving the page.
+ * One row of the "Needs your attention" queue: why it is urgent, who it is
+ * with, and the two or three things the teacher can do about it without
+ * leaving the page.
  */
 import { computed } from 'vue';
 import AppIcon from '../../shared/components/AppIcon.vue';

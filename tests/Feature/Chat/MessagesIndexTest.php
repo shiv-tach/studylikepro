@@ -109,7 +109,7 @@ test('the teacher perspective points the empty state at the schedule', function 
     );
 
     expect($config['urls']['empty'])->toBe(route('teacher.schedule.index'));
-    expect($config['copy']['emptyCta'])->toBe('Open my schedule');
+    expect($config['copy']['emptyCta'])->toBe('Open my lessons');
 
     $thread = collect($config['threads'])->firstWhere('id', $conversation->id);
 
