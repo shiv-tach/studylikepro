@@ -69,11 +69,17 @@ it('shows the join call to action on both booking pages while the room is live',
         ->assertSee('Your classroom is open')
         ->assertSee('Join lesson');
 
-    $this->actingAs($scenario['teacherUser'])
+    $response = $this->actingAs($scenario['teacherUser'])
         ->get(route('teacher.bookings.show', $booking))
-        ->assertOk()
-        ->assertSee('Open now — your student can join.')
-        ->assertSee('Join lesson');
+        ->assertOk();
+
+    $config = teacherBookingConfig($response);
+
+    expect($config['join']['state'])->toBe('open')
+        ->and($config['join']['canJoin'])->toBeTrue()
+        ->and($config['join']['body'])->toContain('your student can join')
+        ->and($config['join']['enterLabel'])->toBe('Join lesson')
+        ->and($config['actions']['canJoin'])->toBeTrue();
 });
 
 it('adds the classroom link to the student lesson list', function () {

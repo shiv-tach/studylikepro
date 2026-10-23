@@ -1,13 +1,16 @@
 <script setup>
 /**
- * The short clock on the next lesson and on a payment hold. Under five minutes
- * it turns red and breathes — the two moments a teacher actually needs to be
- * interrupted. When the countdown reaches zero the chip swaps to the zero label
- * ("Started", "Hold expired") instead of counting backwards.
+ * The short clock on a booking deadline: the next lesson, a payment hold, the
+ * start window. Under five minutes it turns red and breathes — the moments a
+ * teacher actually needs to be interrupted. When the countdown reaches zero the
+ * chip swaps to the zero label ("Started", "Hold ended") instead of counting
+ * backwards.
+ *
+ * Shared by the schedule list and the lesson detail page.
  */
 import { computed } from 'vue';
-import { CHIP } from '../../shared/styles';
-import AppIcon from '../../shared/components/AppIcon.vue';
+import { CHIP } from '../styles';
+import AppIcon from './AppIcon.vue';
 import useCountdown from '../composables/useCountdown';
 
 const props = defineProps({

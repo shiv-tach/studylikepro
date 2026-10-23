@@ -420,6 +420,23 @@ function bookingShowConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the teacher's one-lesson page renders its next step,
+ * ranked queue, lesson flow and money from.
+ *
+ * @return array<string, mixed>
+ */
+function teacherBookingConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="teacher-booking-show-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Read the config island the settings home renders its cards, the unread badge
  * and the email preference from.
  *

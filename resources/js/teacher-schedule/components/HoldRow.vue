@@ -5,11 +5,11 @@
  * released automatically.
  */
 import AppIcon from '../../shared/components/AppIcon.vue';
+import CountdownChip from '../../shared/components/CountdownChip.vue';
 import UiChip from '../../shared/components/UiChip.vue';
 import { usePanel } from '../../shared/composables/usePanel';
 import { CHIP, CHIP_TONES } from '../../shared/styles';
 import { useCopy } from '../composables/usePageContext';
-import CountdownChip from './CountdownChip.vue';
 
 defineProps({
     hold: { type: Object, required: true },

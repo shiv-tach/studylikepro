@@ -8,6 +8,7 @@ use App\Http\Requests\CancelBookingRequest;
 use App\Models\Booking;
 use App\Models\TeacherProfile;
 use App\Services\BookingTransitionService;
+use App\Support\TeacherBookingShowConfig;
 use App\Support\TeacherScheduleConfig;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -85,15 +86,32 @@ class BookingController extends Controller
     {
         Gate::authorize('view', $booking);
 
-        $teacher = $this->teacherProfile($request);
+        // The lesson's own teacher owns the timezone, so an admin inspecting the
+        // page sees the same clock as the teacher who runs it. (The old code
+        // read the viewer's teacher profile and 404'd for admins.)
+        $booking->load([
+            'student',
+            'teacherProfile.user',
+            'subject',
+            'lesson',
+            'learnerGrade',
+            'conversation',
+            'review',
+            'earning',
+        ]);
 
-        abort_unless($booking->teacher_profile_id === $teacher->id || $request->user()->isAdmin(), 403);
-
-        $booking->load(['student.studentProfile', 'subject', 'lesson', 'conversation', 'review']);
+        $timezone = $booking->teacherProfile->timezone
+            ?: config('studylikepro.default_display_timezone');
 
         return view('teacher.bookings.show', [
             'booking' => $booking,
-            'timezone' => $teacher->timezone ?: config('studylikepro.default_display_timezone'),
+            'timezone' => $timezone,
+            'config' => TeacherBookingShowConfig::build(
+                $booking,
+                $request->user(),
+                $timezone,
+                $request->user()->theme['preset'] ?? 'classic',
+            ),
         ]);
     }
 

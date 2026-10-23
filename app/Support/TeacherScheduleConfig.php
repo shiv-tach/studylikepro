@@ -431,37 +431,11 @@ final class TeacherScheduleConfig
     }
 
     /**
-     * @return array{message: string, tone: string}|null
+     * @return array{message: string, tone: string, icon: string|null}|null
      */
     private static function flash(): ?array
     {
-        $tone = 'primary';
-
-        $message = match (session('status')) {
-            'booking-start' => __('Lesson started — the classroom opens for the student now.'),
-            'booking-complete' => __('Lesson marked as delivered.'),
-            'booking-markNoShow' => __('Marked as a no-show.'),
-            'booking-cancelled' => __('Lesson cancelled. The student has been notified.'),
-            default => null,
-        };
-
-        if ($message === null) {
-            return null;
-        }
-
-        if (session('status') === 'booking-cancelled') {
-            $tone = 'slate';
-        }
-
-        if (session('status') === 'booking-complete') {
-            $tone = 'emerald';
-        }
-
-        if (session('status') === 'booking-markNoShow') {
-            $tone = 'rose';
-        }
-
-        return ['message' => $message, 'tone' => $tone];
+        return BookingDisplay::flash();
     }
 
     /**
@@ -562,24 +536,12 @@ final class TeacherScheduleConfig
 
     private static function tone(BookingStatus $status): string
     {
-        return match ($status) {
-            BookingStatus::PendingPayment => 'amber',
-            BookingStatus::Confirmed, BookingStatus::Completed => 'emerald',
-            BookingStatus::InProgress => 'primary',
-            BookingStatus::NoShow, BookingStatus::Disputed => 'rose',
-            BookingStatus::Cancelled, BookingStatus::Expired, BookingStatus::Resolved => 'slate',
-        };
+        return BookingDisplay::tone($status);
     }
 
     private static function initials(string $name): string
     {
-        $initials = collect(preg_split('/\s+/', trim($name)) ?: [])
-            ->filter()
-            ->take(2)
-            ->map(fn (string $part) => mb_substr($part, 0, 1))
-            ->implode('');
-
-        return mb_strtoupper($initials !== '' ? $initials : mb_substr($name, 0, 2));
+        return BookingDisplay::initials($name);
     }
 
     /**

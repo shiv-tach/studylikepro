@@ -5,11 +5,11 @@
  * close it). Everything but the countdown arrives formatted from Blade.
  */
 import AppIcon from '../../shared/components/AppIcon.vue';
+import CountdownChip from '../../shared/components/CountdownChip.vue';
 import UiChip from '../../shared/components/UiChip.vue';
 import { usePanel } from '../../shared/composables/usePanel';
 import { CHIP } from '../../shared/styles';
 import { useCopy, usePage } from '../composables/usePageContext';
-import CountdownChip from './CountdownChip.vue';
 import InlineActionForm from './InlineActionForm.vue';
 
 const props = defineProps({

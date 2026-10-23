@@ -1,5 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { formatCountdown } from '../../shared/formatCountdown';
+import { formatCountdown } from '../formatCountdown';
 
 /**
  * A clock pointed at one instant. Blade sends the deadline as an ISO string, so
