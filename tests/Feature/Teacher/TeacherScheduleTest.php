@@ -133,8 +133,8 @@ it('builds the next-lesson spotlight and the three views', function () {
     $soon = Booking::factory()->create([
         'teacher_profile_id' => $teacher->id,
         'status' => BookingStatus::Confirmed,
-        'starts_at' => now()->addHours(3),
-        'ends_at' => now()->addHours(4),
+        'starts_at' => now()->addDay(),
+        'ends_at' => now()->addDay()->addHour(),
         'learner_name' => 'Aarav Mehta',
     ]);
 
@@ -167,14 +167,45 @@ it('builds the next-lesson spotlight and the three views', function () {
         ->and($config['csrfToken'])->not->toBe('');
 });
 
-it('lists the whole day in the today section', function () {
+it('keeps today\'s lessons out of the next-lesson spotlight', function () {
+    $this->travelTo(Carbon::parse('2026-03-10 09:00:00'));
+
+    $teacherUser = User::factory()->teacher()->onboarded()->create();
+    $teacher = $teacherUser->teacherProfile;
+
+    Booking::factory()->create([
+        'teacher_profile_id' => $teacher->id,
+        'status' => BookingStatus::Confirmed,
+        'starts_at' => Carbon::parse('2026-03-10 11:00:00'),
+        'ends_at' => Carbon::parse('2026-03-10 12:00:00'),
+        'learner_name' => 'Aarav Mehta',
+    ]);
+
+    Booking::factory()->create([
+        'teacher_profile_id' => $teacher->id,
+        'status' => BookingStatus::Confirmed,
+        'starts_at' => Carbon::parse('2026-03-11 11:00:00'),
+        'ends_at' => Carbon::parse('2026-03-11 12:00:00'),
+        'learner_name' => 'Diya Kapoor',
+    ]);
+
+    $config = teacherScheduleConfig(
+        $this->actingAs($teacherUser)->get(route('teacher.schedule.index'))->assertOk()
+    );
+
+    // Today's lesson is already in the Today section, so the spotlight looks past it.
+    expect($config['next']['learnerName'])->toBe('Diya Kapoor')
+        ->and(array_column($config['today']['lessons'], 'learnerName'))->toBe(['Aarav Mehta']);
+});
+
+it('hides delivered lessons from the today section', function () {
     $this->travelTo(Carbon::parse('2026-03-10 09:00:00'));
 
     $teacherUser = User::factory()->teacher()->onboarded()->create();
     $teacher = $teacherUser->teacherProfile;
     $teacher->update(['timezone' => 'Asia/Colombo']);
 
-    // Delivered earlier today: the section shows the day, not just what is left.
+    // Delivered earlier today: the section shows what is still open, not the record.
     Booking::factory()->create([
         'teacher_profile_id' => $teacher->id,
         'status' => BookingStatus::Completed,
@@ -204,14 +235,16 @@ it('lists the whole day in the today section', function () {
     );
 
     expect($config['today'])
-        ->toMatchArray(['count' => 2, 'countLabel' => '2 lessons today', 'minutesLabel' => '120 min booked'])
-        ->and(array_column($config['today']['lessons'], 'learnerName'))->toBe(['Aarav Mehta', 'Diya Kapoor'])
-        ->and($config['today']['lessons'][0]['status'])->toBe('completed')
+        ->toMatchArray(['count' => 1, 'countLabel' => '1 lesson today', 'minutesLabel' => '60 min booked'])
+        ->and(array_column($config['today']['lessons'], 'learnerName'))->toBe(['Diya Kapoor'])
+        ->and($config['today']['lessons'][0]['status'])->toBe('confirmed')
         ->and($config['next']['eyebrow'])->toBe('Next lesson')
-        ->and($config['copy']['priority']['title'])->toBe('Needs your attention');
+        ->and($config['copy']['today']['urgent'])->toBe('Urgent');
 });
 
-it('ranks a finished lesson above a hold that is about to lapse', function () {
+it('ranks urgent work at the top of today and lists it only once', function () {
+    $this->travelTo(Carbon::parse('2026-03-10 09:00:00'));
+
     $teacherUser = User::factory()->teacher()->onboarded()->create();
     $teacher = $teacherUser->teacherProfile;
 
@@ -233,10 +266,11 @@ it('ranks a finished lesson above a hold that is about to lapse', function () {
         $this->actingAs($teacherUser)->get(route('teacher.schedule.index'))->assertOk()
     );
 
-    expect($config['priority'][0]['kind'])->toBe('needs_outcome')
-        ->and($config['priority'][0]['id'])->toBe($finished->id)
-        ->and(array_column($config['priority'][0]['actions'], 'label'))->toContain('Mark complete', 'No-show')
-        ->and($config['priority'][1]['kind'])->toBe('hold_expiring');
+    expect($config['today']['urgent'][0]['kind'])->toBe('needs_outcome')
+        ->and($config['today']['urgent'][0]['id'])->toBe($finished->id)
+        ->and(array_column($config['today']['urgent'][0]['actions'], 'label'))->toContain('Mark complete', 'No-show')
+        ->and($config['today']['urgent'][1]['kind'])->toBe('hold_expiring')
+        ->and($config['today']['lessons'])->toBe([]);
 });
 
 it('only offers the transitions the server would accept', function () {
@@ -339,7 +373,7 @@ it('counts the week and flags a hold that is about to lapse', function () {
         ->toMatchArray(['todayCount' => 0, 'weekCount' => 1, 'holdCount' => 1, 'holdSoonCount' => 1])
         ->and($config['holds'][0]['expiresAt'])->not->toBeNull()
         ->and($config['holds'][0]['expiresLabel'])->toBe('2:50 PM')
-        ->and(collect($config['priority'])->pluck('kind')->all())->toContain('hold_expiring');
+        ->and(collect($config['today']['urgent'])->pluck('kind')->all())->toContain('hold_expiring');
 });
 
 it('returns to the schedule after an inline transition', function () {

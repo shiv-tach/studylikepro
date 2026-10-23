@@ -1,8 +1,8 @@
 <script setup>
 /**
- * One row of the "Needs your attention" queue: why it is urgent, who it is
- * with, and the two or three things the teacher can do about it without
- * leaving the page.
+ * One urgent row at the top of the Today section: an "Urgent" badge, why it is
+ * urgent, who it is with, and the two or three things the teacher can do about
+ * it without leaving the page.
  */
 import { computed } from 'vue';
 import AppIcon from '../../shared/components/AppIcon.vue';
@@ -52,6 +52,7 @@ const LINK_TONES = {
             </p>
 
             <p class="mt-1 flex flex-wrap items-center gap-2">
+                <UiChip tone="rose" icon="alert">{{ copy.today?.urgent }}</UiChip>
                 <a
                     :href="item.url"
                     class="text-base font-bold text-slate-800 transition-colors hover:text-primary dark:text-slate-100"

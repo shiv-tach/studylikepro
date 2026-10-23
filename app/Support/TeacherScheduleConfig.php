@@ -12,9 +12,9 @@ use Illuminate\Support\Collection;
  *
  * Blade still owns every label, timezone-formatted time, money value and route,
  * so the Vue app never formats a date or hardcodes a URL. The page is built
- * around three questions — what is on today, what is next, and what needs the
- * teacher now — so the payload carries the day's own list and a ranked priority
- * queue beside the plain agenda.
+ * around two questions — what is on today and what is next — so the payload
+ * carries the day's own list, with whatever needs the teacher right now ranked
+ * at its top, beside the plain agenda.
  *
  * The action flags mirror BookingPolicy and BookingTransitionService: the page
  * only offers a transition the controller would actually accept.
@@ -25,7 +25,7 @@ final class TeacherScheduleConfig
      * @param  Collection<int, Booking>  $upcoming  Confirmed and in-progress lessons, soonest first.
      * @param  Collection<int, Booking>  $holds  Unpaid holds that have not lapsed.
      * @param  Collection<int, Booking>  $past  The most recent finished lessons.
-     * @param  Collection<int, Booking>  $today  Every lesson on the teacher's current day, finished ones included.
+     * @param  Collection<int, Booking>  $today  The lessons still open on the teacher's current day, finished ones excluded.
      * @param  Collection<int, Booking>  $week  Booked and delivered lessons in the next seven days (dates only).
      */
     public static function build(
@@ -43,6 +43,11 @@ final class TeacherScheduleConfig
             ->map(fn (Booking $booking) => self::card($booking, $timezone, $earlyMinutes))
             ->values();
 
+        // The urgent items sit inside the Today section, so they are ranked
+        // before the day itself is built and the day can drop the lessons it
+        // already carries.
+        $priority = self::priority($upcoming, $holds, $timezone, $earlyMinutes);
+
         return [
             'appName' => config('app.name', 'Studylikepro'),
             'csrfToken' => csrf_token(),
@@ -51,9 +56,8 @@ final class TeacherScheduleConfig
             'flash' => self::flash(),
             'errors' => ['status' => session('errors')?->first('status') ?: null],
             'stats' => self::stats($today, $week, $holds),
-            'today' => self::today($today, $timezone, $earlyMinutes),
-            'next' => self::next($cards->all(), $upcoming),
-            'priority' => self::priority($upcoming, $holds, $timezone, $earlyMinutes),
+            'today' => self::today($today, $timezone, $earlyMinutes, $priority),
+            'next' => self::next($cards->all(), $upcoming, $timezone),
             'agenda' => self::agenda($upcoming, $timezone, $earlyMinutes),
             'holds' => $holds->map(fn (Booking $booking) => self::holdCard($booking, $timezone, $earlyMinutes))->values()->all(),
             'history' => $past->map(fn (Booking $booking) => self::historyRow($booking, $timezone))->values()->all(),
@@ -74,18 +78,23 @@ final class TeacherScheduleConfig
     }
 
     /**
-     * The teacher's own day: every lesson that falls on it in their timezone,
-     * including the ones already delivered, so the top of the page can answer
-     * "what am I doing today?" without opening a tab.
+     * The teacher's own day: what needs them right now, then the lessons on it in
+     * their timezone that still need them, so the top of the page can answer
+     * "what am I doing today?" without opening a tab. Urgent items are listed
+     * once — they leave the plain lesson list so nothing renders twice. Delivered
+     * lessons are left to the history tab.
      *
      * @param  Collection<int, Booking>  $today
+     * @param  list<array<string, mixed>>  $urgent
      * @return array<string, mixed>
      */
-    private static function today(Collection $today, string $timezone, int $earlyMinutes): array
+    private static function today(Collection $today, string $timezone, int $earlyMinutes, array $urgent): array
     {
         $cards = $today
             ->map(fn (Booking $booking) => self::card($booking, $timezone, $earlyMinutes))
             ->values();
+
+        $urgentIds = array_column($urgent, 'id');
 
         return [
             'dateLabel' => now()->copy()->setTimezone($timezone)->format('D d M'),
@@ -94,23 +103,33 @@ final class TeacherScheduleConfig
             'minutesLabel' => __(':minutes min booked', [
                 'minutes' => (int) $today->sum(fn (Booking $booking) => $booking->durationMinutes()),
             ]),
-            'lessons' => $cards->all(),
+            'urgent' => $urgent,
+            'lessons' => $cards
+                ->reject(fn (array $card) => in_array($card['id'], $urgentIds, true))
+                ->values()
+                ->all(),
         ];
     }
 
     /**
      * The spotlight card: the live lesson, or the soonest one that has not
-     * finished yet. Null when the teacher's next lessons are all in the past
-     * (those surface in the priority queue instead).
+     * finished yet — but never one that falls on the teacher's own today, since
+     * the Today section already carries those. Null when nothing is left or the
+     * remaining lessons are all in the past (those surface as urgent items in the
+     * Today section instead).
      *
      * @param  list<array<string, mixed>>  $cards
      * @param  Collection<int, Booking>  $upcoming
      */
-    private static function next(array $cards, Collection $upcoming): ?array
+    private static function next(array $cards, Collection $upcoming, string $timezone): ?array
     {
+        $today = now()->copy()->setTimezone($timezone)->toDateString();
+
         $index = $upcoming
             ->values()
-            ->search(fn (Booking $booking) => $booking->status->isLive() && $booking->ends_at->isFuture());
+            ->search(fn (Booking $booking) => $booking->status->isLive()
+                && $booking->ends_at->isFuture()
+                && $booking->starts_at->copy()->setTimezone($timezone)->toDateString() !== $today);
 
         if ($index === false) {
             return null;
@@ -496,17 +515,11 @@ final class TeacherScheduleConfig
             ],
             'today' => [
                 'title' => __('Today'),
-                'description' => __('Every lesson on your calendar today, in your timezone.'),
-                'emptyTitle' => __('Nothing booked today'),
-                'emptyBody' => __('Your day is clear. Open availability if you want to fill it.'),
+                'description' => __('Anything urgent comes first, then the lessons you still have on your calendar today, in your timezone.'),
+                'urgent' => __('Urgent'),
+                'emptyTitle' => __('Nothing left today'),
+                'emptyBody' => __('Every lesson on today\'s calendar is done and nothing needs you right now. Open availability if you want to fill the rest of the day.'),
                 'availability' => __('Edit availability'),
-            ],
-            'priority' => [
-                'title' => __('Needs your attention'),
-                'description' => __('The lessons that need a decision now — most urgent first.'),
-                'emptyTitle' => __('Nothing needs you right now'),
-                'emptyBody' => __('Your next lesson is booked and nothing is waiting on you. This list fills itself as lessons start and finish.'),
-                'emptyBodyIdle' => __('No lessons are booked yet. Publish your availability and this list fills itself as soon as a student books.'),
             ],
             'agenda' => [
                 'title' => __('Upcoming lessons'),

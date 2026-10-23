@@ -1,8 +1,9 @@
 <script setup>
 /**
  * The answer to "what is next": the live lesson or the soonest one still to
- * come, with a ticking clock and the one action that matters (join, start or
- * close it). Everything but the countdown arrives formatted from Blade.
+ * come from a later day (today's lessons live in the Today section), with a
+ * ticking clock and the one action that matters (join, start or close it).
+ * Everything but the countdown arrives formatted from Blade.
  */
 import AppIcon from '../../shared/components/AppIcon.vue';
 import CountdownChip from '../../shared/components/CountdownChip.vue';

@@ -2,9 +2,10 @@
     use App\Enums\BookingStatus;
 
     // /teacher/schedule is rendered by resources/js/teacher-schedule. Blade owns
-    // the ranked priority queue, every formatted time and price, the agenda
-    // grouping and the route map, then hands them over in one JSON island. The
-    // <noscript> block below repeats the three views with plain links and forms.
+    // the urgent items ranked inside today's list, every formatted time and
+    // price, the agenda grouping and the route map, then hands them over in one
+    // JSON island. The <noscript> block below repeats the three views with plain
+    // links and forms.
     $cardBase = 'rounded-2xl border p-6';
     $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);

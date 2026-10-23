@@ -61,14 +61,14 @@ class BookingController extends Controller
             ->startOfDay()
             ->setTimezone(config('app.timezone'));
 
-        // "Today" keeps the lessons that already finished, because the point of
-        // the section is to show the whole working day rather than only what is
-        // still to come.
+        // "Today" is what the teacher still has to deal with: completed lessons
+        // drop out of the section (their record lives in the history tab), while
+        // a lesson whose time has passed but is still open stays, because it
+        // needs an outcome.
         $today = $teacher->bookings()
             ->whereIn('status', [
                 BookingStatus::Confirmed->value,
                 BookingStatus::InProgress->value,
-                BookingStatus::Completed->value,
             ])
             ->whereBetween('starts_at', [$weekStart, $weekStart->copy()->addDay()])
             ->with(['student', 'subject', 'lesson', 'learnerGrade'])

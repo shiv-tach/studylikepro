@@ -4,9 +4,9 @@
  *
  * Blade decides what is on today, what is next, what needs an action, every
  * formatted time and price, and which transitions are legal; this app only lays
- * the answer out: the hero, today's lessons, the next-lesson spotlight, the
- * ranked "Needs your attention" queue, and three instant views (upcoming
- * agenda, unpaid holds, recent history).
+ * the answer out: the hero, today's lessons with the urgent ones ranked first,
+ * the next-lesson spotlight, and three instant views (upcoming agenda, unpaid
+ * holds, recent history).
  */
 import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
 import { THEME_PRESET_KEY, useThemePreset } from '../shared/composables/useThemePreset';
@@ -20,7 +20,6 @@ import AgendaDay from './components/AgendaDay.vue';
 import HistoryRow from './components/HistoryRow.vue';
 import HoldRow from './components/HoldRow.vue';
 import NextLessonSpotlight from './components/NextLessonSpotlight.vue';
-import PriorityStack from './components/PriorityStack.vue';
 import ScheduleEmptyState from './components/ScheduleEmptyState.vue';
 import ScheduleHero from './components/ScheduleHero.vue';
 import ScheduleTabs from './components/ScheduleTabs.vue';
@@ -86,10 +85,6 @@ onBeforeUnmount(() => window.removeEventListener('hashchange', syncFromHash));
         </RevealOnScroll>
 
         <RevealOnScroll :delay="40">
-            <PriorityStack :items="config.priority" :idle="config.agenda.length === 0" />
-        </RevealOnScroll>
-
-        <RevealOnScroll :delay="50">
             <ScheduleTabs v-model:active="active" :tabs="config.tabs" :label="copy.tabs?.label" />
         </RevealOnScroll>
 
