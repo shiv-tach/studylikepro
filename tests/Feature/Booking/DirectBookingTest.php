@@ -78,6 +78,39 @@ it('shows the direct booking page with open slots and the lesson price', functio
         ->assertSee('Reserve this slot');
 });
 
+it('offers only the teacher\'s nearest open days in the time picker', function () {
+    $scenario = directBookingScenario();
+    $scenario['student']->studentProfile->update(['timezone' => 'UTC']);
+
+    // The scenario already has an evening window two days out; add windows one,
+    // three and four days out so only the first three open days survive the cap.
+    foreach ([1, 3, 4] as $offset) {
+        $day = CarbonImmutable::now('UTC')->addDays($offset)->startOfDay();
+
+        TeacherAvailabilitySlot::factory()
+            ->on($day->dayOfWeek, '09:00', '10:00')
+            ->create(['teacher_profile_id' => $scenario['teacher']->id]);
+    }
+
+    $config = bookingCreateConfig(
+        $this->actingAs($scenario['student'])
+            ->get(route('student.bookings.create', $scenario['teacher']))
+            ->assertOk()
+    );
+
+    $today = CarbonImmutable::now('UTC');
+
+    expect($config['slots'])->toHaveCount(3)
+        ->and(array_column($config['slots'], 'date'))->toBe([
+            $today->addDays(1)->toDateString(),
+            $today->addDays(2)->toDateString(),
+            $today->addDays(3)->toDateString(),
+        ])
+        ->and($config['slots'][1]['slots'][0]['label'])->toBe('18:00')
+        ->and($config['slots'][0]['weekday'])->toBe($today->addDays(1)->format('D'))
+        ->and($config['slots'][0]['slotCountLabel'])->toBe('1 slot');
+});
+
 it('only offers the subjects the admin approved on the booking page', function () {
     $scenario = directBookingScenario();
 

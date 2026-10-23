@@ -3,18 +3,23 @@
  * Steps two and three of the stepper, wrapped in the real booking form POST.
  * Blade has already scoped the slots to the chosen subject, lesson length and
  * the learner's grade and converted every time to the viewer's timezone, so this
- * card only groups them and collects the learner's name. The selected slot is
- * the one value Laravel re-validates against the teacher's open slots.
+ * card only collects the learner's name around the day rail slot picker. The
+ * selected slot is the one value Laravel re-validates against the teacher's open
+ * slots.
  */
 import { computed, ref } from 'vue';
 import { usePanel } from '../../shared/composables/usePanel';
 import UiSectionHeading from '../../shared/components/UiSectionHeading.vue';
+import SlotPickerCard from './SlotPickerCard.vue';
 import { useCopy, useCsrfToken, useUrls } from '../composables/usePageContext';
 
 const props = defineProps({
     selection: { type: Object, required: true },
     slots: { type: Array, default: () => [] },
     slotsNotice: { type: String, default: null },
+    slotsWindow: { type: String, default: null },
+    slotsTimezone: { type: String, default: null },
+    timezone: { type: String, default: '' },
     holdNotice: { type: String, required: true },
     selectedSlot: { type: String, default: null },
     learner: { type: Object, required: true },
@@ -47,34 +52,17 @@ const primaryClass =
         <input type="hidden" name="lesson_id" :value="selection.lessonId">
         <input type="hidden" name="duration" :value="selection.duration">
 
-        <UiSectionHeading :title="copy.stepTime" icon="calendar" level="h3" />
+        <SlotPickerCard
+            v-model="slot"
+            :days="slots"
+            :notice="slotsNotice"
+            :window-notice="slotsWindow"
+            :timezone-notice="slotsTimezone"
+            :timezone="timezone"
+            :error="errors.startsAt"
+        />
 
-        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ holdNotice }}</p>
-
-        <p v-if="errors.startsAt" class="mt-2 text-sm text-rose-600 dark:text-rose-400" role="alert">{{ errors.startsAt }}</p>
-
-        <p
-            v-if="slots.length === 0"
-            class="mt-4 rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400"
-        >
-            {{ slotsNotice }}
-        </p>
-
-        <div v-else class="mt-4 space-y-5">
-            <div v-for="group in slots" :key="group.date">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ group.label }}</p>
-                <div class="mt-2 flex flex-wrap gap-2">
-                    <label v-for="option in group.slots" :key="option.value" class="cursor-pointer">
-                        <input v-model="slot" type="radio" name="starts_at" :value="option.value" class="peer sr-only">
-                        <span
-                            class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition-colors peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40 dark:border-slate-700 dark:text-slate-300"
-                        >
-                            {{ option.label }}
-                        </span>
-                    </label>
-                </div>
-            </div>
-        </div>
+        <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">{{ holdNotice }}</p>
 
         <div class="mt-6 border-t border-slate-200 pt-6 dark:border-slate-800">
             <UiSectionHeading :title="copy.stepWho" icon="user" level="h3" />

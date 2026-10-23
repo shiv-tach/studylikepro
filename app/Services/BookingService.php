@@ -29,6 +29,7 @@ class BookingService
     /**
      * Open slots grouped by the viewer's local date.
      *
+     * @param  int|null  $maxDays  cap the result at this many nearest days that have a slot
      * @return array<string, list<array{starts_at: CarbonImmutable, ends_at: CarbonImmutable, label: string}>>
      */
     public function availableSlots(
@@ -37,6 +38,7 @@ class BookingService
         ?string $timezone = null,
         ?int $days = null,
         int $limit = 200,
+        ?int $maxDays = null,
     ): array {
         $timezone = $timezone ?: config('studylikepro.default_display_timezone');
         $days = $days ?? (int) config('studylikepro.booking.max_advance_days');
@@ -51,6 +53,7 @@ class BookingService
             $durationMinutes,
             $this->slots->blockedRanges($teacher, $from, $until),
             $limit,
+            $maxDays,
         );
 
         $grouped = [];
@@ -63,6 +66,12 @@ class BookingService
                 'ends_at' => $slot['ends_at'],
                 'label' => $label->format('H:i'),
             ];
+        }
+
+        // A teacher day can straddle two viewer dates, so cap the viewer's days
+        // too: the picker promises a fixed number of nearest open days.
+        if ($maxDays !== null) {
+            $grouped = array_slice($grouped, 0, $maxDays, true);
         }
 
         return $grouped;

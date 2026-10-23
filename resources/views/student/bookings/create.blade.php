@@ -14,15 +14,31 @@
         : null;
     $totalMinor = $priceMinor + $feeNet;
 
-    // Slot groups, each already labelled in the viewer's timezone.
-    $slotGroups = collect($slotsByDate)->map(fn ($slots, $date) => [
-        'date' => (string) $date,
-        'label' => \Carbon\CarbonImmutable::parse($date)->format('D, d M'),
-        'slots' => collect($slots)->map(fn ($slot) => [
-            'value' => $slot['starts_at']->toIso8601String(),
-            'label' => $slot['label'],
-        ])->values()->all(),
-    ])->values()->all();
+    // Slot groups, each already labelled in the viewer's timezone. Only the
+    // teacher's nearest open days arrive here, so the picker stays a day rail.
+    $today = \Carbon\CarbonImmutable::now($timezone);
+    $todayDate = $today->toDateString();
+    $tomorrowDate = $today->addDay()->toDateString();
+
+    $slotGroups = collect($slotsByDate)->map(function ($slots, $date) use ($timezone, $todayDate, $tomorrowDate) {
+        $day = \Carbon\CarbonImmutable::parse($date, $timezone);
+
+        return [
+            'date' => (string) $date,
+            'label' => $day->format('D, d M'),
+            'weekday' => $day->format('D'),
+            'dayNumber' => $day->format('j'),
+            'month' => $day->format('M'),
+            'fullLabel' => $day->format('l, j F'),
+            'isToday' => (string) $date === $todayDate,
+            'isTomorrow' => (string) $date === $tomorrowDate,
+            'slotCountLabel' => trans_choice(':count slot|:count slots', count($slots)),
+            'slots' => collect($slots)->map(fn ($slot) => [
+                'value' => $slot['starts_at']->toIso8601String(),
+                'label' => $slot['label'],
+            ])->values()->all(),
+        ];
+    })->values()->all();
 
     $bookingPayload = [
         'appName' => config('app.name', 'Studylikepro'),
@@ -54,11 +70,14 @@
             ? __('This teacher has not listed :grade lessons for :subject yet — you can still book without picking one.', ['grade' => $learnerGrade->label, 'subject' => $subject->name])
             : __('This teacher has not listed lessons for :subject yet — you can book without picking one.', ['subject' => $subject->name])),
         'timezone' => $timezone,
-        'holdNotice' => __('All times are shown in :timezone. Selection is held for :minutes minutes while you pay.', [
-            'timezone' => $timezone,
+        'holdNotice' => __('Selection is held for :minutes minutes while you pay.', [
             'minutes' => platform_settings()->int('hold_ttl_minutes'),
         ]),
+        // The picker is a day rail: the nearest open days the teacher has, in
+        // the viewer's timezone, each with its own times.
         'slots' => $slotGroups,
+        'slotsWindow' => __('Your nearest open days — pick a day, then a time.'),
+        'slotsTimezone' => __('All times are in :timezone.', ['timezone' => $timezone]),
         'slotsNotice' => $slotGroups !== [] ? null : __('No open :minutes-minute slots in the next :days days — try a different lesson length.', [
             'minutes' => $duration,
             'days' => config('studylikepro.booking.max_advance_days'),
@@ -109,6 +128,10 @@
             'duration' => __('Lesson length'),
             'stepTime' => __('2. Pick a time'),
             'stepWho' => __('3. Who is the lesson for?'),
+            'today' => __('Today'),
+            'tomorrow' => __('Tomorrow'),
+            'dayPickerLabel' => __('Choose a day'),
+            'nextFree' => __('Next free'),
             'learnerName' => __('Learner name'),
             'grade' => __('Grade'),
             'total' => __('Total'),

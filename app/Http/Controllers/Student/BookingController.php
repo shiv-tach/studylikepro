@@ -135,6 +135,11 @@ class BookingController extends Controller
 
         $priceMinor = $this->bookings->priceMinor($teacherProfile, $subject, $duration, $learnerGradeId);
 
+        // The picker stays a quick decision: only the teacher's nearest open
+        // days are offered, even though slots are searched across the whole
+        // booking window.
+        $quickPickDays = (int) config('studylikepro.booking.quick_pick_days');
+
         return view('student.bookings.create', [
             'teacher' => $teacherProfile,
             'subjects' => $subjects,
@@ -146,7 +151,12 @@ class BookingController extends Controller
             'selectedLessonId' => $lessons->contains('id', $selectedLessonId) ? $selectedLessonId : null,
             'durations' => $durations,
             'duration' => $duration,
-            'slotsByDate' => $this->bookings->availableSlots($teacherProfile, $duration, $timezone),
+            'slotsByDate' => $this->bookings->availableSlots(
+                teacher: $teacherProfile,
+                durationMinutes: $duration,
+                timezone: $timezone,
+                maxDays: $quickPickDays > 0 ? $quickPickDays : null,
+            ),
             'priceMinor' => $priceMinor,
             // A percentage fee is previewed off the price of the current pick.
             'bookingFee' => $fees->quote(priceMinor: $priceMinor),

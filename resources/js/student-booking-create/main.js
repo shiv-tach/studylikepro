@@ -20,6 +20,8 @@ const DEFAULT_CONFIG = {
     timezone: '',
     holdNotice: '',
     slots: [],
+    slotsWindow: null,
+    slotsTimezone: null,
     slotsNotice: null,
     selectedSlot: null,
     learner: {},

@@ -103,6 +103,34 @@ it('excludes past times and taken ranges', function () {
         ->and($slots[0]['starts_at']->toIso8601String())->toBe('2026-06-01T14:00:00+00:00');
 });
 
+it('stops after the requested number of open days', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-05-31 09:00', 'UTC'));
+
+    $teacher = TeacherProfile::factory()->approved()->create([
+        'timezone' => 'UTC',
+        'lesson_duration_minutes' => 60,
+    ]);
+
+    // Monday to Friday, one hour each evening.
+    foreach ([1, 2, 3, 4, 5] as $dayOfWeek) {
+        TeacherAvailabilitySlot::factory()->on($dayOfWeek, '18:00', '19:00')->create(['teacher_profile_id' => $teacher->id]);
+    }
+
+    $slots = $this->service->openSlots(
+        $teacher,
+        CarbonImmutable::now(),
+        CarbonImmutable::now()->addDays(14),
+        maxDays: 3,
+    );
+
+    expect($slots)->toHaveCount(3)
+        ->and(collect($slots)->pluck('local_date')->unique()->values()->all())->toBe([
+            '2026-06-01',
+            '2026-06-02',
+            '2026-06-03',
+        ]);
+});
+
 it('keeps slots unique and offset-correct across a dst change', function () {
     $this->travelTo(CarbonImmutable::parse('2026-03-06 12:00', 'UTC'));
 

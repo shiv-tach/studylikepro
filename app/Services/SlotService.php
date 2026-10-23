@@ -19,6 +19,7 @@ class SlotService
 
     /**
      * @param  array<int, array{0: CarbonInterface, 1: CarbonInterface}>  $excluded  UTC ranges already booked
+     * @param  int|null  $maxDays  stop after this many teacher-local days produced a slot
      * @return list<array{starts_at: CarbonImmutable, ends_at: CarbonImmutable, local_date: string, local_time: string}>
      */
     public function openSlots(
@@ -28,6 +29,7 @@ class SlotService
         ?int $durationMinutes = null,
         array $excluded = [],
         int $limit = self::MAX_SLOTS,
+        ?int $maxDays = null,
     ): array {
         $duration = $durationMinutes ?? $teacher->lessonDuration();
         $timezone = $teacher->timezone ?: config('app.timezone');
@@ -50,16 +52,24 @@ class SlotService
         );
 
         $slots = [];
+        $daysCollected = 0;
         $cursor = $fromUtc->setTimezone($timezone)->startOfDay();
         $lastDay = $untilUtc->setTimezone($timezone)->endOfDay();
 
         while ($cursor->lessThanOrEqualTo($lastDay)) {
+            // The caller only wants the nearest few days that are open, so stop
+            // as soon as enough of them have produced a slot.
+            if ($maxDays !== null && $daysCollected >= $maxDays) {
+                return $slots;
+            }
+
             if ($timeOff->contains(fn ($entry) => $entry->coversDate($cursor))) {
                 $cursor = $cursor->addDay();
 
                 continue;
             }
 
+            $slotsBefore = count($slots);
             $seen = [];
 
             foreach ($weekly->get($cursor->dayOfWeek, collect()) as $range) {
@@ -101,6 +111,10 @@ class SlotService
                         return $slots;
                     }
                 }
+            }
+
+            if (count($slots) > $slotsBefore) {
+                $daysCollected++;
             }
 
             $cursor = $cursor->addDay();
