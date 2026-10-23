@@ -1,5 +1,5 @@
 /**
- * Field and button classes for the availability step, written out in full
+ * Field and button classes for the availability editor, written out in full
  * because Tailwind only compiles complete class strings.
  */
 export const FIELD =

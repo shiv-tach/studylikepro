@@ -234,6 +234,23 @@ function teacherScheduleConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the availability manager renders its week editor,
+ * default price, bookable preview and time off from.
+ *
+ * @return array<string, mixed>
+ */
+function teacherAvailabilityConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="teacher-availability-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Read the config island the "My purchases" page renders its cards from.
  *
  * @return array<string, mixed>

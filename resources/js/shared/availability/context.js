@@ -1,12 +1,13 @@
 import { inject } from 'vue';
 
 /**
- * The availability step is copy-heavy, so App.vue provides Blade's copy block,
- * route map and CSRF token once and every card injects them.
+ * The availability editor is copy-heavy and shared by two pages (onboarding
+ * step 2 and the manager), so each app provides Blade's copy block, route map
+ * and CSRF token once and every card injects them.
  */
-export const COPY_KEY = Symbol('teacher-availability-setup.copy');
-export const URLS_KEY = Symbol('teacher-availability-setup.urls');
-export const CSRF_KEY = Symbol('teacher-availability-setup.csrf');
+export const COPY_KEY = Symbol('availability.copy');
+export const URLS_KEY = Symbol('availability.urls');
+export const CSRF_KEY = Symbol('availability.csrf');
 
 export function useCopy() {
     return inject(COPY_KEY, {});

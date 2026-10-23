@@ -200,6 +200,10 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
         Route::post('/subjects/{subject}', [TeacherSubjectsController::class, 'update'])->middleware('onboarded')->name('subjects.update');
 
         Route::get('/availability', [TeacherAvailabilityController::class, 'index'])->middleware('onboarded')->name('availability.index');
+        // The manager replaces the whole week in one PUT (same payload shape as
+        // onboarding step 2) and edits the default hourly rate on its own form.
+        Route::put('/availability/week', [TeacherAvailabilityController::class, 'updateRanges'])->middleware('onboarded')->name('availability.week.update');
+        Route::put('/availability/pricing', [TeacherAvailabilityController::class, 'updatePricing'])->middleware('onboarded')->name('availability.pricing.update');
         Route::put('/availability/settings', [TeacherAvailabilityController::class, 'updateSettings'])->middleware('onboarded')->name('availability.settings.update');
         Route::post('/availability/slots', [TeacherAvailabilityController::class, 'storeSlot'])->middleware('onboarded')->name('availability.slots.store');
         Route::delete('/availability/slots/{slot}', [TeacherAvailabilityController::class, 'destroySlot'])->middleware('onboarded')->name('availability.slots.destroy');

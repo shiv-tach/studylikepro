@@ -1,17 +1,17 @@
 import { computed, inject, reactive, ref } from 'vue';
 
-export const WEEK_KEY = Symbol('teacher-availability-setup.week');
+export const WEEK_KEY = Symbol('availability.week');
 
 /**
- * The availability step is one form that edits the whole week, so the days,
- * the presets, the dirty state and the weekly summary live here. Blade sends
- * the starting week (saved ranges, a replayed rejected save, or the recommended
- * preset) and both the editor and the summary card inject this one object.
+ * The whole week is one form, so the days, the presets, the dirty state and the
+ * weekly summary live here. Both the onboarding step and the manager provide
+ * this object; Blade sends the starting week (saved ranges or a replayed
+ * rejected save) and the editor + summary card inject it.
  */
 export function createWeekEditor(config) {
     const limits = config.limits ?? {};
     const maxRangesPerDay = limits.maxRangesPerDay ?? 4;
-    const lessonDuration = config.profile?.lessonDuration ?? 60;
+    const lessonDuration = config.profile?.lessonDuration ?? config.pricing?.lessonDuration ?? 60;
     const presets = config.presets ?? [];
     const errors = config.errors ?? {};
 

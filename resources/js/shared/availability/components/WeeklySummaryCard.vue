@@ -1,13 +1,13 @@
 <script setup>
 /**
- * What the week adds up to and the only submit button on the page. The button
- * stays disabled until at least one complete range exists, so the server never
- * has to reject an empty week after a full page round-trip.
+ * What the week adds up to and the only submit button of the week form. The
+ * button stays disabled until at least one complete range exists, so the server
+ * never has to reject an empty week after a full page round-trip.
  */
-import { usePanel } from '../../shared/composables/usePanel';
-import UiSectionHeading from '../../shared/components/UiSectionHeading.vue';
-import { format, useCopy } from '../composables/usePageContext';
-import { useWeekEditor } from '../composables/useWeekEditor';
+import { usePanel } from '../../composables/usePanel';
+import UiSectionHeading from '../../components/UiSectionHeading.vue';
+import { format, useCopy } from '../context';
+import { useWeekEditor } from '../useWeekEditor';
 import { GHOST_BUTTON, PRIMARY_BUTTON } from '../styles';
 
 const copy = useCopy();
@@ -62,5 +62,7 @@ const {
         <button v-if="dirty" type="button" :class="[GHOST_BUTTON, 'w-full']" @click="undo">
             {{ copy.undo }}
         </button>
+
+        <p v-if="copy.weekNote" class="text-xs leading-relaxed text-slate-400">{{ copy.weekNote }}</p>
     </section>
 </template>

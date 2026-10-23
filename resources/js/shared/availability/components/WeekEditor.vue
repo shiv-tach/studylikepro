@@ -5,12 +5,13 @@
  * days; this is the first screen that lets them set that up in one place).
  *
  * The inputs keep the names Laravel validates (`days[i][ranges][j][start_time]`),
- * so the form posts exactly the shape `WeeklyAvailabilityRequest` reads.
+ * so the surrounding form posts exactly the shape `WeeklyAvailabilityRequest`
+ * reads — on the onboarding step and on the manager page alike.
  */
-import { usePanel } from '../../shared/composables/usePanel';
-import UiSectionHeading from '../../shared/components/UiSectionHeading.vue';
-import { format, useCopy } from '../composables/usePageContext';
-import { useWeekEditor } from '../composables/useWeekEditor';
+import { usePanel } from '../../composables/usePanel';
+import UiSectionHeading from '../../components/UiSectionHeading.vue';
+import { format, useCopy } from '../context';
+import { useWeekEditor } from '../useWeekEditor';
 import { FIELD } from '../styles';
 
 const copy = useCopy();

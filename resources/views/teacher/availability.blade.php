@@ -1,224 +1,259 @@
 @php
-    $cardBase = 'rounded-2xl border p-6';
-    $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
-    $fieldClasses = 'rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
-    $money = fn (int $minor) => platform_settings()->formatMinor($minor);
-    $commission = $commissionPercent;
-    $weekdays = config('studylikepro.weekdays');
-    $chip = 'inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400';
+    // /teacher/availability is rendered by resources/js/teacher-availability.
+    // Blade decides the saved week, the default price, every formatted time and
+    // price, the validation messages and the route map, then hands them over in
+    // one JSON island. The <noscript> block below repeats the same four actions
+    // as plain forms, so a browser without JavaScript loses nothing.
+    $copy = $config['copy'];
+    $pricing = $config['pricing'];
+    $week = $config['week'];
+
+    // JSON_UNESCAPED_SLASHES keeps the URLs readable; the HEX flags keep the
+    // island safe inside a <script> tag.
+    $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
+
+    $cardBase = 'rounded-2xl border p-6 border-slate-200/80 bg-white dark:border-slate-800/80 dark:bg-slate-900';
+    $fieldClasses = 'mt-1 rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
 @endphp
 
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('Availability & pricing') }}</h2>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('Availability & pricing') }}</h2>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    {{ __('Times shown in :timezone.', ['timezone' => $config['timezone']]) }}
+                </p>
+            </div>
+            <a href="{{ $config['urls']['schedule'] }}"
+               class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:text-slate-300">
+                {{ $copy['hero']['schedule'] }}
+            </a>
+        </div>
     </x-slot>
 
-    <div class="mx-auto max-w-4xl space-y-6">
-        @foreach (['availability-slot-added' => 'Weekly range added.', 'availability-slot-removed' => 'Weekly range removed.', 'time-off-added' => 'Time off saved — those days are now blocked.', 'time-off-removed' => 'Time off removed.', 'availability-settings-updated' => 'Lesson length updated.'] as $status => $message)
-            @if (session('status') === $status)
-                <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
-                    {{ $message }}
-                </div>
-            @endif
-        @endforeach
+    <div class="w-full">
+        <script type="application/json" id="teacher-availability-config">@json($config, $jsonFlags)</script>
 
-        <!-- Lesson length & pricing -->
-        <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Lesson length & pricing</h3>
+        <div id="teacher-availability-app" class="space-y-6"></div>
+
+        <noscript>
+            <div class="mx-auto max-w-4xl space-y-6">
+                <section class="{{ $cardBase }}">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $copy['editorTitle'] }}</h3>
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        Slots are generated and displayed in Sri Lanka time ({{ $profile->timezone }}).
+                        {{ $copy['timezoneNote'] }}
+                        {{ __('Your lessons are :minutes minutes long, so every range must last at least that long.', ['minutes' => $pricing['lessonDuration']]) }}
                     </p>
-                </div>
-                <span class="{{ $chip }}">{{ $profile->timezone }}</span>
-            </div>
 
-            <form method="POST" action="{{ route('teacher.availability.settings.update') }}" class="mt-5 flex flex-wrap items-end gap-3">
-                @csrf
-                @method('PUT')
-                <div>
-                    <x-input-label for="lesson_duration_minutes" :value="__('Lesson length')" />
-                    <select id="lesson_duration_minutes" name="lesson_duration_minutes" class="mt-1 {{ $fieldClasses }}">
-                        @foreach (config('studylikepro.lesson_durations') as $minutes)
-                            <option value="{{ $minutes }}" @selected(old('lesson_duration_minutes', $profile->lessonDuration()) == $minutes)>{{ $minutes }} minutes</option>
+                    <x-input-error :messages="$errors->get('days')" class="mt-3" />
+
+                    <form method="POST" action="{{ $config['urls']['week'] }}" class="mt-4 space-y-4">
+                        @csrf
+                        @method('PUT')
+
+                        @foreach ($week as $index => $day)
+                            <fieldset class="rounded-xl border border-slate-200/80 p-3 dark:border-slate-800">
+                                <input type="hidden" name="days[{{ $index }}][value]" value="{{ $day['value'] }}">
+
+                                <label class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                    <input type="checkbox" name="days[{{ $index }}][enabled]" value="1"
+                                           class="rounded border-slate-300 text-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900"
+                                           @checked($day['enabled']) />
+                                    {{ $day['label'] }}
+                                </label>
+
+                                <div class="mt-3 space-y-2">
+                                    @foreach (range(0, 3) as $row)
+                                        @continue($row > 0 && ! isset($day['ranges'][$row]))
+
+                                        <div class="flex flex-wrap items-end gap-3">
+                                            <div>
+                                                <x-input-label for="day-{{ $index }}-{{ $row }}-start" :value="$copy['fromLabel']" />
+                                                <input id="day-{{ $index }}-{{ $row }}-start" type="time"
+                                                       name="days[{{ $index }}][ranges][{{ $row }}][start_time]"
+                                                       value="{{ $day['ranges'][$row]['start'] ?? '' }}" class="{{ $fieldClasses }}" />
+                                            </div>
+                                            <div>
+                                                <x-input-label for="day-{{ $index }}-{{ $row }}-end" :value="$copy['toLabel']" />
+                                                <input id="day-{{ $index }}-{{ $row }}-end" type="time"
+                                                       name="days[{{ $index }}][ranges][{{ $row }}][end_time]"
+                                                       value="{{ $day['ranges'][$row]['end'] ?? '' }}" class="{{ $fieldClasses }}" />
+                                            </div>
+                                        </div>
+
+                                        <x-input-error :messages="$errors->get('days.'.$index.'.ranges.'.$row.'.start_time')" class="mt-1" />
+                                        <x-input-error :messages="$errors->get('days.'.$index.'.ranges.'.$row.'.end_time')" class="mt-1" />
+                                    @endforeach
+                                </div>
+
+                                <x-input-error :messages="$errors->get('days.'.$index.'.ranges')" class="mt-2" />
+                            </fieldset>
                         @endforeach
-                    </select>
-                    <x-input-error :messages="$errors->get('lesson_duration_minutes')" class="mt-2" />
-                </div>
-                <x-primary-button>{{ __('Save lesson length') }}</x-primary-button>
-            </form>
 
-            <div class="mt-6 grid gap-3 sm:grid-cols-2">
-                <div class="rounded-xl border border-slate-200/80 p-4 dark:border-slate-800">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Base rate</p>
-                    <p class="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">{{ $money($profile->hourly_rate_minor) }}<span class="text-sm font-medium text-slate-400"> / hour</span></p>
-                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">You earn about {{ $money((int) round($profile->hourly_rate_minor * (100 - $commission) / 100)) }} after the {{ $commission }}% platform fee.</p>
-                </div>
+                        <div class="flex justify-end">
+                            <x-primary-button>{{ $copy['save'] }}</x-primary-button>
+                        </div>
+                    </form>
+                </section>
 
-                @foreach ($profile->subjects as $subject)
-                    @php
-                        $gradeRates = collect($subject->pivot->grade_rates ?? [])
-                            ->mapWithKeys(fn ($gradeRate, $gradeId) => [(int) $gradeId => (int) $gradeRate]);
-                        $subjectGrades = ($subject->educationLevel?->grades ?? collect())->keyBy('id');
-                    @endphp
-                    @continue(! $subject->pivot->rate_per_hour_minor && $gradeRates->isEmpty())
-                    <div class="rounded-xl border border-primary/30 bg-primary/5 p-4">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-primary">{{ $subject->icon ?? '📘' }} {{ $subject->name }}</p>
+                <section class="{{ $cardBase }}">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Weekly availability</h3>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $copy['editorHint'] }}</p>
 
-                        @if ($subject->pivot->rate_per_hour_minor)
-                            <p class="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">{{ $money($subject->pivot->rate_per_hour_minor) }}<span class="text-sm font-medium text-slate-400"> / hour</span></p>
-                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Default rate — you earn about {{ $money((int) round($subject->pivot->rate_per_hour_minor * (100 - $commission) / 100)) }} after the platform fee.</p>
-                        @endif
-
-                        @if ($gradeRates->isNotEmpty())
-                            <div class="mt-3 space-y-1">
-                                @foreach ($gradeRates as $gradeId => $gradeRate)
-                                    <div class="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                        <span>{{ $subjectGrades->get($gradeId)?->label ?? __('Grade') }}</span>
-                                        <span class="font-semibold text-slate-700 dark:text-slate-200">{{ $money($gradeRate) }} / hour</span>
-                                    </div>
-                                @endforeach
+                    <div class="mt-4 space-y-2">
+                        @foreach ($week as $day)
+                            @continue(empty($day['ranges']))
+                            <div class="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 px-4 py-3 dark:border-slate-800">
+                                <span class="w-24 text-sm font-semibold text-slate-700 dark:text-slate-200">{{ $day['label'] }}</span>
+                                <div class="flex flex-1 flex-wrap gap-2">
+                                    @foreach ($day['ranges'] as $range)
+                                        <span class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+                                            {{ display_clock($range['start']) }}–{{ display_clock($range['end']) }}
+                                        </span>
+                                    @endforeach
+                                </div>
                             </div>
-                        @endif
-
-                        <a href="{{ route('teacher.subjects.index') }}" class="mt-3 inline-block text-xs font-semibold text-primary transition-colors hover:text-primary/80">{{ __('Edit rates') }} →</a>
+                        @endforeach
                     </div>
-                @endforeach
-            </div>
-        </div>
+                </section>
 
-        <!-- Weekly ranges -->
-        <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-            <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Weekly availability</h3>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Add the time ranges you usually teach. Students book {{ $profile->lessonDuration() }}-minute lessons inside them.
-            </p>
+                <section class="{{ $cardBase }}">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $copy['pricing']['title'] }}</h3>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $copy['pricing']['description'] }}</p>
 
-            <div class="mt-5 space-y-3">
-                @php $hasRanges = false; @endphp
-                @foreach ($weekdays as $day => $label)
-                    @php $ranges = $slotsByDay->get($day, collect()); @endphp
-                    @continue($ranges->isEmpty())
-                    @php $hasRanges = true; @endphp
-                    <div class="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 px-4 py-3 dark:border-slate-800">
-                        <span class="w-24 text-sm font-semibold text-slate-700 dark:text-slate-200">{{ $label }}</span>
-                        <div class="flex flex-1 flex-wrap gap-2">
-                            @foreach ($ranges as $range)
-                                <span class="inline-flex items-center gap-2 rounded-full bg-primary/10 py-1 pl-3 pr-1 text-sm font-semibold text-primary">
-                                    {{ display_clock($range->startLabel()) }}–{{ display_clock($range->endLabel()) }}
-                                    <form method="POST" action="{{ route('teacher.availability.slots.destroy', $range) }}">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="flex h-5 w-5 items-center justify-center rounded-full text-primary/70 transition hover:bg-primary/20 hover:text-primary" aria-label="{{ __('Remove :day :range', ['day' => $label, 'range' => display_clock($range->startLabel()).'–'.display_clock($range->endLabel())]) }}">&times;</button>
-                                    </form>
-                                </span>
+                    <form method="POST" action="{{ $config['urls']['pricing'] }}" class="mt-4 flex flex-wrap items-end gap-3">
+                        @csrf
+                        @method('PUT')
+                        <div>
+                            <x-input-label for="hourly_rate" :value="$copy['pricing']['rateLabel']" />
+                            <input id="hourly_rate" name="hourly_rate" type="number" step="0.01" min="100" max="100000"
+                                   value="{{ old('hourly_rate', $pricing['rate']) }}" class="{{ $fieldClasses }}" />
+                        </div>
+                        <x-primary-button>{{ $copy['pricing']['rateSave'] }}</x-primary-button>
+                    </form>
+                    <x-input-error :messages="$errors->get('hourly_rate')" class="mt-2" />
+
+                    <div class="mt-4 rounded-xl border border-slate-200/80 p-4 dark:border-slate-800">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Base rate</p>
+                        <p class="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">
+                            {{ $pricing['rateLabel'] }}<span class="text-sm font-medium text-slate-400"> {{ $copy['pricing']['perHour'] }}</span>
+                        </p>
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $pricing['earningsLabel'] }}</p>
+                    </div>
+
+                    <form method="POST" action="{{ $config['urls']['settings'] }}" class="mt-4 flex flex-wrap items-end gap-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
+                        @csrf
+                        @method('PUT')
+                        <div>
+                            <x-input-label for="lesson_duration_minutes" :value="$copy['pricing']['lessonLengthLabel']" />
+                            <select id="lesson_duration_minutes" name="lesson_duration_minutes" class="{{ $fieldClasses }}">
+                                @foreach ($pricing['durations'] as $duration)
+                                    <option value="{{ $duration['value'] }}" @selected(old('lesson_duration_minutes', $pricing['lessonDuration']) == $duration['value'])>{{ $duration['label'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <x-primary-button>{{ $copy['pricing']['lessonLengthSave'] }}</x-primary-button>
+                    </form>
+                    <x-input-error :messages="$errors->get('lesson_duration_minutes')" class="mt-2" />
+
+                    @if (! empty($pricing['subjects']))
+                        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                            @foreach ($pricing['subjects'] as $subject)
+                                <div class="rounded-xl border border-primary/30 bg-primary/5 p-4">
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-primary">{{ $subject['icon'] }} {{ $subject['name'] }}</p>
+
+                                    @if ($subject['rateLabel'])
+                                        <p class="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">
+                                            {{ $subject['rateLabel'] }}<span class="text-sm font-medium text-slate-400"> {{ $copy['pricing']['perHour'] }}</span>
+                                        </p>
+                                    @endif
+
+                                    @foreach ($subject['gradeRates'] as $grade)
+                                        <div class="mt-2 flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                            <span>{{ $grade['label'] }}</span>
+                                            <span class="font-semibold text-slate-700 dark:text-slate-200">{{ $grade['rateLabel'] }}</span>
+                                        </div>
+                                    @endforeach
+
+                                    <a href="{{ $subject['editUrl'] }}" class="mt-3 inline-block text-xs font-semibold text-primary hover:text-primary/80">{{ $copy['pricing']['editRates'] }} →</a>
+                                </div>
                             @endforeach
                         </div>
-                    </div>
-                @endforeach
+                    @endif
+                </section>
 
-                @unless ($hasRanges)
-                    <p class="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                        No weekly ranges yet — add your first one below and students can start booking those times.
-                    </p>
-                @endunless
-            </div>
+                <section class="{{ $cardBase }}">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $copy['preview']['title'] }}</h3>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $copy['preview']['description'] }}</p>
 
-            <form method="POST" action="{{ route('teacher.availability.slots.store') }}" class="mt-5 flex flex-wrap items-end gap-3 border-t border-slate-200/80 pt-5 dark:border-slate-800">
-                @csrf
-                <div>
-                    <x-input-label for="day_of_week" :value="__('Day')" />
-                    <select id="day_of_week" name="day_of_week" class="mt-1 {{ $fieldClasses }}">
-                        @foreach ($weekdays as $day => $label)
-                            <option value="{{ $day }}" @selected(old('day_of_week') == $day)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <x-input-label for="start_time" :value="__('From')" />
-                    <input id="start_time" name="start_time" type="time" value="{{ old('start_time', '18:00') }}" class="mt-1 {{ $fieldClasses }}" />
-                </div>
-                <div>
-                    <x-input-label for="end_time" :value="__('To')" />
-                    <input id="end_time" name="end_time" type="time" value="{{ old('end_time', '21:00') }}" class="mt-1 {{ $fieldClasses }}" />
-                </div>
-                <x-primary-button>{{ __('Add range') }}</x-primary-button>
-            </form>
-            <x-input-error :messages="$errors->get('day_of_week')" class="mt-2" />
-            <x-input-error :messages="$errors->get('start_time')" class="mt-2" />
-            <x-input-error :messages="$errors->get('end_time')" class="mt-2" />
-        </div>
-
-        <!-- Upcoming open slots -->
-        <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-            <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Next bookable slots</h3>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">A preview of what students see — your local time.</p>
-
-            @if (empty($preview))
-                <p class="mt-4 rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                    Nothing bookable in the next 7 days. Add a weekly range or lift some time off.
-                </p>
-            @else
-                <div class="mt-4 space-y-4">
-                    @foreach ($preview as $date => $slots)
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ \Carbon\CarbonImmutable::parse($date)->format('D, d M') }}</p>
-                            <div class="mt-2 flex flex-wrap gap-2">
-                                @foreach ($slots as $slot)
-                                    <span class="{{ $chip }}">{{ display_clock($slot['local_time']) }}</span>
-                                @endforeach
-                            </div>
+                    @if (empty($config['preview']))
+                        <p class="mt-4 rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                            {{ $copy['preview']['emptyTitle'] }} — {{ $copy['preview']['emptyBody'] }}
+                        </p>
+                    @else
+                        <div class="mt-4 space-y-4">
+                            @foreach ($config['preview'] as $day)
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ $day['dateLabel'] }}</p>
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        @foreach ($day['slots'] as $slot)
+                                            <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">{{ $slot['time'] }}</span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
-                    @endforeach
-                </div>
-            @endif
-        </div>
+                    @endif
+                </section>
 
-        <!-- Time off -->
-        <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
-            <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Time off</h3>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Blocked days disappear from your bookable slots.</p>
+                <section class="{{ $cardBase }}">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $copy['timeOff']['title'] }}</h3>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $copy['timeOff']['description'] }}</p>
 
-            @if ($timeOff->isNotEmpty())
-                <ul class="mt-4 space-y-2">
-                    @foreach ($timeOff as $entry)
-                        <li class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 px-4 py-2.5 dark:border-slate-800">
-                            <div>
-                                <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                    {{ $entry->starts_on->format('d M Y') }}@if (! $entry->starts_on->isSameDay($entry->ends_on)) – {{ $entry->ends_on->format('d M Y') }}@endif
-                                </p>
-                                <p class="text-xs text-slate-500 dark:text-slate-400">{{ $entry->reason ?: 'Time off' }} · {{ $entry->dayCount() }} {{ Str::plural('day', $entry->dayCount()) }}</p>
-                            </div>
-                            <form method="POST" action="{{ route('teacher.availability.time-off.destroy', $entry) }}">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">{{ __('Remove') }}</button>
-                            </form>
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
+                    @if (! empty($config['timeOff']))
+                        <ul class="mt-4 space-y-2">
+                            @foreach ($config['timeOff'] as $entry)
+                                <li class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 px-4 py-2.5 dark:border-slate-800">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ $entry['rangeLabel'] }}</p>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ $entry['reason'] }} · {{ $entry['dayCountLabel'] }}</p>
+                                    </div>
 
-            <form method="POST" action="{{ route('teacher.availability.time-off.store') }}" class="mt-5 flex flex-wrap items-end gap-3 border-t border-slate-200/80 pt-5 dark:border-slate-800">
-                @csrf
-                <div>
-                    <x-input-label for="starts_on" :value="__('From')" />
-                    <input id="starts_on" name="starts_on" type="date" value="{{ old('starts_on') }}" class="mt-1 {{ $fieldClasses }}" />
-                </div>
-                <div>
-                    <x-input-label for="ends_on" :value="__('To')" />
-                    <input id="ends_on" name="ends_on" type="date" value="{{ old('ends_on') }}" class="mt-1 {{ $fieldClasses }}" />
-                </div>
-                <div class="min-w-40 flex-1">
-                    <x-input-label for="reason" :value="__('Reason (optional)')" />
-                    <input id="reason" name="reason" type="text" value="{{ old('reason') }}" placeholder="Family function" class="mt-1 w-full {{ $fieldClasses }}" />
-                </div>
-                <x-primary-button>{{ __('Add time off') }}</x-primary-button>
-            </form>
-            <x-input-error :messages="$errors->get('starts_on')" class="mt-2" />
-            <x-input-error :messages="$errors->get('ends_on')" class="mt-2" />
-            <x-input-error :messages="$errors->get('reason')" class="mt-2" />
-        </div>
+                                    <form method="POST" action="{{ $entry['deleteUrl'] }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">{{ $copy['timeOff']['remove'] }}</button>
+                                    </form>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    <form method="POST" action="{{ $config['urls']['timeOff'] }}" class="mt-5 flex flex-wrap items-end gap-3 border-t border-slate-200/80 pt-5 dark:border-slate-800">
+                        @csrf
+                        <div>
+                            <x-input-label for="starts_on" :value="$copy['timeOff']['fromLabel']" />
+                            <input id="starts_on" name="starts_on" type="date" value="{{ old('starts_on') }}" class="{{ $fieldClasses }}" />
+                        </div>
+                        <div>
+                            <x-input-label for="ends_on" :value="$copy['timeOff']['toLabel']" />
+                            <input id="ends_on" name="ends_on" type="date" value="{{ old('ends_on') }}" class="{{ $fieldClasses }}" />
+                        </div>
+                        <div class="min-w-40 flex-1">
+                            <x-input-label for="reason" :value="$copy['timeOff']['reasonLabel']" />
+                            <input id="reason" name="reason" type="text" maxlength="120" value="{{ old('reason') }}"
+                                   placeholder="{{ $copy['timeOff']['reasonPlaceholder'] }}" class="w-full {{ $fieldClasses }}" />
+                        </div>
+                        <x-primary-button>{{ $copy['timeOff']['add'] }}</x-primary-button>
+                    </form>
+                    <x-input-error :messages="$errors->get('starts_on')" class="mt-2" />
+                    <x-input-error :messages="$errors->get('ends_on')" class="mt-2" />
+                    <x-input-error :messages="$errors->get('reason')" class="mt-2" />
+                </section>
+            </div>
+        </noscript>
     </div>
+
+    @vite('resources/js/teacher-availability/main.js')
 </x-app-layout>

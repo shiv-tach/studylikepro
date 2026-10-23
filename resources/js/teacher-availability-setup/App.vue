@@ -10,11 +10,13 @@ import { THEME_PRESET_KEY, useThemePreset } from '../shared/composables/useTheme
 import OnboardingSteps from '../shared/components/OnboardingSteps.vue';
 import RevealOnScroll from '../shared/components/RevealOnScroll.vue';
 import UiAlert from '../shared/components/UiAlert.vue';
-import PresetCards from './components/PresetCards.vue';
-import WeekEditor from './components/WeekEditor.vue';
-import WeeklySummaryCard from './components/WeeklySummaryCard.vue';
-import { COPY_KEY, CSRF_KEY, URLS_KEY } from './composables/usePageContext';
-import { WEEK_KEY, createWeekEditor } from './composables/useWeekEditor';
+// The week editor, its presets and the summary card are shared with the
+// availability manager at /teacher/availability.
+import PresetCards from '../shared/availability/components/PresetCards.vue';
+import WeekEditor from '../shared/availability/components/WeekEditor.vue';
+import WeeklySummaryCard from '../shared/availability/components/WeeklySummaryCard.vue';
+import { COPY_KEY, CSRF_KEY, URLS_KEY } from '../shared/availability/context';
+import { WEEK_KEY, createWeekEditor } from '../shared/availability/useWeekEditor';
 
 const props = defineProps({
     config: { type: Object, required: true },

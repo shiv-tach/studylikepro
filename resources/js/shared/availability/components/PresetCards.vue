@@ -5,11 +5,11 @@
  * asks first when the editor already holds unsaved changes.
  */
 import { onBeforeUnmount, ref } from 'vue';
-import { usePanel } from '../../shared/composables/usePanel';
-import UiConfirmDialog from '../../shared/components/UiConfirmDialog.vue';
-import UiSectionHeading from '../../shared/components/UiSectionHeading.vue';
-import { format, useCopy } from '../composables/usePageContext';
-import { useWeekEditor } from '../composables/useWeekEditor';
+import { usePanel } from '../../composables/usePanel';
+import UiConfirmDialog from '../../components/UiConfirmDialog.vue';
+import UiSectionHeading from '../../components/UiSectionHeading.vue';
+import { format, useCopy } from '../context';
+import { useWeekEditor } from '../useWeekEditor';
 import { OPTION_IDLE, PRESET_CARD } from '../styles';
 
 const copy = useCopy();

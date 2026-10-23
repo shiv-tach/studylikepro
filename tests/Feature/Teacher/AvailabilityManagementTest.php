@@ -13,12 +13,127 @@ beforeEach(function () {
 it('shows the availability manager to the teacher', function () {
     TeacherAvailabilitySlot::factory()->on(1, '18:00', '21:00')->create(['teacher_profile_id' => $this->profile->id]);
 
-    $this->actingAs($this->teacher)
+    $response = $this->actingAs($this->teacher)
         ->get(route('teacher.availability.index'))
         ->assertOk()
-        ->assertSee('Weekly availability')
-        ->assertSee('6:00 PM–9:00 PM')
-        ->assertSee('Base rate');
+        ->assertSee('id="teacher-availability-app"', false)
+        ->assertSee('id="teacher-availability-config"', false)
+        ->assertSee('resources/js/teacher-availability/main.js', false);
+
+    $config = teacherAvailabilityConfig($response);
+
+    expect(collect($config['week'])->firstWhere('value', 1)['ranges'])
+        ->toBe([['start' => '18:00', 'end' => '21:00']])
+        ->and(collect($config['week'])->firstWhere('value', 2)['enabled'])->toBeFalse()
+        ->and($config['week'])->toHaveCount(7)
+        ->and($config['presets'])->toHaveCount(3)
+        ->and($config['pricing']['lessonDuration'])->toBe(60)
+        ->and($config['pricing']['rate'])->toBe(500)
+        ->and($config['pricing']['currency']['symbol'])->toBe(config('studylikepro.currency_symbol'))
+        ->and($config['limits']['maxRangesPerDay'])->toBe(4)
+        ->and($config['timezone'])->toBe('Asia/Colombo');
+});
+
+it('sends the next bookable slots with the manager', function () {
+    foreach (array_keys(config('studylikepro.weekdays')) as $day) {
+        TeacherAvailabilitySlot::factory()->on($day, '18:00', '21:00')->create(['teacher_profile_id' => $this->profile->id]);
+    }
+
+    $config = teacherAvailabilityConfig(
+        $this->actingAs($this->teacher)->get(route('teacher.availability.index'))
+    );
+
+    expect($config['preview'])->not->toBeEmpty()
+        ->and($config['preview'][0]['slots'][0]['time'])->toMatch('/\d{1,2}:\d{2} (AM|PM)/');
+});
+
+it('replaces the whole week from the manager', function () {
+    TeacherAvailabilitySlot::factory()->on(1, '18:00', '21:00')->create(['teacher_profile_id' => $this->profile->id]);
+
+    $this->actingAs($this->teacher)
+        ->put(route('teacher.availability.week.update'), weekPayload([
+            [
+                'value' => 2,
+                'enabled' => '1',
+                'ranges' => [
+                    ['start_time' => '15:00', 'end_time' => '18:00'],
+                    ['start_time' => '19:00', 'end_time' => '21:00'],
+                ],
+            ],
+            [
+                'value' => 3,
+                'enabled' => '1',
+                'ranges' => [['start_time' => '09:00', 'end_time' => '12:00']],
+            ],
+            // A switched-off day keeps its value but contributes no range.
+            ['value' => 4, 'ranges' => [['start_time' => '09:00', 'end_time' => '10:00']]],
+        ]))
+        ->assertRedirect(route('teacher.availability.index'))
+        ->assertSessionHas('status', 'availability-week-saved')
+        ->assertSessionHasNoErrors();
+
+    // Monday's old range is gone: the week is replaced, not appended to.
+    expect($this->profile->availabilitySlots()->count())->toBe(3)
+        ->and($this->profile->availabilitySlots()->where('day_of_week', 1)->exists())->toBeFalse()
+        ->and($this->profile->availabilitySlots()->where('day_of_week', 2)->count())->toBe(2);
+});
+
+it('replays a rejected week into the editor', function () {
+    $this->actingAs($this->teacher)
+        ->from(route('teacher.availability.index'))
+        ->put(route('teacher.availability.week.update'), weekPayload([
+            ['value' => 1, 'enabled' => '1', 'ranges' => [['start_time' => '21:00', 'end_time' => '18:00']]],
+        ]))
+        ->assertSessionHasErrors('days.0.ranges.0.end_time');
+
+    $config = teacherAvailabilityConfig(
+        $this->get(route('teacher.availability.index'))
+    );
+
+    expect($config['week'][0]['value'])->toBe(1)
+        ->and($config['week'][0]['enabled'])->toBeTrue()
+        ->and($config['week'][0]['ranges'])->toBe([['start' => '21:00', 'end' => '18:00']])
+        ->and($config['errors']['days.0.ranges.0.end_time'])->not->toBeEmpty();
+});
+
+it('updates the default price', function () {
+    $this->actingAs($this->teacher)
+        ->put(route('teacher.availability.pricing.update'), ['hourly_rate' => 2750])
+        ->assertRedirect(route('teacher.availability.index'))
+        ->assertSessionHas('status', 'availability-pricing-updated')
+        ->assertSessionHasNoErrors();
+
+    expect($this->profile->fresh()->hourly_rate_minor)->toBe(275000);
+});
+
+it('validates the default price', function (mixed $rate) {
+    $this->actingAs($this->teacher)
+        ->put(route('teacher.availability.pricing.update'), ['hourly_rate' => $rate])
+        ->assertSessionHasErrors('hourly_rate');
+
+    expect($this->profile->fresh()->hourly_rate_minor)->toBe(50000);
+})->with([
+    'below the floor' => [50],
+    'not a number' => ['free'],
+]);
+
+it('lists time off in the island with its own delete url', function () {
+    $timeOff = TeacherTimeOff::factory()->create([
+        'teacher_profile_id' => $this->profile->id,
+        'starts_on' => now()->addDays(5)->toDateString(),
+        'ends_on' => now()->addDays(6)->toDateString(),
+        'reason' => 'Family function',
+    ]);
+
+    $config = teacherAvailabilityConfig(
+        $this->actingAs($this->teacher)->get(route('teacher.availability.index'))
+    );
+
+    expect($config['timeOff'])->toHaveCount(1)
+        ->and($config['timeOff'][0]['id'])->toBe($timeOff->id)
+        ->and($config['timeOff'][0]['reason'])->toBe('Family function')
+        ->and($config['timeOff'][0]['dayCountLabel'])->toBe('2 days')
+        ->and($config['timeOff'][0]['deleteUrl'])->toBe(route('teacher.availability.time-off.destroy', $timeOff));
 });
 
 it('lets a teacher add a weekly range', function () {

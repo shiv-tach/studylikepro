@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AvailabilityPricingRequest;
 use App\Http\Requests\AvailabilitySettingsRequest;
 use App\Http\Requests\AvailabilitySlotRequest;
 use App\Http\Requests\TimeOffRequest;
@@ -12,6 +13,7 @@ use App\Models\TeacherProfile;
 use App\Models\TeacherTimeOff;
 use App\Services\SlotService;
 use App\Services\WeeklyAvailabilityService;
+use App\Support\AvailabilityManagerConfig;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -77,7 +79,7 @@ class AvailabilityController extends Controller
     }
 
     /**
-     * Weekly availability, time off, lesson length, and pricing summary.
+     * Weekly availability, time off, lesson length and the default price.
      */
     public function index(Request $request, SlotService $slots): View
     {
@@ -89,12 +91,41 @@ class AvailabilityController extends Controller
         ]);
 
         return view('teacher.availability', [
-            'profile' => $profile,
-            'slotsByDay' => $profile->availabilitySlots->groupBy('day_of_week'),
-            'timeOff' => $profile->timeOff,
-            'preview' => $slots->upcomingByDate($profile, 7, 12),
-            'commissionPercent' => platform_settings()->int('commission_percent'),
+            'config' => AvailabilityManagerConfig::build(
+                $profile,
+                $request->user()->theme['preset'] ?? 'classic',
+                $slots->upcomingByDate($profile, 7, 12),
+                platform_settings()->int('commission_percent'),
+            ),
         ]);
+    }
+
+    /**
+     * Replace the whole week from the manager page. The onboarding step posts to
+     * its own gate-protected route; this one only needs the teacher role.
+     */
+    public function updateRanges(WeeklyAvailabilityRequest $request): RedirectResponse
+    {
+        $this->weeks->replace($request->user()->teacherProfile, $request->input('days', []));
+
+        return redirect()
+            ->route('teacher.availability.index')
+            ->with('status', 'availability-week-saved');
+    }
+
+    /**
+     * The default hourly rate every booking starts from. Subject and per-grade
+     * overrides live on /teacher/subjects and are untouched here.
+     */
+    public function updatePricing(AvailabilityPricingRequest $request): RedirectResponse
+    {
+        $request->user()->teacherProfile->update([
+            'hourly_rate_minor' => (int) round(((float) $request->validated('hourly_rate')) * 100),
+        ]);
+
+        return redirect()
+            ->route('teacher.availability.index')
+            ->with('status', 'availability-pricing-updated');
     }
 
     public function storeSlot(AvailabilitySlotRequest $request): RedirectResponse

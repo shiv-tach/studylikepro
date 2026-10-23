@@ -53,6 +53,11 @@ export default defineConfig({
                 // The teacher's onboarding step 2 at /teacher/availability/setup:
                 // the preset weeks and the editable week grid.
                 'resources/js/teacher-availability-setup/main.js',
+                // The availability manager at /teacher/availability: the same
+                // week editor plus the default price, the bookable preview and
+                // the time off. Its own bundle, so the onboarding step never
+                // pays for the pricing panel and vice versa.
+                'resources/js/teacher-availability/main.js',
                 // Onboarding step 3 at /teacher/verification: the documents, the
                 // live checklist and the submit confirmation.
                 'resources/js/teacher-verification/main.js',
