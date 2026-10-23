@@ -69,6 +69,9 @@ export default defineConfig({
                 // and the sessions booked against the order.
                 'resources/js/teacher-orders/main.js',
                 'resources/js/teacher-order-show/main.js',
+                // The teaching schedule at /teacher/schedule: what is next, the
+                // ranked "do next" queue and the day-grouped agenda.
+                'resources/js/teacher-schedule/main.js',
                 // The signed-in chrome (sidebar + top bar) that wraps every
                 // x-app-layout screen, so the layout itself is a Vue component.
                 'resources/js/app-shell/main.js',

@@ -15,6 +15,7 @@ import HoldPanel from './components/HoldPanel.vue';
 import JoinCallout from './components/JoinCallout.vue';
 import LessonDetailsPanel from './components/LessonDetailsPanel.vue';
 import PaymentPanel from './components/PaymentPanel.vue';
+import PlanPanel from './components/PlanPanel.vue';
 import ReviewPanel from './components/ReviewPanel.vue';
 import StatusTimelinePanel from './components/StatusTimelinePanel.vue';
 
@@ -66,6 +67,10 @@ const cancelOpen = ref(Boolean(props.config.cancel?.error));
                 :cancel-notice="config.cancelNotice"
                 @cancel="cancelOpen = true"
             />
+        </RevealOnScroll>
+
+        <RevealOnScroll v-if="config.plan" :delay="70">
+            <PlanPanel :plan="config.plan" />
         </RevealOnScroll>
 
         <RevealOnScroll v-if="config.review" :delay="80">

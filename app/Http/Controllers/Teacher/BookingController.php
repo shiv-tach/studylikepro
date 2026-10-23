@@ -8,6 +8,7 @@ use App\Http\Requests\CancelBookingRequest;
 use App\Models\Booking;
 use App\Models\TeacherProfile;
 use App\Services\BookingTransitionService;
+use App\Support\TeacherScheduleConfig;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -18,40 +19,65 @@ class BookingController extends Controller
     public function __construct(private readonly BookingTransitionService $transitions) {}
 
     /**
-     * The teaching schedule: live lessons, unpaid holds and recent history.
+     * The teaching schedule: what is next, what needs an action, the unpaid
+     * holds and the recent history. The payload is built by
+     * TeacherScheduleConfig so the Vue app receives labels, times, money and
+     * URLs it never has to compute itself.
      */
     public function index(Request $request): View
     {
         $teacher = $this->teacherProfile($request);
+        $timezone = $teacher->timezone ?: config('studylikepro.default_display_timezone');
 
         $upcoming = $teacher->bookings()
             ->whereIn('status', [BookingStatus::Confirmed->value, BookingStatus::InProgress->value])
             ->where('starts_at', '>=', now()->subHour())
-            ->with(['student', 'subject', 'lesson'])
-            ->oldest('starts_at')
+            ->with(['student', 'subject', 'lesson', 'learnerGrade'])
+            // bookings() already sorts newest first, so oldest() would only add a
+            // second clause: reorder() is what actually puts the next lesson first.
+            ->reorder('starts_at')
             ->limit(20)
             ->get();
 
         $holds = $teacher->bookings()
             ->where('status', BookingStatus::PendingPayment->value)
             ->where('expires_at', '>', now())
-            ->with(['student', 'subject', 'lesson'])
-            ->oldest('starts_at')
+            ->with(['student', 'subject', 'lesson', 'learnerGrade'])
+            ->reorder('starts_at')
             ->get();
 
         $past = $teacher->bookings()
             ->past()
-            ->with(['student', 'subject', 'lesson'])
-            ->latest('starts_at')
+            ->with(['student', 'subject', 'lesson', 'learnerGrade'])
+            ->reorder('starts_at', 'desc')
             ->limit(10)
             ->get();
 
+        // The next seven days in the teacher's own timezone, converted back to
+        // the app timezone before binding (Eloquent binds wall time, not an offset).
+        $weekStart = now()
+            ->setTimezone($timezone)
+            ->startOfDay()
+            ->setTimezone(config('app.timezone'));
+
+        $week = $teacher->bookings()
+            ->whereIn('status', [BookingStatus::Confirmed->value, BookingStatus::InProgress->value])
+            ->whereBetween('starts_at', [$weekStart, $weekStart->copy()->addDays(7)])
+            ->get(['starts_at', 'ends_at']);
+
         return view('teacher.schedule.index', [
-            'teacher' => $teacher,
+            'config' => TeacherScheduleConfig::build(
+                $timezone,
+                $request->user()->theme['preset'] ?? 'classic',
+                $upcoming,
+                $holds,
+                $past,
+                $week,
+            ),
+            'timezone' => $timezone,
             'upcoming' => $upcoming,
             'holds' => $holds,
             'past' => $past,
-            'timezone' => $teacher->timezone ?: config('studylikepro.default_display_timezone'),
         ]);
     }
 
@@ -107,9 +133,13 @@ class BookingController extends Controller
 
         $this->transitions->{$action}($booking);
 
-        return redirect()
-            ->route('teacher.bookings.show', $booking)
-            ->with('status', 'booking-'.$action);
+        // Inline actions on the schedule ask to come back there; the lesson page
+        // stays the default for every other caller.
+        $target = $request->input('return') === 'schedule'
+            ? route('teacher.schedule.index')
+            : route('teacher.bookings.show', $booking);
+
+        return redirect($target)->with('status', 'booking-'.$action);
     }
 
     private function teacherProfile(Request $request): TeacherProfile

@@ -22,6 +22,7 @@ const DEFAULT_CONFIG = {
     cancelNotice: null,
     cancel: null,
     review: null,
+    plan: null,
     copy: {},
     urls: {},
 };

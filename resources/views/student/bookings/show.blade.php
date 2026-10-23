@@ -9,6 +9,14 @@
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);
     $themePreset = auth()->user()->theme['preset'];
 
+    $sessionTone = fn (BookingStatus $status) => match ($status) {
+        BookingStatus::PendingPayment => 'amber',
+        BookingStatus::InProgress => 'primary',
+        BookingStatus::Confirmed, BookingStatus::Completed => 'emerald',
+        BookingStatus::NoShow, BookingStatus::Disputed => 'rose',
+        BookingStatus::Cancelled, BookingStatus::Expired, BookingStatus::Resolved => 'slate',
+    };
+
     $teacherUser = $booking->teacherProfile->user;
     $isHold = $booking->status === BookingStatus::PendingPayment;
     $holdLapsed = $isHold && $booking->expires_at?->isPast();
@@ -209,6 +217,58 @@
         'error' => $errors->first('reason') ?: null,
     ] : null;
 
+    // A session booked against a purchase keeps the rest of the plan in view:
+    // the balance, the sibling sessions and the way to spend another one.
+    // Non-plan purchases (Q&A, discussion) still list their sessions.
+    $planBlock = null;
+    $purchase = $booking->servicePurchase;
+
+    if ($purchase !== null) {
+        $isPlan = $purchase->isLessonPlan();
+        $allocation = (int) $purchase->allocation_minutes;
+        $remaining = $isPlan ? $purchase->remainingMinutes() : null;
+        $sessionsLeft = $isPlan ? $purchase->sessionsRemaining() : null;
+        $canBookSession = $isPlan
+            && $remaining > 0
+            && ($sessionsLeft === null || $sessionsLeft > 0)
+            && \Illuminate\Support\Facades\Gate::allows('scheduleSession', $purchase);
+
+        $planBlock = [
+            'title' => $isPlan ? __('Your plan') : __('Your purchase'),
+            'balance' => $remaining === null ? null : [
+                'label' => __('Time left'),
+                'value' => $remaining > 0 ? __(':minutes min', ['minutes' => $remaining]) : __('Done'),
+                'percent' => $allocation > 0
+                    ? min(100, (int) round(($allocation - $remaining) * 100 / $allocation))
+                    : 0,
+                'caption' => __(':used of :total min used', ['used' => $allocation - $remaining, 'total' => $allocation]),
+            ],
+            'sessionsLeft' => $sessionsLeft === null
+                ? null
+                : trans_choice(':count session left to book|:count sessions left to book', $sessionsLeft, ['count' => $sessionsLeft]),
+            'sessionsTitle' => __('Sessions on this purchase'),
+            'currentLabel' => __('This session'),
+            'sessions' => $purchase->sessions->map(fn ($session) => [
+                'id' => $session->id,
+                'url' => route('student.bookings.show', $session),
+                'when' => $session->starts_at->copy()->setTimezone($timezone)->format('D, d M Y · H:i'),
+                'durationLabel' => __(':minutes min', ['minutes' => $session->durationMinutes()]),
+                'scope' => collect([$session->subject?->name, $session->lesson?->name])->filter()->implode(' · ') ?: null,
+                'status' => [
+                    'label' => $session->status->label(),
+                    'tone' => $sessionTone($session->status),
+                ],
+                'current' => $session->is($booking),
+            ])->values()->all(),
+            'exhausted' => $isPlan && ! $canBookSession && $remaining > 0 && $sessionsLeft === 0,
+            'limitLabel' => __('This plan has reached its session limit.'),
+            'bookUrl' => $canBookSession ? route('student.purchase-sessions.create', $purchase) : null,
+            'bookLabel' => __('Book another session'),
+            'purchaseUrl' => route('student.purchases.show', $purchase),
+            'purchaseLabel' => __('View purchase'),
+        ];
+    }
+
     $reviewBlock = null;
 
     if ($isCompleted) {
@@ -260,6 +320,7 @@
         'cancelNotice' => $cancelNotice,
         'cancel' => $cancelDialog,
         'review' => $reviewBlock,
+        'plan' => $planBlock,
         'copy' => [
             'lessonLabel' => __('Lesson'),
             'teacherLabel' => __('Teacher'),
@@ -346,6 +407,39 @@
                     <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ $join['title'] }}</h3>
                     <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ $join['body'] }}</p>
                     <a href="{{ $join['url'] }}" class="mt-3 inline-block rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white">{{ $join['ctaLabel'] }}</a>
+                </div>
+            @endif
+
+            @if ($planBlock)
+                <div class="rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ $planBlock['title'] }}</h3>
+
+                    @if ($planBlock['balance'])
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            {{ $planBlock['balance']['label'] }}: <span class="font-semibold text-slate-700 dark:text-slate-200">{{ $planBlock['balance']['value'] }}</span>
+                            · {{ $planBlock['balance']['caption'] }}
+                        </p>
+                    @endif
+
+                    <ul class="mt-4 space-y-2">
+                        @foreach ($planBlock['sessions'] as $session)
+                            <li class="text-sm text-slate-600 dark:text-slate-300">
+                                <a href="{{ $session['url'] }}" class="font-semibold hover:text-primary">{{ $session['when'] }}</a>
+                                · {{ $session['durationLabel'] }} · {{ $session['status']['label'] }}
+                                @if ($session['current'])
+                                    <span class="text-xs font-semibold text-primary">({{ $planBlock['currentLabel'] }})</span>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+
+                    @if ($planBlock['bookUrl'])
+                        <a href="{{ $planBlock['bookUrl'] }}" class="mt-4 inline-block rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white">{{ $planBlock['bookLabel'] }}</a>
+                    @elseif ($planBlock['exhausted'])
+                        <p class="mt-4 text-sm text-amber-700 dark:text-amber-400">{{ $planBlock['limitLabel'] }}</p>
+                    @endif
+
+                    <a href="{{ $planBlock['purchaseUrl'] }}" class="mt-3 block font-semibold text-primary hover:underline">{{ $planBlock['purchaseLabel'] }}</a>
                 </div>
             @endif
 

@@ -1,7 +1,15 @@
 <?php
 
 use App\Enums\BookingStatus;
+use App\Enums\ServiceType;
 use App\Models\Booking;
+use App\Models\Grade;
+use App\Models\Lesson;
+use App\Models\ServiceOffering;
+use App\Models\ServicePurchase;
+use App\Models\Subject;
+use App\Models\TeacherProfile;
+use App\Models\User;
 use App\Services\BookingTransitionService;
 
 /**
@@ -150,4 +158,107 @@ test('a redirect flash rides in the island', function () {
 
     expect($config['flash']['tone'])->toBe('slate')
         ->and($config['flash']['message'])->toBe('Lesson cancelled. The slot is back on the teacher calendar.');
+});
+
+test('a session of a plan carries its sibling sessions and the next booking', function () {
+    $student = User::factory()->student()->onboarded()->create();
+    $teacher = TeacherProfile::factory()->approved()->create();
+    $subject = Subject::factory()->create(['name' => 'Mathematics']);
+    $lesson = Lesson::factory()->create([
+        'subject_id' => $subject->id,
+        'grade_id' => Grade::factory()->create()->id,
+        'name' => 'Quadratic factorising',
+    ]);
+
+    $offering = ServiceOffering::factory()->forType(ServiceType::Lesson)->create([
+        'teacher_profile_id' => $teacher->id,
+        'subject_id' => $subject->id,
+        'lesson_id' => $lesson->id,
+        'price_minor' => 120000,
+    ]);
+
+    $purchase = ServicePurchase::factory()->forOffering($offering)->create([
+        'student_id' => $student->id,
+        'allocation_minutes' => 180,
+        'max_sessions' => 4,
+        'booking_fee_minor' => 0,
+    ]);
+
+    $session = Booking::factory()->create([
+        'student_id' => $student->id,
+        'teacher_profile_id' => $teacher->id,
+        'service_purchase_id' => $purchase->id,
+        'subject_id' => $subject->id,
+        'lesson_id' => $lesson->id,
+        'starts_at' => now()->addDays(2)->setTime(15, 0),
+        'ends_at' => now()->addDays(2)->setTime(16, 0),
+        'price_minor' => 0,
+    ]);
+
+    $sibling = Booking::factory()->create([
+        'student_id' => $student->id,
+        'teacher_profile_id' => $teacher->id,
+        'service_purchase_id' => $purchase->id,
+        'subject_id' => $subject->id,
+        'lesson_id' => $lesson->id,
+        'starts_at' => now()->addDays(3)->setTime(15, 0),
+        'ends_at' => now()->addDays(3)->setTime(16, 0),
+        'price_minor' => 0,
+    ]);
+
+    $config = bookingShowConfig(
+        $this->actingAs($student)
+            ->get(route('student.bookings.show', $session))
+            ->assertOk()
+    );
+
+    expect($config['plan'])->not->toBeNull()
+        ->and($config['plan']['balance']['value'])->toBe('60 min')
+        ->and($config['plan']['sessionsLeft'])->toBe('2 sessions left to book')
+        ->and($config['plan']['bookUrl'])->toBe(route('student.purchase-sessions.create', $purchase));
+
+    $sessions = collect($config['plan']['sessions']);
+
+    expect($sessions)->toHaveCount(2)
+        ->and($sessions->firstWhere('id', $session->id)['current'])->toBeTrue()
+        ->and($sessions->firstWhere('id', $sibling->id)['current'])->toBeFalse()
+        ->and($sessions->pluck('url')->all())->toBe([
+            route('student.bookings.show', $session),
+            route('student.bookings.show', $sibling),
+        ]);
+});
+
+test('a capped plan with no sessions left hides the booking action', function () {
+    $student = User::factory()->student()->onboarded()->create();
+    $teacher = TeacherProfile::factory()->approved()->create();
+    $offering = ServiceOffering::factory()->forType(ServiceType::Lesson)->create([
+        'teacher_profile_id' => $teacher->id,
+        'price_minor' => 120000,
+    ]);
+
+    $purchase = ServicePurchase::factory()->forOffering($offering)->create([
+        'student_id' => $student->id,
+        'allocation_minutes' => 120,
+        'max_sessions' => 1,
+        'booking_fee_minor' => 0,
+    ]);
+
+    $session = Booking::factory()->create([
+        'student_id' => $student->id,
+        'teacher_profile_id' => $teacher->id,
+        'service_purchase_id' => $purchase->id,
+        'starts_at' => now()->addDays(2)->setTime(15, 0),
+        'ends_at' => now()->addDays(2)->setTime(16, 0),
+        'price_minor' => 0,
+    ]);
+
+    $config = bookingShowConfig(
+        $this->actingAs($student)
+            ->get(route('student.bookings.show', $session))
+            ->assertOk()
+    );
+
+    expect($config['plan']['bookUrl'])->toBeNull()
+        ->and($config['plan']['sessionsLeft'])->toBe('0 sessions left to book')
+        ->and($config['plan']['exhausted'])->toBeTrue();
 });

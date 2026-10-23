@@ -250,7 +250,18 @@ class BookingController extends Controller
     {
         Gate::authorize('view', $booking);
 
-        $booking->load(['teacherProfile.user', 'subject', 'lesson', 'review', 'conversation', 'bookingFeePromotion']);
+        $booking->load([
+            'teacherProfile.user',
+            'subject',
+            'lesson',
+            'review',
+            'conversation',
+            'bookingFeePromotion',
+            // A session of a purchase carries the rest of its plan, so the
+            // student can see the sibling sessions and book the next one.
+            'servicePurchase.sessions.subject',
+            'servicePurchase.sessions.lesson',
+        ]);
 
         return view('student.bookings.show', [
             'booking' => $booking,

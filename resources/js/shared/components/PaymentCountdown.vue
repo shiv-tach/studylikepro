@@ -9,6 +9,7 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { CHIP } from '../styles';
+import { formatCountdown } from '../formatCountdown';
 import AppIcon from './AppIcon.vue';
 
 const props = defineProps({
@@ -65,29 +66,7 @@ const tone = computed(() => (urgent.value || expired.value
 
 const label = computed(() => (expired.value
     ? props.holdExpired
-    : props.payWithin.replace(':time', format(remaining.value))));
-
-/**
- * The two largest units left, so the chip stays short: "1h 04m", "44m 12s",
- * "9s". Seconds are padded so the chip keeps its width while it counts down.
- */
-function format(seconds) {
-    const parts = [
-        [Math.floor(seconds / 86400), 'd'],
-        [Math.floor((seconds % 86400) / 3600), 'h'],
-        [Math.floor((seconds % 3600) / 60), 'm'],
-        [seconds % 60, 's'],
-    ];
-    const shown = parts.filter(([value]) => value > 0).slice(0, 2);
-
-    if (shown.length === 0) {
-        return `0s`;
-    }
-
-    return shown
-        .map(([value, unit], index) => (index > 0 && unit === 's' ? `${String(value).padStart(2, '0')}s` : `${value}${unit}`))
-        .join(' ');
-}
+    : props.payWithin.replace(':time', formatCountdown(remaining.value))));
 </script>
 
 <template>

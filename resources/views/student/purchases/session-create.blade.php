@@ -1,6 +1,8 @@
 @php
-    $cardBase = 'rounded-2xl border p-6';
-    $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
+    $themePreset = auth()->user()->theme['preset'] ?? 'classic';
+    $cardClass = 'rounded-2xl border p-6 '.(in_array($themePreset, ['glass', 'ocean'], true)
+        ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md'
+        : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900');
     $isPlan = $purchase->isLessonPlan();
 @endphp
 
@@ -19,7 +21,7 @@
             </div>
         @endif
 
-        <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
+        <div class="{{ $cardClass }}">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ __('1. Session length') }}</h3>

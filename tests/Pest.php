@@ -217,6 +217,23 @@ function teacherOrderShowConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the teaching schedule renders its next-lesson
+ * spotlight, priority queue and agenda from.
+ *
+ * @return array<string, mixed>
+ */
+function teacherScheduleConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="teacher-schedule-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Read the config island the "My purchases" page renders its cards from.
  *
  * @return array<string, mixed>

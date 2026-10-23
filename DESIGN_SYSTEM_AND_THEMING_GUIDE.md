@@ -316,6 +316,21 @@ The teacher's subject workspace: what they teach, the grades and lessons inside 
 * **No-JS fallback:** the view renders the same forms as plain Blade — the same field names, grade-rate values, lesson checkboxes and route actions.
 * **Contract test:** `tests/Feature/Teacher/TeacherSubjectsPageTest.php` asserts the island the Vue app depends on; `tests/Feature/Teacher/GradeRatePricingTest.php` still checks the rendered rate inputs.
 
+### Teacher schedule (`/teacher/schedule`)
+
+The teaching schedule answers two questions in the first screen: what is next, and what needs a decision now. Blade still ranks and formats everything; the Vue app only lays it out.
+
+* **Entry point:** `resources/js/teacher-schedule/main.js` is its own Vite input; [teacher/schedule/index.blade.php](file:///d:/Github/studylikepro/resources/views/teacher/schedule/index.blade.php) is a thin shell that embeds the island, mounts `#teacher-schedule-app` and renders the `<noscript>` twin. It calls `@vite('resources/js/teacher-schedule/main.js')`.
+* **Server data:** [TeacherScheduleConfig](file:///d:/Github/studylikepro/app/Support/TeacherScheduleConfig.php) builds the whole `#teacher-schedule-config` island: the next-lesson spotlight, the ranked `priority[]` queue, the `agenda[]` grouped by day in the teacher's timezone, the unpaid `holds[]` with their countdown instants, the `history[]` rows, the tab counts, the week figures, the flash and the route map. `BookingController@index` only runs the three queries plus a 7-day count window. Never hardcode a URL or format a time in the Vue code.
+* **Ranking:** `priority[]` is ordered in PHP — a finished lesson to close (10), one running now (30), an open classroom (40), one starting within the hour (50), a hold expiring within the hour (60) — so the Vue app never invents urgency. Every card carries `actions.canStart/canComplete/canNoShow`, mirroring `BookingPolicy` and `BookingTransitionService` (start 30 minutes early, complete once live/started, no-show only after the start time).
+* **Structure:** `resources/js/teacher-schedule/ScheduleApp.vue` provides the page context and renders `ScheduleHero`, `NextLessonSpotlight`, `PriorityStack` (`PriorityRow`), `ScheduleTabs`, `AgendaDay` (`LessonRow`), `HoldRow`, `HistoryRow` and `ScheduleEmptyState`, reusing [resources/js/shared/](file:///d:/Github/studylikepro/resources/js/shared) (`AppIcon`, `UiAlert`, `UiChip`, `UiConfirmDialog`, `UiSectionHeading`, `UiToastStack`, `RevealOnScroll`, `usePanel`, `useThemePreset`, `useNotices`, `styles.js`).
+* **Views:** the three tabs are client state because the island already carries all three collections; switching is instant and the active tab is mirrored into the URL hash (`#upcoming`, `#holds`, `#history`). The tablist supports arrow keys, Home and End.
+* **Clocks:** `shared/formatCountdown.js` formats the two largest units and is shared with `PaymentCountdown.vue`; `teacher-schedule/components/CountdownChip.vue` ticks the next lesson, `HoldRow` ticks a hold's remaining payment window, and both swap to a zero label ("Started", "Hold expired") instead of counting backwards.
+* **Interactivity that stays server-side:** start / mark complete / mark no-show are real `method="POST"` forms carrying the island's CSRF token plus a hidden `return=schedule`, so the controller redirects back to the schedule with its flash message; a refused transition bounces back and the island's `errors.status` renders as a `UiAlert`. The lesson page stays the default redirect for every other caller.
+* **Ordering gotcha:** `TeacherProfile::bookings()` already carries `latest('starts_at')`, so `oldest('starts_at')` only appends a second clause and leaves the list newest-first. The schedule uses `reorder('starts_at')` — the old Blade page silently rendered upcoming lessons in reverse.
+* **No-JS fallback:** the `<noscript>` block repeats the three sections from the same collections using `<x-booking-card>` and plain POST forms.
+* **Contract test:** `tests/Feature/Teacher/TeacherScheduleTest.php` (with `teacherScheduleConfig()` in `tests/Pest.php`) pins the spotlight, the ranking, the day grouping, the transition flags, the hold countdown and the `return=schedule` redirect.
+
 3. **Database update:** Form submission saves selection permanently.
 
 ---
