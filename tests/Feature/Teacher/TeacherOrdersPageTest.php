@@ -211,8 +211,32 @@ test('the order island carries the money, the timeline and the sessions', functi
         ->and($timelineKeys)->toContain('paid')
         ->and($config['sessions'])->toHaveCount(1)
         ->and($config['sessions'][0]['url'])->toBe(route('teacher.bookings.show', $session))
+        // A confirmed session reads blue with a calendar glyph, so it can never
+        // be mistaken for one that has already been completed.
+        ->and($config['sessions'][0]['status'])->toBe(['label' => 'Confirmed', 'tone' => 'sky', 'icon' => 'calendar'])
         ->and($config['sessions'][0]['joinable'])->toBeFalse()
         ->and($config['urls']['index'])->toBe(route('teacher.orders.index'));
+});
+
+test('a confirmed session never reads like a completed one', function () {
+    $scenario = teacherOrdersScenario();
+    teacherOrderSession($scenario, BookingStatus::Confirmed);
+    teacherOrderSession($scenario, BookingStatus::Completed);
+    teacherOrderSession($scenario, BookingStatus::Cancelled);
+
+    $config = teacherOrderShowConfig(
+        $this->actingAs($scenario['teacherUser'])
+            ->get(route('teacher.orders.show', $scenario['purchase']))
+            ->assertOk()
+    );
+
+    $chips = collect($config['sessions'])
+        ->mapWithKeys(fn (array $session) => [$session['status']['label'] => $session['status']])
+        ->all();
+
+    expect($chips['Confirmed'])->toBe(['label' => 'Confirmed', 'tone' => 'sky', 'icon' => 'calendar'])
+        ->and($chips['Completed'])->toBe(['label' => 'Completed', 'tone' => 'emerald', 'icon' => 'check-circle'])
+        ->and($chips['Cancelled'])->toBe(['label' => 'Cancelled', 'tone' => 'slate', 'icon' => 'close']);
 });
 
 test('the order island carries the plan balance of a lesson plan', function () {

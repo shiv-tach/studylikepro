@@ -232,11 +232,12 @@ test('an active plan carries its balance, its progress and the way to book', fun
     expect($config['plan']['exhausted'])->toBeFalse();
     expect($config['plan']['bookUrl'])->toBe(route('student.purchase-sessions.create', $scenario['purchase']));
 
-    // Both sessions are listed, each with the tone of its own status.
+    // Both sessions are listed, each with the tone of its own status: a
+    // confirmed lesson is blue, a cancelled one slate.
     $items = collect($config['sessions']['items']);
 
     expect($config['sessions']['title'])->toBe('Sessions');
-    expect($items->pluck('status.tone')->all())->toBe(['emerald', 'slate']);
+    expect($items->pluck('status.tone')->all())->toBe(['sky', 'slate']);
     expect($items->pluck('status.label')->all())->toBe(['Confirmed', 'Cancelled']);
     expect($items->pluck('durationLabel')->all())->toBe(['60 min', '60 min']);
     expect($items->pluck('scope')->all())->toBe([

@@ -24,13 +24,8 @@
         PurchaseStatus::Cancelled, PurchaseStatus::Expired, PurchaseStatus::Resolved => 'slate',
     };
 
-    $sessionTone = fn (BookingStatus $status) => match ($status) {
-        BookingStatus::PendingPayment => 'amber',
-        BookingStatus::InProgress => 'primary',
-        BookingStatus::Confirmed, BookingStatus::Completed => 'emerald',
-        BookingStatus::NoShow, BookingStatus::Disputed => 'rose',
-        BookingStatus::Cancelled, BookingStatus::Expired, BookingStatus::Resolved => 'slate',
-    };
+    // Session chips share one palette with every other booking surface.
+    $sessionTone = fn (BookingStatus $status) => \App\Support\BookingDisplay::tone($status);
 
     $markingTone = fn (MarkingOrderStatus $status) => match ($status) {
         MarkingOrderStatus::Submitted => 'amber',
@@ -179,6 +174,7 @@
         'status' => [
             'label' => $session->status->label(),
             'tone' => $sessionTone($session->status),
+            'icon' => \App\Support\BookingDisplay::icon($session->status),
         ],
     ])->values()->all();
 

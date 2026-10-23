@@ -30,13 +30,16 @@ enum BookingStatus: string
     }
 
     /**
-     * Semantic status colors (independent of the primary accent theme).
+     * Semantic status colors (independent of the primary accent theme). A
+     * confirmed booking is blue and a completed one green, so the two are never
+     * mistaken for each other in a list. Keep these in step with
+     * BookingDisplay::tone().
      */
     public function badgeClasses(): string
     {
         return match ($this) {
             self::PendingPayment => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-            self::Confirmed => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+            self::Confirmed => 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
             self::InProgress => 'bg-primary/10 text-primary',
             self::Completed => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
             self::Cancelled, self::Expired => 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',

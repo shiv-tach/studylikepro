@@ -77,7 +77,7 @@ const panel = usePanel();
                     </div>
                 </div>
 
-                <UiChip :tone="session.status.tone">{{ session.status.label }}</UiChip>
+                <UiChip :tone="session.status.tone" :icon="session.status.icon">{{ session.status.label }}</UiChip>
             </li>
         </ul>
     </section>

@@ -16,9 +16,11 @@ const props = defineProps({
 
 // Booking statuses carry their own Tailwind classes in the PHP enum, which sits
 // outside Tailwind's scanned paths, so the card keeps its own copy here.
+// Confirmed (booked, still to happen) is blue; completed is green, so the two
+// never read as the same state.
 const statusTones = {
     pending_payment: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    confirmed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    confirmed: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
     in_progress: 'bg-primary/10 text-primary',
     completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
     cancelled: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',

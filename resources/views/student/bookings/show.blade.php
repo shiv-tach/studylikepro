@@ -9,13 +9,8 @@
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);
     $themePreset = auth()->user()->theme['preset'];
 
-    $sessionTone = fn (BookingStatus $status) => match ($status) {
-        BookingStatus::PendingPayment => 'amber',
-        BookingStatus::InProgress => 'primary',
-        BookingStatus::Confirmed, BookingStatus::Completed => 'emerald',
-        BookingStatus::NoShow, BookingStatus::Disputed => 'rose',
-        BookingStatus::Cancelled, BookingStatus::Expired, BookingStatus::Resolved => 'slate',
-    };
+    // Session chips share one palette with every other booking surface.
+    $sessionTone = fn (BookingStatus $status) => \App\Support\BookingDisplay::tone($status);
 
     $teacherUser = $booking->teacherProfile->user;
     $isHold = $booking->status === BookingStatus::PendingPayment;
@@ -257,6 +252,7 @@
                 'status' => [
                     'label' => $session->status->label(),
                     'tone' => $sessionTone($session->status),
+                    'icon' => \App\Support\BookingDisplay::icon($session->status),
                 ],
                 'current' => $session->is($booking),
             ])->values()->all(),

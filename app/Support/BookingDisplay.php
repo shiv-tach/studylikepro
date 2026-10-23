@@ -17,15 +17,35 @@ final class BookingDisplay
 {
     /**
      * A semantic tone that is independent of the shell's accent preset.
+     *
+     * Every status owns its own colour: a booked lesson waiting to happen
+     * (sky) never looks like one that has already been delivered (emerald),
+     * because the two sit next to each other in a session list.
      */
     public static function tone(BookingStatus $status): string
     {
         return match ($status) {
             BookingStatus::PendingPayment => 'amber',
-            BookingStatus::Confirmed, BookingStatus::Completed => 'emerald',
+            BookingStatus::Confirmed => 'sky',
             BookingStatus::InProgress => 'primary',
+            BookingStatus::Completed => 'emerald',
             BookingStatus::NoShow, BookingStatus::Disputed => 'rose',
             BookingStatus::Cancelled, BookingStatus::Expired, BookingStatus::Resolved => 'slate',
+        };
+    }
+
+    /**
+     * The glyph a status chip carries, so the state is readable without colour.
+     */
+    public static function icon(BookingStatus $status): string
+    {
+        return match ($status) {
+            BookingStatus::PendingPayment => 'credit-card',
+            BookingStatus::Confirmed => 'calendar',
+            BookingStatus::InProgress => 'play',
+            BookingStatus::Completed => 'check-circle',
+            BookingStatus::NoShow, BookingStatus::Disputed => 'alert',
+            BookingStatus::Cancelled, BookingStatus::Expired, BookingStatus::Resolved => 'close',
         };
     }
 

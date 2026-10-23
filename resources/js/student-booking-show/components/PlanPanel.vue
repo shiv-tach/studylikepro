@@ -70,7 +70,7 @@ const outlineClass =
                     <p v-if="session.scope" class="text-xs text-slate-400">{{ session.scope }}</p>
                 </a>
 
-                <UiChip :tone="session.status.tone">{{ session.status.label }}</UiChip>
+                <UiChip :tone="session.status.tone" :icon="session.status.icon">{{ session.status.label }}</UiChip>
             </li>
         </ul>
 
