@@ -2,9 +2,9 @@ import { createApp } from 'vue';
 import ScheduleApp from './ScheduleApp.vue';
 
 /**
- * Blade owns the three collections, every formatted time and price, the urgent
- * items ranked inside today's list and the route map for /teacher/schedule, then
- * hands them over as a JSON island. Only this page mounts the schedule.
+ * Blade owns every collection, every formatted time and price, the urgent items
+ * ranked inside today's list and the route map for /teacher/schedule, then hands
+ * them over as a JSON island. Only this page mounts the schedule.
  */
 const DEFAULT_CONFIG = {
     appName: 'Studylikepro',

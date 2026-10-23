@@ -4,8 +4,8 @@
     // /teacher/schedule is rendered by resources/js/teacher-schedule. Blade owns
     // the urgent items ranked inside today's list, every formatted time and
     // price, the agenda grouping and the route map, then hands them over in one
-    // JSON island. The <noscript> block below repeats the three views with plain
-    // links and forms.
+    // JSON island. The <noscript> block below repeats the four tabbed views as
+    // plain lists.
     $cardBase = 'rounded-2xl border p-6';
     $cardTheme = "themePreset === 'glass' || themePreset === 'ocean' ? 'border-slate-200/40 dark:border-slate-800/40 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md' : 'border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900'";
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);
@@ -39,10 +39,27 @@
 
         <div id="teacher-schedule-app" class="space-y-6"></div>
 
-        {{-- Fallback for a browser without JavaScript: the same three views as
+        {{-- Fallback for a browser without JavaScript: the same four views as
              plain lists, with the transitions as ordinary POST forms. --}}
         <noscript>
             <div class="mx-auto max-w-4xl space-y-6">
+                <section>
+                    <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-slate-400">{{ $config['copy']['today']['title'] }}</h3>
+
+                    @forelse ($today as $booking)
+                        <div class="mb-3">
+                            <x-booking-card :booking="$booking" :timezone="$timezone" perspective="teacher"
+                                            :href="route('teacher.bookings.show', $booking)"
+                                            :class="$cardBase.' '.$cardTheme" />
+                        </div>
+                    @empty
+                        <div class="{{ $cardBase }} {{ $cardTheme }}">
+                            <p class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ $config['copy']['today']['emptyTitle'] }}</p>
+                            <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{{ $config['copy']['today']['emptyBody'] }}</p>
+                        </div>
+                    @endforelse
+                </section>
+
                 @if ($holds->isNotEmpty())
                     <section>
                         <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-slate-400">{{ $config['copy']['holds']['title'] }}</h3>

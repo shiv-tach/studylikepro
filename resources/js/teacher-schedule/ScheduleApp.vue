@@ -4,9 +4,9 @@
  *
  * Blade decides what is on today, what is next, what needs an action, every
  * formatted time and price, and which transitions are legal; this app only lays
- * the answer out: the hero, today's lessons with the urgent ones ranked first,
- * the next-lesson spotlight, and three instant views (upcoming agenda, unpaid
- * holds, recent history).
+ * the answer out: the hero, the next-lesson spotlight, then one tab bar over
+ * four instant views — today with the urgent items ranked first, the upcoming
+ * agenda, the unpaid holds and the recent history. Today is the default view.
  */
 import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
 import { THEME_PRESET_KEY, useThemePreset } from '../shared/composables/useThemePreset';
@@ -40,11 +40,12 @@ const copy = computed(() => props.config.copy ?? {});
 const urls = computed(() => props.config.urls ?? {});
 const { toasts, dismiss } = useNotices(props.config.flash ? [props.config.flash] : []);
 
-// The island carries all three collections, so the tabs are pure client state;
-// the hash keeps the active one across a reload.
+// The island carries every collection, so the tabs are pure client state; the
+// hash keeps the active one across a reload. Today leads the list, so a plain
+// visit lands on the day rather than on the whole agenda.
 const tabKeys = (props.config.tabs ?? []).map((tab) => tab.key);
 const initial = window.location.hash.replace('#', '');
-const active = ref(tabKeys.includes(initial) ? initial : (tabKeys[0] ?? 'upcoming'));
+const active = ref(tabKeys.includes(initial) ? initial : (tabKeys[0] ?? 'today'));
 
 watch(active, (key) => {
     if (window.location.hash !== `#${key}`) {
@@ -76,17 +77,23 @@ onBeforeUnmount(() => window.removeEventListener('hashchange', syncFromHash));
             <UiAlert tone="rose" icon="alert" role="alert">{{ config.errors.status }}</UiAlert>
         </RevealOnScroll>
 
-        <RevealOnScroll :delay="20">
-            <TodaySection :today="config.today" />
-        </RevealOnScroll>
-
-        <RevealOnScroll v-if="config.next" :delay="30">
+        <RevealOnScroll v-if="config.next" :delay="20">
             <NextLessonSpotlight :lesson="config.next" />
         </RevealOnScroll>
 
-        <RevealOnScroll :delay="40">
+        <RevealOnScroll :delay="30">
             <ScheduleTabs v-model:active="active" :tabs="config.tabs" :label="copy.tabs?.label" />
         </RevealOnScroll>
+
+        <section
+            v-show="active === 'today'"
+            id="schedule-panel-today"
+            role="tabpanel"
+            aria-labelledby="schedule-tab-today"
+            class="space-y-5"
+        >
+            <TodaySection :today="config.today" />
+        </section>
 
         <section
             v-show="active === 'upcoming'"

@@ -126,7 +126,7 @@ it('shows past lessons in the teacher history', function () {
         ->assertSee('Kabir Singh');
 });
 
-it('builds the next-lesson spotlight and the three views', function () {
+it('builds the next-lesson spotlight and the four views', function () {
     $teacherUser = User::factory()->teacher()->onboarded()->create();
     $teacher = $teacherUser->teacherProfile;
 
@@ -161,9 +161,10 @@ it('builds the next-lesson spotlight and the three views', function () {
         ->and($config['next']['learnerName'])->toBe('Aarav Mehta')
         ->and($config['next']['isLive'])->toBeFalse()
         ->and($config['next']['url'])->toBe(route('teacher.bookings.show', $soon))
-        ->and(array_column($config['tabs'], 'key'))->toBe(['upcoming', 'holds', 'history'])
-        ->and($config['tabs'][0]['count'])->toBe(2)
-        ->and($config['tabs'][1]['count'])->toBe(1)
+        ->and(array_column($config['tabs'], 'key'))->toBe(['today', 'upcoming', 'holds', 'history'])
+        ->and($config['tabs'][0]['count'])->toBe(0)
+        ->and($config['tabs'][1]['count'])->toBe(2)
+        ->and($config['tabs'][2]['count'])->toBe(1)
         ->and($config['csrfToken'])->not->toBe('');
 });
 

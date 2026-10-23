@@ -14,7 +14,7 @@ use Illuminate\Support\Collection;
  * so the Vue app never formats a date or hardcodes a URL. The page is built
  * around two questions — what is on today and what is next — so the payload
  * carries the day's own list, with whatever needs the teacher right now ranked
- * at its top, beside the plain agenda.
+ * at its top, as the first of the four tabs (today, upcoming, holds, history).
  *
  * The action flags mirror BookingPolicy and BookingTransitionService: the page
  * only offers a transition the controller would actually accept.
@@ -61,10 +61,14 @@ final class TeacherScheduleConfig
             'agenda' => self::agenda($upcoming, $timezone, $earlyMinutes),
             'holds' => $holds->map(fn (Booking $booking) => self::holdCard($booking, $timezone, $earlyMinutes))->values()->all(),
             'history' => $past->map(fn (Booking $booking) => self::historyRow($booking, $timezone))->values()->all(),
+            // Today comes first so the page opens on the teacher's own day; the
+            // three longer views sit behind it and share the same tab bar. The
+            // labels stay short because four of them share one row.
             'tabs' => [
-                ['key' => 'upcoming', 'label' => __('Upcoming lessons'), 'count' => $cards->count()],
-                ['key' => 'holds', 'label' => __('Awaiting payment'), 'count' => $holds->count()],
-                ['key' => 'history', 'label' => __('Recent history'), 'count' => $past->count()],
+                ['key' => 'today', 'label' => __('Today'), 'count' => $today->count()],
+                ['key' => 'upcoming', 'label' => __('Upcoming'), 'count' => $cards->count()],
+                ['key' => 'holds', 'label' => __('Unpaid'), 'count' => $holds->count()],
+                ['key' => 'history', 'label' => __('History'), 'count' => $past->count()],
             ],
             'copy' => self::copy($timezone),
             'urls' => [
