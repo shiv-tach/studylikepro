@@ -64,10 +64,12 @@
     }
 
     if ($user->isTeacher() && ! $user->hasCompletedOnboarding()) {
-        // During onboarding only the two setup steps are reachable, so the sidebar
-        // shows them instead of workspace links that would bounce back here.
+        // During onboarding only the three setup steps are reachable, so the
+        // sidebar shows them instead of workspace links that would bounce back
+        // here. The order mirrors App\Support\TeacherOnboarding.
         $navItems = [
             ['label' => 'Teaching profile', 'url' => route('teacher.profile'), 'active' => request()->routeIs('teacher.profile'), 'icon' => 'user', 'badge' => null],
+            ['label' => 'Weekly availability', 'url' => route('teacher.availability.setup'), 'active' => request()->routeIs('teacher.availability.setup'), 'icon' => 'calendar', 'badge' => null],
             ['label' => 'Verification', 'url' => route('teacher.verification'), 'active' => request()->routeIs('teacher.verification*'), 'icon' => 'shield', 'badge' => null],
         ];
     } elseif ($user->isTeacher()) {

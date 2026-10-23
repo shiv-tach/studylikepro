@@ -1,8 +1,9 @@
 <script setup>
 /**
  * The onboarding call-outs: the welcome card a brand-new teacher sees and the
- * "step 1 complete — next: verification" card that hands them to step 2. The
- * action is optional, so the same surface covers both.
+ * "step 1 complete — next: …" card that hands them to the next step (weekly
+ * availability, or verification once a week is set). The action is optional, so
+ * the same surface covers both.
  */
 import { usePanel } from '../../shared/composables/usePanel';
 import AppIcon from '../../shared/components/AppIcon.vue';

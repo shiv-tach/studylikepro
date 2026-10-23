@@ -8,12 +8,12 @@
  */
 import { computed, provide } from 'vue';
 import { THEME_PRESET_KEY, useThemePreset } from '../shared/composables/useThemePreset';
+import OnboardingSteps from '../shared/components/OnboardingSteps.vue';
 import RevealOnScroll from '../shared/components/RevealOnScroll.vue';
 import UiAlert from '../shared/components/UiAlert.vue';
 import { COPY_KEY, CSRF_KEY, URLS_KEY } from './composables/usePageContext';
 import { PROFILE_FORM_KEY, createProfileForm } from './composables/useProfileForm';
 import OnboardingNoticeCard from './components/OnboardingNoticeCard.vue';
-import OnboardingSteps from './components/OnboardingSteps.vue';
 import PhotoCard from './components/PhotoCard.vue';
 import ProfessionalDetailsCard from './components/ProfessionalDetailsCard.vue';
 import ProfileSaveBar from './components/ProfileSaveBar.vue';
@@ -63,15 +63,15 @@ const messages = computed(() => Object.values(props.config.errors ?? {}).flat())
         </RevealOnScroll>
 
         <RevealOnScroll>
-            <OnboardingSteps :steps="config.steps ?? []" :current="config.currentStep ?? 1" />
+            <OnboardingSteps :steps="config.steps ?? []" :current="config.currentStep ?? 1" :copy="copy" />
         </RevealOnScroll>
 
         <RevealOnScroll v-if="profile.isComplete && !profile.hasSubmittedVerification">
             <OnboardingNoticeCard
-                icon="clipboard"
+                :icon="profile.hasAvailability ? 'clipboard' : 'calendar'"
                 :title="copy.stepCompleteTitle"
                 :body="copy.stepCompleteBody"
-                :action="{ label: copy.stepCompleteCta, url: urls.verification }"
+                :action="{ label: copy.stepCompleteCta, url: urls.nextStep }"
             />
         </RevealOnScroll>
 

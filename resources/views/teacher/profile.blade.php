@@ -12,34 +12,15 @@
     $verificationSubmitted = (bool) $profile?->hasSubmittedVerification();
     $verificationStatus = $profile?->verification_status;
     $ratingCount = (int) ($profile?->rating_count ?? 0);
+    $hasAvailability = $profile !== null && \App\Support\TeacherOnboarding::hasAvailability($profile);
+    $nextStepIsAvailability = $profileComplete && ! $hasAvailability;
 
     // The pickers, the card pills and the counters all read these server-side
     // values, so no label or limit has to be repeated in the Vue app.
     $languages = config('studylikepro.languages');
     $previewSubjects = $profile?->subjects ?? collect();
 
-    $steps = [
-        [
-            'number' => 1,
-            'label' => __('Teaching profile'),
-            'hint' => __('Headline, bio, languages and hourly rate.'),
-            'url' => route('teacher.profile'),
-            'done' => $profileComplete,
-            'reachable' => true,
-        ],
-        [
-            'number' => 2,
-            'label' => __('Verification'),
-            'hint' => ! $profileComplete
-                ? __('Unlocks once you save your profile.')
-                : ($verificationSubmitted
-                    ? __('Documents submitted — our team is reviewing them.')
-                    : __('Upload your documents, choose your subjects and submit them for review.')),
-            'url' => route('teacher.verification'),
-            'done' => $verificationSubmitted,
-            'reachable' => $profileComplete,
-        ],
-    ];
+    $steps = \App\Support\TeacherOnboarding::steps($profile);
 
     $payload = [
         'appName' => config('app.name', 'Studylikepro'),
@@ -57,6 +38,7 @@
         'profile' => [
             'isComplete' => $profileComplete,
             'hasSubmittedVerification' => $verificationSubmitted,
+            'hasAvailability' => $hasAvailability,
         ],
         'languages' => $languages,
         'limits' => [
@@ -107,9 +89,13 @@
         'urls' => [
             'update' => route('teacher.profile.update'),
             'verification' => route('teacher.verification'),
+            'availability' => route('teacher.availability.setup'),
+            'nextStep' => $nextStepIsAvailability
+                ? route('teacher.availability.setup')
+                : route('teacher.verification'),
         ],
         'copy' => [
-            'incomplete' => __('Finish your teaching profile to unlock your dashboard and continue to verification.'),
+            'incomplete' => __('Finish your teaching profile to unlock weekly availability and continue to verification.'),
             'updated' => __('Your teaching profile has been updated.'),
             'errorTitle' => __('Please fix the following:'),
             'stepsTitle' => __('Teacher setup'),
@@ -119,9 +105,15 @@
             'stepStatusCurrent' => __('In progress'),
             'stepStatusUpNext' => __('Up next'),
             'stepStatusLocked' => __('Locked'),
-            'stepCompleteTitle' => __('Step 1 complete — next: verification'),
-            'stepCompleteBody' => __('Upload your documents and submit them for review to unlock your dashboard.'),
-            'stepCompleteCta' => __('Continue to verification'),
+            'stepCompleteTitle' => $nextStepIsAvailability
+                ? __('Step 1 complete — next: weekly availability')
+                : __('Step 1 complete — next: verification'),
+            'stepCompleteBody' => $nextStepIsAvailability
+                ? __('Set the days and hours you teach so students can book you. You can load a suggested week and change anything.')
+                : __('Upload your documents and submit them for review to unlock your dashboard.'),
+            'stepCompleteCta' => $nextStepIsAvailability
+                ? __('Continue to availability')
+                : __('Continue to verification'),
             'professionalTitle' => __('Professional details'),
             'professionalHint' => __('What students read before they book you.'),
             'headlineLabel' => __('Headline'),
@@ -149,7 +141,7 @@
             'saving' => __('Saving…'),
             'undo' => __('Undo changes'),
             'save' => __('Save changes'),
-            'saveAndContinue' => __('Save profile & continue to verification'),
+            'saveAndContinue' => __('Save profile & continue to availability'),
             'previewTitle' => __('Public card preview'),
             'previewLive' => __('Live'),
             'previewHint' => __('This is the card students see in the teacher directory.'),
@@ -199,7 +191,7 @@
         <div class="mx-auto max-w-3xl space-y-6">
             @if (session('status') === 'complete-your-profile')
                 <div class="rounded-2xl border border-amber-200/80 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
-                    {{ __('Finish your teaching profile to unlock your dashboard and continue to verification.') }}
+                    {{ __('Finish your teaching profile to unlock weekly availability and continue to verification.') }}
                 </div>
             @elseif (session('status') === 'profile-updated')
                 <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
@@ -215,14 +207,14 @@
                         <div class="flex items-start gap-3">
                             <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xl">🪪</span>
                             <div>
-                                <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('Step 1 complete — next: verification') }}</h3>
+                                <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ $nextStepIsAvailability ? __('Step 1 complete — next: weekly availability') : __('Step 1 complete — next: verification') }}</h3>
                                 <p class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                                    {{ __('Upload your documents and submit them for review to unlock your dashboard.') }}
+                                    {{ $nextStepIsAvailability ? __('Set the days and hours you teach so students can book you. You can load a suggested week and change anything.') : __('Upload your documents and submit them for review to unlock your dashboard.') }}
                                 </p>
                             </div>
                         </div>
-                        <a href="{{ route('teacher.verification') }}" class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all duration-200 hover:bg-primary/90 hover:shadow-lg active:scale-[0.98]">
-                            {{ __('Continue to verification') }}
+                        <a href="{{ $nextStepIsAvailability ? route('teacher.availability.setup') : route('teacher.verification') }}" class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all duration-200 hover:bg-primary/90 hover:shadow-lg active:scale-[0.98]">
+                            {{ $nextStepIsAvailability ? __('Continue to availability') : __('Continue to verification') }}
                             <span aria-hidden="true">→</span>
                         </a>
                     </div>
@@ -320,7 +312,7 @@
 
                 <div class="flex items-center justify-end">
                     <x-primary-button>
-                        {{ $profileComplete ? __('Save changes') : __('Save profile & continue to verification') }}
+                        {{ $profileComplete ? __('Save changes') : __('Save profile & continue to availability') }}
                     </x-primary-button>
                 </div>
             </form>

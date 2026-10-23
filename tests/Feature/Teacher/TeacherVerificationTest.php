@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\ApprovalStatus;
+use App\Models\Subject;
 use App\Models\TeacherProfile;
 use App\Models\TeacherVerificationDocument;
 use App\Models\User;
@@ -52,7 +54,12 @@ test('documents cannot be uploaded while the application is pending review', fun
     Storage::fake('local');
 
     $user = User::factory()->teacher()->create();
-    TeacherProfile::factory()->pending()->for($user)->create();
+    $profile = TeacherProfile::factory()->pending()->for($user)->create();
+    $profile->availabilitySlots()->create([
+        'day_of_week' => 1,
+        'start_minute' => 18 * 60,
+        'end_minute' => 21 * 60,
+    ]);
 
     $this->actingAs($user)
         ->post(route('teacher.verification.documents.store'), [
@@ -99,7 +106,12 @@ test('documents are locked after the application is submitted', function () {
     Storage::fake('local');
 
     $user = User::factory()->teacher()->create();
-    TeacherProfile::factory()->pending()->for($user)->create();
+    $profile = TeacherProfile::factory()->pending()->for($user)->create();
+    $profile->availabilitySlots()->create([
+        'day_of_week' => 1,
+        'start_minute' => 18 * 60,
+        'end_minute' => 21 * 60,
+    ]);
     $document = TeacherVerificationDocument::factory()->for($user->teacherProfile)->create();
 
     $this->actingAs($user)
@@ -180,7 +192,19 @@ test('a failed submission without the terms does not tick the checklist', functi
 
 test('rejected teachers can resubmit their application', function () {
     $user = User::factory()->teacher()->create();
-    TeacherProfile::factory()->rejected()->for($user)->create();
+    $profile = TeacherProfile::factory()->rejected()->for($user)->create();
+    $profile->availabilitySlots()->create([
+        'day_of_week' => 1,
+        'start_minute' => 18 * 60,
+        'end_minute' => 21 * 60,
+    ]);
+
+    $subject = Subject::query()->active()->first() ?? Subject::factory()->create(['is_active' => true]);
+    $profile->subjects()->attach($subject->id, [
+        'status' => ApprovalStatus::Approved,
+        'grade_levels' => [],
+    ]);
+
     TeacherVerificationDocument::factory()->for($user->teacherProfile)->create();
 
     $this->actingAs($user)
@@ -234,7 +258,7 @@ test('the verification page ships the checklist, documents and notices as an isl
         // The id is the only required type, so it is the one offered first.
         ->and($config['selectedType'])->toBe('id_proof')
         ->and(collect($config['documentTypes'])->firstWhere('value', 'id_proof')['required'])->toBeTrue()
-        ->and($config['currentStep'])->toBe(2)
+        ->and($config['currentStep'])->toBe(3)
         ->and($config['urls']['upload'])->toBe(route('teacher.verification.documents.store'));
 });
 
@@ -296,7 +320,12 @@ test('a json upload is refused with a notice once the documents are locked', fun
     Storage::fake('local');
 
     $user = User::factory()->teacher()->create();
-    TeacherProfile::factory()->pending()->for($user)->create();
+    $profile = TeacherProfile::factory()->pending()->for($user)->create();
+    $profile->availabilitySlots()->create([
+        'day_of_week' => 1,
+        'start_minute' => 18 * 60,
+        'end_minute' => 21 * 60,
+    ]);
 
     $this->actingAs($user)
         ->postJson(route('teacher.verification.documents.store'), [

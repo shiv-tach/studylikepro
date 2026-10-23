@@ -37,9 +37,10 @@ test('the profile page ships the live preview of the public teacher card', funct
         ->and($config['preview']['subjects'])->toHaveCount(1)
         ->and($config['preview']['currencySymbol'])->not->toBe('')
         ->and($config['preview']['verificationLabel'])->toBe('Pending review')
-        ->and($config['steps'])->toHaveCount(2)
+        ->and($config['steps'])->toHaveCount(3)
         ->and($config['currentStep'])->toBe(1)
-        ->and($config['urls']['update'])->toBe(route('teacher.profile.update'));
+        ->and($config['urls']['update'])->toBe(route('teacher.profile.update'))
+        ->and($config['urls']['availability'])->toBe(route('teacher.availability.setup'));
 });
 
 test('a rejected save hands the answers and messages back to the preview', function () {
@@ -75,7 +76,7 @@ test('teachers can complete their profile', function () {
         'hourly_rate' => 750,
     ]);
 
-    $response->assertRedirect(route('teacher.verification'));
+    $response->assertRedirect(route('teacher.availability.setup'));
 
     $profile = $user->fresh()->teacherProfile;
 
@@ -86,10 +87,10 @@ test('teachers can complete their profile', function () {
         ->and($profile->timezone)->toBe('Asia/Colombo')
         ->and($profile->verification_status->value)->toBe('draft');
 
-    // Step 2 is still open, so the teacher area stays locked until the documents are submitted.
+    // Step 2 is now the weekly availability, so the teacher area stays locked.
     $this->get(route('teacher.dashboard'))
-        ->assertRedirect(route('teacher.verification'))
-        ->assertSessionHas('status', 'complete-your-verification');
+        ->assertRedirect(route('teacher.availability.setup'))
+        ->assertSessionHas('status', 'complete-your-availability');
 });
 
 test('updating an existing profile redirects back to the profile', function () {

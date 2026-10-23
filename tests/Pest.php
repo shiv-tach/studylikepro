@@ -116,6 +116,22 @@ function teachingProfileConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the availability setup step renders its week from.
+ *
+ * @return array<string, mixed>
+ */
+function availabilitySetupConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="teacher-availability-setup-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Read the config island the verification step renders its checklist, documents
  * and upload cards from.
  *
@@ -490,13 +506,24 @@ function gradeId(int $number): int
 }
 
 /**
- * A teacher who finished step 1 only: the profile is complete but the verification
- * documents have not been submitted, so the teacher area stays locked.
+ * A teacher who finished onboarding steps 1 and 2: the profile is complete and
+ * a weekly range exists, but the verification documents have not been submitted,
+ * so the teacher area stays locked at step 3. A subject is attached because the
+ * verification step requires at least one before the application can be submitted.
  */
 function onboardingTeacher(): User
 {
     $user = User::factory()->teacher()->create();
-    TeacherProfile::factory()->for($user)->create();
+    $profile = TeacherProfile::factory()->for($user)->create();
+
+    TeacherAvailabilitySlot::factory()->create(['teacher_profile_id' => $profile->id]);
+
+    $subject = Subject::query()->active()->first() ?? Subject::factory()->create(['is_active' => true]);
+
+    $profile->subjects()->attach($subject->id, [
+        'status' => ApprovalStatus::Approved,
+        'grade_levels' => [],
+    ]);
 
     return $user;
 }

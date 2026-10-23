@@ -8,6 +8,7 @@
  */
 import { computed, provide, ref } from 'vue';
 import { THEME_PRESET_KEY, useThemePreset } from '../shared/composables/useThemePreset';
+import OnboardingSteps from '../shared/components/OnboardingSteps.vue';
 import RevealOnScroll from '../shared/components/RevealOnScroll.vue';
 import UiAlert from '../shared/components/UiAlert.vue';
 import UiToastStack from '../shared/components/UiToastStack.vue';
@@ -17,7 +18,6 @@ import { useNotices } from '../shared/composables/useNotices';
 import CompletedCard from './components/CompletedCard.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
 import DocumentsCard from './components/DocumentsCard.vue';
-import OnboardingSteps from './components/OnboardingSteps.vue';
 import RequirementsCard from './components/RequirementsCard.vue';
 import StatusCard from './components/StatusCard.vue';
 import SubjectsCard from './components/SubjectsCard.vue';
@@ -83,7 +83,7 @@ async function confirmRemoval() {
         </RevealOnScroll>
 
         <RevealOnScroll>
-            <OnboardingSteps :steps="config.steps ?? []" :current="config.currentStep ?? 2" />
+            <OnboardingSteps :steps="config.steps ?? []" :current="config.currentStep ?? 3" :copy="copy" />
         </RevealOnScroll>
 
         <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -96,12 +96,12 @@ async function confirmRemoval() {
                     <DocumentsCard @request-remove="pendingRemoval = $event" />
                 </RevealOnScroll>
 
-                <RevealOnScroll :delay="30">
-                    <SubjectsCard />
+                <RevealOnScroll v-if="canEdit" :delay="30">
+                    <UploadCard />
                 </RevealOnScroll>
 
-                <RevealOnScroll v-if="canEdit" :delay="40">
-                    <UploadCard />
+                <RevealOnScroll :delay="40">
+                    <SubjectsCard />
                 </RevealOnScroll>
 
                 <RevealOnScroll v-if="canEdit" :delay="60">

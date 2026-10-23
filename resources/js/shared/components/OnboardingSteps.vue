@@ -1,36 +1,45 @@
 <script setup>
 /**
- * The two-step onboarding tracker. Blade decides each step's label, hint, URL
- * and whether it is reachable — the app only decides how a done, current or
- * locked step looks, so step 1 and step 2 can never describe themselves
- * differently.
+ * The three-step onboarding tracker, shared by the profile, availability and
+ * verification screens. Blade decides each step's label, hint, URL and whether
+ * it is reachable — this component only decides how a done, current or locked
+ * step looks, so the three pages can never describe the same step differently.
+ *
+ * `copy` is passed in rather than injected because each page owns its own copy
+ * island; the keys it reads are the same on all three.
  */
 import { computed } from 'vue';
-import { usePanel } from '../../shared/composables/usePanel';
-import AppIcon from '../../shared/components/AppIcon.vue';
-import { format, useCopy } from '../composables/usePageContext';
+import { usePanel } from '../composables/usePanel';
+import AppIcon from './AppIcon.vue';
 
 const props = defineProps({
     steps: { type: Array, required: true },
     current: { type: Number, required: true },
+    copy: { type: Object, default: () => ({}) },
 });
 
-const copy = useCopy();
 const panel = usePanel();
 
 const completedCount = computed(() => props.steps.filter((step) => step.done).length);
-const allDone = computed(() => completedCount.value === props.steps.length);
+const allDone = computed(() => props.steps.length > 0 && completedCount.value === props.steps.length);
+
+function format(template, values) {
+    return Object.entries(values).reduce(
+        (text, [key, value]) => text.replace(`:${key}`, String(value)),
+        String(template ?? ''),
+    );
+}
 
 function statusOf(step) {
     if (step.done) {
-        return copy.stepStatusDone;
+        return props.copy.stepStatusDone;
     }
 
     if (step.number === props.current) {
-        return copy.stepStatusCurrent;
+        return props.copy.stepStatusCurrent;
     }
 
-    return step.reachable ? copy.stepStatusUpNext : copy.stepStatusLocked;
+    return step.reachable ? props.copy.stepStatusUpNext : props.copy.stepStatusLocked;
 }
 
 function cardClasses(step) {
@@ -76,14 +85,14 @@ function statusClasses(step) {
             </p>
         </div>
 
-        <ol class="mt-4 grid gap-3 sm:grid-cols-2">
-            <li v-for="step in steps" :key="step.number">
+        <ol class="mt-4 grid gap-3 sm:grid-cols-3">
+            <li v-for="step in steps" :key="step.number" class="h-full">
                 <a
                     :href="step.url"
                     :aria-disabled="!step.reachable ? 'true' : undefined"
                     :tabindex="step.reachable ? undefined : -1"
                     :aria-current="step.number === current ? 'step' : undefined"
-                    class="flex items-center gap-3 rounded-xl border p-3.5 transition-colors"
+                    class="flex h-full items-start gap-3 rounded-xl border p-3.5 transition-colors"
                     :class="[
                         cardClasses(step),
                         step.reachable ? 'hover:border-primary/60' : 'pointer-events-none opacity-70',
@@ -94,12 +103,12 @@ function statusClasses(step) {
                         <template v-else>{{ step.number }}</template>
                     </span>
 
-                    <span class="min-w-0">
-                        <span class="block text-[11px] font-semibold uppercase tracking-wide" :class="statusClasses(step)">
+                    <span class="min-w-0 flex-1">
+                        <span class="block min-h-8 text-[11px] font-semibold uppercase leading-4 tracking-wide" :class="statusClasses(step)">
                             {{ format(copy.stepLabel, { number: step.number }) }} · {{ statusOf(step) }}
                         </span>
                         <span class="block truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{{ step.label }}</span>
-                        <span class="block text-xs text-slate-500 dark:text-slate-400">{{ step.hint }}</span>
+                        <span class="mt-0.5 block text-xs leading-5 text-slate-500 dark:text-slate-400">{{ step.hint }}</span>
                     </span>
                 </a>
             </li>

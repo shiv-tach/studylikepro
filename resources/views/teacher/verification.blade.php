@@ -11,29 +11,11 @@
 
     $profileComplete = (bool) $profile->isComplete();
     $verificationSubmitted = (bool) $profile->hasSubmittedVerification();
+    $hasAvailability = \App\Support\TeacherOnboarding::hasAvailability($profile);
     $selectedSubjectIds = array_map('intval', $selectedSubjectIds);
     $hasSubjects = $selectedSubjectIds !== [];
 
-    $steps = [
-        [
-            'number' => 1,
-            'label' => __('Teaching profile'),
-            'hint' => __('Headline, bio, languages and hourly rate.'),
-            'url' => route('teacher.profile'),
-            'done' => $profileComplete,
-            'reachable' => true,
-        ],
-        [
-            'number' => 2,
-            'label' => __('Verification'),
-            'hint' => $verificationSubmitted
-                ? __('Documents submitted — our team is reviewing them.')
-                : __('Upload your documents, choose your subjects and submit them for review.'),
-            'url' => route('teacher.verification'),
-            'done' => $verificationSubmitted,
-            'reachable' => $profileComplete,
-        ],
-    ];
+    $steps = \App\Support\TeacherOnboarding::steps($profile);
 
     $typeHints = [
         'id_proof' => __('A passport, national ID card or driving licence — this is the one we need before you can submit.'),
@@ -63,7 +45,19 @@
         $notices[] = [
             'tone' => 'emerald',
             'title' => __('Step 1 complete'),
-            'message' => __('Your teaching profile is saved. Upload your documents below, then submit them for review.'),
+            'message' => __('Your teaching profile is saved. Set your weekly availability, then upload your documents.'),
+        ];
+    } elseif (session('status') === 'availability-saved') {
+        $notices[] = [
+            'tone' => 'emerald',
+            'title' => __('Weekly availability saved'),
+            'message' => __('Your week is set. Upload your documents below, then submit them for review.'),
+        ];
+    } elseif (session('status') === 'complete-your-availability') {
+        $notices[] = [
+            'tone' => 'amber',
+            'title' => __('One step left'),
+            'message' => __('Set your weekly availability before submitting your documents.'),
         ];
     } elseif (session('status') === 'complete-your-verification') {
         $notices[] = [
@@ -167,7 +161,7 @@
         ],
         'notices' => $notices,
         'steps' => $steps,
-        'currentStep' => 2,
+        'currentStep' => 3,
         'urls' => [
             'upload' => route('teacher.verification.documents.store'),
             'submit' => route('teacher.verification.submit'),
@@ -176,6 +170,7 @@
             'privacy' => route('legal.privacy'),
             'dashboard' => route('teacher.dashboard'),
             'profile' => route('teacher.profile'),
+            'availability' => route('teacher.availability.setup'),
         ],
         'copy' => [
             'toastLabel' => __('Notifications'),
@@ -322,7 +317,7 @@
                 </div>
             @endforeach
 
-            <x-teacher-onboarding-steps :current="2" />
+            <x-teacher-onboarding-steps :current="3" />
 
             <!-- Status overview -->
             <div class="{{ $cardClasses }}">
@@ -505,6 +500,22 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             Teaching profile completed
+                        </li>
+                        <li class="flex items-center gap-2 {{ $hasAvailability ? 'text-slate-600 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400' }}">
+                            @if ($hasAvailability)
+                                <svg class="h-5 w-5 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>Weekly availability set</span>
+                            @else
+                                <svg class="h-5 w-5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span class="flex flex-wrap items-center gap-x-2">
+                                    Weekly availability required
+                                    <a href="{{ route('teacher.availability.setup') }}" class="font-semibold text-primary hover:underline">Set now</a>
+                                </span>
+                            @endif
                         </li>
                         <li class="flex items-center gap-2 {{ $hasIdProof ? 'text-slate-600 dark:text-slate-300' : 'text-slate-500 dark:text-slate-400' }}">
                             @if ($hasIdProof)

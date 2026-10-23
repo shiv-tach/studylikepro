@@ -11,6 +11,7 @@ use App\Models\Subject;
 use App\Models\TeacherProfile;
 use App\Models\TeacherVerificationDocument;
 use App\Services\TeacherSubjectService;
+use App\Support\TeacherOnboarding;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,10 +31,8 @@ class VerificationController extends Controller
     {
         $profile = $request->user()->teacherProfile;
 
-        if (! $profile?->isComplete()) {
-            return redirect()
-                ->route('teacher.profile')
-                ->with('status', 'complete-your-profile');
+        if ($gate = $this->onboardingGate($profile)) {
+            return $gate;
         }
 
         return view('teacher.verification', [
@@ -54,10 +53,8 @@ class VerificationController extends Controller
     {
         $profile = $request->user()->teacherProfile;
 
-        if (! $profile?->isComplete()) {
-            return redirect()
-                ->route('teacher.profile')
-                ->with('status', 'complete-your-profile');
+        if ($gate = $this->onboardingGate($profile)) {
+            return $gate;
         }
 
         if (! $profile->verification_status->allowsDocumentEditing()) {
@@ -102,6 +99,10 @@ class VerificationController extends Controller
      */
     public function destroy(Request $request, TeacherVerificationDocument $document): RedirectResponse|JsonResponse
     {
+        if ($gate = $this->onboardingGate($request->user()->teacherProfile)) {
+            return $gate;
+        }
+
         Gate::authorize('delete', $document);
 
         $label = $document->typeLabel();
@@ -134,10 +135,8 @@ class VerificationController extends Controller
     {
         $profile = $request->user()->teacherProfile;
 
-        if (! $profile?->isComplete()) {
-            return redirect()
-                ->route('teacher.profile')
-                ->with('status', 'complete-your-profile');
+        if ($gate = $this->onboardingGate($profile)) {
+            return $gate;
         }
 
         if (! $profile->verification_status->allowsDocumentEditing()) {
@@ -182,10 +181,8 @@ class VerificationController extends Controller
     {
         $profile = $request->user()->teacherProfile;
 
-        if (! $profile?->isComplete()) {
-            return redirect()
-                ->route('teacher.profile')
-                ->with('status', 'complete-your-profile');
+        if ($gate = $this->onboardingGate($profile)) {
+            return $gate;
         }
 
         if (! $profile->verification_status->allowsDocumentEditing()) {
@@ -223,6 +220,28 @@ class VerificationController extends Controller
         return redirect()
             ->route('teacher.verification')
             ->with('status', 'submitted-for-review');
+    }
+
+    /**
+     * The onboarding gate every verification action shares: the profile has to
+     * be saved and at least one weekly range set, otherwise the teacher is sent
+     * to the step they still owe rather than to a dead end.
+     */
+    private function onboardingGate(?TeacherProfile $profile): ?RedirectResponse
+    {
+        if (! $profile?->isComplete()) {
+            return redirect()
+                ->route('teacher.profile')
+                ->with('status', 'complete-your-profile');
+        }
+
+        if (! TeacherOnboarding::hasAvailability($profile)) {
+            return redirect()
+                ->route('teacher.availability.setup')
+                ->with('status', 'complete-your-availability');
+        }
+
+        return null;
     }
 
     /**

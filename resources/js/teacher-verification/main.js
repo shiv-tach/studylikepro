@@ -23,7 +23,7 @@ const DEFAULT_CONFIG = {
     errors: {},
     notices: [],
     steps: [],
-    currentStep: 2,
+    currentStep: 3,
     copy: {},
     urls: {},
 };

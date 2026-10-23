@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\TeacherOnboarding;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,11 +23,16 @@ class EnsureOnboardingCompleted
         }
 
         if ($user->isTeacher() && ! $user->hasCompletedOnboarding()) {
-            // Step 1 is the teaching profile; step 2 is verification. Teachers who
-            // saved their profile but never submitted documents are sent to step 2.
-            return $user->teacherProfile?->isComplete()
-                ? redirect()->route('teacher.verification')->with('status', 'complete-your-verification')
-                : redirect()->route('teacher.profile')->with('status', 'complete-your-profile');
+            // Step 1 is the teaching profile, step 2 the weekly availability and
+            // step 3 verification. Send the teacher to the first step they owe.
+            return match (true) {
+                ! $user->teacherProfile?->isComplete()
+                    => redirect()->route('teacher.profile')->with('status', 'complete-your-profile'),
+                ! TeacherOnboarding::hasAvailability($user->teacherProfile)
+                    => redirect()->route('teacher.availability.setup')->with('status', 'complete-your-availability'),
+                default
+                    => redirect()->route('teacher.verification')->with('status', 'complete-your-verification'),
+            };
         }
 
         return $next($request);

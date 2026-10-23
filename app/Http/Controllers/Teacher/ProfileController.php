@@ -48,8 +48,10 @@ class ProfileController extends Controller
         $this->updateAvatar($request, $user);
 
         if ($wasIncomplete) {
+            // Step 2 now sits between the profile and the documents: students
+            // need a weekly range before there is anything to book.
             return redirect()
-                ->route('teacher.verification')
+                ->route('teacher.availability.setup')
                 ->with('status', 'profile-completed');
         }
 

@@ -2,7 +2,7 @@
 /**
  * The one button that submits the form, kept beside the live preview so it stays
  * on screen while the teacher works through the fields. The label changes once
- * the profile is complete, because the save no longer opens verification.
+ * the profile is complete, because the save no longer starts onboarding step 2.
  */
 import { usePanel } from '../../shared/composables/usePanel';
 import { useCopy } from '../composables/usePageContext';

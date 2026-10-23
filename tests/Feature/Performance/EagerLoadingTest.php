@@ -71,6 +71,14 @@ function eagerLoadingScenario(): array
     // gets the subject - the card has to render from eager-loaded data too.
     $scenario['teacher']->subjects()->attach($subject->id, ['status' => ApprovalStatus::Approved, 'grade_levels' => []]);
 
+    // The verification step now requires a weekly range, and this scenario
+    // renders that page as well.
+    $scenario['teacher']->availabilitySlots()->create([
+        'day_of_week' => 1,
+        'start_minute' => 18 * 60,
+        'end_minute' => 21 * 60,
+    ]);
+
     return [...$scenario, 'conversation' => $conversation, 'review' => $review, 'dispute' => $dispute, 'subject' => $subject];
 }
 

@@ -29,9 +29,10 @@ Automated equivalent: `tests/Feature/Acceptance/CoreFlowTest.php` (runs in CI).
 | A4 | Open a verified teacher from *Find a teacher* and click **Book a slot** | The booking page shows the learner grade read-only from the learning profile; only that grade's lessons and rate are offered | ☐ |
 | A5 | Pick a published slot and confirm the booking | A pending-payment hold appears in *My lessons* with the payment countdown; the teacher sees the hold in *Schedule* | ☐ |
 | A6 | Try to book the same slot in a second session | The slot is rejected because it is held; the first hold is untouched | ☐ |
-| A7 | Register as a teacher, complete the teaching profile | Step 1 is marked completed in the 2-step progress; verification page opens | ☐ |
-| A8 | Try the dashboard or another teacher page before submitting verification | Redirected back to verification; step 2 shows as in progress | ☐ |
-| A9 | Pick at least one subject, upload a government ID and submit for review | Subjects are required; the terms checkbox is required; status Pending and the teacher area unlocks with both steps completed | ☐ |
+| A7 | Register as a teacher, complete the teaching profile | Step 1 is marked completed in the 3-step progress and the weekly availability step opens | ☐ |
+| A8 | On the availability step, load a suggested week and save it | The week fills the editor unsaved, can be edited per day, and saving opens verification with step 2 completed | ☐ |
+| A9 | Try the dashboard or verification before saving a weekly range | Redirected back to the availability step; step 3 shows as locked | ☐ |
+| A10 | Pick at least one subject, upload a government ID and submit for review | Subjects are required; the terms checkbox is required; status Pending and the teacher area unlocks with all three steps completed | ☐ |
 | A10 | Admin approves the application | Teacher sees "Approved"; the pending subjects are approved and the teacher appears in `/teachers` | ☐ |
 | A11 | Teacher configures grades, lessons, a rate per grade and availability | Subject panels show grade chips with a rate input each and lesson checkboxes pre-selected; weekly slots appear | ☐ |
 | A12 | Student pays from the checkout page (test mode) | Booking confirmed, "Payment received", receipt available | ☐ |

@@ -31,7 +31,7 @@ test('the shell island carries the user, the route map and the student menu', fu
         ->toContain('My subjects', 'My lessons', 'Find a teacher');
 });
 
-test('an onboarding teacher only gets the two setup steps in the sidebar', function () {
+test('an onboarding teacher only gets the three setup steps in the sidebar', function () {
     $teacher = User::factory()->teacher()->create();
 
     $config = shellConfig(
@@ -41,7 +41,7 @@ test('an onboarding teacher only gets the two setup steps in the sidebar', funct
     $labels = collect($config['navItems'])->pluck('label')->all();
 
     // The dashboard/setup steps, then the profile + settings links every role gets.
-    expect(array_slice($labels, 0, 2))->toEqual(['Teaching profile', 'Verification']);
+    expect(array_slice($labels, 0, 3))->toEqual(['Teaching profile', 'Weekly availability', 'Verification']);
     expect($labels)->not->toContain('Earnings');
 });
 

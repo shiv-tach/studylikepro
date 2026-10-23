@@ -206,6 +206,11 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
         Route::post('/availability/time-off', [TeacherAvailabilityController::class, 'storeTimeOff'])->middleware('onboarded')->name('availability.time-off.store');
         Route::delete('/availability/time-off/{timeOff}', [TeacherAvailabilityController::class, 'destroyTimeOff'])->middleware('onboarded')->name('availability.time-off.destroy');
 
+        // Onboarding step 2. Deliberately NOT behind `onboarded`: it is the step
+        // that has to be finished before verification can be submitted.
+        Route::get('/availability/setup', [TeacherAvailabilityController::class, 'setup'])->name('availability.setup');
+        Route::put('/availability/setup', [TeacherAvailabilityController::class, 'updateWeek'])->name('availability.setup.update');
+
         Route::get('/schedule', [TeacherBookingController::class, 'index'])->middleware('onboarded')->name('schedule.index');
         Route::get('/schedule/{booking}', [TeacherBookingController::class, 'show'])->middleware('onboarded')->name('bookings.show');
         Route::post('/schedule/{booking}/start', [TeacherBookingController::class, 'start'])->middleware('onboarded')->name('bookings.start');
