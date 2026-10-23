@@ -238,52 +238,57 @@
                             $stepGrade = $levels->flatMap->grades->firstWhere('id', $gradeId);
                             $juniorGrades = ($stepGrade?->number ?? 10) < 10;
                         @endphp
-                        <div class="{{ $cardBase }}" :class="{{ $cardTheme }}" x-show="grade === {{ $gradeId }}" x-cloak>
-                            <div class="flex flex-wrap items-center justify-between gap-3">
-                                <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('Pick your subjects') }}</h3>
-                                <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                                    <span x-text="pickedBaskets"></span>/{{ count($groups) }}
-                                </span>
-                            </div>
-                            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                {{ $juniorGrades
-                                    ? __('Grades 6 to 9 pick one subject from their Category I basket. Pick the subject you are studying for it.')
-                                    : __('Grade 10 and 11 students take one subject from each of the three O/L baskets. Pick the subject you are studying for each one.') }}
-                            </p>
+                        {{-- x-if, not x-show: a hidden card would keep radios with the same name and
+                             value in the same native group, so Alpine's checked sync on the hidden copy
+                             would silently uncheck the one the student actually clicked. --}}
+                        <template x-if="grade === {{ $gradeId }}">
+                            <div class="{{ $cardBase }}" :class="{{ $cardTheme }}" x-cloak>
+                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('Pick your subjects') }}</h3>
+                                    <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                                        <span x-text="pickedBaskets"></span>/{{ count($groups) }}
+                                    </span>
+                                </div>
+                                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                    {{ $juniorGrades
+                                        ? __('Grades 6 to 9 pick one subject from their Category I basket. Pick the subject you are studying for it.')
+                                        : __('Grade 10 and 11 students take one subject from each of the three O/L baskets. Pick the subject you are studying for each one.') }}
+                                </p>
 
-                            <div class="mt-5 space-y-6">
-                                @foreach ($groups as $group)
-                                    @php $basketKey = $group['basket']->key; @endphp
-                                    <div>
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                                {{ trim(($group['basket']->icon ?? '').' '.$group['basket']->name) }}
-                                            </h4>
-                                            <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                                                {{ __('pick one') }}
-                                            </span>
-                                            <span class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400"
-                                                  x-show="!! subjects['{{ $basketKey }}']" x-cloak>{{ __('chosen') }}</span>
-                                        </div>
-                                        @if ($group['basket']->description)
-                                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $group['basket']->description }}</p>
-                                        @endif
+                                <div class="mt-5 space-y-6">
+                                    @foreach ($groups as $group)
+                                        @php $basketKey = $group['basket']->key; @endphp
+                                        <div>
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                                    {{ trim(($group['basket']->icon ?? '').' '.$group['basket']->name) }}
+                                                </h4>
+                                                <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                                                    {{ __('pick one') }}
+                                                </span>
+                                                <span class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400"
+                                                      x-show="!! subjects['{{ $basketKey }}']" x-cloak>{{ __('chosen') }}</span>
+                                            </div>
+                                            @if ($group['basket']->description)
+                                                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $group['basket']->description }}</p>
+                                            @endif
 
-                                        <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                            @foreach ($group['subjects'] as $subject)
-                                                <label class="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors hover:border-primary/40 dark:hover:border-primary/30"
-                                                       :class="subjects['{{ $basketKey }}'] === {{ $subject->id }} ? '{{ $optionActive }}' : '{{ $optionIdle }}'">
-                                                    <input type="radio" name="basket_subjects[{{ $basketKey }}]" value="{{ $subject->id }}"
-                                                           x-model.number="subjects['{{ $basketKey }}']" class="{{ $radioClasses }}" />
-                                                    <span class="text-lg">{{ $subject->icon ?? '📘' }}</span>
-                                                    <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ $subject->name }}</span>
-                                                </label>
-                                            @endforeach
+                                            <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                                @foreach ($group['subjects'] as $subject)
+                                                    <label class="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors hover:border-primary/40 dark:hover:border-primary/30"
+                                                           :class="subjects['{{ $basketKey }}'] === {{ $subject->id }} ? '{{ $optionActive }}' : '{{ $optionIdle }}'">
+                                                        <input type="radio" name="basket_subjects[{{ $basketKey }}]" value="{{ $subject->id }}"
+                                                               x-model.number="subjects['{{ $basketKey }}']" class="{{ $radioClasses }}" />
+                                                        <span class="text-lg">{{ $subject->icon ?? '📘' }}</span>
+                                                        <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ $subject->name }}</span>
+                                                    </label>
+                                                @endforeach
+                                            </div>
                                         </div>
-                                    </div>
-                                @endforeach
+                                    @endforeach
+                                </div>
                             </div>
-                        </div>
+                        </template>
                     @endforeach
                 </section>
 

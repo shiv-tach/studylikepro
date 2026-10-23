@@ -45,6 +45,19 @@ test('an onboarding teacher only gets the three setup steps in the sidebar', fun
     expect($labels)->not->toContain('Earnings');
 });
 
+test('a teacher sidebar counts the lessons still to teach and never badges reviews', function () {
+    $scenario = paidBookingScenario(hoursAhead: 48);
+
+    $config = shellConfig(
+        $this->actingAs($scenario['teacherUser'])->get(route('teacher.schedule.index'))->assertOk()
+    );
+
+    $items = collect($config['navItems'])->keyBy('label');
+
+    expect($items['My lessons']['badge'])->toBe(1)
+        ->and($items['Reviews']['badge'])->toBeNull();
+});
+
 test('the notification bell count and rows ride in the island', function () {
     $scenario = paidBookingScenario();
     $scenario['student']->notify(new LessonCompleted($scenario['booking']));
