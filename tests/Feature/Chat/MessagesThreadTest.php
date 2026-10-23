@@ -29,7 +29,7 @@ test('the thread island carries the perspective, the lesson line and the route m
         ->and($config['urls']['store'])->toBe(route('messages.store', $conversation))
         ->and($config['urls']['report'])->toBe(route('messages.report', $conversation))
         ->and($config['lesson']['url'])->toBe(route('student.bookings.show', $scenario['booking']))
-        ->and($config['lesson']['schedule'])->toMatch('/^[A-Z][a-z]{2} \d{2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}$/')
+        ->and($config['lesson']['schedule'])->toMatch('/^[A-Z][a-z]{2} \d{2} [A-Z][a-z]{2} \d{4}, \d{1,2}:\d{2} [AP]M$/')
         ->and($config['report']['open'])->toBeFalse()
         ->and($config['flash'])->toBeNull()
         ->and(collect($config['report']['reasons'])->pluck('value')->all())->toBe(array_keys(Dispute::REASONS));

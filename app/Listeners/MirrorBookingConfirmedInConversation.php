@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use App\Events\BookingConfirmed;
 use App\Services\ConversationService;
+use App\Support\TimeFormat;
 
 /**
  * Keeps the lesson chat in step with the booking: when payment lands, the
@@ -19,7 +20,7 @@ class MirrorBookingConfirmedInConversation
 
         $this->conversations->systemMessage(
             $booking,
-            'Payment received — your lesson on '.$booking->starts_at->format('D d M Y, H:i').' is confirmed. Use this chat to share what you want to cover, files or joining notes.',
+            'Payment received — your lesson on '.$booking->starts_at->format('D d M Y, '.TimeFormat::TIME).' is confirmed. Use this chat to share what you want to cover, files or joining notes.',
         );
     }
 }

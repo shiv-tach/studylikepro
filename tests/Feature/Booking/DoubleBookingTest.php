@@ -87,7 +87,7 @@ it('re-checks the slot inside the booking transaction so a late rival cannot win
     $this->actingAs($scenario['second'])
         ->get(route('student.bookings.create', $scenario['teacher']))
         ->assertOk()
-        ->assertSee('18:00');
+        ->assertSee('11:30 PM');
 
     // ...then the first one books it before the second submits.
     $this->actingAs($scenario['first'])
@@ -132,7 +132,7 @@ it('drops booked slots from the public teacher profile preview', function () {
     $scenario = doubleBookingScenario();
 
     $before = preg_match_all(
-        '/>\d{2}:\d{2}<\/span>/',
+        '/>\d{1,2}:\d{2} [AP]M<\/span>/',
         $this->get(route('teachers.show', $scenario['teacher']))->assertOk()->getContent(),
     );
 
@@ -144,7 +144,7 @@ it('drops booked slots from the public teacher profile preview', function () {
     ]);
 
     $after = preg_match_all(
-        '/>\d{2}:\d{2}<\/span>/',
+        '/>\d{1,2}:\d{2} [AP]M<\/span>/',
         $this->get(route('teachers.show', $scenario['teacher']))->assertOk()->getContent(),
     );
 

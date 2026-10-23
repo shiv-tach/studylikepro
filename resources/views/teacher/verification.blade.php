@@ -123,8 +123,8 @@
         'profile' => [
             'isComplete' => $profileComplete,
             'hasSubmittedVerification' => $verificationSubmitted,
-            'submittedAt' => $profile->submitted_at?->format('d M Y, H:i'),
-            'verifiedAt' => $profile->verified_at?->format('d M Y, H:i'),
+            'submittedAt' => display_datetime($profile->submitted_at),
+            'verifiedAt' => display_datetime($profile->verified_at),
             'notes' => $profile->verification_notes,
         ],
         'canEditDocuments' => $canEditDocuments,

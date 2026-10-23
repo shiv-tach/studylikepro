@@ -137,7 +137,7 @@
             'chips' => $chips,
             'nextSession' => $next === null ? null : [
                 'label' => __('Next session'),
-                'value' => $next->starts_at->copy()->setTimezone($timezone)->format('D, d M Y · H:i'),
+                'value' => display_datetime($next->starts_at->copy()->setTimezone($timezone), 'D, d M Y', ' · '),
             ],
         ];
     })->values()->all();

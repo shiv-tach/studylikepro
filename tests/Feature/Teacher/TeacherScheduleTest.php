@@ -338,7 +338,7 @@ it('counts the week and flags a hold that is about to lapse', function () {
     expect($config['stats'])
         ->toMatchArray(['todayCount' => 0, 'weekCount' => 1, 'holdCount' => 1, 'holdSoonCount' => 1])
         ->and($config['holds'][0]['expiresAt'])->not->toBeNull()
-        ->and($config['holds'][0]['expiresLabel'])->toBe('14:50')
+        ->and($config['holds'][0]['expiresLabel'])->toBe('2:50 PM')
         ->and(collect($config['priority'])->pluck('kind')->all())->toContain('hold_expiring');
 });
 

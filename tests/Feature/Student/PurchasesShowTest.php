@@ -120,7 +120,7 @@ test('the purchase island carries the status, the money and the route map', func
     // An active purchase counts its window down in days, not minutes.
     expect($config['status']['expiry']['label'])->toBe('Valid until');
     expect($config['status']['expiry']['value'])->toBe(
-        $scenario['purchase']->expires_at->copy()->setTimezone(purchaseDetailTimezone())->format('d M Y, H:i')
+        $scenario['purchase']->expires_at->copy()->setTimezone(purchaseDetailTimezone())->format('d M Y, g:i A')
     );
 
     // Nothing to pay for and nothing paid yet.
@@ -246,7 +246,7 @@ test('an active plan carries its balance, its progress and the way to book', fun
     expect($items->first()['url'])->toBe(route('student.bookings.show', Booking::query()->orderBy('starts_at')->first()));
     expect($items->first()['when'])->toBe(
         Booking::query()->orderBy('starts_at')->first()->starts_at->copy()
-            ->setTimezone(purchaseDetailTimezone())->format('D, d M Y · H:i')
+            ->setTimezone(purchaseDetailTimezone())->format('D, d M Y · g:i A')
     );
 });
 
@@ -370,5 +370,5 @@ test('a purchase that paid through checkout reports when and how', function () {
     );
 
     expect($config['status']['payment']['label'])->toBe('Paid '.$payment->captured_at->copy()
-        ->setTimezone(purchaseDetailTimezone())->format('d M Y, H:i').' via demo');
+        ->setTimezone(purchaseDetailTimezone())->format('d M Y, g:i A').' via demo');
 });

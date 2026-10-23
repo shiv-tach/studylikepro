@@ -74,7 +74,7 @@ it('shows the direct booking page with open slots and the lesson price', functio
         ->assertOk()
         ->assertSee($scenario['teacherUser']->name)
         ->assertSee('600')
-        ->assertSee('18:00')
+        ->assertSee('11:30 PM')
         ->assertSee('Reserve this slot');
 });
 
@@ -106,7 +106,7 @@ it('offers only the teacher\'s nearest open days in the time picker', function (
             $today->addDays(2)->toDateString(),
             $today->addDays(3)->toDateString(),
         ])
-        ->and($config['slots'][1]['slots'][0]['label'])->toBe('18:00')
+        ->and($config['slots'][1]['slots'][0]['label'])->toBe('6:00 PM')
         ->and($config['slots'][0]['weekday'])->toBe($today->addDays(1)->format('D'))
         ->and($config['slots'][0]['slotCountLabel'])->toBe('1 slot');
 });
@@ -420,7 +420,7 @@ it('hands the stepper island the scoped options, the slots and the order summary
 
     expect($slotValues)->toContain($scenario['slot']->toIso8601String())
         ->and($config['slots'][0]['label'])->not->toBeEmpty()
-        ->and($config['slots'][0]['slots'][0]['label'])->toMatch('/^\d{2}:\d{2}$/')
+        ->and($config['slots'][0]['slots'][0]['label'])->toMatch('/^\d{1,2}:\d{2} [AP]M$/')
         ->and($config['slotsNotice'])->toBeNull();
 
     // 60 minutes of the 600.00/hr rate, plus the booking fee on top.

@@ -42,7 +42,7 @@
                     </span>
                 </div>
                 <p class="text-xs text-slate-400">
-                    {{ __('Submitted') }} {{ $order->submitted_at?->format('d M Y, H:i') }}
+                    {{ __('Submitted') }} {{ display_datetime($order->submitted_at) }}
                 </p>
             </div>
 
@@ -57,7 +57,7 @@
                         @if ($order->isOverdue())
                             {{ __('⚠️ The deadline passed :time — the teacher is late. You can dispute once the paper is returned.', ['time' => $deadline->diffForHumans()]) }}
                         @else
-                            {{ __('Expected back by :time (:hours hours after payment).', ['time' => $deadline->format('d M Y, H:i'), 'hours' => $order->effectiveTurnaroundHours()]) }}
+                            {{ __('Expected back by :time (:hours hours after payment).', ['time' => display_datetime($deadline), 'hours' => $order->effectiveTurnaroundHours()]) }}
                         @endif
                     </p>
                 @endif

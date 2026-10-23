@@ -59,8 +59,8 @@ class AvailabilitySlotRequest extends FormRequest
 
             if ($overlapping) {
                 $validator->errors()->add('start_time', __('This range overlaps your existing :start–:end slot.', [
-                    'start' => $overlapping->startLabel(),
-                    'end' => $overlapping->endLabel(),
+                    'start' => display_clock($overlapping->startLabel()),
+                    'end' => display_clock($overlapping->endLabel()),
                 ]));
             }
         });

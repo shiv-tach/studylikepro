@@ -24,8 +24,8 @@
     $cancelWindowHours = platform_settings()->int('student_cancel_window_hours');
 
     $startDateLabel = $booking->starts_at->copy()->setTimezone($timezone)->format('D d M Y');
-    $startTimeLabel = $booking->starts_at->copy()->setTimezone($timezone)->format('H:i');
-    $endTimeLabel = $booking->ends_at->copy()->setTimezone($timezone)->format('H:i');
+    $startTimeLabel = display_time($booking->starts_at->copy()->setTimezone($timezone));
+    $endTimeLabel = display_time($booking->ends_at->copy()->setTimezone($timezone));
 
     // The flash banner a redirect left behind, if any.
     $flash = match (session('status')) {
@@ -44,7 +44,7 @@
         'title' => __('Your classroom is open'),
         'body' => __('Join :teacher now — the room stays open until :time.', [
             'teacher' => $teacherUser->name,
-            'time' => $booking->joinClosesAt()->copy()->setTimezone($timezone)->format('H:i'),
+            'time' => display_time($booking->joinClosesAt()->copy()->setTimezone($timezone)),
         ]),
         'ctaLabel' => __('Join lesson'),
         'url' => route('classroom.show', $booking),
@@ -60,7 +60,7 @@
             'slotLine' => $startDateLabel.', '.$startTimeLabel.'–'.$endTimeLabel.' · '.$booking->durationMinutes().' '.__('minutes'),
             'note' => $booking->expires_at
                 ? __('Reserved until :time (:relative). After that the slot is released to other students.', [
-                    'time' => $booking->expires_at->copy()->setTimezone($timezone)->format('H:i'),
+                    'time' => display_time($booking->expires_at->copy()->setTimezone($timezone)),
                     'relative' => $booking->expires_at->diffForHumans(),
                 ])
                 : __('Complete the payment to confirm this lesson.'),
@@ -73,7 +73,7 @@
             'payLabel' => __('Pay :amount', ['amount' => $money($booking->totalMinor())]),
             'payUrl' => route('student.bookings.checkout', $booking),
             'secureNote' => __('Secure checkout · the slot stays yours until :time', [
-                'time' => $booking->expires_at?->copy()->setTimezone($timezone)->format('H:i') ?? __('you pay'),
+                'time' => display_time($booking->expires_at?->copy()->setTimezone($timezone)) ?? __('you pay'),
             ]),
         ];
     } elseif ($holdLapsed || $booking->status === BookingStatus::Expired) {
@@ -110,7 +110,7 @@
         'subjectLine' => collect([$booking->subject?->name, $booking->lesson?->name])->filter()->implode(' · '),
         'learner' => $booking->learner_name ?? auth()->user()->name,
         'learnerGrade' => $booking->learnerGrade?->label,
-        'bookedOn' => $booking->created_at->format('d M Y, H:i'),
+        'bookedOn' => display_datetime($booking->created_at),
         'reference' => '#'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
     ];
 
@@ -119,7 +119,7 @@
         ->map(fn (array $step) => [
             'key' => $step['key'],
             'label' => $step['label'],
-            'at' => $step['at']?->copy()->setTimezone($timezone)->format('d M Y, H:i'),
+            'at' => display_datetime($step['at']?->copy()->setTimezone($timezone)),
             'description' => $step['description'],
         ])
         ->values()->all();
@@ -161,7 +161,7 @@
             },
             'gatewayId' => $payment->gateway_payment_id,
             'refunded' => $payment->refundedMinor() > 0 ? $money($payment->refundedMinor()) : null,
-            'paidOn' => $payment->captured_at?->copy()->setTimezone($timezone)->format('d M Y, H:i') ?? '—',
+            'paidOn' => display_datetime($payment->captured_at?->copy()->setTimezone($timezone)) ?? '—',
         ] : null,
         'receiptUrl' => route('receipts.show', $booking),
     ];
@@ -251,7 +251,7 @@
             'sessions' => $purchase->sessions->map(fn ($session) => [
                 'id' => $session->id,
                 'url' => route('student.bookings.show', $session),
-                'when' => $session->starts_at->copy()->setTimezone($timezone)->format('D, d M Y · H:i'),
+                'when' => display_datetime($session->starts_at->copy()->setTimezone($timezone), 'D, d M Y', ' · '),
                 'durationLabel' => __(':minutes min', ['minutes' => $session->durationMinutes()]),
                 'scope' => collect([$session->subject?->name, $session->lesson?->name])->filter()->implode(' · ') ?: null,
                 'status' => [

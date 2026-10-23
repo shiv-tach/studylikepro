@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Payment;
+use App\Support\TimeFormat;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -27,7 +28,7 @@ class PaymentFailed extends Notification implements ShouldQueue
             ->line('What the gateway said: "'.$this->reason.'"');
 
         if ($booking->expires_at?->isFuture()) {
-            $message->line('Your slot is still held until '.$booking->expires_at->format('H:i').' — you can try again with another method.');
+            $message->line('Your slot is still held until '.$booking->expires_at->format(TimeFormat::TIME).' — you can try again with another method.');
         } else {
             $message->line('The slot has been released. Book it again and pay with another method.');
         }

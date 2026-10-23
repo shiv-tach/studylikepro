@@ -107,7 +107,7 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4">
-                                    <p class="text-slate-700 dark:text-slate-200">{{ $booking->starts_at->copy()->setTimezone($timezone)->format('d M Y, H:i') }}</p>
+                                    <p class="text-slate-700 dark:text-slate-200">{{ display_datetime($booking->starts_at->copy()->setTimezone($timezone)) }}</p>
                                     <p class="text-xs text-slate-400">{{ $booking->durationMinutes() }} {{ __('min') }}</p>
                                 </td>
                                 <td class="px-6 py-4">

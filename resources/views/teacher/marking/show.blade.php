@@ -33,7 +33,7 @@
                 <div class="text-right text-xs text-slate-400">
                     <p>👤 {{ $order->student?->name }}</p>
                     @if ($deadline && in_array($order->status, [MarkingOrderStatus::Submitted, MarkingOrderStatus::InProgress], true))
-                        <p class="mt-1">{{ __('Due :time', ['time' => $deadline->format('d M Y, H:i')]) }}</p>
+                        <p class="mt-1">{{ __('Due :time', ['time' => display_datetime($deadline)]) }}</p>
                     @endif
                     @if ($order->page_count)
                         <p class="mt-1">{{ __(':pages pages', ['pages' => $order->page_count]) }}</p>
@@ -41,7 +41,7 @@
                 </div>
             </div>
             @if ($order->purchase)
-                <p class="mt-3 text-xs text-slate-400">{{ __('Price :amount — paid :when', ['amount' => platform_settings()->formatMinor($order->purchase->price_minor), 'when' => $order->purchase->paid_at?->format('d M Y, H:i') ?? '—']) }}</p>
+                <p class="mt-3 text-xs text-slate-400">{{ __('Price :amount — paid :when', ['amount' => platform_settings()->formatMinor($order->purchase->price_minor), 'when' => display_datetime($order->purchase->paid_at) ?? '—']) }}</p>
             @endif
         </div>
 

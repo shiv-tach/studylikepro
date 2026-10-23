@@ -66,7 +66,7 @@
             'metaLabel' => $meta === [] ? null : implode(' · ', $meta),
             'rate' => $money($cardRate),
             'nextSlot' => $nextSlot
-                ? $nextSlot['starts_at']->setTimezone($viewerTz)->format('D d M · H:i')
+                ? display_datetime($nextSlot['starts_at']->setTimezone($viewerTz), 'D d M', ' · ')
                 : null,
         ];
     })->values();

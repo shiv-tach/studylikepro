@@ -106,11 +106,11 @@
                         <div class="flex flex-1 flex-wrap gap-2">
                             @foreach ($ranges as $range)
                                 <span class="inline-flex items-center gap-2 rounded-full bg-primary/10 py-1 pl-3 pr-1 text-sm font-semibold text-primary">
-                                    {{ $range->startLabel() }}–{{ $range->endLabel() }}
+                                    {{ display_clock($range->startLabel()) }}–{{ display_clock($range->endLabel()) }}
                                     <form method="POST" action="{{ route('teacher.availability.slots.destroy', $range) }}">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="flex h-5 w-5 items-center justify-center rounded-full text-primary/70 transition hover:bg-primary/20 hover:text-primary" aria-label="{{ __('Remove :day :range', ['day' => $label, 'range' => $range->startLabel().'–'.$range->endLabel()]) }}">&times;</button>
+                                        <button type="submit" class="flex h-5 w-5 items-center justify-center rounded-full text-primary/70 transition hover:bg-primary/20 hover:text-primary" aria-label="{{ __('Remove :day :range', ['day' => $label, 'range' => display_clock($range->startLabel()).'–'.display_clock($range->endLabel())]) }}">&times;</button>
                                     </form>
                                 </span>
                             @endforeach
@@ -166,7 +166,7 @@
                             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ \Carbon\CarbonImmutable::parse($date)->format('D, d M') }}</p>
                             <div class="mt-2 flex flex-wrap gap-2">
                                 @foreach ($slots as $slot)
-                                    <span class="{{ $chip }}">{{ $slot['local_time'] }}</span>
+                                    <span class="{{ $chip }}">{{ display_clock($slot['local_time']) }}</span>
                                 @endforeach
                             </div>
                         </div>

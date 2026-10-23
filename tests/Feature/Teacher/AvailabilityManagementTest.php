@@ -17,7 +17,7 @@ it('shows the availability manager to the teacher', function () {
         ->get(route('teacher.availability.index'))
         ->assertOk()
         ->assertSee('Weekly availability')
-        ->assertSee('18:00–21:00')
+        ->assertSee('6:00 PM–9:00 PM')
         ->assertSee('Base rate');
 });
 

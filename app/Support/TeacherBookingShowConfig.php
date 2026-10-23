@@ -100,15 +100,15 @@ final class TeacherBookingShowConfig
                     ->filter()
                     ->implode(' · ') ?: __('Tutoring lesson'),
                 'dateLabel' => $starts->format('D d M Y'),
-                'timeRange' => $starts->format('H:i').'–'.$ends->format('H:i'),
+                'timeRange' => $starts->format(TimeFormat::TIME).'–'.$ends->format(TimeFormat::TIME),
                 'durationLabel' => __(':minutes minutes', ['minutes' => $booking->durationMinutes()]),
                 'timezone' => $timezone,
                 'reference' => '#'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
-                'bookedOn' => $booking->created_at->copy()->setTimezone($timezone)->format('d M Y, H:i'),
+                'bookedOn' => $booking->created_at->copy()->setTimezone($timezone)->format(TimeFormat::DATE_TIME),
                 'startsAt' => $booking->starts_at->toIso8601String(),
                 'endsAt' => $booking->ends_at->toIso8601String(),
                 'startWindowOpensAt' => $startWindowOpensAt->toIso8601String(),
-                'startWindowLabel' => $startWindowOpensAt->copy()->setTimezone($timezone)->format('H:i'),
+                'startWindowLabel' => $startWindowOpensAt->copy()->setTimezone($timezone)->format(TimeFormat::TIME),
                 'payoutLabel' => platform_settings()->formatMinor((int) $booking->teacher_payout_minor),
             ],
             'join' => $join,
@@ -121,7 +121,7 @@ final class TeacherBookingShowConfig
                     ->map(fn (array $step) => [
                         'key' => $step['key'],
                         'label' => $step['label'],
-                        'at' => $step['at']?->copy()->setTimezone($timezone)->format('d M Y, H:i'),
+                        'at' => $step['at']?->copy()->setTimezone($timezone)->format(TimeFormat::DATE_TIME),
                         'description' => $step['description'],
                     ])
                     ->values()
@@ -171,13 +171,13 @@ final class TeacherBookingShowConfig
             $state = 'open';
             $title = __('Your classroom is open');
             $body = __('Open now — your student can join. The room stays open until :time.', [
-                'time' => $closesAt->format('H:i'),
+                'time' => $closesAt->format(TimeFormat::TIME),
             ]);
         } elseif ($windowClosed) {
             $state = 'closed';
             $title = __('The classroom window has closed');
             $body = __('The join window ended on :date, so the room is no longer available.', [
-                'date' => $closesAt->format('D d M, H:i'),
+                'date' => $closesAt->format('D d M, '.TimeFormat::TIME),
             ]);
         } elseif ($booking->meeting_status === MeetingStatus::Failed) {
             $state = 'failed';
@@ -189,7 +189,7 @@ final class TeacherBookingShowConfig
                 'minutes' => $booking->joinOpensBeforeMinutes(),
             ]);
             $body = __('Joins open at :time on :date. The room itself follows the lesson status.', [
-                'time' => $opensAt->format('H:i'),
+                'time' => $opensAt->format(TimeFormat::TIME),
                 'date' => $opensAt->format('D d M'),
             ]);
         } else {
@@ -253,7 +253,7 @@ final class TeacherBookingShowConfig
             return self::nextItem('hold', 'amber', 'clock', __('Waiting on payment'), [
                 'body' => $expires && $expires->isFuture()
                     ? __('The slot is held until :time (:relative). It frees up automatically if the student does not pay.', [
-                        'time' => $expires->copy()->setTimezone($timezone)->format('H:i'),
+                        'time' => $expires->copy()->setTimezone($timezone)->format(TimeFormat::TIME),
                         'relative' => $expires->diffForHumans(),
                     ])
                     : __('The payment window has closed and the slot will be released.'),
@@ -328,7 +328,7 @@ final class TeacherBookingShowConfig
 
         return self::nextItem('upcoming', 'sky', 'calendar', __('Up next'), [
             'body' => __('The lesson is booked. You can start it from :time on :date.', [
-                'time' => $booking->starts_at->copy()->subMinutes((int) config('studylikepro.booking.teacher_start_early_minutes'))->setTimezone($timezone)->format('H:i'),
+                'time' => $booking->starts_at->copy()->subMinutes((int) config('studylikepro.booking.teacher_start_early_minutes'))->setTimezone($timezone)->format(TimeFormat::TIME),
                 'date' => $starts->format('D d M'),
             ]),
             'deadline' => $booking->starts_at->toIso8601String(),
@@ -505,7 +505,7 @@ final class TeacherBookingShowConfig
                 $status === BookingStatus::Confirmed && $actions['canStart'] => 'current',
                 default => 'upcoming',
             },
-            'at' => $booking->started_at?->copy()->setTimezone($timezone)->format('H:i'),
+            'at' => $booking->started_at?->copy()->setTimezone($timezone)->format(TimeFormat::TIME),
             'action' => $isOwner && $status === BookingStatus::Confirmed && $actions['canStart'] && ! $ended
                 ? self::formAction(__('Start lesson'), $actions['start'], 'primary')
                 : null,
@@ -521,7 +521,7 @@ final class TeacherBookingShowConfig
                 $actions['canComplete'] => 'current',
                 default => 'upcoming',
             },
-            'at' => $booking->completed_at?->copy()->setTimezone($timezone)->format('H:i'),
+            'at' => $booking->completed_at?->copy()->setTimezone($timezone)->format(TimeFormat::TIME),
             'action' => $isOwner && $actions['canComplete']
                 ? self::formAction(__('Mark delivered'), $actions['complete'], 'primary')
                 : null,

@@ -276,7 +276,7 @@ it('shows an approved teacher profile with rates and availability', function () 
         ->assertSee(platform_settings()->formatMinor(80000))
         ->assertSee('Grade 11')
         ->assertSee('Your time (Asia/Colombo)')
-        ->assertSee('18:00');
+        ->assertSee('6:00 PM');
 });
 
 it('renders the public teacher profile inside the landing page shell', function () {

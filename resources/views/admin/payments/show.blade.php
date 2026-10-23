@@ -60,11 +60,11 @@
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Created') }}</dt>
-                        <dd class="mt-1 text-sm text-slate-700 dark:text-slate-200">{{ $payment->created_at->copy()->setTimezone($timezone)->format('d M Y, H:i') }}</dd>
+                        <dd class="mt-1 text-sm text-slate-700 dark:text-slate-200">{{ display_datetime($payment->created_at->copy()->setTimezone($timezone)) }}</dd>
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Captured') }}</dt>
-                        <dd class="mt-1 text-sm text-slate-700 dark:text-slate-200">{{ $payment->captured_at?->copy()->setTimezone($timezone)->format('d M Y, H:i') ?? '—' }}</dd>
+                        <dd class="mt-1 text-sm text-slate-700 dark:text-slate-200">{{ display_datetime($payment->captured_at?->copy()->setTimezone($timezone)) ?? '—' }}</dd>
                     </div>
                 </dl>
 
@@ -91,7 +91,7 @@
                             {{ $booking->teacherProfile->user->name }}
                             @if ($booking->subject) · {{ $booking->subject->name }} @endif
                         </p>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ $booking->starts_at->copy()->setTimezone($timezone)->format('d M Y, H:i') }}</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ display_datetime($booking->starts_at->copy()->setTimezone($timezone)) }}</p>
                         <p class="mt-2 text-xs text-slate-400">
                             {{ __('Lesson :price · booking fee :booking_fee', [
                                 'price' => $money($booking->price_minor),
@@ -142,7 +142,7 @@
                                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ $refund->reason }}</p>
                                 <p class="mt-1 text-xs text-slate-400">
                                     {{ ucfirst($refund->initiated_by) }}
-                                    · {{ $refund->created_at->copy()->setTimezone($timezone)->format('d M Y, H:i') }}
+                                    · {{ display_datetime($refund->created_at->copy()->setTimezone($timezone)) }}
                                     @if ($refund->gateway_refund_id) · <span class="font-mono">{{ $refund->gateway_refund_id }}</span> @endif
                                 </p>
                             </div>

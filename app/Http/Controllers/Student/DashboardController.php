@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Student;
 use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Support\TimeFormat;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -74,8 +75,8 @@ class DashboardController extends Controller
                 ->filter()
                 ->implode(' · ') ?: __('Tutoring lesson'),
             'teacher' => $booking->teacherProfile?->user?->name,
-            'startsAt' => $booking->starts_at->copy()->setTimezone($timezone)->format('D d M, H:i'),
-            'endsAt' => $booking->ends_at->copy()->setTimezone($timezone)->format('H:i'),
+            'startsAt' => $booking->starts_at->copy()->setTimezone($timezone)->format('D d M, '.TimeFormat::TIME),
+            'endsAt' => $booking->ends_at->copy()->setTimezone($timezone)->format(TimeFormat::TIME),
             'durationMinutes' => $booking->durationMinutes(),
             'status' => $booking->status->value,
             'statusLabel' => $booking->status->label(),

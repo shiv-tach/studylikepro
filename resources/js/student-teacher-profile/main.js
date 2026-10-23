@@ -16,7 +16,7 @@ const DEFAULT_CONFIG = {
     teacher: {},
     subjects: [],
     serviceGroups: [],
-    availability: { timezone: '', timezoneLabel: '', empty: true, days: [] },
+    availability: { timezone: '', timezoneLabel: '', empty: true, days: [], windowNotice: null, timezoneNotice: null },
     reviews: { count: 0, rating: null, summaryLabel: null, breakdown: [], items: [], showingLabel: null },
     booking: {
         canBook: false,

@@ -43,7 +43,7 @@
             'at' => ($conversation->last_message_at ?? $conversation->created_at)->diffForHumans(),
             'title' => $booking?->lesson?->name ?? $booking?->subject?->name ?? __('Tutoring lesson'),
             'schedule' => $booking?->starts_at
-                ? $booking->starts_at->copy()->setTimezone($timezone)->format('D d M Y, H:i')
+                ? display_datetime($booking->starts_at->copy()->setTimezone($timezone), 'D d M Y')
                 : null,
             'preview' => $preview,
             'previewSystem' => $previewSystem,

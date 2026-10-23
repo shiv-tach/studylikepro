@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Models\Subject;
 use App\Models\TeacherProfile;
 use App\Support\BookingDraft;
+use App\Support\TimeFormat;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -64,7 +65,7 @@ class BookingService
             $grouped[$label->toDateString()][] = [
                 'starts_at' => $slot['starts_at'],
                 'ends_at' => $slot['ends_at'],
-                'label' => $label->format('H:i'),
+                'label' => $label->format(TimeFormat::TIME),
             ];
         }
 

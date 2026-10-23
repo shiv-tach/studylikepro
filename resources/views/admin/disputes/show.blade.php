@@ -48,7 +48,7 @@
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Raised') }}</dt>
-                        <dd class="mt-1 text-sm text-slate-700 dark:text-slate-200">{{ $dispute->created_at->copy()->setTimezone($timezone)->format('d M Y, H:i') }}</dd>
+                        <dd class="mt-1 text-sm text-slate-700 dark:text-slate-200">{{ display_datetime($dispute->created_at->copy()->setTimezone($timezone)) }}</dd>
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Reported by') }}</dt>
@@ -93,7 +93,7 @@
                         <div>
                             <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Closed') }}</dt>
                             <dd class="mt-1 text-slate-700 dark:text-slate-200">
-                                {{ $dispute->resolved_at?->copy()->setTimezone($timezone)->format('d M Y, H:i') }}
+                                {{ display_datetime($dispute->resolved_at?->copy()->setTimezone($timezone)) }}
                                 @if ($dispute->resolvedBy) · {{ $dispute->resolvedBy->name }} @endif
                             </dd>
                         </div>
@@ -149,7 +149,7 @@
                     </div>
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('When') }}</p>
-                        <p class="mt-1 text-sm text-slate-700 dark:text-slate-200">{{ $booking->starts_at->copy()->setTimezone($timezone)->format('d M Y, H:i') }}</p>
+                        <p class="mt-1 text-sm text-slate-700 dark:text-slate-200">{{ display_datetime($booking->starts_at->copy()->setTimezone($timezone)) }}</p>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
                             <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold {{ $booking->status->badgeClasses() }}">{{ $booking->status->label() }}</span>
                         </p>
@@ -186,7 +186,7 @@
                         <li class="text-sm">
                             <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">
                                 {{ $message->isSystem() ? __('Studylikepro') : ($message->sender?->name ?? __('Unknown')) }}
-                                · {{ $message->created_at->copy()->setTimezone($timezone)->format('d M Y, H:i') }}
+                                · {{ display_datetime($message->created_at->copy()->setTimezone($timezone)) }}
                             </p>
                             <p class="mt-0.5 whitespace-pre-line {{ $message->isSystem() ? 'italic text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-200' }}">{{ $message->body }}</p>
                         </li>

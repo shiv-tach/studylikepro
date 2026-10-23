@@ -36,7 +36,7 @@
                         {{ $booking->subject?->name }}@if ($booking->lesson) · {{ $booking->lesson->name }}@endif
                     </p>
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        {{ $booking->starts_at->copy()->setTimezone($timezone)->format('D d M Y, H:i') }}–{{ $booking->ends_at->copy()->setTimezone($timezone)->format('H:i') }}
+                        {{ display_datetime($booking->starts_at->copy()->setTimezone($timezone), 'D d M Y') }}–{{ display_time($booking->ends_at->copy()->setTimezone($timezone)) }}
                         · {{ $booking->durationMinutes() }} {{ __('minutes') }}
                     </p>
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">

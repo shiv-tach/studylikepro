@@ -272,7 +272,7 @@
                             <p class="text-lg font-extrabold text-slate-800 dark:text-slate-100">@if ($ratesFrom)<span class="text-xs font-medium text-slate-400">{{ __('from') }} </span>@endif{{ $money($cardRate) }}<span class="text-sm font-medium text-slate-400">/hr</span></p>
                             <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                                 @if ($nextSlot)
-                                    Next: {{ $nextSlot['starts_at']->setTimezone($viewerTz)->format('D d M · H:i') }}
+                                    Next: {{ display_datetime($nextSlot['starts_at']->setTimezone($viewerTz), 'D d M', ' · ') }}
                                 @else
                                     No slots in the next 7 days
                                 @endif

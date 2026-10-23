@@ -70,7 +70,7 @@
                     <div>
                         <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('When') }}</dt>
                         <dd class="mt-1 text-sm text-slate-700 dark:text-slate-200">
-                            {{ $booking->starts_at->copy()->setTimezone($timezone)->format('d M Y, H:i') }}
+                            {{ display_datetime($booking->starts_at->copy()->setTimezone($timezone)) }}
                             <p class="text-xs text-slate-400">{{ $booking->durationMinutes() }} {{ __('min') }}</p>
                         </dd>
                     </div>
@@ -182,7 +182,7 @@
                                 <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ $step['label'] }}</p>
                                 <p class="text-xs text-slate-500 dark:text-slate-400">
                                     @if ($step['at'])
-                                        {{ $step['at']->copy()->setTimezone($timezone)->format('d M Y, H:i') }} ·
+                                        {{ display_datetime($step['at']->copy()->setTimezone($timezone)) }} ·
                                     @endif
                                     {{ $step['description'] }}
                                 </p>
@@ -287,7 +287,7 @@
                         <li class="text-sm">
                             <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">
                                 {{ $message->isSystem() ? __('Studylikepro') : ($message->sender?->name ?? __('Unknown')) }}
-                                · {{ $message->created_at->copy()->setTimezone($timezone)->format('d M Y, H:i') }}
+                                · {{ display_datetime($message->created_at->copy()->setTimezone($timezone)) }}
                             </p>
                             <p class="mt-0.5 whitespace-pre-line {{ $message->isSystem() ? 'italic text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-200' }}">
                                 {{ $message->body }}

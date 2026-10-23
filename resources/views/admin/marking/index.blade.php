@@ -56,7 +56,7 @@
                             </td>
                             <td class="px-3 py-3 text-xs text-slate-500 dark:text-slate-400">
                                 @if ($order->deadline_at)
-                                    <span class="{{ $order->isOverdue() ? 'font-semibold text-rose-500' : '' }}">{{ $order->deadline_at->format('d M Y, H:i') }}</span>
+                                    <span class="{{ $order->isOverdue() ? 'font-semibold text-rose-500' : '' }}">{{ display_datetime($order->deadline_at) }}</span>
                                 @else
                                     —
                                 @endif

@@ -7,7 +7,7 @@
             <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
                 {{ $step['label'] }}
                 @if ($step['at'])
-                    <span class="font-normal text-slate-400">· {{ $step['at']->copy()->setTimezone($timezone)->format('d M Y, H:i') }}</span>
+                    <span class="font-normal text-slate-400">· {{ display_datetime($step['at']->copy()->setTimezone($timezone)) }}</span>
                 @else
                     <span class="font-normal text-slate-400">· {{ __('pending') }}</span>
                 @endif

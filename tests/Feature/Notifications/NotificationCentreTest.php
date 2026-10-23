@@ -167,7 +167,7 @@ it('mentions today\'s lesson in the digest mail', function () {
     $scenario = classroomScenario();
 
     $mail = (new DailyDigest([
-        ['title' => '45 minute Mathematics lesson with Priya Verma', 'detail' => '17:00 (in about 2 hours)'],
+        ['title' => '45 minute Mathematics lesson with Priya Verma', 'detail' => '5:00 PM (in about 2 hours)'],
     ], 3, 1))->toMail($scenario['student']);
 
     $rendered = (string) $mail->render();

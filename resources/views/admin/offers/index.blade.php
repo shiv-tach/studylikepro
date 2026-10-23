@@ -16,8 +16,8 @@
     $feeCaption = $feeIsPercent
         ? __('of every lesson and service price.')
         : __('Charged to students on top of the lesson price.');
-    $window = fn ($offer) => ($offer->starts_at?->copy()->setTimezone($displayTimezone)->format('d M Y, H:i') ?? 'Always')
-        .' → '.($offer->ends_at?->copy()->setTimezone($displayTimezone)->format('d M Y, H:i') ?? 'Until switched off');
+    $window = fn ($offer) => (display_datetime($offer->starts_at?->copy()->setTimezone($displayTimezone)) ?? 'Always')
+        .' → '.(display_datetime($offer->ends_at?->copy()->setTimezone($displayTimezone)) ?? 'Until switched off');
 
     // Where an offer sits relative to its window, for the list badge.
     $status = function ($offer) {

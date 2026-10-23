@@ -90,7 +90,7 @@ const nextFreeLabel = computed(() =>
 );
 
 const dayTabClass = (day) => [
-    'w-[4.75rem] shrink-0 rounded-xl border px-2 py-2 text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+    'min-w-[4.75rem] shrink-0 whitespace-nowrap rounded-xl border px-2 py-2 text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
     day.date === selectedDate.value
         ? 'border-primary bg-primary/10'
         : 'border-slate-200 bg-white hover:border-primary/40 dark:border-slate-800 dark:bg-slate-900',

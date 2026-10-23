@@ -17,7 +17,7 @@
     $lessonSummary = $lesson
         ? [
             'title' => $lessonTitle,
-            'schedule' => $lesson->starts_at->copy()->setTimezone($timezone)->format('D d M Y, H:i'),
+            'schedule' => display_datetime($lesson->starts_at->copy()->setTimezone($timezone), 'D d M Y'),
             'url' => route($bookingsRoute, $lesson),
         ]
         : null;

@@ -103,7 +103,7 @@
                             <tr>
                                 <td class="px-6 py-4">
                                     <p class="font-mono text-xs text-slate-700 dark:text-slate-200">{{ $payout->reference }}</p>
-                                    <p class="text-xs text-slate-400">{{ $payout->created_at->format('d M Y, H:i') }}</p>
+                                    <p class="text-xs text-slate-400">{{ display_datetime($payout->created_at) }}</p>
                                 </td>
                                 <td class="px-6 py-4 text-slate-700 dark:text-slate-200">{{ $payout->teacherProfile->user->name }}</td>
                                 <td class="px-6 py-4 text-slate-600 dark:text-slate-300">{{ $payout->lessons_count }}</td>

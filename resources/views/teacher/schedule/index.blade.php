@@ -112,7 +112,7 @@
                                     <div class="min-w-0">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <x-booking-status-badge :status="$booking->status" />
-                                            <span class="text-xs text-slate-400">{{ $booking->starts_at->copy()->setTimezone($timezone)->format('D d M Y, H:i') }}</span>
+                                            <span class="text-xs text-slate-400">{{ display_datetime($booking->starts_at->copy()->setTimezone($timezone), 'D d M Y') }}</span>
                                         </div>
                                         <p class="mt-1 truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
                                             {{ $booking->learner_name ?: $booking->student->name }}

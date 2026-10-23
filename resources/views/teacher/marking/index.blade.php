@@ -55,7 +55,7 @@
                     </div>
                     <div class="text-right text-xs text-slate-400">
                         @if ($deadline = $order->deadlineAt())
-                            <p>{{ __('Due :time', ['time' => $deadline->format('d M, H:i')]) }}</p>
+                            <p>{{ __('Due :time', ['time' => display_datetime($deadline, 'd M')]) }}</p>
                         @endif
                     </div>
                 </div>

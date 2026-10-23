@@ -43,8 +43,8 @@
             'reviewPrompt' => $booking->status === BookingStatus::Completed && $booking->review === null,
             'title' => $title,
             'subtitle' => __('with :name', ['name' => $booking->teacherProfile->user->name]),
-            'startsLabel' => $booking->starts_at->copy()->setTimezone($timezone)->format('D d M, H:i'),
-            'endsLabel' => $booking->ends_at->copy()->setTimezone($timezone)->format('H:i'),
+            'startsLabel' => display_datetime($booking->starts_at->copy()->setTimezone($timezone), 'D d M'),
+            'endsLabel' => display_time($booking->ends_at->copy()->setTimezone($timezone)),
             'amountLabel' => __('Total'),
             'amount' => $money($booking->totalMinor()),
         ];
@@ -157,7 +157,7 @@
                         </h3>
                         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                             {{ __('with :name', ['name' => $booking->teacherProfile->user->name]) }}
-                            · {{ $booking->starts_at->copy()->setTimezone($timezone)->format('D d M, H:i') }}–{{ $booking->ends_at->copy()->setTimezone($timezone)->format('H:i') }}
+                            · {{ display_datetime($booking->starts_at->copy()->setTimezone($timezone), 'D d M') }}–{{ display_time($booking->ends_at->copy()->setTimezone($timezone)) }}
                         </p>
                     </div>
                 @empty

@@ -28,7 +28,7 @@
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                         {{ __('Receipt #:ref · :date', [
                             'ref' => str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT),
-                            'date' => $payment->captured_at?->copy()->setTimezone($timezone)->format('d M Y, H:i') ?? $booking->created_at->format('d M Y'),
+                            'date' => display_datetime($payment->captured_at?->copy()->setTimezone($timezone)) ?? $booking->created_at->format('d M Y'),
                         ]) }}
                     </p>
                 </div>
@@ -47,7 +47,7 @@
                         {{ $booking->subject?->name }}@if ($booking->lesson) · {{ $booking->lesson->name }}@endif
                     </dd>
                     <dd class="text-slate-500 dark:text-slate-400">
-                        {{ $booking->starts_at->copy()->setTimezone($timezone)->format('D d M Y, H:i') }}–{{ $booking->ends_at->copy()->setTimezone($timezone)->format('H:i') }}
+                        {{ display_datetime($booking->starts_at->copy()->setTimezone($timezone), 'D d M Y') }}–{{ display_time($booking->ends_at->copy()->setTimezone($timezone)) }}
                         · {{ $booking->durationMinutes() }} {{ __('minutes') }}
                     </dd>
                 </div>

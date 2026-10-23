@@ -59,7 +59,7 @@
                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Lesson') }}</p>
                 <p class="mt-1 text-lg font-bold text-slate-800 dark:text-slate-100">{{ $lessonTitle }}</p>
                 <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    {{ __('with :name', ['name' => $teacher->name]) }} · {{ $booking->starts_at->copy()->setTimezone($timezone)->format('D d M Y, H:i') }}
+                    {{ __('with :name', ['name' => $teacher->name]) }} · {{ display_datetime($booking->starts_at->copy()->setTimezone($timezone), 'D d M Y') }}
                 </p>
             </div>
 

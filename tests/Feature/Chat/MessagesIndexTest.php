@@ -31,7 +31,7 @@ test('the inbox island carries the student perspective and the route map', funct
         ->and($thread['initials'])->toBe(mb_strtoupper(mb_substr($scenario['teacherUser']->name, 0, 2)))
         ->and($thread['unread'])->toBe(0)
         ->and($thread['unreadLabel'])->toBeNull()
-        ->and($thread['schedule'])->toMatch('/^[A-Z][a-z]{2} \d{2} [A-Z][a-z]{2} \d{4}, \d{2}:\d{2}$/')
+        ->and($thread['schedule'])->toMatch('/^[A-Z][a-z]{2} \d{2} [A-Z][a-z]{2} \d{4}, \d{1,2}:\d{2} [AP]M$/')
         ->and($thread['preview'])->toBe('No messages yet — say hello.')
         ->and($thread['previewEmpty'])->toBeTrue()
         ->and($thread['previewSystem'])->toBeFalse();

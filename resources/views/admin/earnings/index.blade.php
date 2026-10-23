@@ -225,7 +225,7 @@
                                 <td class="px-6 py-4">
                                     <p class="font-mono text-xs text-slate-700 dark:text-slate-200">{{ $payment->gateway_payment_id ?? $payment->gateway_order_id ?? '#'.$payment->id }}</p>
                                     <p class="text-xs text-slate-400">
-                                        {{ $payment->captured_at?->copy()->setTimezone($timezone)->format('d M Y, H:i') ?? $payment->created_at->format('d M Y, H:i') }}
+                                        {{ display_datetime($payment->captured_at?->copy()->setTimezone($timezone)) ?? display_datetime($payment->created_at) }}
                                     </p>
                                     <p class="text-xs text-slate-500 dark:text-slate-400">{{ $payment->student?->name }}</p>
                                 </td>

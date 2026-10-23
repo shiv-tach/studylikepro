@@ -17,7 +17,7 @@
 
         <div class="max-w-[80%]">
             <p class="text-xs text-slate-400 {{ $mine ? 'text-right' : '' }}">
-                {{ $mine ? __('You') : ($message->sender?->name ?? __('Someone')) }} · {{ $message->created_at->format('H:i') }}
+                {{ $mine ? __('You') : ($message->sender?->name ?? __('Someone')) }} · {{ display_time($message->created_at) }}
             </p>
 
             @if ($message->body)

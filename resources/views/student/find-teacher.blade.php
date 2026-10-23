@@ -50,8 +50,8 @@
             // prints the slot the teacher genuinely has open then.
             'availability' => $slot === null ? null : [
                 'label' => $dateFilter !== null
-                    ? __('Available :when', ['when' => $slot['starts_at']->setTimezone($viewerTz)->format('D d M · H:i')])
-                    : __('Next: :when', ['when' => $slot['starts_at']->setTimezone($viewerTz)->format('D d M · H:i')]),
+                    ? __('Available :when', ['when' => display_datetime($slot['starts_at']->setTimezone($viewerTz), 'D d M', ' · ')])
+                    : __('Next: :when', ['when' => display_datetime($slot['starts_at']->setTimezone($viewerTz), 'D d M', ' · ')]),
             ],
         ];
     })->values()->all();

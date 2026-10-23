@@ -232,7 +232,7 @@
                                 <td class="px-6 py-4 text-slate-600 dark:text-slate-300">
                                     {{ $user->isTeacher() ? $booking->student->name : $booking->teacherProfile->user->name }}
                                 </td>
-                                <td class="px-6 py-4 text-slate-600 dark:text-slate-300">{{ $booking->starts_at->copy()->setTimezone($timezone)->format('d M Y, H:i') }}</td>
+                                <td class="px-6 py-4 text-slate-600 dark:text-slate-300">{{ display_datetime($booking->starts_at->copy()->setTimezone($timezone)) }}</td>
                                 <td class="px-6 py-4">
                                     <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $booking->status->badgeClasses() }}">{{ $booking->status->label() }}</span>
                                 </td>

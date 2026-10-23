@@ -57,7 +57,7 @@
 
         <div class="text-right">
             <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                {{ $booking->starts_at->copy()->setTimezone($timezone)->format('D d M, H:i') }}–{{ $booking->ends_at->copy()->setTimezone($timezone)->format('H:i') }}
+                {{ display_datetime($booking->starts_at->copy()->setTimezone($timezone), 'D d M') }}–{{ display_time($booking->ends_at->copy()->setTimezone($timezone)) }}
             </p>
             <p class="mt-1 text-xs text-slate-400">{{ $amountLabel }} {{ $money($amount) }}</p>
         </div>

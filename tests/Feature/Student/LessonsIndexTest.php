@@ -71,8 +71,8 @@ test('a lesson card carries its status, teacher, time and total', function () {
     expect($card['reviewPrompt'])->toBeFalse();
     expect($card['amountLabel'])->toBe('Total');
     expect($card['amount'])->toBe(platform_settings()->formatMinor($booking->totalMinor()));
-    expect($card['startsLabel'])->toMatch('/^[A-Z][a-z]{2} \d{2} [A-Z][a-z]{2}, \d{2}:\d{2}$/');
-    expect($card['endsLabel'])->toMatch('/^\d{2}:\d{2}$/');
+    expect($card['startsLabel'])->toMatch('/^[A-Z][a-z]{2} \d{2} [A-Z][a-z]{2}, \d{1,2}:\d{2} [AP]M$/');
+    expect($card['endsLabel'])->toMatch('/^\d{1,2}:\d{2} [AP]M$/');
 });
 
 test('a held slot carries its payment countdown', function () {

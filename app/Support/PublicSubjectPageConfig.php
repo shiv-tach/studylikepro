@@ -120,7 +120,7 @@ final class PublicSubjectPageConfig
                 'rate' => $money($cardRate),
                 'rateFrom' => $grade === null && $cardRate < $teacher->effectiveRateFor($subject),
                 'nextSlot' => $nextSlot
-                    ? $nextSlot['starts_at']->setTimezone($viewerTz)->format('D d M · H:i')
+                    ? $nextSlot['starts_at']->setTimezone($viewerTz)->format('D d M · '.TimeFormat::TIME)
                     : null,
                 // Guests are pointed at sign-up, a signed-in teacher or admin at
                 // the profile itself, and only a student who may book gets the

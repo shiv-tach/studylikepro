@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\User;
 use App\Notifications\DailyDigest;
 use App\Services\ConversationService;
+use App\Support\TimeFormat;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
@@ -92,7 +93,7 @@ class SendDailyDigest extends Command
 
             return [
                 'title' => sprintf('%.0f minute%s %s with %s', $booking->durationMinutes(), $booking->durationMinutes() === 1 ? '' : 's', $lesson, $with),
-                'detail' => $startsAt->format('H:i').($hoursAway > 0 ? ' (in about '.$hoursAway.' hour'.($hoursAway === 1 ? '' : 's').')' : ' (now)'),
+                'detail' => $startsAt->format(TimeFormat::TIME).($hoursAway > 0 ? ' (in about '.$hoursAway.' hour'.($hoursAway === 1 ? '' : 's').')' : ' (now)'),
             ];
         })->values()->all();
     }

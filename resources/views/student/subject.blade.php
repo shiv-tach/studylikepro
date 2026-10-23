@@ -119,7 +119,7 @@
             'rate' => $money($cardRate),
             'rateFrom' => $rateFrom,
             'nextSlot' => $nextSlot
-                ? $nextSlot['starts_at']->setTimezone($viewerTz)->format('D d M · H:i')
+                ? display_datetime($nextSlot['starts_at']->setTimezone($viewerTz), 'D d M', ' · ')
                 : null,
             'canBook' => $user->can('create', [\App\Models\Booking::class, $teacher]),
             'bookUrl' => route('student.bookings.create', [

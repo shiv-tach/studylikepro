@@ -13,9 +13,9 @@
         ? ($booking->learner_name ?: $booking->student->name)
         : $booking->teacherProfile->user->name;
     $startLabel = $booking->starts_at->copy()->setTimezone($timezone)->format('D d M Y');
-    $startTime = $booking->starts_at->copy()->setTimezone($timezone)->format('H:i');
-    $endTime = $booking->ends_at->copy()->setTimezone($timezone)->format('H:i');
-    $openTime = $booking->joinOpensAt()->copy()->setTimezone($timezone)->format('H:i');
+    $startTime = display_time($booking->starts_at->copy()->setTimezone($timezone));
+    $endTime = display_time($booking->ends_at->copy()->setTimezone($timezone));
+    $openTime = display_time($booking->joinOpensAt()->copy()->setTimezone($timezone));
 
     $state = match (true) {
         ! $isLive => 'lesson_over',
@@ -61,7 +61,7 @@
                 <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('This classroom has closed') }}</h3>
                 <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
                     @if ($booking->status === BookingStatus::Completed)
-                        {{ __('The lesson was delivered on :date. You can find the receipt and the lesson record on the lesson page.', ['date' => $booking->completed_at?->copy()->setTimezone($timezone)->format('d M Y, H:i') ?? $startLabel]) }}
+                        {{ __('The lesson was delivered on :date. You can find the receipt and the lesson record on the lesson page.', ['date' => display_datetime($booking->completed_at?->copy()->setTimezone($timezone)) ?? $startLabel]) }}
                     @elseif ($booking->status === BookingStatus::NoShow)
                         {{ __('The lesson was marked as a no-show, so no classroom was used. Our team can review what happened.') }}
                     @elseif ($booking->status === BookingStatus::Cancelled)
@@ -87,7 +87,7 @@
                             {{ $isTeacher ? __('Your student :name is ready to join.', ['name' => $counterpart]) : __('Your teacher :name is waiting for you.', ['name' => $counterpart]) }}
                         </p>
                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            {{ $startTime }}–{{ $endTime }} · {{ $booking->durationMinutes() }} {{ __('minutes') }} · {{ __('link live until :time', ['time' => $booking->joinClosesAt()->copy()->setTimezone($timezone)->format('H:i')]) }}
+                            {{ $startTime }}–{{ $endTime }} · {{ $booking->durationMinutes() }} {{ __('minutes') }} · {{ __('link live until :time', ['time' => display_time($booking->joinClosesAt()->copy()->setTimezone($timezone))]) }}
                         </p>
                     </div>
                 </div>

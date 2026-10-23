@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\MessageType;
+use App\Support\TimeFormat;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -72,7 +73,7 @@ class Message extends Model
             'sender' => $this->isSystem() ? null : ($this->sender?->name ?? 'Someone'),
             'body' => $this->body,
             'attachment_url' => $this->attachmentUrl(),
-            'at' => $this->created_at->format('H:i'),
+            'at' => $this->created_at->format(TimeFormat::TIME),
             'day' => $this->created_at->toDateString(),
             'created_at' => $this->created_at->toIso8601String(),
         ];

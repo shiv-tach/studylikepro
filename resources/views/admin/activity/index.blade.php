@@ -68,7 +68,7 @@
                         @forelse ($entries as $entry)
                             <tr>
                                 <td class="px-6 py-4 whitespace-nowrap text-slate-500 dark:text-slate-400">
-                                    {{ $entry->created_at->format('d M Y, H:i') }}
+                                    {{ display_datetime($entry->created_at) }}
                                     <p class="text-xs text-slate-400">{{ $entry->created_at->diffForHumans() }}</p>
                                 </td>
                                 <td class="px-6 py-4">

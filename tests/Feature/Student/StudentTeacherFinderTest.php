@@ -320,6 +320,43 @@ test('a student only sees their own grade on the dedicated teacher page', functi
     expect(json_encode($config))->not->toContain(platform_settings()->formatMinor(90000));
 });
 
+test('the dedicated teacher page groups the open slots into a day rail', function () {
+    $student = finderStudent(8);
+    $teacher = gradeSplitTeacher();
+
+    // Four open weekdays, so the rail has more days than it may show.
+    foreach ([2, 3, 4, 5] as $weekday) {
+        TeacherAvailabilitySlot::factory()->on($weekday, '18:00', '20:00')->create(['teacher_profile_id' => $teacher->id]);
+    }
+
+    $config = teacherProfileConfig(
+        $this->actingAs($student)->get(route('student.teachers.show', $teacher))->assertOk()
+    );
+
+    $availability = $config['availability'];
+
+    expect($availability['empty'])->toBeFalse();
+    expect($availability['timezoneLabel'])->toBe('Your time (Asia/Colombo)');
+
+    // Only the nearest open days are offered, matching the booking picker.
+    expect($availability['days'])->toHaveCount(3);
+    expect(array_column($availability['days'], 'date'))
+        ->toBe(['2026-06-02', '2026-06-03', '2026-06-04']);
+
+    // Each day carries what the rail renders: the tab labels, the day heading
+    // and its own times.
+    expect($availability['days'][0])->toHaveKeys([
+        'date', 'label', 'weekday', 'dayNumber', 'month', 'fullLabel',
+        'isToday', 'isTomorrow', 'slotCountLabel', 'slots',
+    ]);
+    expect($availability['days'][0]['slotCountLabel'])->toMatch('/^\d+ slots?$/');
+    expect($availability['days'][0]['slots'][0])->toHaveKeys(['value', 'label']);
+    expect($availability['days'][0]['slots'][0]['label'])->toMatch('/^\d{1,2}:\d{2} [AP]M$/');
+
+    expect($config['copy']['nextFree'])->toBe('Next free');
+    expect($config['copy']['dayPickerLabel'])->toBe('Choose a day');
+});
+
 test('a guest still sees every grade on the public teacher page', function () {
     $teacher = gradeSplitTeacher();
 
@@ -617,7 +654,7 @@ test('a finder card carries the grade rate, the rating and the next open slot', 
     expect($card['subjects'][0])->toContain('Mathematics');
     expect($card['extraSubjects'])->toBe(0);
     expect($card['metaLabel'])->toContain('Grade 11')->toContain('1 lesson');
-    expect($card['availability']['label'])->toMatch('/^Next: \w{3} \d{2} \w{3} · \d{2}:\d{2}$/');
+    expect($card['availability']['label'])->toMatch('/^Next: \w{3} \d{2} \w{3} · \d{1,2}:\d{2} [AP]M$/');
 });
 
 test('a finder card without a rating or an open slot says so', function () {
@@ -661,7 +698,7 @@ test('a picked day turns the card slot into "available" and counts as a filter',
     expect($config['filters']['date'])->toBe($tuesday->toDateString());
     expect($config['filters']['time_from'])->toBe('18:30');
     expect($config['teachers'][0]['availability']['label'])
-        ->toMatch('/^Available \w{3} \d{2} \w{3} · \d{2}:\d{2}$/');
+        ->toMatch('/^Available \w{3} \d{2} \w{3} · \d{1,2}:\d{2} [AP]M$/');
 });
 
 test('the finder island switches to the day-filtered empty state', function () {

@@ -4,6 +4,7 @@ namespace App\Notifications\Concerns;
 
 use App\Models\Booking;
 use App\Models\User;
+use App\Support\TimeFormat;
 
 trait FormatsBookingTimes
 {
@@ -22,8 +23,8 @@ trait FormatsBookingTimes
         $startsAt = $booking->starts_at->copy()->setTimezone($this->timezoneFor($notifiable));
         $endsAt = $booking->ends_at->copy()->setTimezone($this->timezoneFor($notifiable));
 
-        $format = $withDate ? 'D d M Y, H:i' : 'H:i';
+        $format = $withDate ? 'D d M Y, '.TimeFormat::TIME : TimeFormat::TIME;
 
-        return $startsAt->format($format).'–'.$endsAt->format('H:i');
+        return $startsAt->format($format).'–'.$endsAt->format(TimeFormat::TIME);
     }
 }

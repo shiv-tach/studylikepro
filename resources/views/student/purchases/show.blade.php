@@ -172,7 +172,7 @@
     $sessions = $purchase->sessions->map(fn ($session) => [
         'id' => $session->id,
         'url' => route('student.bookings.show', $session),
-        'when' => $session->starts_at->copy()->setTimezone($timezone)->format('D, d M Y · H:i'),
+        'when' => display_datetime($session->starts_at->copy()->setTimezone($timezone), 'D, d M Y', ' · '),
         'durationLabel' => __(':minutes min', ['minutes' => $session->durationMinutes()]),
         // The scope line is dropped when there is nothing to name it by.
         'scope' => collect([$session->subject?->name, $session->lesson?->name])->filter()->implode(' · ') ?: null,
@@ -196,7 +196,7 @@
             // money is outstanding, a validity date once the purchase is live.
             'expiry' => $purchase->expires_at === null ? null : [
                 'label' => $isPending ? __('Payment hold until') : __('Valid until'),
-                'value' => $purchase->expires_at->copy()->setTimezone($timezone)->format('d M Y, H:i'),
+                'value' => display_datetime($purchase->expires_at->copy()->setTimezone($timezone)),
             ],
             'price' => [
                 'label' => __('Total price'),
@@ -207,7 +207,7 @@
             ],
             'payment' => $capturedPayment === null ? null : [
                 'label' => __('Paid :when via :gateway', [
-                    'when' => $capturedPayment->captured_at?->setTimezone($timezone)->format('d M Y, H:i'),
+                    'when' => display_datetime($capturedPayment->captured_at?->setTimezone($timezone)),
                     'gateway' => $capturedPayment->gateway,
                 ]),
             ],

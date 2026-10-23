@@ -11,7 +11,7 @@
     $themePreset = $userTheme['preset'] ?? 'classic';
     $money = fn (int $minor) => platform_settings()->formatMinor($minor);
     $timezone = config('studylikepro.default_display_timezone');
-    $date = fn ($moment) => $moment?->copy()->setTimezone($timezone)->format('d M Y, H:i');
+    $date = fn ($moment) => display_datetime($moment?->copy()->setTimezone($timezone));
 
     $typeIcons = [
         ServiceType::Lesson->value => 'graduation',
@@ -75,7 +75,7 @@
     $sessionRows = $sessions->map(fn ($session) => [
         'id' => $session->id,
         'url' => route('teacher.bookings.show', $session),
-        'when' => $session->starts_at->copy()->setTimezone($timezone)->format('D, d M Y · H:i'),
+        'when' => display_datetime($session->starts_at->copy()->setTimezone($timezone), 'D, d M Y', ' · '),
         'durationLabel' => __(':minutes min', ['minutes' => $session->durationMinutes()]),
         'learnerName' => $session->learner_name ?: $purchase->student->name,
         'scope' => collect([$session->subject?->name, $session->lesson?->name])->filter()->implode(' · ') ?: null,

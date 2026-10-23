@@ -10,18 +10,42 @@
     $ratingCount = (int) $teacher->rating_count;
     $ratingAvg = $ratingCount > 0 ? number_format((float) $teacher->rating_avg, 1) : null;
 
+    // Slot groups, each already labelled in the viewer's timezone. Only the
+    // teacher's nearest open days arrive here, so the panel stays a day rail:
+    // pick a day, then read its times.
+    $today = \Carbon\CarbonImmutable::now($viewerTz);
+    $todayDate = $today->toDateString();
+    $tomorrowDate = $today->addDay()->toDateString();
+
     $slotsByDate = [];
     foreach ($availability as $slot) {
         $local = $slot['starts_at']->setTimezone($viewerTz);
         $slotsByDate[$local->toDateString()][] = $local;
     }
-    $slotsByDate = array_slice($slotsByDate, 0, 7, true);
+
+    // The panel is a quick glance, not a calendar: keep the same nearest-open-
+    // days window the booking page's picker uses.
+    $quickPickDays = (int) config('studylikepro.booking.quick_pick_days');
+    $slotsByDate = $quickPickDays > 0 ? array_slice($slotsByDate, 0, $quickPickDays, true) : $slotsByDate;
 
     $availabilityDays = [];
     foreach ($slotsByDate as $date => $slots) {
+        $day = \Carbon\CarbonImmutable::parse($date, $viewerTz);
+
         $availabilityDays[] = [
-            'label' => \Carbon\CarbonImmutable::parse($date)->format('D, d M'),
-            'slots' => array_map(fn ($slot) => $slot->format('H:i'), $slots),
+            'date' => (string) $date,
+            'label' => $day->format('D, d M'),
+            'weekday' => $day->format('D'),
+            'dayNumber' => $day->format('j'),
+            'month' => $day->format('M'),
+            'fullLabel' => $day->format('l, j F'),
+            'isToday' => (string) $date === $todayDate,
+            'isTomorrow' => (string) $date === $tomorrowDate,
+            'slotCountLabel' => trans_choice(':count slot|:count slots', count($slots)),
+            'slots' => array_map(fn ($slot) => [
+                'value' => $slot->toIso8601String(),
+                'label' => display_time($slot),
+            ], $slots),
         ];
     }
 
@@ -132,6 +156,8 @@
             'timezoneLabel' => __('Your time (:timezone)', ['timezone' => $viewerTz]),
             'empty' => $availabilityDays === [],
             'days' => $availabilityDays,
+            'windowNotice' => __('Your nearest open days — pick a day to see its times.'),
+            'timezoneNotice' => __('All times are in :timezone.', ['timezone' => $viewerTz]),
         ],
         'reviews' => [
             'count' => $ratingCount,
@@ -189,6 +215,10 @@
             'servicesTagline' => __('prices set by the teacher'),
             'availabilityTitle' => __('Availability'),
             'noSlots' => __('No open slots in the next two weeks — check back soon.'),
+            'today' => __('Today'),
+            'tomorrow' => __('Tomorrow'),
+            'dayPickerLabel' => __('Choose a day'),
+            'nextFree' => __('Next free'),
             'reviewsTitle' => __('Student reviews'),
             'noReviews' => __('No reviews yet — this teacher is new to Studylikepro.'),
             'outOfFive' => __(':rating out of 5'),

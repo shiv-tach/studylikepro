@@ -203,7 +203,7 @@ final class TeacherScheduleConfig
             $items[] = self::priorityItem(60, 'hold_expiring', self::holdCard($booking, $timezone, $earlyMinutes), [
                 'eyebrow' => __('Payment time nearly up'),
                 'body' => __('The slot is reserved until :time. If the student does not pay, the slot is released.', [
-                    'time' => $booking->expires_at->copy()->setTimezone($timezone)->format('H:i'),
+                    'time' => $booking->expires_at->copy()->setTimezone($timezone)->format(TimeFormat::TIME),
                 ]),
                 'tone' => 'amber',
             ]);
@@ -375,9 +375,9 @@ final class TeacherScheduleConfig
             'title' => $title !== '' ? $title : __('Tutoring lesson'),
             'durationLabel' => $booking->durationMinutes().' '.__('min'),
             'startsAt' => $starts->toIso8601String(),
-            'startsLabel' => $starts->format('D d M, H:i'),
-            'timeLabel' => $starts->format('H:i'),
-            'endTimeLabel' => $ends->format('H:i'),
+            'startsLabel' => $starts->format('D d M, '.TimeFormat::TIME),
+            'timeLabel' => $starts->format(TimeFormat::TIME),
+            'endTimeLabel' => $ends->format(TimeFormat::TIME),
             'payoutLabel' => platform_settings()->formatMinor((int) $booking->teacher_payout_minor),
             'joinUrl' => $booking->canJoinNow() ? route('classroom.show', $booking) : null,
             'canJoin' => $booking->canJoinNow(),
@@ -406,7 +406,7 @@ final class TeacherScheduleConfig
             'payByLabel' => $booking->expires_at?->isFuture()
                 ? __('Pay within :time', ['time' => $booking->expires_at->diffForHumans()])
                 : null,
-            'expiresLabel' => $booking->expires_at?->copy()->setTimezone($timezone)->format('H:i'),
+            'expiresLabel' => $booking->expires_at?->copy()->setTimezone($timezone)->format(TimeFormat::TIME),
         ];
     }
 
@@ -425,7 +425,7 @@ final class TeacherScheduleConfig
             'statusLabel' => $booking->status->label(),
             'statusTone' => self::tone($booking->status),
             'dateLabel' => $starts->format('D d M'),
-            'timeLabel' => $starts->format('H:i'),
+            'timeLabel' => $starts->format(TimeFormat::TIME),
             'learnerName' => $learner,
             'learnerInitials' => self::initials($learner),
             'learnerGrade' => $booking->learnerGrade?->label,

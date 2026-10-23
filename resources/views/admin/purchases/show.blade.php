@@ -67,7 +67,7 @@
                     @foreach ($purchase->sessions as $session)
                         <li class="flex items-center justify-between gap-3 py-2.5 text-sm">
                             <a href="{{ route('admin.bookings.show', $session) }}" class="font-semibold text-slate-700 hover:text-primary dark:text-slate-200">
-                                {{ $session->starts_at->copy()->setTimezone($timezone)->format('D, d M Y · H:i') }} · {{ $session->durationMinutes() }} {{ __('min') }}
+                                {{ display_datetime($session->starts_at->copy()->setTimezone($timezone), 'D, d M Y', ' · ') }} · {{ $session->durationMinutes() }} {{ __('min') }}
                             </a>
                             <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $session->status->badgeClasses() }}">{{ $session->status->label() }}</span>
                         </li>
@@ -83,7 +83,7 @@
                     <li class="flex items-center justify-between gap-3 py-2.5 text-sm">
                         <div>
                             <p class="font-semibold text-slate-700 dark:text-slate-200">{{ $money($payment->amount_minor) }} · {{ $payment->gateway }}</p>
-                            <p class="text-xs text-slate-400">{{ $payment->captured_at?->copy()->setTimezone($timezone)->format('d M Y, H:i') ?? __('not captured') }}</p>
+                            <p class="text-xs text-slate-400">{{ display_datetime($payment->captured_at?->copy()->setTimezone($timezone)) ?? __('not captured') }}</p>
                         </div>
                         <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $payment->status->badgeClasses() }}">{{ $payment->status->label() }}</span>
                     </li>

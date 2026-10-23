@@ -233,8 +233,8 @@ final class PublicTeacherPageConfig
             $startsAt = $slot['starts_at']->setTimezone($timezone);
             $byDate[$startsAt->toDateString()][] = [
                 'iso' => $startsAt->toIso8601String(),
-                'time' => $startsAt->format('H:i'),
-                'endTime' => $slot['ends_at']->setTimezone($timezone)->format('H:i'),
+                'time' => $startsAt->format(TimeFormat::TIME),
+                'endTime' => $slot['ends_at']->setTimezone($timezone)->format(TimeFormat::TIME),
             ];
         }
 
@@ -262,8 +262,8 @@ final class PublicTeacherPageConfig
             'start' => $window['start']->toIso8601String(),
             'end' => $window['end']->toIso8601String(),
             'dayLabel' => self::dayLabel($window['start']->setTimezone($timezone)->toDateString(), $today, $tomorrow),
-            'startTime' => $window['start']->setTimezone($timezone)->format('H:i'),
-            'endTime' => $window['end']->setTimezone($timezone)->format('H:i'),
+            'startTime' => $window['start']->setTimezone($timezone)->format(TimeFormat::TIME),
+            'endTime' => $window['end']->setTimezone($timezone)->format(TimeFormat::TIME),
         ], $windows);
 
         $slotCount = count($slots);

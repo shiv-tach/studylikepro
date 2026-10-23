@@ -44,7 +44,7 @@
                 <div>
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Deadline') }}</dt>
                     <dd class="mt-1 {{ $order->isOverdue() ? 'font-semibold text-rose-500' : 'font-semibold text-slate-700 dark:text-slate-200' }}">
-                        {{ $order->deadline_at?->copy()->setTimezone($timezone)->format('d M Y, H:i') ?? '—' }}
+                        {{ display_datetime($order->deadline_at?->copy()->setTimezone($timezone)) ?? '—' }}
                         @if ($order->isOverdue()) · {{ __('overdue') }} @endif
                     </dd>
                 </div>
@@ -52,15 +52,15 @@
             <dl class="mt-4 grid gap-4 border-t border-slate-200 pt-4 text-sm sm:grid-cols-3 dark:border-slate-800">
                 <div>
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Submitted') }}</dt>
-                    <dd class="mt-1 text-slate-600 dark:text-slate-300">{{ $order->submitted_at?->copy()->setTimezone($timezone)->format('d M Y, H:i') ?? '—' }}</dd>
+                    <dd class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ display_datetime($order->submitted_at?->copy()->setTimezone($timezone)) ?? '—' }}</dd>
                 </div>
                 <div>
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Returned') }}</dt>
-                    <dd class="mt-1 text-slate-600 dark:text-slate-300">{{ $order->returned_at?->copy()->setTimezone($timezone)->format('d M Y, H:i') ?? '—' }}</dd>
+                    <dd class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ display_datetime($order->returned_at?->copy()->setTimezone($timezone)) ?? '—' }}</dd>
                 </div>
                 <div>
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Paid') }}</dt>
-                    <dd class="mt-1 text-slate-600 dark:text-slate-300">{{ $order->purchase->paid_at?->copy()->setTimezone($timezone)->format('d M Y, H:i') ?? '—' }}</dd>
+                    <dd class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ display_datetime($order->purchase->paid_at?->copy()->setTimezone($timezone)) ?? '—' }}</dd>
                 </div>
             </dl>
         </div>

@@ -8,6 +8,7 @@ use App\Events\BookingCreated;
 use App\Models\Booking;
 use App\Models\ServicePurchase;
 use App\Models\TeacherProfile;
+use App\Support\TimeFormat;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -132,7 +133,7 @@ class SessionSchedulingService
             $grouped[$label->toDateString()][] = [
                 'starts_at' => $slot['starts_at'],
                 'ends_at' => $slot['ends_at'],
-                'label' => $label->format('H:i'),
+                'label' => $label->format(TimeFormat::TIME),
             ];
         }
 
