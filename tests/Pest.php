@@ -251,6 +251,23 @@ function teacherAvailabilityConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the teacher reviews page renders its summary, star
+ * distribution, review cards and report dialog from.
+ *
+ * @return array<string, mixed>
+ */
+function teacherReviewsConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="teacher-reviews-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Read the config island the "My purchases" page renders its cards from.
  *
  * @return array<string, mixed>

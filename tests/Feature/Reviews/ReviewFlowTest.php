@@ -278,11 +278,83 @@ it('shows the teacher their reviews with the rating summary', function () {
     $this->actingAs($scenario['student'])
         ->post(route('student.reviews.store', $scenario['booking']), ['rating' => 5, 'comment' => 'Superb lesson.']);
 
-    $this->actingAs($scenario['teacherUser'])
+    $review = Review::query()->firstOrFail();
+
+    $response = $this->actingAs($scenario['teacherUser'])
         ->get(route('teacher.reviews.index'))
-        ->assertOk()
-        ->assertSee('Superb lesson.')
-        ->assertSee('5.0')
+        ->assertOk();
+
+    $config = teacherReviewsConfig($response);
+
+    expect($config['stats']['rating'])->toBe('5.0')
+        ->and($config['stats']['ratingCount'])->toBe(1)
+        ->and($config['stats']['lessons'])->toBe(1)
+        ->and($config['breakdown']['total'])->toBe(1)
+        ->and($config['breakdown']['rows'][0])->toMatchArray(['star' => 5, 'count' => 1, 'percent' => 100])
+        ->and($config['reviews'])->toHaveCount(1)
+        ->and($config['reviews'][0]['comment'])->toBe('Superb lesson.')
+        ->and($config['reviews'][0]['rating'])->toBe(5)
+        ->and($config['reviews'][0]['stars']['filled'])->toBe('★★★★★')
+        ->and($config['reviews'][0]['flagged'])->toBeFalse()
+        ->and($config['reviews'][0]['flagUrl'])->toBe(route('teacher.reviews.flag', $review))
+        ->and($config['flag']['reasons'])->toHaveCount(4)
+        ->and($config['flag']['openId'])->toBeNull()
+        ->and($config['urls']['profile'])->toContain('/teachers/');
+
+    // The no-JS twin carries the same facts.
+    $response->assertSee('Superb lesson.', false)
         ->assertSee('Rating breakdown')
         ->assertSee('Report this review');
+});
+
+it('drops the report action once a review is with support', function () {
+    $scenario = deliveredLesson();
+
+    $this->actingAs($scenario['student'])
+        ->post(route('student.reviews.store', $scenario['booking']), ['rating' => 2, 'comment' => 'Not for me.']);
+
+    $review = Review::query()->firstOrFail();
+
+    $this->actingAs($scenario['teacherUser'])
+        ->post(route('teacher.reviews.flag', $review), ['reason' => 'unfair']);
+
+    $config = teacherReviewsConfig(
+        $this->actingAs($scenario['teacherUser'])->get(route('teacher.reviews.index'))
+    );
+
+    expect($config['stats']['reported'])->toBe(1)
+        ->and($config['reviews'][0]['flagged'])->toBeTrue()
+        ->and($config['reviews'][0]['flagReasonLabel'])->toBe('It is unfair or inaccurate')
+        // Reporting twice is refused, so the card must not offer it again.
+        ->and($config['reviews'][0]['flagUrl'])->toBeNull()
+        // The redirect's confirmation now travels as a toast, not a banner.
+        ->and($config['notices'])->toHaveCount(1)
+        ->and($config['notices'][0]['tone'])->toBe('emerald');
+});
+
+it('replays a rejected report into the dialog it came from', function () {
+    $scenario = deliveredLesson();
+
+    $this->actingAs($scenario['student'])
+        ->post(route('student.reviews.store', $scenario['booking']), ['rating' => 3, 'comment' => 'It was fine.']);
+
+    $review = Review::query()->firstOrFail();
+
+    $this->actingAs($scenario['teacherUser'])
+        ->from(route('teacher.reviews.index'))
+        ->post(route('teacher.reviews.flag', $review), [
+            'reason' => 'not-a-reason',
+            'notes' => 'Kept for later',
+            'editing_review' => $review->id,
+        ])
+        ->assertRedirect(route('teacher.reviews.index'))
+        ->assertSessionHasErrors('reason');
+
+    $config = teacherReviewsConfig(
+        $this->actingAs($scenario['teacherUser'])->get(route('teacher.reviews.index'))
+    );
+
+    expect($config['flag']['openId'])->toBe($review->id)
+        ->and($config['flag']['notes'])->toBe('Kept for later')
+        ->and($config['flag']['errors']['reason'])->not->toBeNull();
 });

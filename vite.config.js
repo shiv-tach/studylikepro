@@ -80,6 +80,9 @@ export default defineConfig({
                 // One lesson at /teacher/schedule/{booking}: the next-step
                 // answer, the lesson flow and the money/timeline paperwork.
                 'resources/js/teacher-booking-show/main.js',
+                // What students said at /teacher/reviews: the rating summary,
+                // the star distribution, the comments and the report dialog.
+                'resources/js/teacher-reviews/main.js',
                 // The signed-in chrome (sidebar + top bar) that wraps every
                 // x-app-layout screen, so the layout itself is a Vue component.
                 'resources/js/app-shell/main.js',
