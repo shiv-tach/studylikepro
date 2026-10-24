@@ -4,12 +4,14 @@
  * the canvas markup: every pin, stamp and correction is reachable here, can be
  * located on the page and removed without touching the drawing.
  */
+import { nextTick, ref, watch } from 'vue';
 import { usePanel } from '../../../shared/composables/usePanel';
 import { useCopy } from '../../composables/usePageContext';
 
 const props = defineProps({
     rows: { type: Array, default: () => [] },
     currentKey: { type: String, default: '' },
+    selectedId: { type: String, default: null },
     copy: { type: Object, default: () => ({}) },
 });
 
@@ -17,6 +19,7 @@ const emit = defineEmits(['locate', 'remove']);
 
 const panel = usePanel();
 const copyAll = useCopy();
+const root = ref(null);
 
 function kindLabel(row) {
     if (row.kind === 'strokes') {
@@ -37,10 +40,34 @@ function kindLabel(row) {
 function rowKey(row) {
     return `${row.file}:${row.page}`;
 }
+
+// Selecting a mark on the paper should reveal its row here, not scroll the
+// whole page looking for it.
+watch(() => props.selectedId, async (id) => {
+    if (!id || !root.value) {
+        return;
+    }
+
+    await nextTick();
+
+    const list = root.value.querySelector('[data-feed-list]');
+    const row = root.value.querySelector(`[data-feed-row="${CSS.escape(id)}"]`);
+
+    if (!list || !row) {
+        return;
+    }
+
+    const rowRect = row.getBoundingClientRect();
+    const listRect = list.getBoundingClientRect();
+
+    if (rowRect.top < listRect.top || rowRect.bottom > listRect.bottom) {
+        list.scrollTop += rowRect.top - listRect.top - (list.clientHeight - rowRect.height) / 2;
+    }
+});
 </script>
 
 <template>
-    <section :class="panel" aria-labelledby="studio-feed-heading">
+    <section ref="root" :class="panel" aria-labelledby="studio-feed-heading">
         <div class="flex items-center justify-between gap-2">
             <h2 id="studio-feed-heading" class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ copy.title }}</h2>
             <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-300">{{ rows.length }}</span>
@@ -48,14 +75,17 @@ function rowKey(row) {
 
         <p v-if="rows.length === 0" class="mt-2 text-[11px] leading-snug text-slate-400">{{ copy.empty }}</p>
 
-        <ul v-else class="mt-2 max-h-72 space-y-1.5 overflow-y-auto pr-1">
+        <ul v-else data-feed-list class="mt-2 max-h-72 space-y-1.5 overflow-y-auto pr-1">
             <li
                 v-for="row in rows"
                 :key="row.id"
+                :data-feed-row="row.id"
                 class="group flex items-start gap-2 rounded-xl border px-2.5 py-2 transition-colors"
-                :class="rowKey(row) === currentKey
-                    ? 'border-primary/40 bg-primary/5'
-                    : 'border-slate-200/80 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50'"
+                :class="row.id === selectedId
+                    ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                    : rowKey(row) === currentKey
+                        ? 'border-primary/40 bg-primary/5'
+                        : 'border-slate-200/80 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50'"
             >
                 <button type="button" class="min-w-0 flex-1 text-left" @click="emit('locate', row)">
                     <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">

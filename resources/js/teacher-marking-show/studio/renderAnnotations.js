@@ -7,6 +7,26 @@
 const HIGHLIGHTER_ALPHA = 0.35;
 const FONT_STACK = '"Plus Jakarta Sans", Inter, system-ui, sans-serif';
 
+/** Stamp glyph height as a fraction of the page width. */
+export const DEFAULT_STAMP_SIZE = 0.024;
+export const MIN_STAMP_SIZE = 0.012;
+export const MAX_STAMP_SIZE = 0.08;
+
+/**
+ * The stamp's glyph size, clamped to what the paper and the server accept.
+ *
+ * @returns {number} fraction of the page width
+ */
+export function stampSizeOf(item) {
+    const size = Number(item?.size);
+
+    if (!Number.isFinite(size) || size <= 0) {
+        return DEFAULT_STAMP_SIZE;
+    }
+
+    return Math.min(MAX_STAMP_SIZE, Math.max(MIN_STAMP_SIZE, size));
+}
+
 export function pageKey(file, page) {
     return `${Number(file) || 0}:${Number(page) || 0}`;
 }
@@ -122,35 +142,31 @@ export function drawStrokes(ctx, strokes, width, height) {
     });
 }
 
-function drawStamp(ctx, item, width, height) {
-    const label = String(item.text || item.stamp || '').trim();
+function stampGlyph(item, stamps) {
+    const configured = (stamps ?? []).find((stamp) => stamp.key === item.stamp);
 
-    if (label === '') {
+    return item.icon || configured?.icon || String(item.text ?? '').trim() || '';
+}
+
+function drawStamp(ctx, item, width, height, stamps) {
+    // A stamp is only its mark: the bare glyph in the stamp colour, exactly like
+    // the live studio overlay. No badge behind it, no label, no points.
+    const glyph = stampGlyph(item, stamps);
+
+    if (glyph === '') {
         return;
     }
 
-    const fontSize = Math.max(9, width * 0.015);
-    const paddingX = fontSize * 0.7;
-    const paddingY = fontSize * 0.45;
+    const size = Math.max(12, stampSizeOf(item) * width);
+    const x = item.x * width;
+    const y = item.y * height;
 
     ctx.save();
-    ctx.font = `600 ${fontSize}px ${FONT_STACK}`;
-    const boxWidth = ctx.measureText(label).width + paddingX * 2;
-    const boxHeight = fontSize + paddingY * 2;
-    const x = item.x * width - boxWidth / 2;
-    const y = item.y * height - boxHeight / 2;
-
-    roundRect(ctx, x, y, boxWidth, boxHeight, boxHeight / 2);
     ctx.fillStyle = item.color || '#4f46e5';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.lineWidth = Math.max(1, fontSize * 0.08);
-    ctx.stroke();
-
-    ctx.fillStyle = '#ffffff';
+    ctx.font = `700 ${Math.round(size)}px ${FONT_STACK}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(label, item.x * width, item.y * height + fontSize * 0.04);
+    ctx.fillText(glyph, x, y);
     ctx.restore();
 }
 
@@ -220,18 +236,18 @@ function drawCorrection(ctx, item, width, height) {
 /**
  * @param {CanvasRenderingContext2D} ctx
  * @param {Array<object>} items
- * @param {{width: number, height: number, numbers?: Map<string, number>, key?: string}} options
+ * @param {{width: number, height: number, numbers?: Map<string, number>, key?: string, stamps?: Array<object>}} options
  */
 export function drawItems(ctx, items, options) {
     if (!Array.isArray(items) || items.length === 0) {
         return;
     }
 
-    const { width, height, numbers = new Map(), key = '' } = options;
+    const { width, height, numbers = new Map(), key = '', stamps = [] } = options;
 
     items.forEach((item, index) => {
         if (item.type === 'stamp') {
-            drawStamp(ctx, item, width, height);
+            drawStamp(ctx, item, width, height, stamps);
         } else if (item.type === 'comment') {
             drawCommentPin(ctx, item, width, height, numbers.get(`${key}:${index}`) ?? null);
         } else if (item.type === 'correction') {

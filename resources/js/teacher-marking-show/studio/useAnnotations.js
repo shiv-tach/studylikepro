@@ -1,4 +1,5 @@
 import { computed, reactive, ref } from 'vue';
+import { DEFAULT_STAMP_SIZE, MAX_STAMP_SIZE, MIN_STAMP_SIZE } from './renderAnnotations';
 
 /**
  * The markup store. Coordinates are normalised to the page and widths are a
@@ -11,6 +12,16 @@ import { computed, reactive, ref } from 'vue';
  */
 const MAX_HISTORY = 40;
 const MIN_POINT_DISTANCE = 0.0015;
+
+function clampStampSize(value) {
+    const size = Number(value);
+
+    if (!Number.isFinite(size) || size <= 0) {
+        return DEFAULT_STAMP_SIZE;
+    }
+
+    return Math.round(Math.min(MAX_STAMP_SIZE, Math.max(MIN_STAMP_SIZE, size)) * 100000) / 100000;
+}
 
 export const TOOL_SHORTCUTS = {
     v: 'select',
@@ -30,6 +41,18 @@ function createId() {
     return `a-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function strokeTop(strokes) {
+    let top = 1;
+
+    strokes.forEach((stroke) => {
+        (stroke.points ?? []).forEach((point) => {
+            top = Math.min(top, Number(point[1]) || 0);
+        });
+    });
+
+    return top;
+}
+
 function normalizeItem(item) {
     return {
         id: item.id ?? createId(),
@@ -41,6 +64,7 @@ function normalizeItem(item) {
         color: item.color ?? null,
         points: item.points ?? null,
         icon: item.icon ?? null,
+        size: item.size == null ? null : clampStampSize(item.size),
     };
 }
 
@@ -49,6 +73,8 @@ export function createAnnotations(initial = null) {
     const tool = ref('select');
     const brush = reactive({ color: '#e11d48', width: 0.003 });
     const activeStamp = ref(null);
+    // The glyph size every new stamp is placed at; the rail's slider owns it.
+    const stampSize = ref(DEFAULT_STAMP_SIZE);
     const revision = ref(0);
     const history = [];
     const future = [];
@@ -208,6 +234,68 @@ export function createAnnotations(initial = null) {
         revision.value += 1;
     }
 
+    // Repositioning a placed mark (stamp, pin or card) is one undo step even
+    // though the gesture streams many pointer events: the canvas only commits
+    // the final spot on release.
+    function moveItem(file, page, id, x, y) {
+        const entry = pageFor(file, page, false);
+
+        if (!entry) {
+            return null;
+        }
+
+        const item = entry.items.find((row) => row.id === id);
+
+        if (!item) {
+            return null;
+        }
+
+        const nextX = Math.min(1, Math.max(0, Number(x) || 0));
+        const nextY = Math.min(1, Math.max(0, Number(y) || 0));
+
+        if (item.x === nextX && item.y === nextY) {
+            return item;
+        }
+
+        remember();
+        item.x = nextX;
+        item.y = nextY;
+        revision.value += 1;
+
+        return item;
+    }
+
+    // Growing or shrinking a placed stamp is one undo step, like moving it:
+    // `record` is false for the intermediate values of a slider drag.
+    function resizeItem(file, page, id, size, { record = true } = {}) {
+        const entry = pageFor(file, page, false);
+
+        if (!entry) {
+            return null;
+        }
+
+        const item = entry.items.find((row) => row.id === id);
+
+        if (!item) {
+            return null;
+        }
+
+        const next = clampStampSize(size);
+
+        if (item.size === next) {
+            return item;
+        }
+
+        if (record) {
+            remember();
+        }
+
+        item.size = next;
+        revision.value += 1;
+
+        return item;
+    }
+
     function clearPage(file, page) {
         const entry = pageFor(file, page, false);
 
@@ -219,6 +307,10 @@ export function createAnnotations(initial = null) {
         entry.strokes.splice(0, entry.strokes.length);
         entry.items.splice(0, entry.items.length);
         revision.value += 1;
+    }
+
+    function setStampSize(next) {
+        stampSize.value = clampStampSize(next);
     }
 
     function setTool(next) {
@@ -245,6 +337,8 @@ export function createAnnotations(initial = null) {
         pages.reduce((total, entry) => total + entry.strokes.length, 0),
     );
 
+    // The feed doubles as navigation, so every row carries the spot it refers
+    // to: `y` is enough to scroll the paper to it.
     const feed = computed(() => {
         const rows = [];
 
@@ -258,6 +352,7 @@ export function createAnnotations(initial = null) {
                     text: item.text,
                     stamp: item.stamp,
                     color: item.color,
+                    y: item.y,
                 });
             });
 
@@ -268,6 +363,7 @@ export function createAnnotations(initial = null) {
                     page: entry.page,
                     kind: 'strokes',
                     count: entry.strokes.length,
+                    y: strokeTop(entry.strokes),
                 });
             }
         });
@@ -285,6 +381,7 @@ export function createAnnotations(initial = null) {
         tool,
         brush,
         activeStamp,
+        stampSize,
         revision,
         itemCount,
         strokeCount,
@@ -300,8 +397,11 @@ export function createAnnotations(initial = null) {
         addStroke,
         addItem,
         removeItem,
+        moveItem,
+        resizeItem,
         clearPage,
         setTool,
+        setStampSize,
         MIN_POINT_DISTANCE,
     };
 }

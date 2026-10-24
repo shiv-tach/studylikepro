@@ -37,6 +37,11 @@ final class MarkingAnnotationRules
 
     public const COLOR_PATTERN = '/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/';
 
+    /** A stamp glyph is sized as a fraction of the page width. */
+    public const MIN_ITEM_SIZE = 0.005;
+
+    public const MAX_ITEM_SIZE = 0.2;
+
     /**
      * @return array<string, mixed>
      */
@@ -66,6 +71,7 @@ final class MarkingAnnotationRules
             $prefix.'.pages.*.items.*.stamp' => ['nullable', 'string', 'max:40'],
             $prefix.'.pages.*.items.*.color' => ['nullable', 'string', 'regex:'.self::COLOR_PATTERN],
             $prefix.'.pages.*.items.*.points' => ['nullable', 'numeric', 'min:-100', 'max:100'],
+            $prefix.'.pages.*.items.*.size' => ['nullable', 'numeric', 'min:'.self::MIN_ITEM_SIZE, 'max:'.self::MAX_ITEM_SIZE],
         ];
     }
 
@@ -205,6 +211,7 @@ final class MarkingAnnotationRules
                 'stamp' => filled($item['stamp'] ?? null) ? mb_substr((string) $item['stamp'], 0, 40) : null,
                 'color' => filled($item['color'] ?? null) ? (string) $item['color'] : null,
                 'points' => is_numeric($item['points'] ?? null) ? (float) $item['points'] : null,
+                'size' => is_numeric($item['size'] ?? null) ? self::itemSize($item['size']) : null,
             ];
         }
 
@@ -219,5 +226,10 @@ final class MarkingAnnotationRules
     private static function width(mixed $value): float
     {
         return round(min(0.08, max(0.0005, (float) $value)), 5);
+    }
+
+    private static function itemSize(mixed $value): float
+    {
+        return round(min(self::MAX_ITEM_SIZE, max(self::MIN_ITEM_SIZE, (float) $value)), 5);
     }
 }

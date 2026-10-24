@@ -10,7 +10,7 @@
  * Everything the teacher does is autosaved as vectors through the partial
  * draft endpoint; the flattened PDF is only built when they choose to deliver.
  */
-import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, provide, ref, shallowRef, watch } from 'vue';
 import { THEME_PRESET_KEY, useThemePreset } from '../shared/composables/useThemePreset';
 import { useNotices } from '../shared/composables/useNotices';
 import UiToastStack from '../shared/components/UiToastStack.vue';
@@ -194,6 +194,45 @@ async function loadPaper() {
 
 const pending = ref(null);
 
+// The mark the teacher last picked, on the paper or from the feed. Selection
+// is presentation only: it never changes the saved annotations.
+const selectedId = ref(null);
+const pageSize = ref({ width: 0, height: 0 });
+let pendingFocus = null;
+
+function onPageRendered(size) {
+    pageSize.value = size;
+
+    if (pendingFocus) {
+        const row = pendingFocus;
+        pendingFocus = null;
+        scrollToMark(row);
+    }
+}
+
+// Bring a mark into view inside the paper scroller without touching the rest
+// of the page — scrolling the window here is what made clicks feel like they
+// jumped somewhere else.
+function scrollToMark(row) {
+    const scroller = viewport.value;
+
+    if (!scroller || pageSize.value.height === 0) {
+        return;
+    }
+
+    const y = Math.min(1, Math.max(0, Number(row?.y) || 0));
+    const target = y * pageSize.value.height;
+    const top = Math.max(0, Math.round(target - scroller.clientHeight / 2));
+
+    scroller.scrollTop = top;
+}
+
+function onLocateItem(item) {
+    // Clicking the mark that is already selected clears the ring, so a stamp
+    // can be deselected without switching tools.
+    selectedId.value = selectedId.value === item.id ? null : (item.id ?? null);
+}
+
 function onPlace(place) {
     if (!currentPage.value) {
         return;
@@ -206,7 +245,9 @@ function onPlace(place) {
             return;
         }
 
-        annotations.addItem(currentPage.value.fileIndex, currentPage.value.pageIndex, {
+        // Select the fresh mark so its ring shows straight away: that mark is
+        // the handle the teacher drags to nudge a misplaced stamp.
+        const placed = annotations.addItem(currentPage.value.fileIndex, currentPage.value.pageIndex, {
             type: 'stamp',
             x: place.x,
             y: place.y,
@@ -215,7 +256,9 @@ function onPlace(place) {
             color: stamp.color,
             points: stamp.points,
             icon: stamp.icon,
+            size: annotations.stampSize.value,
         });
+        selectedId.value = placed?.id ?? null;
 
         return;
     }
@@ -228,13 +271,14 @@ function saveAnnotation(text) {
         return;
     }
 
-    annotations.addItem(currentPage.value.fileIndex, currentPage.value.pageIndex, {
+    const saved = annotations.addItem(currentPage.value.fileIndex, currentPage.value.pageIndex, {
         type: pending.value.type,
         x: pending.value.x,
         y: pending.value.y,
         text,
         color: pending.value.type === 'correction' ? '#34d399' : '#4f46e5',
     });
+    selectedId.value = saved?.id ?? null;
 
     pending.value = null;
 }
@@ -251,12 +295,31 @@ function onStroke(stroke) {
     });
 }
 
+// Drag (or arrow-key) repositioning of a placed stamp, pin or card.
+function onMoveItem(move) {
+    if (!currentPage.value || !move?.id) {
+        return;
+    }
+
+    annotations.moveItem(
+        currentPage.value.fileIndex,
+        currentPage.value.pageIndex,
+        move.id,
+        move.x,
+        move.y,
+    );
+}
+
 function onRemoveItem(id) {
     if (!currentPage.value) {
         return;
     }
 
     annotations.removeItem(currentPage.value.fileIndex, currentPage.value.pageIndex, id);
+
+    if (selectedId.value === id) {
+        selectedId.value = null;
+    }
 }
 
 function clearCurrentPage() {
@@ -269,12 +332,55 @@ function clearCurrentPage() {
     }
 
     annotations.clearPage(currentPage.value.fileIndex, currentPage.value.pageIndex);
+    selectedId.value = null;
 }
 
 function chooseStamp(stamp) {
+    // Picking the armed stamp again puts it away: the rail must never trap the
+    // teacher in stamp mode while they only wanted to look at the marks.
+    if (annotations.activeStamp.value?.key === stamp.key) {
+        annotations.setTool('select');
+
+        return;
+    }
+
     annotations.tool.value = 'stamp';
     annotations.activeStamp.value = stamp;
     annotations.brush.color = stamp.color;
+}
+
+// The rail's slider sets the size for the next stamp and, so a mark placed a
+// moment ago at the wrong size is a single slider move away from fixed, the one
+// that is currently selected. Only the first change of a drag lands in history,
+// which keeps one undo step per slider gesture.
+let sizingGesture = false;
+
+function setStampSize(size) {
+    annotations.setStampSize(size);
+
+    if (!currentPage.value || !selectedId.value) {
+        return;
+    }
+
+    const item = currentMarkup.value.items.find((row) => row.id === selectedId.value);
+
+    if (item?.type !== 'stamp') {
+        return;
+    }
+
+    annotations.resizeItem(
+        currentPage.value.fileIndex,
+        currentPage.value.pageIndex,
+        item.id,
+        annotations.stampSize.value,
+        { record: !sizingGesture },
+    );
+
+    sizingGesture = true;
+}
+
+function endStampSize() {
+    sizingGesture = false;
 }
 
 function locate(row) {
@@ -284,16 +390,25 @@ function locate(row) {
         return;
     }
 
-    currentIndex.value = index;
-    nextTick(() => {
-        if (viewport.value) {
-            viewport.value.scrollTop = 0;
-        }
-    });
+    selectedId.value = row.id ?? null;
+
+    if (index !== currentIndex.value) {
+        // The target page is not on screen yet; scroll once it has rendered.
+        pendingFocus = row;
+        currentIndex.value = index;
+
+        return;
+    }
+
+    scrollToMark(row);
 }
 
 function removeFeedRow(row) {
     annotations.removeItem(row.file, row.page, row.id);
+
+    if (selectedId.value === row.id) {
+        selectedId.value = null;
+    }
 }
 
 /* ----------------------------------------------------------------- marks */
@@ -346,6 +461,7 @@ async function buildPdf() {
             paper: paper.value,
             annotations: annotations.snapshot(),
             title: `Marked paper ${props.config.order?.reference ?? ''}`.trim(),
+            stamps: props.config.stamps ?? [],
         });
 
         const filename = `marked-${String(props.config.order?.reference ?? 'paper').replace(/[^a-z0-9-]/gi, '') || 'paper'}.pdf`;
@@ -531,8 +647,11 @@ onBeforeUnmount(() => {
                         :stamps="config.stamps ?? []"
                         :brush="annotations.brush"
                         :active-stamp="annotations.activeStamp.value"
+                        :stamp-size="annotations.stampSize.value"
                         @set-tool="annotations.setTool"
                         @set-stamp="chooseStamp"
+                        @set-stamp-size="setStampSize"
+                        @end-stamp-size="endStampSize"
                         @set-color="(color) => { annotations.brush.color = color; }"
                         @clear-page="clearCurrentPage"
                     />
@@ -566,6 +685,8 @@ onBeforeUnmount(() => {
                                 :paper="paper"
                                 :strokes="currentMarkup.strokes"
                                 :items="currentMarkup.items"
+                                :stamps="config.stamps ?? []"
+                                :selected-id="selectedId"
                                 :scale="scale"
                                 :tool="annotations.tool.value"
                                 :brush="annotations.brush"
@@ -574,6 +695,9 @@ onBeforeUnmount(() => {
                                 @stroke="onStroke"
                                 @place="onPlace"
                                 @remove-item="onRemoveItem"
+                                @move-item="onMoveItem"
+                                @locate-item="onLocateItem"
+                                @rendered="onPageRendered"
                             />
 
                             <p v-else class="self-center text-xs text-slate-500 dark:text-slate-300">
@@ -610,6 +734,7 @@ onBeforeUnmount(() => {
                         <AnnotationFeed
                             :rows="annotations.feed.value"
                             :current-key="currentKey"
+                            :selected-id="selectedId"
                             :copy="copy.studio?.feed"
                             @locate="locate"
                             @remove="removeFeedRow"

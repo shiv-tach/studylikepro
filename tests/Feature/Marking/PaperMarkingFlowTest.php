@@ -606,6 +606,7 @@ it('derives the student-facing marks from the rubric on delivery', function () {
                 'stamp' => 'correct',
                 'color' => '#059669',
                 'points' => 5,
+                'size' => 0.04,
             ]],
         ]],
     ];
@@ -628,6 +629,7 @@ it('derives the student-facing marks from the rubric on delivery', function () {
     expect($order->status)->toBe(MarkingOrderStatus::Returned)
         ->and($order->marked_files)->toHaveCount(1)
         ->and($order->annotations['pages'][0]['page'])->toBe(1)
+        ->and($order->annotations['pages'][0]['items'][0]['size'])->toBe(0.04)
         ->and($order->rubric_scores)->toBe([
             ['key' => 'concept', 'title' => 'Conceptual accuracy', 'score' => 21, 'max' => 25],
             // The server clamps a score that runs past the criterion maximum.

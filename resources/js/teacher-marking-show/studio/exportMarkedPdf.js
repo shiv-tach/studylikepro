@@ -69,7 +69,7 @@ function appendNotes(pdf, notes) {
  *
  * @returns {Promise<{blob: Blob, size: number}>}
  */
-export async function exportMarkedPdf({ paper, annotations, title }) {
+export async function exportMarkedPdf({ paper, annotations, title, stamps = [] }) {
     const pages = paper?.pages ?? [];
 
     if (pages.length === 0) {
@@ -98,6 +98,7 @@ export async function exportMarkedPdf({ paper, annotations, title }) {
                 height: dimensions.pixelHeight,
                 numbers,
                 key: pageKey(page.fileIndex, page.pageIndex),
+                stamps,
             });
             collectNotes(notes, pageMarkup.items, index + 1);
         }

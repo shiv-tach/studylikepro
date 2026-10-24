@@ -479,6 +479,8 @@ final class TeacherMarkingShowConfig
                     'comment' => __('Comment pin'),
                     'correction' => __('Correction card'),
                     'stampGroup' => __('Quick stamps'),
+                    'stampSize' => __('Stamp size'),
+                    'stampSizeReset' => __('Reset stamp size'),
                     'undo' => __('Undo'),
                     'redo' => __('Redo'),
                     'clearPage' => __('Clear page'),
@@ -487,6 +489,7 @@ final class TeacherMarkingShowConfig
                     'zoomOut' => __('Zoom out'),
                     'zoomReset' => __('Fit page'),
                     'color' => __('Pen colour'),
+                    'dragHint' => __('Drag a stamp, pin or card on the paper to move it. Arrow keys nudge it once it is focused.'),
                 ],
                 'pages' => [
                     'title' => __('Pages'),
