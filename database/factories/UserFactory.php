@@ -31,6 +31,9 @@ class UserFactory extends Factory
             // overrides that only pass a name keep working.
             'name' => fake()->firstName().' '.fake()->lastName(),
             'email' => fake()->unique()->safeEmail(),
+            // Canonical Sri Lankan mobile (07[0-8] + 7 digits) so the number
+            // can also be used to sign in.
+            'mobile' => '07'.fake()->numberBetween(0, 8).fake()->unique()->numerify('#######'),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),

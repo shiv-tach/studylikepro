@@ -43,6 +43,14 @@
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
+        <!-- Mobile number -->
+        <div class="mt-4">
+            <x-input-label for="mobile" :value="__('Mobile number')" />
+            <x-text-input id="mobile" class="block mt-1 w-full" type="tel" name="mobile" :value="old('mobile')" required inputmode="numeric" autocomplete="tel-national" placeholder="076 982 88 74" />
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('Sri Lankan mobile, e.g. 076 982 88 74. You can sign in with this number.') }}</p>
+            <x-input-error :messages="$errors->get('mobile')" class="mt-2" />
+        </div>
+
         <x-input-error :messages="$errors->get('role')" class="mt-2" />
 
         <x-input-error :messages="$errors->get('invite')" class="mt-2" />

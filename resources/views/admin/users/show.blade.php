@@ -55,6 +55,7 @@
                     <div>
                         <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ $user->name }}</h3>
                         <p class="text-sm text-slate-400">{{ $user->email }}</p>
+                        <p class="text-sm text-slate-400">{{ $user->mobileFormatted() ?? __('No mobile number') }}</p>
                         <div class="mt-1 flex flex-wrap gap-1.5">
                             @foreach ($user->getRoleNames() as $role)
                                 <span class="{{ $chip }}">{{ ucfirst($role) }}</span>

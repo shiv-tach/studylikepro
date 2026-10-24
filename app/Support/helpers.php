@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\PlatformSettings;
+use App\Support\PhoneNumber;
 use App\Support\TimeFormat;
 use Illuminate\Support\Carbon;
 
@@ -35,6 +36,16 @@ if (! function_exists('display_datetime')) {
     function display_datetime(?DateTimeInterface $at, string $dateFormat = 'd M Y', string $separator = ', '): ?string
     {
         return $at?->format($dateFormat.$separator.TimeFormat::TIME);
+    }
+}
+
+if (! function_exists('display_mobile')) {
+    /**
+     * A stored mobile number as people read it, e.g. "076 982 88 74".
+     */
+    function display_mobile(?string $mobile): ?string
+    {
+        return PhoneNumber::format($mobile);
     }
 }
 

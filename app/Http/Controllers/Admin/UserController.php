@@ -38,8 +38,18 @@ class UserController extends Controller
             ->when(($filters['status'] ?? null) === 'suspended', fn (Builder $query) => $query->whereNotNull('suspended_at'))
             ->when(($filters['status'] ?? null) === 'active', fn (Builder $query) => $query->whereNull('suspended_at'))
             ->when($filters['search'] ?? null, function (Builder $query, string $search) {
-                $query->where(function (Builder $query) use ($search) {
-                    $query->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%");
+                // Also try the digits alone so "076 982 88 74" matches the
+                // canonical "0769828874" stored on the row.
+                $digits = preg_replace('/\D+/', '', $search) ?? '';
+
+                $query->where(function (Builder $query) use ($search, $digits) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('mobile', 'like', "%{$search}%");
+
+                    if ($digits !== '' && $digits !== $search) {
+                        $query->orWhere('mobile', 'like', "%{$digits}%");
+                    }
                 });
             })
             ->orderBy('name')

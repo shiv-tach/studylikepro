@@ -34,6 +34,7 @@ it('opens a user with their lessons, payments and reviews', function () {
         ->get(route('admin.users.show', $scenario['student']))
         ->assertOk()
         ->assertSee($scenario['student']->email)
+        ->assertSee($scenario['student']->mobileFormatted())
         ->assertSee('Recent lessons')
         ->assertSee('Recent payments');
 
@@ -42,6 +43,18 @@ it('opens a user with their lessons, payments and reviews', function () {
         ->assertOk()
         ->assertSee('Balances')
         ->assertSee('Verification');
+});
+
+it('finds people by their mobile number', function () {
+    $admin = User::factory()->admin()->create();
+    $student = User::factory()->student()->create(['mobile' => '0769828874']);
+    User::factory()->student()->create();
+
+    $this->actingAs($admin)
+        ->get(route('admin.users.index', ['search' => '076 982 88 74']))
+        ->assertOk()
+        ->assertSee($student->name)
+        ->assertSee('076 982 88 74');
 });
 
 it('suspends an account with a reason and blocks the next login', function () {
@@ -57,8 +70,12 @@ it('suspends an account with a reason and blocks the next login', function () {
 
     Auth::logout();
 
-    $this->post('/login', ['email' => $student->email, 'password' => 'password'])
-        ->assertSessionHasErrors('email');
+    $this->post('/login', ['login' => $student->email, 'password' => 'password'])
+        ->assertSessionHasErrors('login');
+
+    // The mobile number is blocked too, not just the email address.
+    $this->post('/login', ['login' => $student->mobile, 'password' => 'password'])
+        ->assertSessionHasErrors('login');
 
     $this->assertGuest();
 });
@@ -89,7 +106,7 @@ it('reactivates a suspended account', function () {
 
     Auth::logout();
 
-    $this->post('/login', ['email' => $student->email, 'password' => 'password'])
+    $this->post('/login', ['login' => $student->email, 'password' => 'password'])
         ->assertRedirect();
 
     $this->assertAuthenticatedAs($student);

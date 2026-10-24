@@ -48,7 +48,7 @@
                     </select>
                 </div>
                 <div>
-                    <x-input-label for="filter-search" :value="__('Name or email')" />
+                    <x-input-label for="filter-search" :value="__('Name, email or mobile')" />
                     <x-text-input id="filter-search" name="search" type="text" class="mt-1 block w-full"
                                   :value="$filters['search'] ?? null" placeholder="{{ __('Search people') }}" />
                 </div>
@@ -77,6 +77,7 @@
                                 <td class="px-6 py-4">
                                     <p class="font-semibold text-slate-800 dark:text-slate-100">{{ $user->name }}</p>
                                     <p class="text-xs text-slate-500 dark:text-slate-400">{{ $user->email }}</p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ $user->mobileFormatted() ?? __('No mobile number') }}</p>
                                     @if ($user->isSuspended())
                                         <p class="mt-1 text-xs font-semibold text-rose-500">{{ __('Suspended: :reason', ['reason' => $user->suspension_reason]) }}</p>
                                     @endif

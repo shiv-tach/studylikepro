@@ -65,11 +65,11 @@ it('rate limits sign-in attempts per account', function () {
     $student = User::factory()->student()->create();
 
     for ($attempt = 1; $attempt <= 2; $attempt++) {
-        $this->post('/login', ['email' => $student->email, 'password' => 'wrong-password'])
-            ->assertSessionHasErrors('email');
+        $this->post('/login', ['login' => $student->email, 'password' => 'wrong-password'])
+            ->assertSessionHasErrors('login');
     }
 
-    $this->post('/login', ['email' => $student->email, 'password' => 'wrong-password'])
+    $this->post('/login', ['login' => $student->email, 'password' => 'wrong-password'])
         ->assertStatus(429);
 
     $this->assertGuest();
@@ -82,6 +82,7 @@ it('rate limits registrations per address', function () {
         'first_name' => 'New',
         'last_name' => 'Person',
         'email' => $email,
+        'mobile' => '07'.fake()->numberBetween(0, 8).fake()->unique()->numerify('#######'),
         'password' => 'password',
         'password_confirmation' => 'password',
         'role' => User::ROLE_STUDENT,

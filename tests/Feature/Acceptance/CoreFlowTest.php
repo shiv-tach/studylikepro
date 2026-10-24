@@ -74,6 +74,8 @@ function signUp(string $role, array $overrides = []): User
         'first_name' => $overrides['first_name'] ?? $firstName,
         'last_name' => $overrides['last_name'] ?? ($lastName ?? 'User'),
         'email' => $email,
+        // Unique per call because the column is unique.
+        'mobile' => $overrides['mobile'] ?? '07'.fake()->numberBetween(0, 8).fake()->unique()->numerify('#######'),
         'password' => 'password',
         'password_confirmation' => 'password',
         'role' => $role,

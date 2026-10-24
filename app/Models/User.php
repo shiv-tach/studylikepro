@@ -3,7 +3,9 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\PhoneNumber;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -34,6 +36,7 @@ class User extends Authenticatable
         'first_name',
         'last_name',
         'email',
+        'mobile',
         'password',
         'theme',
         'notification_preferences',
@@ -118,6 +121,34 @@ class User extends Authenticatable
         );
 
         return implode(' ', $parts);
+    }
+
+    /**
+     * Store every mobile number in the canonical local form ("0769828874"),
+     * so login lookups, uniqueness checks and admin search all compare the
+     * same digits however the visitor typed it.
+     */
+    protected function mobile(): Attribute
+    {
+        return Attribute::make(
+            set: function (?string $value): ?string {
+                if ($value === null || trim($value) === '') {
+                    return null;
+                }
+
+                // Keep an unusable value as typed rather than silently dropping
+                // it; validation happens at the form/request layer.
+                return PhoneNumber::normalize($value) ?? trim($value);
+            },
+        );
+    }
+
+    /**
+     * The stored number as people read it, e.g. "076 982 88 74".
+     */
+    public function mobileFormatted(): ?string
+    {
+        return PhoneNumber::format($this->mobile);
     }
 
     /**

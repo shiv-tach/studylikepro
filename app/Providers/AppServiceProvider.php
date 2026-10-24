@@ -15,6 +15,7 @@ use App\Services\Meetings\DailyMeetingProvider;
 use App\Services\Meetings\FakeMeetingProvider;
 use App\Services\Payments\FakePaymentGateway;
 use App\Services\Payments\RazorpayGateway;
+use App\Support\PhoneNumber;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -85,8 +86,16 @@ class AppServiceProvider extends ServiceProvider
     {
         $limit = fn (string $key): int => (int) config("studylikepro.throttle.{$key}");
 
-        RateLimiter::for('login', fn (Request $request) => Limit::perMinute($limit('login'))
-            ->by(Str::lower((string) $request->input('email')).'|'.$request->ip()));
+        RateLimiter::for('login', function (Request $request) use ($limit) {
+            $login = trim((string) $request->input('login'));
+
+            // "076 982 88 74" and "+94 76 982 8874" must share one bucket.
+            $identifier = str_contains($login, '@')
+                ? Str::lower($login)
+                : (PhoneNumber::normalize($login) ?? $login);
+
+            return Limit::perMinute($limit('login'))->by($identifier.'|'.$request->ip());
+        });
 
         RateLimiter::for('register', fn (Request $request) => Limit::perMinute($limit('register'))->by($request->ip()));
 

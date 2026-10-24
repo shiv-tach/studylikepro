@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\TeacherInvite;
 use App\Models\User;
+use App\Rules\SriLankanMobile;
+use App\Support\PhoneNumber;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,12 +51,19 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Compare and store the number in its canonical local form so
+        // "076 982 88 74" and "+94 76 982 8874" are the same account.
+        $request->merge(['mobile' => PhoneNumber::normalize($request->input('mobile'))]);
+
         $request->validate([
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'mobile' => ['required', 'string', new SriLankanMobile, Rule::unique(User::class, 'mobile')],
             'role' => ['nullable', 'string', Rule::in([User::ROLE_STUDENT, User::ROLE_TEACHER])],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        ], [], [
+            'mobile' => __('mobile number'),
         ]);
 
         // Public registration always creates a student; only an invite may grant the teacher role.
@@ -76,6 +85,7 @@ class RegisteredUserController extends Controller
             'first_name' => trim($request->string('first_name')->toString()),
             'last_name' => trim($request->string('last_name')->toString()),
             'email' => $request->email,
+            'mobile' => $request->mobile,
             'password' => Hash::make($request->password),
         ]);
 

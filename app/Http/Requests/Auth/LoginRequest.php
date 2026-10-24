@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Support\PhoneNumber;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -21,14 +22,29 @@ class LoginRequest extends FormRequest
     }
 
     /**
+     * Trim the identifier so a pasted number or address still matches.
+     */
+    protected function prepareForValidation(): void
+    {
+        $login = $this->input('login');
+
+        if (is_string($login)) {
+            $this->merge(['login' => trim($login)]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
+     *
+     * `login` is one field holding either an email address or a Sri Lankan
+     * mobile number; its shape decides which column is checked.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'login' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string'],
         ];
     }
@@ -42,11 +58,21 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        $credentials = $this->credentials();
+
+        if ($credentials === null) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'login' => trans('auth.failed'),
+            ]);
+        }
+
+        if (! Auth::attempt($credentials + ['password' => $this->input('password')], $this->boolean('remember'))) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'login' => trans('auth.failed'),
             ]);
         }
 
@@ -57,9 +83,32 @@ class LoginRequest extends FormRequest
             Auth::guard('web')->logout();
 
             throw ValidationException::withMessages([
-                'email' => __('This account is suspended. Contact support if you believe this is a mistake.'),
+                'login' => __('This account is suspended. Contact support if you believe this is a mistake.'),
             ]);
         }
+    }
+
+    /**
+     * The column/value pair the identifier points at, or null when it is
+     * neither an email address nor a Sri Lankan mobile number.
+     *
+     * @return array{email: string}|array{mobile: string}|null
+     */
+    private function credentials(): ?array
+    {
+        $login = trim((string) $this->input('login'));
+
+        if ($login === '') {
+            return null;
+        }
+
+        if (str_contains($login, '@')) {
+            return ['email' => Str::lower($login)];
+        }
+
+        $mobile = PhoneNumber::normalize($login);
+
+        return $mobile === null ? null : ['mobile' => $mobile];
     }
 
     /**
@@ -78,7 +127,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
+            'login' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
@@ -87,9 +136,18 @@ class LoginRequest extends FormRequest
 
     /**
      * Get the rate limiting throttle key for the request.
+     *
+     * Keyed on the canonical identifier so "076 982 88 74" and
+     * "+94 76 982 8874" share one bucket.
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        $credentials = $this->credentials();
+
+        $identifier = $credentials === null
+            ? Str::lower((string) $this->input('login'))
+            : (string) reset($credentials);
+
+        return Str::transliterate($identifier.'|'.$this->ip());
     }
 }
