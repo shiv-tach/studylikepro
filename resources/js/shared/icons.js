@@ -194,6 +194,9 @@ export const icons = {
     list: {
         paths: ['M8.5 6.5h11M8.5 12h11M8.5 17.5h11', 'M4.6 6.5h.01M4.6 12h.01M4.6 17.5h.01'],
     },
+    chart: {
+        paths: ['M4.5 19.5h15', 'M8 16V10M12 16V5.5M16 16v-3.5'],
+    },
 };
 
 export default icons;

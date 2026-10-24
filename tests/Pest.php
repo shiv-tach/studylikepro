@@ -268,6 +268,23 @@ function teacherReviewsConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the teacher earnings dashboard renders its totals,
+ * status tabs, trend, ledger and payouts from.
+ *
+ * @return array<string, mixed>
+ */
+function teacherEarningsConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="teacher-earnings-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Read the config island the "My purchases" page renders its cards from.
  *
  * @return array<string, mixed>

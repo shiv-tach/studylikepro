@@ -83,6 +83,9 @@ export default defineConfig({
                 // What students said at /teacher/reviews: the rating summary,
                 // the star distribution, the comments and the report dialog.
                 'resources/js/teacher-reviews/main.js',
+                // The teacher's money at /teacher/earnings: the totals, the
+                // six-month trend, the payouts and the filterable ledger.
+                'resources/js/teacher-earnings/main.js',
                 // The signed-in chrome (sidebar + top bar) that wraps every
                 // x-app-layout screen, so the layout itself is a Vue component.
                 'resources/js/app-shell/main.js',

@@ -184,6 +184,73 @@ class EarningsService
     }
 
     /**
+     * How many ledger rows sit in each state, plus the total.
+     *
+     * One grouped query, read from the teacher's whole ledger rather than the
+     * filtered page, so a status filter never makes the other tabs read 0. Every
+     * state is present even when it is empty: "no reverses" is information.
+     *
+     * @return array<string, int>
+     */
+    public function statusCountsFor(TeacherProfile $teacher): array
+    {
+        $grouped = $teacher->earnings()
+            // The relation already sorts by created_at; a group by needs that
+            // order cleared or MySQL's ONLY_FULL_GROUP_BY rejects the query.
+            ->reorder()
+            ->selectRaw('status, count(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status')
+            ->all();
+
+        $counts = ['all' => 0];
+
+        foreach (EarningStatus::cases() as $case) {
+            $counts[$case->value] = (int) ($grouped[$case->value] ?? 0);
+            $counts['all'] += $counts[$case->value];
+        }
+
+        return $counts;
+    }
+
+    /**
+     * What the teacher earned in each of the last `$months` calendar months,
+     * net of refunds, oldest first.
+     *
+     * Grouped in PHP on purpose: the test suite runs on SQLite while production
+     * runs MySQL, and a `strftime`/`DATE_FORMAT` expression would make the two
+     * disagree. Empty months are included so the trend never draws a gap.
+     *
+     * @return list<array{key: string, label: string, minor: int, count: int}>
+     */
+    public function monthlyFor(TeacherProfile $teacher, int $months = 6): array
+    {
+        $months = max(1, $months);
+        $start = now()->startOfMonth()->subMonths($months - 1);
+
+        $grouped = $teacher->earnings()
+            ->where('created_at', '>=', $start)
+            ->get(['created_at', 'amount_minor', 'reversed_minor'])
+            ->groupBy(fn (TeacherEarning $row) => $row->created_at->format('Y-m'));
+
+        return collect(range(0, $months - 1))
+            ->map(function (int $offset) use ($start, $grouped): array {
+                $month = $start->copy()->addMonths($offset);
+                $rows = $grouped->get($month->format('Y-m'));
+
+                return [
+                    'key' => $month->format('Y-m'),
+                    'label' => $month->format('M'),
+                    'minor' => $rows === null
+                        ? 0
+                        : (int) $rows->sum(fn (TeacherEarning $row) => max(0, $row->amount_minor - $row->reversed_minor)),
+                    'count' => $rows?->count() ?? 0,
+                ];
+            })
+            ->all();
+    }
+
+    /**
      * Eligible rows that have not been batched into a payout yet.
      *
      * @return Collection<int, TeacherEarning>

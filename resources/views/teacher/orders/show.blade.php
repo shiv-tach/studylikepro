@@ -40,12 +40,7 @@
         MarkingOrderStatus::Resolved, MarkingOrderStatus::Cancelled => 'slate',
     };
 
-    $earningTone = fn (\App\Enums\EarningStatus $status) => match ($status) {
-        \App\Enums\EarningStatus::Pending => 'amber',
-        \App\Enums\EarningStatus::Eligible => 'emerald',
-        \App\Enums\EarningStatus::Paid => 'primary',
-        \App\Enums\EarningStatus::Reversed => 'rose',
-    };
+    $earningTone = fn (\App\Enums\EarningStatus $status) => \App\Support\EarningDisplay::tone($status);
 
     // A hold whose window has closed is already lost even though the scheduler
     // has not written the status yet — the same reading the orders list uses.
