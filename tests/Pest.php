@@ -285,6 +285,40 @@ function teacherEarningsConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island the teacher marking inbox renders its hero numbers,
+ * status rail and order cards from.
+ *
+ * @return array<string, mixed>
+ */
+function teacherMarkingConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="teacher-marking-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island the marking order console renders its paperwork and
+ * delivery form from.
+ *
+ * @return array<string, mixed>
+ */
+function teacherMarkingShowConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="teacher-marking-show-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Read the config island the "My purchases" page renders its cards from.
  *
  * @return array<string, mixed>

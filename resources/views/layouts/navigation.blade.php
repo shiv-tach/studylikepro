@@ -46,6 +46,16 @@
         ? app(\App\Services\Payments\EarningsService::class)->totalsFor($user->teacherProfile)['available']
         : 0;
 
+    // Papers waiting for the teacher's pen. Paid-only, so a checkout that never
+    // completed never inflates the sidebar.
+    $papersToMark = $user->isTeacher() && $user->teacherProfile
+        ? \App\Models\PaperMarkingOrder::query()
+            ->forTeacher($user->teacherProfile->id)
+            ->paid()
+            ->awaitingWork()
+            ->count()
+        : 0;
+
     $navItems = [
         ['label' => 'Dashboard', 'url' => $dashboardUrl, 'active' => $onDashboard, 'icon' => 'dashboard', 'badge' => null],
     ];
@@ -76,7 +86,7 @@
     } elseif ($user->isTeacher()) {
         $navItems[] = ['label' => 'Orders', 'url' => route('teacher.orders.index'), 'active' => request()->routeIs('teacher.orders*'), 'icon' => 'wallet', 'badge' => null];
         $navItems[] = ['label' => 'My lessons', 'url' => route('teacher.schedule.index'), 'active' => request()->routeIs('teacher.schedule*') || request()->routeIs('teacher.bookings*'), 'icon' => 'clock', 'badge' => $lessonsToTeach ?: null];
-        $navItems[] = ['label' => 'Paper Marking', 'url' => route('teacher.marking.index'), 'active' => request()->routeIs('teacher.marking*'), 'icon' => 'check', 'badge' => null];
+        $navItems[] = ['label' => 'Paper Marking', 'url' => route('teacher.marking.index'), 'active' => request()->routeIs('teacher.marking*'), 'icon' => 'check', 'badge' => $papersToMark ?: null];
         $navItems[] = ['label' => 'Earnings', 'url' => route('teacher.earnings.index'), 'active' => request()->routeIs('teacher.earnings*'), 'icon' => 'wallet', 'badge' => $availableEarnings > 0 ? platform_settings()->formatMinor($availableEarnings) : null];
         $navItems[] = ['label' => 'Messages', 'url' => route('messages.index'), 'active' => request()->routeIs('messages.*'), 'icon' => 'chat', 'badge' => ($unreadMessageCount ?? 0) ?: null];
         $navItems[] = ['label' => 'Services & pricing', 'url' => route('teacher.services.index'), 'active' => request()->routeIs('teacher.services*'), 'icon' => 'tag', 'badge' => null];

@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Like Pro | Grader Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Caveat:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+        .handwriting {
+            font-family: 'Caveat', cursive;
+            font-size: 1.35rem;
+            line-height: 1.65rem;
+            color: #1e293b;
+        }
+        .mono-code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Paper lined effect */
+        .lined-paper {
+            background-color: #ffffff;
+            background-image: linear-gradient(#f1f5f9 1px, transparent 1px);
+            background-size: 100% 1.75rem;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Pulse animation for active annotations */
+        @keyframes ringPulse {
+            0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); transform: scale(1); }
+            50% { box-shadow: 0 0 0 12px rgba(79, 70, 229, 0); transform: scale(1.06); }
+            100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); transform: scale(1); }
+        }
+        .pulse-highlight {
+            animation: ringPulse 1.2s ease-out 2;
+        }
+        /* Simulated Demo Cursor */
+        #demo-cursor {
+            pointer-events: none;
+            z-index: 9999;
+            transition: top 0.65s cubic-bezier(0.22, 1, 0.36, 1), left 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .cursor-click-ripple {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(99, 102, 241, 0.45);
+            border: 2px solid #4f46e5;
+            transform: scale(0);
+            opacity: 0;
+        }
+        @keyframes clickRippleAnim {
+            0% { transform: scale(0.2); opacity: 1; }
+            100% { transform: scale(1.9); opacity: 0; }
+        }
+        .cursor-clicking .cursor-click-ripple {
+            animation: clickRippleAnim 0.5s ease-out forwards;
+        }
+        /* Waveform bars */
+        @keyframes waveBounce {
+            0%, 100% { height: 5px; }
+            50% { height: 22px; }
+        }
+        .wave-bar-active {
+            animation: waveBounce 0.6s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-800 h-screen flex flex-col">
+
+    <!-- SIMULATED DEMO CURSOR -->
+    <div id="demo-cursor" class="fixed hidden" style="top: 50%; left: 50%;">
+        <div class="cursor-click-ripple"></div>
+        <div class="relative flex items-center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-lg">
+                <path d="M5.5 3.21V20.8C5.5 21.45 6.27 21.79 6.75 21.35L11.44 17.02C11.68 16.8 11.99 16.68 12.32 16.68H18.5C19.16 16.68 19.5 15.89 19.03 15.42L6.42 2.81C5.96 2.34 5.5 2.66 5.5 3.21Z" fill="#4F46E5" stroke="white" stroke-width="2"/>
+            </svg>
+            <span id="demo-cursor-tag" class="ml-1 px-2 py-0.5 bg-indigo-600 text-white text-[11px] font-semibold rounded-full shadow-md whitespace-nowrap">Teacher Demo</span>
+        </div>
+    </div>
+
+    <!-- TOP HEADER BAR -->
+    <header class="h-16 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between shrink-0 z-30">
+        <!-- Brand & Paper Title -->
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-indigo-500/20">
+                SLP
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-white font-bold tracking-tight text-base">Study Like Pro</span>
+                    <span class="text-xs px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full font-medium">Grader Studio</span>
+                </div>
+                <p class="text-xs text-slate-400 hidden sm:block">IT302: Database & Network Architecture • Final Paper II</p>
+            </div>
+        </div>
+
+        <!-- Center Student Switcher & Auto-Play Demo Button -->
+        <div class="flex items-center space-x-3">
+            <!-- Student Selector -->
+            <div class="relative">
+                <select id="student-select" onchange="switchStudent(this.value)" class="bg-slate-800 text-slate-100 text-xs sm:text-sm font-medium rounded-xl px-3.5 py-2 pr-8 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                    <option value="kasun">👤 Kasun Perera (Marking • ID: #SL-2041)</option>
+                    <option value="nimali">👤 Nimali Silva (Pending • ID: #SL-2042)</option>
+                    <option value="ruwan">👤 Ruwan Fernando (Marked 88/100 • ID: #SL-2045)</option>
+                </select>
+            </div>
+
+            <!-- Prominent Auto-Play Walkthrough Demo Button -->
+            <button id="autoplay-btn" onclick="toggleAutoPlayDemo()" class="relative group overflow-hidden rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 p-[1px] shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all active:scale-95">
+                <div class="bg-slate-900/90 group-hover:bg-transparent transition-colors rounded-[11px] px-4 py-2 flex items-center space-x-2">
+                    <span id="autoplay-icon" class="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-xs font-bold">▶</span>
+                    <span id="autoplay-text" class="text-xs sm:text-sm font-bold text-white tracking-wide">Auto-Play Demo Walkthrough</span>
+                </div>
+            </button>
+        </div>
+
+        <!-- Right Save & Next Student -->
+        <div class="flex items-center space-x-2.5">
+            <div class="hidden xl:flex items-center space-x-1.5 bg-slate-800/90 border border-slate-700/80 px-3 py-1.5 rounded-xl">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-xs text-slate-300 font-medium" id="autosave-status">All changes saved</span>
+            </div>
+            <button id="save-next-btn" onclick="saveAndNextStudent()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md shadow-indigo-600/25 flex items-center space-x-1.5 transition-all active:scale-95">
+                <span>Save & Next Student</span>
+                <span>→</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN WORKSPACE BODY -->
+    <div class="flex-1 flex overflow-hidden relative bg-slate-100">
+
+        <!-- LEFT FLOATING/DOCKED ANNOTATION TOOLBAR -->
+        <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between p-3.5 shrink-0 z-20 overflow-y-auto shadow-sm">
+            <div class="space-y-4">
+                <!-- Primary Markup Tools -->
+                <div>
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">Annotation Tools</p>
+                    <div class="grid grid-cols-1 gap-1.5">
+                        <button id="tool-select" onclick="setActiveTool('select')" class="tool-btn flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold transition-all bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            <span class="flex items-center space-x-2.5">
+                                <span class="text-base">↖️</span>
+                                <span>Pointer / Select</span>
+                            </span>
+                            <kbd class="text-[10px] px-1.5 py-0.5 bg-white rounded border border-indigo-200 text-indigo-500">V</kbd>
+                        </button>
+
+                        <button id="tool-pen" onclick="setActiveTool('pen')" class="tool-btn flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 border border-transparent transition-all">
+                            <span class="flex items-center space-x-2.5">
+                                <span class="text-base">🖊️</span>
+                                <span>Red Pen (Freehand)</span>
+                            </span>
+                            <span class="w-3 h-3 rounded-full bg-rose-600 ring-2 ring-rose-200"></span>
+                        </button>
+
+                        <button id="tool-highlighter" onclick="setActiveTool('highlighter')" class="tool-btn flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 border border-transparent transition-all">
+                            <span class="flex items-center space-x-2.5">
+                                <span class="text-base">🖍️</span>
+                                <span>Yellow Highlighter</span>
+                            </span>
+                            <span class="w-3 h-3 rounded-full bg-amber-300 ring-2 ring-amber-100"></span>
+                        </button>
+
+                        <button id="tool-comment" onclick="setActiveTool('comment')" class="tool-btn flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 border border-transparent transition-all">
+                            <span class="flex items-center space-x-2.5">
+                                <span class="text-base">📌</span>
+                                <span>Point Comment Pin</span>
+                            </span>
+                            <kbd class="text-[10px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">C</kbd>
+                        </button>
+
+                        <button id="tool-correction" onclick="setActiveTool('correction')" class="tool-btn flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 border border-transparent transition-all">
+                            <span class="flex items-center space-x-2.5">
+                                <span class="text-base">✨</span>
+                                <span>Inline Correct Answer</span>
+                            </span>
+                            <span class="text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-bold">Key</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Stamps Palette -->
+                <div class="pt-2 border-t border-slate-100">
+                    <div class="flex items-center justify-between mb-2 px-1">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">1-Click Quick Stamps</p>
+                        <span class="text-[10px] text-indigo-600 font-medium">Click & Drop</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        <button id="stamp-correct" onclick="selectStamp('correct', '✅ Correct (+5)', 'emerald', 5)" class="stamp-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50/70 hover:bg-emerald-100/80 text-emerald-800 border border-emerald-200 transition-all">
+                            <span>✅ Correct</span>
+                            <span class="px-1.5 py-0.5 bg-emerald-600 text-white rounded text-[10px] font-bold">+5 pts</span>
+                        </button>
+
+                        <button id="stamp-incorrect" onclick="selectStamp('incorrect', '❌ Incorrect (0)', 'rose', 0)" class="stamp-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold bg-rose-50/70 hover:bg-rose-100/80 text-rose-800 border border-rose-200 transition-all">
+                            <span>❌ Incorrect</span>
+                            <span class="px-1.5 py-0.5 bg-rose-600 text-white rounded text-[10px] font-bold">0 pts</span>
+                        </button>
+
+                        <button id="stamp-formula" onclick="selectStamp('formula', '⚠️ Check SQL / Formula', 'amber', 0)" class="stamp-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold bg-amber-50/70 hover:bg-amber-100/80 text-amber-800 border border-amber-200 transition-all">
+                            <span>⚠️ Check Formula</span>
+                            <span class="text-[10px] text-amber-700">Review</span>
+                        </button>
+
+                        <button id="stamp-good" onclick="selectStamp('good', '💡 Good Point (+2)', 'indigo', 2)" class="stamp-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-50/70 hover:bg-indigo-100/80 text-indigo-800 border border-indigo-200 transition-all">
+                            <span>💡 Good Point</span>
+                            <span class="px-1.5 py-0.5 bg-indigo-600 text-white rounded text-[10px] font-bold">+2 pts</span>
+                        </button>
+
+                        <button id="stamp-citation" onclick="selectStamp('citation', '📖 Needs Citation', 'purple', 0)" class="stamp-btn w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold bg-purple-50/70 hover:bg-purple-100/80 text-purple-800 border border-purple-200 transition-all">
+                            <span>📖 Needs Citation</span>
+                            <span class="text-[10px] text-purple-700">Note</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Answer Key Overlay Toggle -->
+                <div class="pt-2 border-t border-slate-100">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">Smart Comparison</p>
+                    <button id="answer-key-toggle" onclick="toggleAnswerKeyOverlay()" class="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50 text-indigo-700 font-semibold text-xs flex items-center justify-between transition-all">
+                        <span class="flex items-center space-x-2">
+                            <span class="text-base">👁️</span>
+                            <span>Answer Key Overlay</span>
+                        </span>
+                        <span id="overlay-badge" class="px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 text-[10px] font-bold">OFF</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Active Mode Helper Box -->
+            <div class="mt-4 bg-slate-900 text-white p-3 rounded-xl text-xs space-y-1">
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400 font-medium text-[11px]">Active Tool:</span>
+                    <span id="active-tool-badge" class="text-indigo-400 font-bold">Pointer</span>
+                </div>
+                <p id="active-tool-hint" class="text-[11px] text-slate-300 leading-relaxed">Click any existing pin or card on the paper to inspect or edit it.</p>
+            </div>
+        </aside>
+
+        <!-- CENTER WORKSPACE (STUDENT PAPER CANVAS) -->
+        <main class="flex-1 flex flex-col relative overflow-hidden bg-slate-200/70">
+
+            <!-- Floating Top Canvas Controls (Zoom, Clear, Status) -->
+            <div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-2 bg-white/95 backdrop-blur shadow-md border border-slate-200/80 px-3 py-1.5 rounded-full">
+                <button onclick="adjustZoom(-0.1)" class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-sm" title="Zoom Out">−</button>
+                <span id="zoom-label" class="text-xs font-semibold text-slate-700 w-12 text-center">100%</span>
+                <button onclick="adjustZoom(0.1)" class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-sm" title="Zoom In">+</button>
+                <div class="h-4 w-[1px] bg-slate-200"></div>
+                <button onclick="clearInkCanvas()" class="text-xs font-medium text-slate-600 hover:text-rose-600 px-2 py-1 rounded-full hover:bg-rose-50 transition-colors">
+                    🧹 Clear Ink
+                </button>
+                <button onclick="resetDemoState()" class="text-xs font-medium text-slate-600 hover:text-indigo-600 px-2 py-1 rounded-full hover:bg-indigo-50 transition-colors">
+                    ↺ Reset Paper
+                </button>
+            </div>
+
+            <!-- Scrollable Paper Viewport -->
+            <div id="paper-scroll-container" class="flex-1 overflow-auto p-6 sm:p-10 flex justify-center items-start">
+
+                <!-- THE EXAM PAPER SHEET -->
+                <div id="exam-paper" class="relative w-[820px] min-h-[1120px] bg-white rounded-sm shadow-2xl border border-slate-300 transition-transform origin-top select-none" style="transform: scale(1);">
+
+                    <!-- Top Exam Paper Official Header -->
+                    <div class="border-b-2 border-slate-800 p-8 pb-5 bg-slate-50/70">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-[11px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-100 px-2.5 py-0.5 rounded">Semester II Examination • 2026</span>
+                                <h1 class="text-xl font-bold text-slate-900 mt-1.5">IT302: Database Systems & Network Architecture</h1>
+                                <p class="text-xs text-slate-500 mt-0.5">Paper II — Structured Essay & Problem Solving (Time: 2 Hours)</p>
+                            </div>
+                            <!-- Dynamic Score Stamp Box on Paper Top Right -->
+                            <div class="border-2 border-rose-600/80 rounded-xl px-4 py-2 text-center bg-rose-50/40 rotate-[-2deg] shadow-sm">
+                                <span class="text-[10px] font-bold uppercase tracking-widest text-rose-700 block">Total Score</span>
+                                <div class="text-2xl font-black text-rose-600 font-mono leading-tight">
+                                    <span id="paper-score-stamp">65</span><span class="text-sm text-rose-400">/100</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Student Metadata Row -->
+                        <div class="mt-4 pt-3 border-t border-slate-200 grid grid-cols-3 gap-4 text-xs">
+                            <div>
+                                <span class="text-slate-400">Student Name:</span>
+                                <span id="paper-student-name" class="font-semibold text-slate-800 ml-1 handwriting text-lg">Kasun Perera</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">Candidate ID:</span>
+                                <span id="paper-student-id" class="font-semibold text-slate-800 ml-1 mono-code">#SL-2041</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">Submission Status:</span>
+                                <span id="paper-status-pill" class="ml-1 px-2 py-0.5 bg-amber-100 text-amber-800 font-semibold rounded text-[11px]">In Marking Queue</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Exam Questions & Student Handwritten Answers Container -->
+                    <div class="p-8 space-y-8 lined-paper relative">
+
+                        <!-- QUESTION 1: Database Normalization (Correct) -->
+                        <div id="question-block-1" class="relative bg-white/85 backdrop-blur-[1px] p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="text-sm font-bold text-slate-900">
+                                    Q1. Explain why a table in Second Normal Form (2NF) might still suffer from update anomalies, and state the condition required to achieve Third Normal Form (3NF).
+                                </h3>
+                                <span class="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded shrink-0 ml-2">[25 Marks]</span>
+                            </div>
+
+                            <!-- Student Answer 1 -->
+                            <div class="mt-3 pl-3 border-l-4 border-indigo-400 py-1 space-y-2">
+                                <p class="handwriting text-slate-800">
+                                    Even if a relation is in 2NF (no partial dependencies on a composite primary key), it can still contain <span class="underline decoration-indigo-500">transitive dependencies</span> where a non-key attribute depends on another non-key attribute (e.g., Student_ID → Dept_ID → Dept_Head).
+                                </p>
+                                <p class="handwriting text-slate-800">
+                                    If we update the Department Head for a department, we must update multiple rows, causing update anomalies. To reach 3NF, every non-prime attribute must be non-transitively dependent on the primary key ("nothing but the key").
+                                </p>
+                            </div>
+
+                            <!-- Answer Key Overlay for Q1 (Hidden by default) -->
+                            <div class="answer-key-layer hidden mt-3 p-3.5 rounded-xl bg-emerald-950/90 text-emerald-100 border-2 border-emerald-400 shadow-lg">
+                                <div class="flex items-center justify-between text-xs font-bold text-emerald-300 mb-1">
+                                    <span>👁️ MODEL ANSWER KEY — QUESTION 1</span>
+                                    <span>Full Credit: 25 pts</span>
+                                </div>
+                                <p class="text-xs leading-relaxed">
+                                    ✓ Must identify <strong>Transitive Dependency</strong> ($A \rightarrow B \rightarrow C$) as the root cause of redundancy in 2NF.<br>
+                                    ✓ Must state 3NF rule: Relation is in 2NF and no non-prime attribute is transitively dependent on the primary key (or for every $X \rightarrow Y$, $X$ is a superkey or $Y$ is prime).
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- QUESTION 2: SQL Aggregation & HAVING Clause (Contains Deliberate Student Error!) -->
+                        <div id="question-block-2" class="relative bg-white/85 backdrop-blur-[1px] p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="text-sm font-bold text-slate-900">
+                                    Q2. Write an SQL query on the <code class="mono-code text-xs bg-slate-100 px-1.5 py-0.5 rounded">Orders(OrderID, CustomerID, OrderTotal, Status)</code> table to list all <code class="mono-code text-xs">CustomerID</code>s who have placed more than 3 completed orders with a combined total exceeding $1,500.
+                                </h3>
+                                <span class="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded shrink-0 ml-2">[40 Marks]</span>
+                            </div>
+
+                            <!-- Student Answer 2 (With SQL WHERE vs HAVING mistake) -->
+                            <div id="q2-answer-area" class="mt-3 pl-3 border-l-4 border-indigo-400 py-2 bg-slate-50/70 rounded-r-lg font-mono text-sm text-slate-800 space-y-1 relative">
+                                <div><span class="text-indigo-700 font-semibold">SELECT</span> CustomerID, COUNT(OrderID), SUM(OrderTotal)</div>
+                                <div><span class="text-indigo-700 font-semibold">FROM</span> Orders</div>
+                                <div id="q2-mistake-line" class="relative inline-block px-1 rounded transition-colors">
+                                    <span class="text-rose-700 font-semibold">WHERE</span> Status = 'Completed' <span class="bg-amber-200/60 px-1 rounded border-b-2 border-rose-500">AND COUNT(OrderID) &gt; 3 AND SUM(OrderTotal) &gt; 1500</span>
+                                </div>
+                                <div><span class="text-indigo-700 font-semibold">GROUP BY</span> CustomerID;</div>
+                            </div>
+
+                            <!-- Answer Key Overlay for Q2 (Hidden by default) -->
+                            <div class="answer-key-layer hidden mt-3 p-3.5 rounded-xl bg-emerald-950/90 text-emerald-100 border-2 border-emerald-400 shadow-lg font-mono text-xs">
+                                <div class="flex items-center justify-between font-sans font-bold text-emerald-300 mb-1.5">
+                                    <span>👁️ MODEL ANSWER KEY — QUESTION 2</span>
+                                    <span> Deduct 10 pts if aggregate is inside WHERE</span>
+                                </div>
+                                <div class="bg-slate-900/90 p-2.5 rounded-lg text-emerald-200 space-y-0.5">
+                                    <div>SELECT CustomerID, COUNT(OrderID) AS OrderCount, SUM(OrderTotal) AS TotalSpent</div>
+                                    <div>FROM Orders WHERE Status = 'Completed'</div>
+                                    <div>GROUP BY CustomerID</div>
+                                    <div class="text-amber-300 font-bold">HAVING COUNT(OrderID) &gt; 3 AND SUM(OrderTotal) &gt; 1500;</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- QUESTION 3: Subnetting & Usable Hosts Calculation -->
+                        <div id="question-block-3" class="relative bg-white/85 backdrop-blur-[1px] p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="text-sm font-bold text-slate-900">
+                                    Q3. A campus LAN is assigned the CIDR block <code class="mono-code text-xs bg-slate-100 px-1.5 py-0.5 rounded">192.168.10.0/26</code>. Calculate the subnet mask in dotted decimal notation, total IP addresses, and maximum usable host addresses.
+                                </h3>
+                                <span class="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded shrink-0 ml-2">[35 Marks]</span>
+                            </div>
+
+                            <!-- Student Answer 3 -->
+                            <div id="q3-answer-area" class="mt-3 pl-3 border-l-4 border-indigo-400 py-1 space-y-1.5">
+                                <p class="handwriting text-slate-800">
+                                    • Prefix /26 means 26 network bits (11111111.11111111.11111111.11000000) → Subnet Mask = <span class="font-bold">255.255.255.192</span>
+                                </p>
+                                <p class="handwriting text-slate-800">
+                                    • Remaining host bits = 32 - 26 = 6 bits. Total addresses = 2<sup>6</sup> = 64 addresses.
+                                </p>
+                                <p id="q3-final-line" class="handwriting text-slate-800">
+                                    • Usable hosts = 64 - 2 (Network ID <span class="mono-code text-sm">.0</span> &amp; Broadcast <span class="mono-code text-sm">.63</span>) = <span class="font-bold text-indigo-900">62 usable hosts</span>.
+                                </p>
+                            </div>
+
+                            <!-- Answer Key Overlay for Q3 (Hidden by default) -->
+                            <div class="answer-key-layer hidden mt-3 p-3.5 rounded-xl bg-emerald-950/90 text-emerald-100 border-2 border-emerald-400 shadow-lg">
+                                <div class="flex items-center justify-between text-xs font-bold text-emerald-300 mb-1">
+                                    <span>👁️ MODEL ANSWER KEY — QUESTION 3</span>
+                                    <span>Full Credit: 35 pts</span>
+                                </div>
+                                <p class="text-xs leading-relaxed">
+                                    ✓ Subnet Mask: <strong>255.255.255.192</strong> (10 pts)<br>
+                                    ✓ Total Addresses: $2^{32-26} = 2^6 = 64$ (10 pts)<br>
+                                    ✓ Usable Hosts: $64 - 2 = \mathbf{62}$ hosts, citing Network (.0) and Broadcast (.63) reservation (15 pts).
+                                </p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- HTML5 FREEHAND DRAWING & HIGHLIGHTING CANVAS OVERLAY -->
+                    <canvas id="ink-canvas" width="820" height="1120" class="absolute inset-0 z-10 pointer-events-none"></canvas>
+
+                    <!-- INTERACTIVE PINS, STAMPS & INLINE CORRECTION LAYER -->
+                    <div id="annotations-layer" class="absolute inset-0 z-20 pointer-events-none"></div>
+
+                </div>
+            </div>
+
+            <!-- VIDEO WALKTHROUGH SUBTITLE / VOICEOVER BANNER (Fixed at bottom of center workspace) -->
+            <div id="walkthrough-banner" class="hidden absolute bottom-5 left-1/2 -translate-x-1/2 z-30 w-[92%] max-w-2xl bg-slate-900/95 backdrop-blur-md text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-indigo-500/40 flex items-center space-x-4">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center shrink-0">
+                    <span class="text-lg animate-bounce">🎬</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between">
+                        <span id="walkthrough-step-tag" class="text-[10px] font-bold uppercase tracking-wider text-amber-400">Auto-Demo • Step 1 of 6</span>
+                        <span class="text-[11px] text-slate-400">Interactive Video Walkthrough</span>
+                    </div>
+                    <p id="walkthrough-subtitle" class="text-xs sm:text-sm font-medium text-slate-100 mt-0.5 leading-snug">
+                        Initializing automated grading demonstration...
+                    </p>
+                </div>
+                <button onclick="stopAutoPlayDemo()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-xs font-semibold text-slate-300 hover:text-white transition-colors shrink-0">
+                    Stop
+                </button>
+            </div>
+
+        </main>
+
+        <!-- RIGHT SIDEBAR (RUBRIC, COMMENTS & SCORING PANEL) -->
+        <aside class="w-80 sm:w-96 bg-white border-l border-slate-200 flex flex-col shrink-0 z-20 shadow-sm">
+
+            <!-- Score Tally Header Card -->
+            <div class="p-4 bg-slate-900 text-white border-b border-slate-800">
+                <div class="flex items-center justify-between mb-2">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Live Rubric Tally</span>
+                        <h2 class="text-sm font-bold text-white">Grading Breakdown</h2>
+                    </div>
+                    <div class="text-right">
+                        <div class="flex items-baseline justify-end space-x-1">
+                            <span id="total-score-display" class="text-3xl font-extrabold text-emerald-400 font-mono">65</span>
+                            <span class="text-xs text-slate-400 font-semibold">/ 100 pts</span>
+                        </div>
+                        <span id="grade-letter-badge" class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">Grade: B+ (Merit)</span>
+                    </div>
+                </div>
+                <!-- Animated Progress Bar -->
+                <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                    <div id="score-progress-bar" class="h-full bg-gradient-to-r from-indigo-500 via-emerald-400 to-teal-400 rounded-full transition-all duration-500" style="width: 65%;"></div>
+                </div>
+            </div>
+
+            <!-- Sidebar Navigation Tabs -->
+            <div class="grid grid-cols-2 border-b border-slate-200 bg-slate-50 p-1">
+                <button id="tab-btn-rubric" onclick="switchSidebarTab('rubric')" class="py-2 text-xs font-bold rounded-lg bg-white text-indigo-600 shadow-sm transition-all">
+                    📊 Rubric & Audio (4)
+                </button>
+                <button id="tab-btn-feed" onclick="switchSidebarTab('feed')" class="py-2 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all flex items-center justify-center space-x-1.5">
+                    <span>💬 Markup Feed</span>
+                    <span id="feed-count-badge" class="px-1.5 py-0.2 bg-indigo-100 text-indigo-700 rounded-full text-[10px]">3</span>
+                </button>
+            </div>
+
+            <!-- TAB 1: INTERACTIVE RUBRIC & OVERALL FEEDBACK -->
+            <div id="sidebar-tab-rubric" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <div class="space-y-3" id="rubric-criteria-list">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+                <!-- Overall Feedback & 30s Audio Recorder Simulator -->
+                <div class="pt-3 border-t border-slate-200 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Overall Summary Feedback</label>
+                        <button onclick="insertQuickSummary()" class="text-[11px] text-indigo-600 hover:underline font-medium">+ Auto-Generate</button>
+                    </div>
+                    <textarea id="overall-feedback-input" rows="3" class="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Write encouraging summary remarks for the student...">Solid grasp of 3NF normalization and CIDR subnet calculation! Watch out for SQL aggregate functions (COUNT/SUM)—they must be filtered inside a HAVING clause rather than WHERE.</textarea>
+
+                    <!-- Simulated Voice Note Recorder -->
+                    <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <button id="voice-record-btn" onclick="toggleVoiceRecording()" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold flex items-center space-x-1.5 transition-all">
+                                    <span id="voice-btn-icon">🎤</span>
+                                    <span id="voice-btn-text">Record 30s Audio Feedback</span>
+                                </button>
+                            </div>
+                            <span id="voice-timer" class="text-xs font-mono font-semibold text-slate-500">00:00 / 00:30</span>
+                        </div>
+
+                        <!-- Animated Audio Waveform Visualizer -->
+                        <div id="voice-waveform" class="mt-2.5 h-7 bg-white rounded-lg border border-slate-100 px-3 flex items-center justify-between space-x-1">
+                            <span class="text-[11px] text-slate-400" id="voice-status-label">Click microphone to attach a personal voice note</span>
+                            <div id="wave-bars-container" class="hidden flex items-center space-x-1 h-full">
+                                <div class="w-1 bg-rose-500 rounded-full wave-bar-active" style="animation-delay: 0.0s"></div>
+                                <div class="w-1 bg-rose-500 rounded-full wave-bar-active" style="animation-delay: 0.15s"></div>
+                                <div class="w-1 bg-rose-500 rounded-full wave-bar-active" style="animation-delay: 0.3s"></div>
+                                <div class="w-1 bg-rose-500 rounded-full wave-bar-active" style="animation-delay: 0.1s"></div>
+                                <div class="w-1 bg-rose-500 rounded-full wave-bar-active" style="animation-delay: 0.25s"></div>
+                                <div class="w-1 bg-rose-500 rounded-full wave-bar-active" style="animation-delay: 0.05s"></div>
+                                <div class="w-1 bg-rose-500 rounded-full wave-bar-active" style="animation-delay: 0.2s"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: ANNOTATION & INLINE CORRECTION FEED -->
+            <div id="sidebar-tab-feed" class="hidden flex-1 overflow-y-auto p-4 space-y-2.5">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs font-semibold text-slate-500">Click any item to locate on paper</span>
+                    <button onclick="openNewAnnotationModal(410, 460, 'correction')" class="text-xs font-bold text-indigo-600 hover:underline">+ Add Correction</button>
+                </div>
+                <div id="annotation-feed-list" class="space-y-2.5">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+        </aside>
+    </div>
+
+    <!-- MODAL FOR ADDING/EDITING STICKY COMMENT OR INLINE CORRECT ANSWER -->
+    <div id="annotation-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span id="modal-icon" class="text-xl">✨</span>
+                    <h3 id="modal-title" class="text-sm font-bold text-slate-900">Add Inline Correct Answer</h3>
+                </div>
+                <button onclick="closeAnnotationModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label id="modal-label" class="block text-xs font-semibold text-slate-600 mb-1">Model Correction / Teacher Comment</label>
+                    <textarea id="modal-input" rows="3" class="w-full rounded-xl border border-slate-300 p-3 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter the correct formula, SQL syntax, or explanation..."></textarea>
+                </div>
+
+                <!-- Quick Presets for fast grading -->
+                <div>
+                    <span class="text-[11px] font-semibold text-slate-400 block mb-1.5">1-Click Teacher Presets:</span>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button type="button" onclick="fillModalPreset('HAVING COUNT(OrderID) > 3 AND SUM(OrderTotal) > 1500')" class="text-[11px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-lg font-medium">
+                            SQL HAVING Clause Fix
+                        </button>
+                        <button type="button" onclick="fillModalPreset('Good explanation of transitive dependency (A -> B -> C).')" class="text-[11px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-lg font-medium">
+                            Praise 3NF Logic
+                        </button>
+                        <button type="button" onclick="fillModalPreset('Remember to subtract 2 for Network & Broadcast addresses.')" class="text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg font-medium">
+                            Subnetting Host Rule
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button onclick="closeAnnotationModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancel</button>
+                <button onclick="saveModalAnnotation()" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm">Attach to Paper</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed top-20 right-6 z-50 hidden bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl border border-slate-700 flex items-center space-x-2.5 text-xs font-medium">
+        <span id="toast-icon">✅</span>
+        <span id="toast-msg">Saved successfully!</span>
+    </div>
+
+    <script>
+        // ==========================================
+        // APPLICATION STATE & SAMPLE DATA
+        // ==========================================
+        let currentTool = 'select'; // 'select', 'pen', 'highlighter', 'comment', 'correction', 'stamp'
+        let pendingStamp = null;
+        let currentZoom = 1;
+        let answerKeyVisible = false;
+        let pendingModalCoords = { x: 400, y: 400, type: 'correction' };
+
+        // Rubric State (4 Criteria, each max 25 pts = 100 pts total)
+        const rubricData = [
+            {
+                id: 'crit-1',
+                title: '1. Conceptual Accuracy (2NF/3NF)',
+                desc: 'Identifies transitive dependency & 3NF condition',
+                score: 25,
+                options: [0, 5, 10, 15, 20, 25]
+            },
+            {
+                id: 'crit-2',
+                title: '2. SQL Query & Aggregation Syntax',
+                desc: 'Correct GROUP BY and HAVING clause filtering',
+                score: 15,
+                options: [0, 5, 10, 15, 20, 25]
+            },
+            {
+                id: 'crit-3',
+                title: '3. Subnetting Working & Steps',
+                desc: 'Binary mask conversion & host power calculation',
+                score: 15,
+                options: [0, 5, 10, 15, 20, 25]
+            },
+            {
+                id: 'crit-4',
+                title: '4. Technical Clarity & Terminology',
+                desc: 'Proper notation and clear step-by-step layout',
+                score: 10,
+                options: [0, 5, 10, 15, 20, 25]
+            }
+        ];
+
+        // Annotations on Paper (Stamps, Sticky Comments, Inline Corrections)
+        let annotations = [];
+
+        function getInitialAnnotations() {
+            return [
+                {
+                    id: 'ann-1',
+                    type: 'stamp',
+                    x: 645,
+                    y: 235,
+                    text: '✅ Correct (+5)',
+                    color: 'emerald',
+                    questionRef: 'Q1 • 3NF Definition'
+                },
+                {
+                    id: 'ann-2',
+                    type: 'comment',
+                    x: 560,
+                    y: 315,
+                    author: 'Mr. Wijesinghe',
+                    text: 'Great concrete example (Student_ID → Dept_ID → Dept_Head) to illustrate transitive dependency!',
+                    questionRef: 'Q1 • Conceptual Example'
+                },
+                {
+                    id: 'ann-3',
+                    type: 'stamp',
+                    x: 615,
+                    y: 525,
+                    text: '⚠️ Check SQL / Formula',
+                    color: 'amber',
+                    questionRef: 'Q2 • WHERE Clause Error'
+                }
+            ];
+        }
+
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        window.onload = function () {
+            annotations = getInitialAnnotations();
+            renderRubric();
+            renderAnnotations();
+            initInkCanvas();
+            drawInitialSampleInk();
+        };
+
+        // ==========================================
+        // RUBRIC & SCORE TALLYING
+        // ==========================================
+        function renderRubric() {
+            const container = document.getElementById('rubric-criteria-list');
+            container.innerHTML = '';
+
+            let total = 0;
+            rubricData.forEach((crit, idx) => {
+                total += crit.score;
+
+                const card = document.createElement('div');
+                card.id = `rubric-card-${crit.id}`;
+                card.className = 'p-3 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-white transition-all space-y-2';
+
+                const pillsHtml = crit.options.map(val => {
+                    const isSelected = crit.score === val;
+                    return `
+                        <button
+                            id="pill-${crit.id}-${val}"
+                            onclick="setRubricScore(${idx}, ${val})"
+                            class="flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                isSelected
+                                    ? 'bg-indigo-600 text-white shadow-sm scale-105'
+                                    : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'
+                            }"
+                        >${val}</button>
+                    `;
+                }).join('');
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-800">${crit.title}</h4>
+                            <p class="text-[11px] text-slate-500">${crit.desc}</p>
+                        </div>
+                        <span class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">${crit.score}/25</span>
+                    </div>
+                    <div class="flex items-center space-x-1 pt-1">
+                        ${pillsHtml}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            // Update Total Score Display, Paper Stamp & Progress Bar
+            document.getElementById('total-score-display').textContent = total;
+            document.getElementById('paper-score-stamp').textContent = total;
+            document.getElementById('score-progress-bar').style.width = `${total}%`;
+
+            const gradeBadge = document.getElementById('grade-letter-badge');
+            if (total >= 85) {
+                gradeBadge.textContent = 'Grade: A+ (Distinction)';
+                gradeBadge.className = 'text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold';
+            } else if (total >= 70) {
+                gradeBadge.textContent = 'Grade: A- (Very Good)';
+                gradeBadge.className = 'text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold';
+            } else if (total >= 55) {
+                gradeBadge.textContent = 'Grade: B (Credit)';
+                gradeBadge.className = 'text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold';
+            } else {
+                gradeBadge.textContent = 'Grade: C (Pass)';
+                gradeBadge.className = 'text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold';
+            }
+        }
+
+        function setRubricScore(critIndex, newScore) {
+            rubricData[critIndex].score = newScore;
+            renderRubric();
+            triggerAutoSaveIndicator();
+        }
+
+        // ==========================================
+        // ANNOTATION TOOLS & INTERACTIVE LAYER
+        // ==========================================
+        function setActiveTool(tool) {
+            currentTool = tool;
+            pendingStamp = null;
+
+            // Reset button visual states
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.className = 'tool-btn flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 border border-transparent transition-all';
+            });
+            document.querySelectorAll('.stamp-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-indigo-600');
+            });
+
+            const activeBtn = document.getElementById(`tool-${tool}`);
+            if (activeBtn) {
+                activeBtn.className = 'tool-btn flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold transition-all bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs';
+            }
+
+            const inkCanvas = document.getElementById('ink-canvas');
+            const badge = document.getElementById('active-tool-badge');
+            const hint = document.getElementById('active-tool-hint');
+
+            if (tool === 'pen' || tool === 'highlighter') {
+                inkCanvas.classList.remove('pointer-events-none');
+                inkCanvas.style.cursor = 'crosshair';
+                badge.textContent = tool === 'pen' ? 'Red Pen' : 'Highlighter';
+                hint.textContent = 'Click and drag directly across the student exam paper to draw or highlight.';
+            } else {
+                inkCanvas.classList.add('pointer-events-none');
+                inkCanvas.style.cursor = 'default';
+                if (tool === 'select') {
+                    badge.textContent = 'Pointer';
+                    hint.textContent = 'Click any existing pin or correction card on the paper to inspect or delete it.';
+                } else if (tool === 'comment') {
+                    badge.textContent = 'Point Comment Pin';
+                    hint.textContent = 'Click anywhere on the student paper to drop a linked sticky comment.';
+                } else if (tool === 'correction') {
+                    badge.textContent = 'Correct Answer Card';
+                    hint.textContent = 'Click on any mistake on the paper to attach a green Model Answer card.';
+                }
+            }
+        }
+
+        function selectStamp(id, label, color, bonusPts) {
+            currentTool = 'stamp';
+            pendingStamp = { id, label, color, bonusPts };
+
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.className = 'tool-btn flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 border border-transparent transition-all';
+            });
+            document.querySelectorAll('.stamp-btn').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-indigo-600');
+            });
+
+            const stampBtn = document.getElementById(`stamp-${id}`);
+            if (stampBtn) stampBtn.classList.add('ring-2', 'ring-indigo-600');
+
+            document.getElementById('ink-canvas').classList.add('pointer-events-none');
+            document.getElementById('active-tool-badge').textContent = `Stamp: ${label}`;
+            document.getElementById('active-tool-hint').textContent = 'Click anywhere on the student paper to drop this stamp badge.';
+        }
+
+        // Paper Click Handler for placing Stamps, Comments, or Corrections
+        document.getElementById('exam-paper').addEventListener('click', function (e) {
+            // Ignore clicks on existing annotation cards
+            if (e.target.closest('.paper-annotation-item')) return;
+
+            const rect = this.getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left) / currentZoom);
+            const y = Math.round((e.clientY - rect.top) / currentZoom);
+
+            if (currentTool === 'stamp' && pendingStamp) {
+                addAnnotation({
+                    id: 'ann-' + Date.now(),
+                    type: 'stamp',
+                    x: Math.min(Math.max(x - 50, 20), 660),
+                    y: Math.min(Math.max(y - 16, 20), 1060),
+                    text: pendingStamp.label,
+                    color: pendingStamp.color,
+                    questionRef: y < 420 ? 'Q1 • Normalization' : (y < 680 ? 'Q2 • SQL Query' : 'Q3 • Subnetting')
+                });
+                showToast('Stamp placed on paper!');
+            } else if (currentTool === 'comment') {
+                openNewAnnotationModal(x, y, 'comment');
+            } else if (currentTool === 'correction') {
+                openNewAnnotationModal(x, y, 'correction');
+            }
+        });
+
+        function addAnnotation(annObj) {
+            annotations.push(annObj);
+            renderAnnotations();
+            triggerAutoSaveIndicator();
+        }
+
+        function removeAnnotation(id, event) {
+            if (event) event.stopPropagation();
+            annotations = annotations.filter(a => a.id !== id);
+            renderAnnotations();
+            triggerAutoSaveIndicator();
+        }
+
+        function renderAnnotations() {
+            const layer = document.getElementById('annotations-layer');
+            const feed = document.getElementById('annotation-feed-list');
+            layer.innerHTML = '';
+            feed.innerHTML = '';
+
+            document.getElementById('feed-count-badge').textContent = annotations.length;
+
+            annotations.forEach((ann, index) => {
+                // 1. Render on Paper Canvas
+                const el = document.createElement('div');
+                el.id = `paper-node-${ann.id}`;
+                el.style.left = `${ann.x}px`;
+                el.style.top = `${ann.y}px`;
+                el.className = 'paper-annotation-item absolute pointer-events-auto transition-all duration-300';
+
+                if (ann.type === 'stamp') {
+                    const colorClasses = {
+                        emerald: 'bg-emerald-600 text-white border-emerald-700 shadow-emerald-600/20',
+                        rose: 'bg-rose-600 text-white border-rose-700 shadow-rose-600/20',
+                        amber: 'bg-amber-500 text-slate-950 border-amber-600 shadow-amber-500/20',
+                        indigo: 'bg-indigo-600 text-white border-indigo-700 shadow-indigo-600/20',
+                        purple: 'bg-purple-600 text-white border-purple-700 shadow-purple-600/20'
+                    }[ann.color || 'indigo'];
+
+                    el.innerHTML = `
+                        <div onclick="focusAnnotation('${ann.id}')" class="group flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-md cursor-pointer hover:scale-105 transition-transform ${colorClasses}">
+                            <span>${ann.text}</span>
+                            <button onclick="removeAnnotation('${ann.id}', event)" class="opacity-0 group-hover:opacity-100 ml-1 text-[10px] bg-black/20 rounded-full w-4 h-4 flex items-center justify-center">✕</button>
+                        </div>
+                    `;
+                } else if (ann.type === 'comment') {
+                    el.innerHTML = `
+                        <div onclick="focusAnnotation('${ann.id}')" class="group relative bg-amber-50 border-2 border-amber-400 rounded-xl p-2.5 shadow-lg w-60 cursor-pointer hover:shadow-xl transition-all">
+                            <div class="flex items-center justify-between text-[10px] font-bold text-amber-800 mb-1">
+                                <span>📌 STICKY NOTE #${index + 1}</span>
+                                <button onclick="removeAnnotation('${ann.id}', event)" class="text-amber-700 hover:text-rose-600">✕</button>
+                            </div>
+                            <p class="text-[11px] text-slate-800 leading-snug font-medium">${ann.text}</p>
+                        </div>
+                    `;
+                } else if (ann.type === 'correction') {
+                    el.innerHTML = `
+                        <div onclick="focusAnnotation('${ann.id}')" class="group relative bg-emerald-950 text-white border-2 border-emerald-400 rounded-xl p-3 shadow-xl w-72 cursor-pointer hover:scale-[1.02] transition-all">
+                            <div class="flex items-center justify-between text-[10px] font-bold text-emerald-300 mb-1">
+                                <span class="flex items-center space-x-1">
+                                    <span>✨ CORRECT ANSWER</span>
+                                </span>
+                                <button onclick="removeAnnotation('${ann.id}', event)" class="text-emerald-300 hover:text-rose-400">✕</button>
+                            </div>
+                            <div class="text-xs font-mono bg-emerald-900/90 p-2 rounded-lg border border-emerald-700 text-emerald-100 leading-relaxed">
+                                ${ann.text}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                layer.appendChild(el);
+
+                // 2. Render in Right Sidebar Feed
+                const feedItem = document.createElement('div');
+                feedItem.onclick = () => focusAnnotation(ann.id);
+                feedItem.className = 'p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-indigo-50/50 hover:border-indigo-300 cursor-pointer transition-all space-y-1';
+
+                const badgeLabel = ann.type === 'correction'
+                    ? '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold">✨ Model Correction</span>'
+                    : (ann.type === 'comment'
+                        ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold">📌 Comment</span>'
+                        : '<span class="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[10px] font-bold">🏷️ Quick Stamp</span>');
+
+                feedItem.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        ${badgeLabel}
+                        <span class="text-[10px] text-slate-400 font-medium">${ann.questionRef || 'Paper Markup'}</span>
+                    </div>
+                    <p class="text-xs text-slate-800 font-medium leading-snug mono-code mt-1">${ann.text}</p>
+                `;
+                feed.appendChild(feedItem);
+            });
+        }
+
+        function focusAnnotation(id) {
+            const node = document.getElementById(`paper-node-${id}`);
+            if (!node) return;
+            node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            node.firstElementChild.classList.remove('pulse-highlight');
+            void node.offsetWidth; // trigger reflow
+            node.firstElementChild.classList.add('pulse-highlight');
+        }
+
+        // ==========================================
+        // MODAL FOR STICKY COMMENTS & CORRECTIONS
+        // ==========================================
+        function openNewAnnotationModal(x, y, type) {
+            pendingModalCoords = {
+                x: Math.min(Math.max(x - 110, 20), 510),
+                y: Math.min(Math.max(y - 20, 40), 980),
+                type
+            };
+
+            const modal = document.getElementById('annotation-modal');
+            const title = document.getElementById('modal-title');
+            const icon = document.getElementById('modal-icon');
+            const input = document.getElementById('modal-input');
+
+            if (type === 'correction') {
+                icon.textContent = '✨';
+                title.textContent = 'Attach Structured "Correct Answer" Card';
+                input.value = 'HAVING COUNT(OrderID) > 3 AND SUM(OrderTotal) > 1500';
+            } else {
+                icon.textContent = '📌';
+                title.textContent = 'Drop Point Comment Sticky Note';
+                input.value = 'Please review how aggregate functions work with GROUP BY.';
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            input.focus();
+        }
+
+        function closeAnnotationModal() {
+            const modal = document.getElementById('annotation-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function fillModalPreset(text) {
+            document.getElementById('modal-input').value = text;
+        }
+
+        function saveModalAnnotation() {
+            const text = document.getElementById('modal-input').value.trim();
+            if (!text) return;
+
+            addAnnotation({
+                id: 'ann-' + Date.now(),
+                type: pendingModalCoords.type,
+                x: pendingModalCoords.x,
+                y: pendingModalCoords.y,
+                text: text,
+                questionRef: pendingModalCoords.y < 420 ? 'Q1 • 3NF' : (pendingModalCoords.y < 680 ? 'Q2 • SQL Query' : 'Q3 • Subnetting')
+            });
+
+            closeAnnotationModal();
+            setActiveTool('select');
+            showToast(pendingModalCoords.type === 'correction' ? 'Correct Answer attached!' : 'Comment pin added!');
+        }
+
+        // ==========================================
+        // HTML5 FREEHAND RED PEN & HIGHLIGHTER CANVAS
+        // ==========================================
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        function initInkCanvas() {
+            const canvas = document.getElementById('ink-canvas');
+            const ctx = canvas.getContext('2d');
+
+            function getPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: (clientX - rect.left) / currentZoom,
+                    y: (clientY - rect.top) / currentZoom
+                };
+            }
+
+            function startDraw(e) {
+                if (currentTool !== 'pen' && currentTool !== 'highlighter') return;
+                isDrawing = true;
+                const pos = getPos(e);
+                lastX = pos.x;
+                lastY = pos.y;
+            }
+
+            function moveDraw(e) {
+                if (!isDrawing) return;
+                e.preventDefault();
+                const pos = getPos(e);
+
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                if (currentTool === 'pen') {
+                    ctx.strokeStyle = 'rgba(225, 29, 72, 0.9)';
+                    ctx.lineWidth = 2.8;
+                } else if (currentTool === 'highlighter') {
+                    ctx.strokeStyle = 'rgba(250, 204, 21, 0.35)';
+                    ctx.lineWidth = 18;
+                }
+
+                ctx.stroke();
+                lastX = pos.x;
+                lastY = pos.y;
+            }
+
+            function endDraw() {
+                if (isDrawing) {
+                    isDrawing = false;
+                    triggerAutoSaveIndicator();
+                }
+            }
+
+            canvas.addEventListener('mousedown', startDraw);
+            canvas.addEventListener('mousemove', moveDraw);
+            window.addEventListener('mouseup', endDraw);
+
+            canvas.addEventListener('touchstart', startDraw, { passive: false });
+            canvas.addEventListener('touchmove', moveDraw, { passive: false });
+            window.addEventListener('touchend', endDraw);
+        }
+
+        // Draw realistic teacher red-pen underline/check on load
+        function drawInitialSampleInk() {
+            const canvas = document.getElementById('ink-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.save();
+            ctx.strokeStyle = 'rgba(225, 29, 72, 0.85)';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+
+            // Red checkmark on Q1
+            ctx.beginPath();
+            ctx.moveTo(735, 310);
+            ctx.lineTo(748, 324);
+            ctx.lineTo(775, 292);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Animated red circle drawing for the Auto-Play Demo
+        function animateRedCircleOnSQLMistake() {
+            const canvas = document.getElementById('ink-canvas');
+            const ctx = canvas.getContext('2d');
+            const centerX = 395;
+            const centerY = 588;
+            const radiusX = 215;
+            const radiusY = 18;
+
+            let step = 0;
+            const totalSteps = 35;
+
+            const interval = setInterval(() => {
+                step++;
+                const prevAngle = ((step - 1) / totalSteps) * (Math.PI * 2);
+                const currAngle = (step / totalSteps) * (Math.PI * 2);
+
+                ctx.save();
+                ctx.strokeStyle = 'rgba(225, 29, 72, 0.92)';
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, prevAngle, currAngle);
+                ctx.stroke();
+                ctx.restore();
+
+                if (step >= totalSteps) clearInterval(interval);
+            }, 16);
+        }
+
+        function clearInkCanvas() {
+            const canvas = document.getElementById('ink-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            showToast('Freehand ink cleared');
+        }
+
+        // ==========================================
+        // ANSWER KEY OVERLAY & UI CONTROLS
+        // ==========================================
+        function toggleAnswerKeyOverlay() {
+            answerKeyVisible = !answerKeyVisible;
+            const layers = document.querySelectorAll('.answer-key-layer');
+            layers.forEach(l => l.classList.toggle('hidden', !answerKeyVisible));
+
+            const badge = document.getElementById('overlay-badge');
+            const btn = document.getElementById('answer-key-toggle');
+
+            if (answerKeyVisible) {
+                badge.textContent = 'ON';
+                badge.className = 'px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-bold';
+                btn.classList.add('bg-emerald-50', 'border-emerald-400', 'text-emerald-800');
+                showToast('Answer Key Overlay enabled');
+            } else {
+                badge.textContent = 'OFF';
+                badge.className = 'px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 text-[10px] font-bold';
+                btn.classList.remove('bg-emerald-50', 'border-emerald-400', 'text-emerald-800');
+            }
+        }
+
+        function adjustZoom(delta) {
+            currentZoom = Math.min(Math.max(currentZoom + delta, 0.7), 1.3);
+            document.getElementById('exam-paper').style.transform = `scale(${currentZoom})`;
+            document.getElementById('zoom-label').textContent = `${Math.round(currentZoom * 100)}%`;
+        }
+
+        function switchSidebarTab(tab) {
+            const isRubric = tab === 'rubric';
+            document.getElementById('sidebar-tab-rubric').classList.toggle('hidden', !isRubric);
+            document.getElementById('sidebar-tab-feed').classList.toggle('hidden', isRubric);
+
+            document.getElementById('tab-btn-rubric').className = isRubric
+                ? 'py-2 text-xs font-bold rounded-lg bg-white text-indigo-600 shadow-sm transition-all'
+                : 'py-2 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all';
+
+            document.getElementById('tab-btn-feed').className = !isRubric
+                ? 'py-2 text-xs font-bold rounded-lg bg-white text-indigo-600 shadow-sm transition-all flex items-center justify-center space-x-1.5'
+                : 'py-2 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all flex items-center justify-center space-x-1.5';
+        }
+
+        // ==========================================
+        // VOICE NOTE RECORDER SIMULATOR
+        // ==========================================
+        let isRecordingVoice = false;
+        let voiceInterval = null;
+        let voiceSeconds = 0;
+
+        function toggleVoiceRecording() {
+            const btnText = document.getElementById('voice-btn-text');
+            const timer = document.getElementById('voice-timer');
+            const waveBars = document.getElementById('wave-bars-container');
+            const statusLabel = document.getElementById('voice-status-label');
+
+            if (!isRecordingVoice) {
+                isRecordingVoice = true;
+                voiceSeconds = 0;
+                btnText.textContent = 'Stop Recording';
+                statusLabel.textContent = 'Recording teacher voice note...';
+                waveBars.classList.remove('hidden');
+
+                voiceInterval = setInterval(() => {
+                    voiceSeconds++;
+                    const secStr = String(voiceSeconds).padStart(2, '0');
+                    timer.textContent = `00:${secStr} / 00:30`;
+                    if (voiceSeconds >= 30) toggleVoiceRecording();
+                }, 1000);
+            } else {
+                isRecordingVoice = false;
+                clearInterval(voiceInterval);
+                btnText.textContent = '✓ Play Recorded Note (00:0' + Math.max(voiceSeconds, 4) + ')';
+                statusLabel.textContent = 'Audio feedback attached to submission';
+                waveBars.classList.add('hidden');
+                showToast('🎤 Voice feedback attached!');
+            }
+        }
+
+        function insertQuickSummary() {
+            const box = document.getElementById('overall-feedback-input');
+            box.value = "Excellent work on Question 1 (3NF normalization) and Question 3 (CIDR /26 host calculation). In Question 2, remember that SQL aggregate functions like COUNT() and SUM() cannot be placed inside a WHERE clause—use HAVING after GROUP BY instead.";
+            showToast('Summary feedback generated');
+        }
+
+        // ==========================================
+        // STUDENT SWITCHING & RESET
+        // ==========================================
+        function switchStudent(studentKey) {
+            const nameEl = document.getElementById('paper-student-name');
+            const idEl = document.getElementById('paper-student-id');
+            const statusEl = document.getElementById('paper-status-pill');
+
+            if (studentKey === 'kasun') {
+                nameEl.textContent = 'Kasun Perera';
+                idEl.textContent = '#SL-2041';
+                statusEl.textContent = 'In Marking Queue';
+                statusEl.className = 'ml-1 px-2 py-0.5 bg-amber-100 text-amber-800 font-semibold rounded text-[11px]';
+            } else if (studentKey === 'nimali') {
+                nameEl.textContent = 'Nimali Silva';
+                idEl.textContent = '#SL-2042';
+                statusEl.textContent = 'Ready to Mark';
+                statusEl.className = 'ml-1 px-2 py-0.5 bg-indigo-100 text-indigo-800 font-semibold rounded text-[11px]';
+            } else {
+                nameEl.textContent = 'Ruwan Fernando';
+                idEl.textContent = '#SL-2045';
+                statusEl.textContent = 'Marked & Returned';
+                statusEl.className = 'ml-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 font-semibold rounded text-[11px]';
+            }
+            showToast(`Loaded submission for ${nameEl.textContent}`);
+        }
+
+        function saveAndNextStudent() {
+            const select = document.getElementById('student-select');
+            if (select.value === 'kasun') {
+                select.value = 'nimali';
+            } else if (select.value === 'nimali') {
+                select.value = 'ruwan';
+            } else {
+                select.value = 'kasun';
+            }
+            switchStudent(select.value);
+        }
+
+        function resetDemoState() {
+            stopAutoPlayDemo();
+            clearInkCanvas();
+            annotations = getInitialAnnotations();
+            rubricData[0].score = 25;
+            rubricData[1].score = 15;
+            rubricData[2].score = 15;
+            rubricData[3].score = 10;
+            if (answerKeyVisible) toggleAnswerKeyOverlay();
+            renderRubric();
+            renderAnnotations();
+            drawInitialSampleInk();
+            showToast('Paper reset to initial state');
+        }
+
+        function triggerAutoSaveIndicator() {
+            const status = document.getElementById('autosave-status');
+            status.textContent = 'Saving...';
+            setTimeout(() => {
+                status.textContent = 'All changes saved';
+            }, 600);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 2400);
+        }
+
+        // ==========================================
+        // AUTOMATED VIDEO-LIKE DEMO WALKTHROUGH PLAYER
+        // ==========================================
+        let demoRunning = false;
+        let demoTimeouts = [];
+
+        function scheduleDemoStep(fn, delay) {
+            const t = setTimeout(fn, delay);
+            demoTimeouts.push(t);
+        }
+
+        function moveDemoCursorToElement(selector, clickEffect = true) {
+            const el = document.querySelector(selector);
+            const cursor = document.getElementById('demo-cursor');
+            if (!el || !cursor) return;
+
+            const rect = el.getBoundingClientRect();
+            const targetX = rect.left + rect.width / 2;
+            const targetY = rect.top + rect.height / 2;
+
+            cursor.style.left = `${targetX}px`;
+            cursor.style.top = `${targetY}px`;
+
+            if (clickEffect) {
+                setTimeout(() => {
+                    cursor.classList.remove('cursor-clicking');
+                    void cursor.offsetWidth;
+                    cursor.classList.add('cursor-clicking');
+                }, 620);
+            }
+        }
+
+        function updateWalkthroughBanner(stepLabel, subtitle) {
+            document.getElementById('walkthrough-step-tag').textContent = stepLabel;
+            document.getElementById('walkthrough-subtitle').textContent = subtitle;
+        }
+
+        function toggleAutoPlayDemo() {
+            if (demoRunning) {
+                stopAutoPlayDemo();
+            } else {
+                startAutoPlayDemo();
+            }
+        }
+
+        function startAutoPlayDemo() {
+            // Reset clean state first
+            clearInkCanvas();
+            annotations = getInitialAnnotations();
+            if (answerKeyVisible) toggleAnswerKeyOverlay();
+            rubricData[0].score = 25;
+            rubricData[1].score = 15;
+            rubricData[2].score = 15;
+            rubricData[3].score = 10;
+            renderRubric();
+            renderAnnotations();
+            drawInitialSampleInk();
+            switchSidebarTab('rubric');
+
+            demoRunning = true;
+            document.getElementById('demo-cursor').classList.remove('hidden');
+            document.getElementById('walkthrough-banner').classList.remove('hidden');
+            document.getElementById('autoplay-icon').textContent = '⏹';
+            document.getElementById('autoplay-text').textContent = 'Stop Demo Walkthrough';
+
+            // STEP 1: Toggle Answer Key Overlay to compare student's SQL query against model key
+            updateWalkthroughBanner(
+                'STEP 1 OF 6 • SMART ANSWER KEY OVERLAY',
+                'First, the teacher toggles the "Answer Key Overlay" to instantly compare Kasun\'s paper against the model solutions.'
+            );
+            moveDemoCursorToElement('#answer-key-toggle');
+            scheduleDemoStep(() => {
+                if (!answerKeyVisible) toggleAnswerKeyOverlay();
+            }, 900);
+
+            // STEP 2: Circle the SQL WHERE aggregate error using the Red Pen tool
+            scheduleDemoStep(() => {
+                updateWalkthroughBanner(
+                    'STEP 2 OF 6 • FREEHAND RED PEN MARKUP',
+                    'Spotting an SQL error in Question 2 (COUNT/SUM inside WHERE instead of HAVING), the teacher circles it with the Red Pen.'
+                );
+                moveDemoCursorToElement('#tool-pen');
+            }, 3400);
+
+            scheduleDemoStep(() => {
+                setActiveTool('pen');
+                document.getElementById('question-block-2').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                moveDemoCursorToElement('#q2-mistake-line');
+            }, 4200);
+
+            scheduleDemoStep(() => {
+                animateRedCircleOnSQLMistake();
+            }, 4900);
+
+            // STEP 3: Attach an Inline "Correct Answer" card right below the SQL mistake
+            scheduleDemoStep(() => {
+                updateWalkthroughBanner(
+                    'STEP 3 OF 6 • INLINE CORRECT ANSWER CARD',
+                    'Next, the teacher attaches a structured green "Correct Answer" card showing the exact HAVING clause fix.'
+                );
+                moveDemoCursorToElement('#tool-correction');
+            }, 6800);
+
+            scheduleDemoStep(() => {
+                setActiveTool('correction');
+                moveDemoCursorToElement('#q2-answer-area');
+            }, 7600);
+
+            scheduleDemoStep(() => {
+                // Hide answer key overlay so the green correction card stands out clearly
+                if (answerKeyVisible) toggleAnswerKeyOverlay();
+                const newId = 'ann-demo-sql';
+                addAnnotation({
+                    id: newId,
+                    type: 'correction',
+                    x: 240,
+                    y: 615,
+                    text: 'HAVING COUNT(OrderID) > 3 AND SUM(OrderTotal) > 1500;',
+                    questionRef: 'Q2 • SQL HAVING Fix'
+                });
+                focusAnnotation(newId);
+                showToast('✨ Inline Correct Answer attached!');
+            }, 8400);
+
+            // STEP 4: Drop a Quick Stamp on Question 3 (Subnetting calculation)
+            scheduleDemoStep(() => {
+                updateWalkthroughBanner(
+                    'STEP 4 OF 6 • 1-CLICK QUICK STAMPS',
+                    'Moving to Question 3, Kasun accurately calculated 62 usable hosts. The teacher drops a "✅ Correct (+5)" stamp in one click.'
+                );
+                document.getElementById('question-block-3').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                moveDemoCursorToElement('#stamp-correct');
+            }, 11200);
+
+            scheduleDemoStep(() => {
+                selectStamp('correct', '✅ Correct (+5)', 'emerald', 5);
+                moveDemoCursorToElement('#q3-final-line');
+            }, 12000);
+
+            scheduleDemoStep(() => {
+                const stampId = 'ann-demo-q3';
+                addAnnotation({
+                    id: stampId,
+                    type: 'stamp',
+                    x: 590,
+                    y: 865,
+                    text: '✅ Correct (+5)',
+                    color: 'emerald',
+                    questionRef: 'Q3 • Usable Hosts'
+                });
+                focusAnnotation(stampId);
+            }, 12800);
+
+            // STEP 5: Click Rubric Score Pills in the Right Sidebar & Auto-Tally Total Score
+            scheduleDemoStep(() => {
+                updateWalkthroughBanner(
+                    'STEP 5 OF 6 • CLICKABLE RUBRIC & AUTO-TALLY',
+                    'In the Rubric panel, clicking the score pills for Subnetting (25/25) and Clarity (20/25) automatically updates the total grade to 85/100 (A+)!'
+                );
+                moveDemoCursorToElement('#pill-crit-3-25');
+            }, 15000);
+
+            scheduleDemoStep(() => {
+                setRubricScore(2, 25); // Subnetting -> 25
+                moveDemoCursorToElement('#pill-crit-4-20');
+            }, 15900);
+
+            scheduleDemoStep(() => {
+                setRubricScore(3, 20); // Clarity -> 20 (Total becomes 85/100)
+                showToast('🎉 Rubric auto-tallied: 85 / 100 (A+)');
+            }, 16800);
+
+            // STEP 6: Record a quick Voice Feedback note & wrap up
+            scheduleDemoStep(() => {
+                updateWalkthroughBanner(
+                    'STEP 6 OF 6 • PERSONAL AUDIO FEEDBACK & NEXT STUDENT',
+                    'Finally, the teacher records a personal voice note summary and clicks "Save & Next Student". Try any tool yourself now!'
+                );
+                moveDemoCursorToElement('#voice-record-btn');
+            }, 18800);
+
+            scheduleDemoStep(() => {
+                if (!isRecordingVoice) toggleVoiceRecording();
+            }, 19600);
+
+            scheduleDemoStep(() => {
+                if (isRecordingVoice) toggleVoiceRecording();
+                setActiveTool('select');
+            }, 22000);
+
+            scheduleDemoStep(() => {
+                stopAutoPlayDemo(true);
+            }, 23500);
+        }
+
+        function stopAutoPlayDemo(completedNaturally = false) {
+            demoRunning = false;
+            demoTimeouts.forEach(t => clearTimeout(t));
+            demoTimeouts = [];
+
+            if (isRecordingVoice) toggleVoiceRecording();
+
+            document.getElementById('demo-cursor').classList.add('hidden');
+            document.getElementById('autoplay-icon').textContent = '▶';
+            document.getElementById('autoplay-text').textContent = 'Auto-Play Demo Walkthrough';
+
+            if (completedNaturally) {
+                updateWalkthroughBanner(
+                    '✅ DEMO COMPLETE • INTERACTIVE MODE READY',
+                    'Walkthrough complete! Feel free to draw with the Red Pen, drop Stamps, toggle the Answer Key, or edit Rubric scores.'
+                );
+                setTimeout(() => {
+                    if (!demoRunning) {
+                        document.getElementById('walkthrough-banner').classList.add('hidden');
+                    }
+                }, 4500);
+            } else {
+                document.getElementById('walkthrough-banner').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

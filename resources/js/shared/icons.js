@@ -197,6 +197,12 @@ export const icons = {
     chart: {
         paths: ['M4.5 19.5h15', 'M8 16V10M12 16V5.5M16 16v-3.5'],
     },
+    download: {
+        paths: ['M12 4.5v10', 'M8 11l4 4 4-4', 'M5 19.5h14'],
+    },
+    upload: {
+        paths: ['M12 14.5v-10', 'M8 8l4-4 4 4', 'M5 19.5h14'],
+    },
 };
 
 export default icons;

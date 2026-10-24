@@ -86,6 +86,11 @@ export default defineConfig({
                 // The teacher's money at /teacher/earnings: the totals, the
                 // six-month trend, the payouts and the filterable ledger.
                 'resources/js/teacher-earnings/main.js',
+                // The paper-marking inbox at /teacher/marking and one order at
+                // /teacher/marking/{order}: what is waiting, what is overdue and
+                // the delivery form that returns the marked copy.
+                'resources/js/teacher-marking/main.js',
+                'resources/js/teacher-marking-show/main.js',
                 // The signed-in chrome (sidebar + top bar) that wraps every
                 // x-app-layout screen, so the layout itself is a Vue component.
                 'resources/js/app-shell/main.js',

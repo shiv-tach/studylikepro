@@ -327,3 +327,146 @@ it('lets the owner download their uploaded paper', function () {
         ->get(route('student.marking-orders.download', [$order, 'files', 0]))
         ->assertStatus(403);
 });
+
+it('renders the marking inbox island with a counted status rail and its paid orders', function () {
+    Storage::fake('local');
+
+    ['order' => $order, 'teacher' => $teacher, 'student' => $student] = submittedMarkingOrder();
+
+    $config = teacherMarkingConfig(
+        $this->actingAs($teacher->user)->get(route('teacher.marking.index'))->assertOk()
+    );
+
+    expect(collect($config['statusTabs'])->pluck('key')->all())
+        ->toBe(['', 'submitted', 'in_progress', 'returned', 'accepted', 'disputed', 'resolved', 'cancelled'])
+        ->and($config['statusTabs'][0]['active'])->toBeTrue()
+        ->and($config['statusTabs'][0]['count'])->toBe(1)
+        ->and($config['statusTabs'][1]['count'])->toBe(1)
+        ->and($config['stats']['awaiting'])->toBe(1)
+        ->and($config['stats']['overdue'])->toBe(0)
+        ->and($config['orders'])->toHaveCount(1)
+        ->and($config['orders'][0]['id'])->toBe($order->id)
+        ->and($config['orders'][0]['url'])->toBe(route('teacher.marking.show', $order))
+        ->and($config['orders'][0]['studentName'])->toBe($student->name)
+        ->and($config['orders'][0]['status'])->toMatchArray([
+            'value' => 'submitted',
+            'label' => 'Submitted',
+            'tone' => 'amber',
+        ])
+        ->and($config['orders'][0]['actionLabel'])->toBe('Mark paper')
+        ->and($config['orders'][0]['deadlineLabel'])->toStartWith('Due ');
+});
+
+it('filters the marking inbox with a real status link', function () {
+    Storage::fake('local');
+
+    $teacher = TeacherProfile::factory()->approved()->create();
+
+    submittedMarkingOrder(null, $teacher);
+    $returned = submittedMarkingOrder(null, $teacher);
+
+    $returned['order']->forceFill([
+        'status' => MarkingOrderStatus::Returned,
+        'returned_at' => now(),
+        'marked_files' => [],
+    ])->save();
+
+    $config = teacherMarkingConfig(
+        $this->actingAs($teacher->user)
+            ->get(route('teacher.marking.index', ['status' => 'returned']))
+            ->assertOk()
+    );
+
+    $tabs = collect($config['statusTabs']);
+
+    expect($config['orders'])->toHaveCount(1)
+        ->and($config['orders'][0]['id'])->toBe($returned['order']->id)
+        ->and($tabs->firstWhere('key', 'returned')['active'])->toBeTrue()
+        ->and($tabs->firstWhere('key', 'submitted')['count'])->toBe(1)
+        ->and($tabs->firstWhere('key', 'returned')['count'])->toBe(1)
+        ->and($config['stats']['returned'])->toBe(1);
+});
+
+it('renders the marking console island with the paper and the delivery form', function () {
+    Storage::fake('local');
+
+    ['order' => $order, 'teacher' => $teacher] = submittedMarkingOrder();
+
+    $config = teacherMarkingShowConfig(
+        $this->actingAs($teacher->user)->get(route('teacher.marking.show', $order))->assertOk()
+    );
+
+    expect($config['canMark'])->toBeTrue()
+        ->and($config['files'])->toHaveCount(1)
+        ->and($config['files'][0]['name'])->toBe('sample.pdf')
+        ->and($config['files'][0]['sizeLabel'])->toBe('1 KB')
+        ->and($config['files'][0]['url'])->toBe(route('teacher.marking.download', [$order, 'files', 0]))
+        ->and($config['form']['maxFiles'])->toBe((int) config('studylikepro.services.marking_max_files'))
+        ->and($config['form']['marks'])->toBe([['label' => '', 'value' => '']])
+        ->and($config['form']['errors']['order'])->toBeNull()
+        ->and($config['delivery'])->toBeNull()
+        ->and($config['order']['subjectName'])->toBe($order->subject->name)
+        ->and($config['order']['status']['tone'])->toBe('amber');
+});
+
+it('replays the feedback and the mark rows when a delivery is rejected', function () {
+    Storage::fake('local');
+
+    ['order' => $order, 'teacher' => $teacher] = submittedMarkingOrder();
+
+    $this->from(route('teacher.marking.show', $order))
+        ->actingAs($teacher->user)
+        ->post(route('teacher.marking.mark', $order), [
+            'feedback' => 'Solid work on the first half.',
+            'marks' => [
+                ['label' => 'Question 1', 'value' => '18/20'],
+                ['label' => 'Question 2', 'value' => ''],
+            ],
+        ])
+        ->assertSessionHasErrors('marked_files')
+        ->assertRedirect(route('teacher.marking.show', $order));
+
+    $config = teacherMarkingShowConfig(
+        $this->actingAs($teacher->user)->get(route('teacher.marking.show', $order))
+    );
+
+    expect($config['form']['feedback'])->toBe('Solid work on the first half.')
+        ->and($config['form']['marks'])->toHaveCount(2)
+        ->and($config['form']['marks'][0])->toBe(['label' => 'Question 1', 'value' => '18/20'])
+        ->and($config['form']['errors']['marked_files'])->not->toBeEmpty();
+});
+
+it('shows the delivered copy and the dispute on a disputed order', function () {
+    Storage::fake('local');
+
+    ['order' => $order, 'teacher' => $teacher] = submittedMarkingOrder();
+
+    $order->forceFill([
+        'status' => MarkingOrderStatus::Disputed,
+        'returned_at' => now(),
+        'marked_files' => [
+            [
+                'path' => 'marking-orders/'.$order->id.'/marked/sample.pdf',
+                'original_name' => 'sample-marked.pdf',
+                'mime_type' => 'application/pdf',
+                'size' => 1100,
+            ],
+        ],
+        'feedback' => 'Good work overall.',
+        'marks' => [['label' => 'Question 1', 'value' => '18/20']],
+        'dispute_reason' => 'The marked copy belongs to a different paper.',
+    ])->save();
+
+    $config = teacherMarkingShowConfig(
+        $this->actingAs($teacher->user)->get(route('teacher.marking.show', $order))->assertOk()
+    );
+
+    expect($config['canMark'])->toBeFalse()
+        ->and($config['form'])->toBeNull()
+        ->and($config['delivery']['feedback'])->toBe('Good work overall.')
+        ->and($config['delivery']['marks'])->toBe([['label' => 'Question 1', 'value' => '18/20']])
+        ->and($config['delivery']['files'][0]['name'])->toBe('sample-marked.pdf')
+        ->and($config['delivery']['files'][0]['url'])->toBe(route('teacher.marking.download', [$order, 'marked_files', 0]))
+        ->and($config['dispute']['reason'])->toBe('The marked copy belongs to a different paper.')
+        ->and($config['order']['status']['tone'])->toBe('rose');
+});

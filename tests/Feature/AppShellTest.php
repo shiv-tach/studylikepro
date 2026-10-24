@@ -1,7 +1,14 @@
 <?php
 
+use App\Enums\PurchaseStatus;
+use App\Enums\ServiceType;
+use App\Models\PaperMarkingOrder;
+use App\Models\ServiceOffering;
+use App\Models\ServicePurchase;
+use App\Models\TeacherProfile;
 use App\Models\User;
 use App\Notifications\LessonCompleted;
+use Illuminate\Support\Carbon;
 
 /**
  * The signed-in chrome — sidebar, top bar and notification bell — is rendered by
@@ -56,6 +63,44 @@ test('a teacher sidebar counts the lessons still to teach and never badges revie
 
     expect($items['My lessons']['badge'])->toBe(1)
         ->and($items['Reviews']['badge'])->toBeNull();
+});
+
+test('the teacher sidebar counts the papers still waiting to be marked', function () {
+    $teacher = TeacherProfile::factory()->approved()->create();
+
+    $offering = ServiceOffering::factory()->forType(ServiceType::PaperMarking)->create([
+        'teacher_profile_id' => $teacher->id,
+    ]);
+
+    $purchaseFor = fn (PurchaseStatus $status, ?Carbon $paidAt = null) => ServicePurchase::factory()
+        ->forOffering($offering)
+        ->create([
+            'status' => $status,
+            'paid_at' => $paidAt,
+        ]);
+
+    PaperMarkingOrder::factory()->forPurchase($purchaseFor(PurchaseStatus::Active, now()->subHour()))->create();
+    PaperMarkingOrder::factory()->forPurchase($purchaseFor(PurchaseStatus::Active, now()->subHour()))->inProgress()->create();
+
+    // Neither of these is work: one is not paid for, the other is delivered.
+    PaperMarkingOrder::factory()->forPurchase($purchaseFor(PurchaseStatus::PendingPayment))->create();
+    PaperMarkingOrder::factory()->forPurchase($purchaseFor(PurchaseStatus::Active, now()->subHour()))->returned()->create();
+
+    $config = shellConfig(
+        $this->actingAs($teacher->user)->get(route('teacher.schedule.index'))->assertOk()
+    );
+
+    expect(collect($config['navItems'])->keyBy('label')['Paper Marking']['badge'])->toBe(2);
+});
+
+test('the marking badge is absent when nothing is waiting', function () {
+    $teacher = TeacherProfile::factory()->approved()->create();
+
+    $config = shellConfig(
+        $this->actingAs($teacher->user)->get(route('teacher.schedule.index'))->assertOk()
+    );
+
+    expect(collect($config['navItems'])->keyBy('label')['Paper Marking']['badge'])->toBeNull();
 });
 
 test('the notification bell count and rows ride in the island', function () {

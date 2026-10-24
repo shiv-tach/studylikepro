@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\MarkingOrderStatus;
+use App\Enums\PurchaseStatus;
 use Database\Factories\PaperMarkingOrderFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -131,6 +132,18 @@ class PaperMarkingOrder extends Model
             MarkingOrderStatus::Submitted->value,
             MarkingOrderStatus::InProgress->value,
         ]);
+    }
+
+    /**
+     * Only orders the student actually paid for. An unpaid submission is
+     * invisible to the teacher everywhere: inbox, rail counts and sidebar badge.
+     */
+    public function scopePaid(Builder $query): Builder
+    {
+        return $query->whereHas('purchase', fn (Builder $purchase) => $purchase->whereIn('status', [
+            PurchaseStatus::Active->value,
+            PurchaseStatus::Completed->value,
+        ]));
     }
 
     public function scopeForTeacher(Builder $query, int $profileId): Builder

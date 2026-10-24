@@ -3,6 +3,7 @@
     use App\Enums\MarkingOrderStatus;
     use App\Enums\PurchaseStatus;
     use App\Enums\ServiceType;
+    use App\Support\MarkingDisplay;
 
     // /teacher/orders is rendered by resources/js/teacher-orders. Blade owns the
     // query results, every status count, the money labels, the filter and search
@@ -24,14 +25,9 @@
         PurchaseStatus::Cancelled, PurchaseStatus::Expired, PurchaseStatus::Resolved => 'slate',
     };
 
-    $markingTone = fn (MarkingOrderStatus $status) => match ($status) {
-        MarkingOrderStatus::Submitted => 'amber',
-        MarkingOrderStatus::InProgress => 'primary',
-        MarkingOrderStatus::Returned => 'sky',
-        MarkingOrderStatus::Accepted => 'emerald',
-        MarkingOrderStatus::Disputed => 'rose',
-        MarkingOrderStatus::Resolved, MarkingOrderStatus::Cancelled => 'slate',
-    };
+    // The marking chip's colour lives in MarkingDisplay, shared with the marking
+    // inbox and the marking order console, so the three cannot drift apart.
+    $markingTone = fn (MarkingOrderStatus $status) => MarkingDisplay::tone($status);
 
     // The shared icon set (resources/js/shared/icons.js) names each service.
     $typeIcons = [

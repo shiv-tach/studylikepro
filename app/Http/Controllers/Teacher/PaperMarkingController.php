@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Teacher;
 
 use App\Enums\MarkingOrderStatus;
-use App\Enums\PurchaseStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MarkPaperRequest;
 use App\Models\PaperMarkingOrder;
@@ -29,14 +28,31 @@ class PaperMarkingController extends Controller
             'status' => ['nullable', 'string', Rule::enum(MarkingOrderStatus::class)],
         ]);
 
-        $orders = PaperMarkingOrder::query()
+        // One base query serves the page, the rail counts and the overdue count,
+        // so a tab can never disagree with the rows below it — and an unpaid
+        // submission is invisible to all three.
+        $base = PaperMarkingOrder::query()
             ->forTeacher($request->user()->teacherProfile->id)
-            ->whereHas('purchase', function ($query) {
-                $query->whereIn('status', [
-                    PurchaseStatus::Active->value,
-                    PurchaseStatus::Completed->value,
-                ]);
-            })
+            ->paid();
+
+        $statusCounts = (clone $base)
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->get()
+            ->mapWithKeys(fn (PaperMarkingOrder $row) => [$row->status->value => (int) $row->total])
+            ->all();
+
+        // A deadline is either stored or derived from the paid time plus the
+        // agreed turnaround, so the comparison runs in PHP. Only the papers
+        // still awaiting work are loaded.
+        $overdue = (clone $base)
+            ->awaitingWork()
+            ->with('purchase:id,paid_at')
+            ->get(['id', 'purchase_id', 'status', 'deadline_at', 'turnaround_hours'])
+            ->filter(fn (PaperMarkingOrder $order) => $order->isOverdue())
+            ->count();
+
+        $orders = $base
             ->with(['purchase.student', 'subject'])
             ->when(
                 $filters['status'] ?? null,
@@ -48,7 +64,8 @@ class PaperMarkingController extends Controller
 
         return view('teacher.marking.index', [
             'orders' => $orders,
-            'statuses' => MarkingOrderStatus::cases(),
+            'statusCounts' => $statusCounts,
+            'overdueCount' => $overdue,
             'selectedStatus' => $filters['status'] ?? null,
         ]);
     }
