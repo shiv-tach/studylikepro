@@ -26,14 +26,12 @@
 @endphp
 
 <x-app-layout>
-    <x-slot name="header">
-        <div>
-            <a href="{{ $config['urls']['index'] }}" class="text-xs font-semibold text-slate-400 transition-colors hover:text-primary">&larr; {{ __('Marking inbox') }}</a>
-            <h2 class="mt-1 font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('Marking order') }} · {{ $config['order']['subjectName'] }}</h2>
-        </div>
-    </x-slot>
-
-    <div class="w-full space-y-6">
+    {{-- No page heading in the shell's top bar: the marking order is named by the
+         studio's own command panel, which sits in the right-hand column so the
+         paper can use the full height of the page. No vertical rhythm on the
+         wrapper either — the hidden script element would still claim the sibling
+         margin and push the studio down by 24px. --}}
+    <div class="w-full">
         <script type="application/json" id="teacher-marking-show-config">@json($config, $jsonFlags)</script>
 
         <div id="teacher-marking-show-app" class="space-y-6"></div>

@@ -592,7 +592,7 @@ onBeforeUnmount(() => {
                 :action="config.form.action"
                 method="POST"
                 enctype="multipart/form-data"
-                class="space-y-4"
+                class="flex flex-col gap-4 xl:h-[calc(100vh-8rem)] xl:min-h-0"
                 @submit.prevent
             >
                 <input type="hidden" name="_token" :value="config.csrfToken">
@@ -624,25 +624,31 @@ onBeforeUnmount(() => {
                     </template>
                 </template>
 
-                <StudioTopBar
-                    :order="config.order"
-                    :autosave-status="autosave.status.value"
-                    :saved-at-label="autosave.savedAt.value"
-                    :can-undo="annotations.canUndo.value"
-                    :can-redo="annotations.canRedo.value"
-                    :next-url="config.urls.next"
-                    :urls="config.urls"
-                    @undo="annotations.undo()"
-                    @redo="annotations.redo()"
-                    @deliver="openDeliver"
-                />
+                <!-- Narrow screens keep the command bar above the canvas; from xl
+                     up it moves into the right-hand column so the paper gets the
+                     full height of the page. -->
+                <div class="xl:hidden">
+                    <StudioTopBar
+                        :order="config.order"
+                        :autosave-status="autosave.status.value"
+                        :saved-at-label="autosave.savedAt.value"
+                        :can-undo="annotations.canUndo.value"
+                        :can-redo="annotations.canRedo.value"
+                        :next-url="config.urls.next"
+                        :urls="config.urls"
+                        @undo="annotations.undo()"
+                        @redo="annotations.redo()"
+                        @deliver="openDeliver"
+                    />
+                </div>
 
                 <div v-if="formErrors.length" class="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
                     <p v-for="(message, index) in formErrors" :key="index">{{ message }}</p>
                 </div>
 
-                <div class="grid items-start gap-4 xl:grid-cols-[16rem_minmax(0,1fr)_20rem]">
+                <div class="grid items-start gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[16rem_minmax(0,1fr)_20rem] xl:grid-rows-1 xl:items-stretch">
                     <StudioToolRail
+                        class="xl:min-h-0 xl:overflow-y-auto"
                         :tool="annotations.tool.value"
                         :stamps="config.stamps ?? []"
                         :brush="annotations.brush"
@@ -656,7 +662,7 @@ onBeforeUnmount(() => {
                         @clear-page="clearCurrentPage"
                     />
 
-                    <div class="min-w-0 space-y-3">
+                    <div class="flex min-w-0 flex-col gap-3 xl:min-h-0">
                         <div class="flex items-center justify-between gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900/90">
                             <p class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                                 {{ currentPage ? (copy.studio?.pages?.label ?? 'Page :current of :total').replace(':current', pages.findIndex((page) => page.key === currentKey) + 1).replace(':total', pages.length) : '' }}
@@ -672,7 +678,7 @@ onBeforeUnmount(() => {
 
                         <div
                             ref="viewport"
-                            class="flex max-h-[calc(100vh-18rem)] min-h-[26rem] justify-center overflow-auto rounded-2xl bg-slate-200/70 p-6 dark:bg-slate-950/40"
+                            class="flex max-h-[calc(100vh-18rem)] min-h-[26rem] justify-center overflow-auto rounded-2xl bg-slate-200/70 p-6 dark:bg-slate-950/40 xl:max-h-none xl:min-h-0 xl:flex-1"
                         >
                             <div v-if="paperLoading" class="flex items-center gap-2 self-center text-xs font-semibold text-slate-500 dark:text-slate-300">
                                 <span class="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-hidden="true"></span>
@@ -718,7 +724,23 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                    <aside class="space-y-3 xl:sticky xl:top-20">
+                    <aside class="flex flex-col gap-3 xl:min-h-0 xl:overflow-y-auto xl:pr-1">
+                        <div class="hidden xl:block">
+                            <StudioTopBar
+                                orientation="vertical"
+                                :order="config.order"
+                                :autosave-status="autosave.status.value"
+                                :saved-at-label="autosave.savedAt.value"
+                                :can-undo="annotations.canUndo.value"
+                                :can-redo="annotations.canRedo.value"
+                                :next-url="config.urls.next"
+                                :urls="config.urls"
+                                @undo="annotations.undo()"
+                                @redo="annotations.redo()"
+                                @deliver="openDeliver"
+                            />
+                        </div>
+
                         <RubricPanel
                             :rubric="rubric"
                             :marks="marks"
