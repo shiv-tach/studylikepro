@@ -79,7 +79,8 @@ it('rate limits registrations per address', function () {
     config(['studylikepro.throttle.register' => 1]);
 
     $payload = fn (string $email) => [
-        'name' => 'New Person',
+        'first_name' => 'New',
+        'last_name' => 'Person',
         'email' => $email,
         'password' => 'password',
         'password_confirmation' => 'password',

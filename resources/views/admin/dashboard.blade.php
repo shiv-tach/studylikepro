@@ -14,7 +14,7 @@
         <!-- Welcome banner -->
         <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 via-slate-900 to-primary p-6 text-white shadow-lg shadow-primary/10 dark:shadow-primary/5">
             <div class="relative z-10 max-w-xl">
-                <h3 class="text-xl font-bold md:text-2xl">Welcome back, {{ Auth::user()->name }} 👋</h3>
+                <h3 class="text-xl font-bold md:text-2xl">Welcome back, {{ Auth::user()->displayName() }} 👋</h3>
                 <p class="mt-1 text-sm text-white/90">Verification, bookings, payments, disputes, refunds and reports all live here. Anything marked with a number needs a human.</p>
             </div>
             <div class="absolute right-0 top-0 -mr-6 -mt-6 h-36 w-36 rounded-full bg-white/10 blur-xl"></div>

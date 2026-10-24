@@ -20,7 +20,11 @@ const urls = useUrls();
 const csrfToken = useCsrfToken();
 
 // The form's own draft, seeded from what Blade sent back.
-const form = reactive({ name: props.values.name ?? '', email: props.values.email ?? '' });
+const form = reactive({
+    firstName: props.values.firstName ?? '',
+    lastName: props.values.lastName ?? '',
+    email: props.values.email ?? '',
+});
 const submitting = ref(false);
 </script>
 
@@ -34,18 +38,32 @@ const submitting = ref(false);
             <input type="hidden" name="_token" :value="csrfToken">
             <input type="hidden" name="_method" value="PATCH">
 
-            <UiFormField :label="copy.nameLabel" for-id="name" :errors="errors.name ?? []" required>
-                <input
-                    id="name"
-                    v-model="form.name"
-                    name="name"
-                    type="text"
-                    required
-                    autofocus
-                    autocomplete="name"
-                    class="mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                >
-            </UiFormField>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <UiFormField :label="copy.firstNameLabel" for-id="first_name" :errors="errors.firstName ?? []" required>
+                    <input
+                        id="first_name"
+                        v-model="form.firstName"
+                        name="first_name"
+                        type="text"
+                        required
+                        autofocus
+                        autocomplete="given-name"
+                        class="mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    >
+                </UiFormField>
+
+                <UiFormField :label="copy.lastNameLabel" for-id="last_name" :errors="errors.lastName ?? []" required>
+                    <input
+                        id="last_name"
+                        v-model="form.lastName"
+                        name="last_name"
+                        type="text"
+                        required
+                        autocomplete="family-name"
+                        class="mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    >
+                </UiFormField>
+            </div>
 
             <UiFormField :label="copy.emailLabel" for-id="email" :errors="errors.email ?? []" required>
                 <input

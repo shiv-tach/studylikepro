@@ -22,7 +22,7 @@ class BookingConfirmed extends Notification implements ShouldQueue
 
         $message = (new MailMessage)
             ->subject('Lesson confirmed — '.$when)
-            ->greeting('You are all set, '.$notifiable->name.'!')
+            ->greeting('You are all set, '.$notifiable->displayName().'!')
             ->line('Payment received. Your '.$this->booking->durationMinutes().'-minute lesson is confirmed.')
             ->line('When: '.$when)
             ->line('Lesson: '.$subject);

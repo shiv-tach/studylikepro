@@ -24,7 +24,7 @@
         <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-primary/80 to-purple-600 p-6 text-white shadow-lg shadow-primary/10 dark:shadow-primary/5">
             <div class="relative z-10 max-w-xl">
                 <div class="flex flex-wrap items-center gap-3">
-                    <h3 class="text-xl font-bold md:text-2xl">Welcome, {{ Auth::user()->name }}! 👋</h3>
+                    <h3 class="text-xl font-bold md:text-2xl">Welcome, {{ Auth::user()->displayName() }}! 👋</h3>
                     <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
                         <span class="h-1.5 w-1.5 rounded-full {{ $statusDot }}"></span>
                         Verification: {{ $status?->label() ?? 'Not started' }}

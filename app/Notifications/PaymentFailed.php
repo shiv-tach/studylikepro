@@ -23,7 +23,7 @@ class PaymentFailed extends Notification implements ShouldQueue
 
         $message = (new MailMessage)
             ->subject('Payment failed for '.platform_settings()->formatMinor($this->payment->amount_minor))
-            ->greeting('Hello '.$notifiable->name.',')
+            ->greeting('Hello '.$notifiable->displayName().',')
             ->line('We could not complete the payment for your '.$booking->durationMinutes().'-minute lesson.')
             ->line('What the gateway said: "'.$this->reason.'"');
 

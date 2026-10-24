@@ -31,7 +31,7 @@ class DailyDigest extends Notification implements ShouldQueue
             ->subject($this->lessons === []
                 ? 'Your Studylikepro day'
                 : 'Today: '.count($this->lessons).' lesson'.(count($this->lessons) === 1 ? '' : 's').' on Studylikepro')
-            ->greeting('Good morning, '.$notifiable->name.'!');
+            ->greeting('Good morning, '.$notifiable->displayName().'!');
 
         if ($this->lessons !== []) {
             $message->line('On your timetable today:');

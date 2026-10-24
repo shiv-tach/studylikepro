@@ -137,7 +137,8 @@
         'logoUrl' => asset('images/brand/logo-mark.png'),
         'csrfToken' => csrf_token(),
         'user' => [
-            'name' => $user->name,
+            'name' => $user->displayName(),
+            'fullName' => $user->name,
             'initials' => mb_substr($user->name, 0, 2),
             'roleLabel' => $roleLabel,
             'avatarUrl' => $user->avatarUrl(),

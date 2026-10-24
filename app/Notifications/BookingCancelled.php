@@ -24,7 +24,7 @@ class BookingCancelled extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject('Lesson cancelled — '.$when)
-            ->greeting('Hello '.$notifiable->name.',')
+            ->greeting('Hello '.$notifiable->displayName().',')
             ->line('The lesson on '.$when.' has been cancelled by the '.$this->by.'.')
             ->when($this->reason, fn (MailMessage $message) => $message->line('Reason: '.$this->reason))
             ->line('Nothing else is needed from you. You can book another time any time.')

@@ -26,7 +26,7 @@ class LessonCompleted extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject('Lesson completed — '.$this->windowLabel($this->booking, $notifiable))
-            ->greeting('Well done, '.$notifiable->name.'!')
+            ->greeting('Well done, '.$notifiable->displayName().'!')
             ->when(
                 $isStudent,
                 fn (MailMessage $message) => $message

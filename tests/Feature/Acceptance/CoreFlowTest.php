@@ -66,8 +66,13 @@ function signUp(string $role, array $overrides = []): User
     // Registering signs the new account in; the next sign-up needs a clean guest.
     Auth::logout();
 
+    // The form now collects the two parts; a `name` override is split the same
+    // way the migration and the model do, so existing callers keep working.
+    [$firstName, $lastName] = User::splitName($overrides['name'] ?? 'Test '.ucfirst($role));
+
     $payload = [
-        'name' => $overrides['name'] ?? 'Test '.ucfirst($role),
+        'first_name' => $overrides['first_name'] ?? $firstName,
+        'last_name' => $overrides['last_name'] ?? ($lastName ?? 'User'),
         'email' => $email,
         'password' => 'password',
         'password_confirmation' => 'password',

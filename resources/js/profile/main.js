@@ -11,7 +11,7 @@ const DEFAULT_CONFIG = {
     csrfToken: '',
     theme: { preset: 'classic' },
     user: {},
-    values: { name: '', email: '' },
+    values: { firstName: '', lastName: '', email: '' },
     errors: {},
     passwordErrors: {},
     deleteErrors: [],

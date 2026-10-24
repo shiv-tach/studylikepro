@@ -23,7 +23,7 @@ class ReviewFlagged extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject('Review #'.$this->review->id.' reported — '.($this->review->flagReasonLabel() ?? 'under review'))
-            ->greeting('Hello '.$notifiable->name.',')
+            ->greeting('Hello '.$notifiable->displayName().',')
             ->line($teacher.' reported a review left by '.$student.': '.($this->review->flagReasonLabel() ?? 'no reason given').'.')
             ->line('Rating given: '.$this->review->rating.'/5')
             ->when($this->review->comment, fn (MailMessage $message) => $message->line('They wrote: "'.$this->review->comment.'"'))

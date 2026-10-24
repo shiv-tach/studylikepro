@@ -18,7 +18,7 @@ class TeacherVerificationRejected extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject('Action needed on your Studylikepro application')
-            ->greeting('Hi '.$notifiable->name.',')
+            ->greeting('Hi '.$notifiable->displayName().',')
             ->line('Our team reviewed your teacher application and could not approve it yet.')
             ->line('Reviewer notes:')
             ->line('"'.$this->reason.'"')

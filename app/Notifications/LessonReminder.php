@@ -42,7 +42,7 @@ class LessonReminder extends Notification implements ShouldQueue
             ->subject($this->isTomorrow()
                 ? 'Lesson reminder — tomorrow at '.$time
                 : 'Lesson reminder — '.$time.' today')
-            ->greeting('See you soon, '.$notifiable->name.'!')
+            ->greeting('See you soon, '.$notifiable->displayName().'!')
             ->line($this->isTomorrow()
                 ? 'Your lesson is tomorrow: '.$when.'.'
                 : 'Your lesson starts at '.$time.' on '.$when.'.')

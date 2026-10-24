@@ -18,7 +18,7 @@ class SubjectRequestRejected extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject('Your subject request needs a change')
-            ->greeting('Hi '.$notifiable->name.',')
+            ->greeting('Hi '.$notifiable->displayName().',')
             ->line('Our team could not approve your request for '.$this->subjectLabel.'.')
             ->line('Reviewer notes:')
             ->line('"'.$this->reason.'"')

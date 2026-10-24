@@ -58,7 +58,8 @@
     $dashboard = [
         'appName' => config('app.name', 'Studylikepro'),
         'user' => [
-            'name' => Auth::user()->name,
+            'name' => Auth::user()->displayName(),
+            'fullName' => Auth::user()->name,
             'grade' => $gradeLabel,
             'timezone' => $displayTimezone,
             'learningLanguage' => $learningLanguage,

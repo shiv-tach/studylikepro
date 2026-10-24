@@ -10,7 +10,8 @@ test('registration screen can be rendered', function () {
 
 test('new students can register', function () {
     $response = $this->post('/register', [
-        'name' => 'Test Student',
+        'first_name' => 'Test',
+        'last_name' => 'Student',
         'email' => 'student@example.com',
         'role' => User::ROLE_STUDENT,
         'password' => 'password',
@@ -20,14 +21,33 @@ test('new students can register', function () {
     $this->assertAuthenticated();
     $response->assertRedirect(route('dashboard', absolute: false));
 
-    expect(User::where('email', 'student@example.com')->first()->hasRole(User::ROLE_STUDENT))->toBeTrue();
+    $student = User::where('email', 'student@example.com')->first();
+
+    expect($student->hasRole(User::ROLE_STUDENT))->toBeTrue()
+        ->and($student->first_name)->toBe('Test')
+        ->and($student->last_name)->toBe('Student')
+        // The full name keeps every existing reader (exports, receipts, admin) working.
+        ->and($student->name)->toBe('Test Student');
+});
+
+test('registration requires a first and last name', function () {
+    $response = $this->post('/register', [
+        'email' => 'noname@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ]);
+
+    $response->assertSessionHasErrors(['first_name', 'last_name']);
+    $this->assertGuest();
+    expect(User::where('email', 'noname@example.com')->exists())->toBeFalse();
 });
 
 test('new teachers can register with an invite', function () {
     [, $token] = makeTeacherInvite();
 
     $response = $this->post('/register', [
-        'name' => 'Test Teacher',
+        'first_name' => 'Test',
+        'last_name' => 'Teacher',
         'email' => 'teacher@example.com',
         'role' => User::ROLE_TEACHER,
         'invite' => $token,
@@ -43,7 +63,8 @@ test('new teachers can register with an invite', function () {
 
 test('teachers cannot register without an invite', function () {
     $response = $this->post('/register', [
-        'name' => 'Test Teacher',
+        'first_name' => 'Test',
+        'last_name' => 'Teacher',
         'email' => 'teacher@example.com',
         'role' => User::ROLE_TEACHER,
         'password' => 'password',
@@ -57,7 +78,8 @@ test('teachers cannot register without an invite', function () {
 
 test('teachers cannot register with an unknown invite token', function () {
     $response = $this->post('/register', [
-        'name' => 'Test Teacher',
+        'first_name' => 'Test',
+        'last_name' => 'Teacher',
         'email' => 'teacher@example.com',
         'role' => User::ROLE_TEACHER,
         'invite' => 'does-not-exist',
@@ -75,7 +97,8 @@ test('teachers cannot register with a used invite', function () {
     $invite->forceFill(['consumed_at' => now()])->save();
 
     $response = $this->post('/register', [
-        'name' => 'Test Teacher',
+        'first_name' => 'Test',
+        'last_name' => 'Teacher',
         'email' => 'teacher@example.com',
         'role' => User::ROLE_TEACHER,
         'invite' => $token,
@@ -92,7 +115,8 @@ test('teachers cannot register with an expired invite', function () {
     [, $token] = makeTeacherInvite(-1);
 
     $response = $this->post('/register', [
-        'name' => 'Test Teacher',
+        'first_name' => 'Test',
+        'last_name' => 'Teacher',
         'email' => 'teacher@example.com',
         'role' => User::ROLE_TEACHER,
         'invite' => $token,
@@ -107,7 +131,8 @@ test('teachers cannot register with an expired invite', function () {
 
 test('registration without a role creates a student account', function () {
     $response = $this->post('/register', [
-        'name' => 'Test User',
+        'first_name' => 'Test',
+        'last_name' => 'User',
         'email' => 'test@example.com',
         'password' => 'password',
         'password_confirmation' => 'password',
@@ -121,7 +146,8 @@ test('registration without a role creates a student account', function () {
 
 test('registration rejects privileged roles', function () {
     $response = $this->post('/register', [
-        'name' => 'Test User',
+        'first_name' => 'Test',
+        'last_name' => 'User',
         'email' => 'test@example.com',
         'role' => User::ROLE_ADMIN,
         'password' => 'password',

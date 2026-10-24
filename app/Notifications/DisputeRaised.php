@@ -23,7 +23,7 @@ class DisputeRaised extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject('New dispute #'.$this->dispute->id.' — '.$this->dispute->reasonLabel())
-            ->greeting('Hello '.$notifiable->name.',')
+            ->greeting('Hello '.$notifiable->displayName().',')
             ->line($who.' raised a dispute: '.$this->dispute->reasonLabel().'.')
             ->when($booking, fn (MailMessage $message) => $message->line('Lesson: #'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT).' · '.($booking->subject?->name ?? 'Tutoring lesson')))
             ->when($this->dispute->details, fn (MailMessage $message) => $message->line('They wrote: "'.$this->dispute->details.'"'))

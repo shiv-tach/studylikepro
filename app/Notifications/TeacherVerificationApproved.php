@@ -21,7 +21,7 @@ class TeacherVerificationApproved extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject('You are verified on Studylikepro 🎉')
-            ->greeting('Congratulations, '.$notifiable->name.'!')
+            ->greeting('Congratulations, '.$notifiable->displayName().'!')
             ->line('Your teacher profile has been reviewed and verified.')
             ->when($this->approvedSubjects !== [], fn (MailMessage $mail) => $mail
                 ->line('Approved subjects: '.implode(', ', $this->approvedSubjects).'.'))

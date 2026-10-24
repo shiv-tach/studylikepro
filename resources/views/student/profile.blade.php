@@ -35,7 +35,8 @@
         'csrfToken' => csrf_token(),
         'theme' => ['preset' => $themePreset],
         'student' => [
-            'name' => $user->name,
+            'name' => $user->displayName(),
+            'fullName' => $user->name,
             'email' => $user->email,
             'initials' => Str::upper(Str::substr($user->name, 0, 2)),
             'avatarUrl' => $user->avatarUrl(),

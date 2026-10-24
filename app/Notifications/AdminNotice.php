@@ -24,7 +24,7 @@ class AdminNotice extends Notification implements ShouldQueue
     {
         $message = (new MailMessage)
             ->subject($this->title)
-            ->greeting('Hello '.$notifiable->name.',')
+            ->greeting('Hello '.$notifiable->displayName().',')
             ->line($this->body);
 
         return $this->url !== null

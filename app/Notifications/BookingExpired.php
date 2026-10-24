@@ -18,7 +18,7 @@ class BookingExpired extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject('Your held slot was released')
-            ->greeting('Hello '.$notifiable->name.',')
+            ->greeting('Hello '.$notifiable->displayName().',')
             ->line('The slot on '.$this->windowLabel($this->booking, $notifiable).' was held for '.platform_settings()->int('hold_ttl_minutes').' minutes and the payment did not arrive.')
             ->line('It is back on the market and other students can take it.')
             ->action('Book another time', route('teachers.show', $this->booking->teacherProfile));

@@ -24,7 +24,8 @@ test('the shell island carries the user, the route map and the student menu', fu
         $this->actingAs($student)->get(route('student.dashboard'))->assertOk()
     );
 
-    expect($config['user']['name'])->toBe($student->name);
+    expect($config['user']['name'])->toBe($student->displayName());
+    expect($config['user']['fullName'])->toBe($student->name);
     expect($config['user']['initials'])->toBe(mb_substr($student->name, 0, 2));
     expect($config['user']['roleLabel'])->toBe('Student');
     expect($config['theme']['preset'])->toBe('classic');

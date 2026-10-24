@@ -26,7 +26,7 @@ class DisputeResolved extends Notification implements ShouldQueue
 
         $message = (new MailMessage)
             ->subject('Dispute #'.$this->dispute->id.' — '.strtolower($this->dispute->resolutionLabel() ?? 'closed'))
-            ->greeting('Hello '.$notifiable->name.',')
+            ->greeting('Hello '.$notifiable->displayName().',')
             ->line('Our team finished looking at the report on your lesson (dispute #'.$this->dispute->id.').')
             ->line('Outcome: '.($this->dispute->resolutionLabel() ?? 'closed').'.');
 

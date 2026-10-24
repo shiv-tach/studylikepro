@@ -22,7 +22,7 @@ class PayoutPaid extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject('Payout of '.$amount.' sent')
-            ->greeting('Good news, '.$notifiable->name.'!')
+            ->greeting('Good news, '.$notifiable->displayName().'!')
             ->line('We have transferred '.$amount.' for '.$this->payout->lessons_count.' lesson(s) to your registered account.')
             ->line('Transfer reference: '.$this->payout->reference)
             ->line('Batches are cleaned up in the earnings ledger — the lessons now show as paid out.')

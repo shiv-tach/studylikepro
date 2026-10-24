@@ -23,7 +23,7 @@ class LessonRefundProcessed extends Notification implements ShouldQueue
 
         $message = (new MailMessage)
             ->subject('Refund of '.$amount.' processed')
-            ->greeting('Hello '.$notifiable->name.',');
+            ->greeting('Hello '.$notifiable->displayName().',');
 
         if ($booking !== null) {
             $message->line('A '.$this->refund->percent.'% refund of '.$amount.' has been issued for the lesson on '.$this->windowLabel($booking, $notifiable).'.');

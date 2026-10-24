@@ -15,7 +15,8 @@
         'csrfToken' => csrf_token(),
         'theme' => ['preset' => $userTheme['preset'] ?? 'classic'],
         'user' => [
-            'name' => $user->name,
+            'name' => $user->displayName(),
+            'fullName' => $user->name,
             'email' => $user->email,
             'initials' => Str::upper(Str::substr($user->name, 0, 2)),
             'avatarUrl' => $user->avatarUrl(),
@@ -23,11 +24,13 @@
         // A rejected save comes back through old(), so the form reopens with the
         // values the user just submitted rather than the stored ones.
         'values' => [
-            'name' => old('name', $user->name),
+            'firstName' => old('first_name', $user->first_name) ?? '',
+            'lastName' => old('last_name', $user->last_name) ?? '',
             'email' => old('email', $user->email),
         ],
         'errors' => [
-            'name' => $errors->get('name'),
+            'firstName' => $errors->get('first_name'),
+            'lastName' => $errors->get('last_name'),
             'email' => $errors->get('email'),
         ],
         // The password form validates into its own bag, so the keys are renamed
@@ -53,7 +56,8 @@
             'save' => __('Save'),
             'infoTitle' => __('Profile Information'),
             'infoHint' => __("Update your account's profile information and email address."),
-            'nameLabel' => __('Name'),
+            'firstNameLabel' => __('First name'),
+            'lastNameLabel' => __('Last name'),
             'emailLabel' => __('Email'),
             'unverifiedNotice' => __('Your email address is unverified.'),
             'resendVerification' => __('Click here to re-send the verification email.'),
@@ -117,10 +121,18 @@
                     @csrf
                     @method('PATCH')
 
-                    <div>
-                        <x-input-label for="name" :value="__('Name')" />
-                        <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autocomplete="name" />
-                        <x-input-error class="mt-2" :messages="$errors->get('name')" />
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <x-input-label for="first_name" :value="__('First name')" />
+                            <x-text-input id="first_name" name="first_name" type="text" class="mt-1 block w-full" :value="old('first_name', $user->first_name)" required autocomplete="given-name" />
+                            <x-input-error class="mt-2" :messages="$errors->get('first_name')" />
+                        </div>
+
+                        <div>
+                            <x-input-label for="last_name" :value="__('Last name')" />
+                            <x-text-input id="last_name" name="last_name" type="text" class="mt-1 block w-full" :value="old('last_name', $user->last_name)" required autocomplete="family-name" />
+                            <x-input-error class="mt-2" :messages="$errors->get('last_name')" />
+                        </div>
                     </div>
 
                     <div>

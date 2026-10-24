@@ -36,6 +36,16 @@ it('brands lifecycle emails too', function () {
         ->toContain('View my lesson');
 });
 
+it('greets the recipient by their first name', function () {
+    $user = User::factory()->student()->create(['name' => 'Asha Perera']);
+
+    Notification::send($user, new AdminNotice('Profile reminder', 'Please update your details.'));
+
+    expect(deliveredMailHtml())
+        ->toContain('Hello Asha,')
+        ->not->toContain('Hello Asha Perera');
+});
+
 it('skips the mail copy for users who turned emails off', function () {
     $user = User::factory()->student()->create([
         'notification_preferences' => ['email' => false],

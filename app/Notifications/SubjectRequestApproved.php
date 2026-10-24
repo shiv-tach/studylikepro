@@ -18,7 +18,7 @@ class SubjectRequestApproved extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject('Subject approved on Studylikepro ✅')
-            ->greeting('Good news, '.$notifiable->name.'!')
+            ->greeting('Good news, '.$notifiable->displayName().'!')
             ->line('Our team approved your request to teach '.$this->subjectName.'.')
             ->line('Students can now find you through it. Set its lessons, grades and rates on your Subjects page.')
             ->action('Open my subjects', route('teacher.subjects.index'))

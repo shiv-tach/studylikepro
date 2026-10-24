@@ -31,6 +31,8 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'first_name',
+        'last_name',
         'email',
         'password',
         'theme',
@@ -61,6 +63,71 @@ class User extends Authenticatable
             'notification_preferences' => 'array',
             'suspended_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Keep the legacy `name` column in step with the split first/last name.
+     *
+     * `name` stays the canonical full name so search, sorting, receipts, CSV
+     * exports and every existing reader keep working. Assigning only `name`
+     * (factories, seeders, imports) splits it back into first and last.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (User $user) {
+            if ($user->isDirty('first_name') || $user->isDirty('last_name')) {
+                $user->name = static::joinName($user->first_name, $user->last_name);
+
+                return;
+            }
+
+            if ($user->isDirty('name')) {
+                [$user->first_name, $user->last_name] = static::splitName((string) $user->name);
+            }
+        });
+    }
+
+    /**
+     * Split a full name on its last space: "Asha Perera" → [Asha, Perera].
+     *
+     * @return array{0: string, 1: string|null}
+     */
+    public static function splitName(string $name): array
+    {
+        $name = trim(preg_replace('/\s+/u', ' ', $name) ?? $name);
+
+        if ($name === '') {
+            return ['', null];
+        }
+
+        if (preg_match('/^(.*)\s(\S+)$/u', $name, $matches) === 1) {
+            return [trim($matches[1]), $matches[2]];
+        }
+
+        return [$name, null];
+    }
+
+    /**
+     * Build the canonical full name from the two stored parts.
+     */
+    public static function joinName(?string $firstName, ?string $lastName): string
+    {
+        $parts = array_filter(
+            [trim((string) $firstName), trim((string) $lastName)],
+            fn (string $part) => $part !== '',
+        );
+
+        return implode(' ', $parts);
+    }
+
+    /**
+     * The name the app greets the user with — the first name by default.
+     */
+    public function displayName(): string
+    {
+        $firstName = trim((string) $this->first_name);
+
+        return $firstName !== '' ? $firstName : (string) $this->name;
     }
 
     /**

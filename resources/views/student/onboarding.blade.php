@@ -127,7 +127,7 @@
                     <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xl">✨</span>
                     <div>
                         <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">
-                            {{ __('Welcome, :name!', ['name' => Auth::user()->name]) }}
+                            {{ __('Welcome, :name!', ['name' => Auth::user()->displayName()]) }}
                         </h3>
                         <p class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
                             {{ __('A few quick questions so we can match you with the right tutors and lessons. You can change any of this later from your profile.') }}

@@ -153,8 +153,10 @@ it('builds the profile page from its island', function () {
 
     $config = profileConfig($this->actingAs($user)->get('/profile')->assertOk());
 
-    expect($config['values']['name'])->toBe($user->name)
+    expect($config['values']['firstName'])->toBe($user->first_name)
+        ->and($config['values']['lastName'])->toBe($user->last_name)
         ->and($config['values']['email'])->toBe($user->email)
+        ->and($config['user']['name'])->toBe($user->displayName())
         ->and($config['urls']['update'])->toBe(route('profile.update'))
         ->and($config['urls']['password'])->toBe(route('password.update'))
         ->and($config['urls']['destroy'])->toBe(route('profile.destroy'))

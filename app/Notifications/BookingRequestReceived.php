@@ -23,7 +23,7 @@ class BookingRequestReceived extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject('New lesson booking from '.$this->booking->student->name)
-            ->greeting('Hello '.$notifiable->name.',')
+            ->greeting('Hello '.$notifiable->displayName().',')
             ->line($this->booking->student->name.' booked a '.$this->booking->durationMinutes().'-minute lesson with you.')
             ->line('When: '.$this->windowLabel($this->booking, $notifiable))
             ->line('Lesson: '.($this->booking->lesson?->name ?? $this->booking->subject?->name ?? 'Tutoring lesson'))
