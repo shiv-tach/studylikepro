@@ -133,7 +133,7 @@
     // Everything the Vue shell needs. Blade keeps ownership of the route map so
     // no URL is ever hardcoded in resources/js/app-shell.
     $shell = [
-        'appName' => config('app.name', 'Studylikepro'),
+        'appName' => config('app.name', 'Study Like Pro'),
         'logoUrl' => asset('images/brand/logo-mark.png'),
         'csrfToken' => csrf_token(),
         'user' => [

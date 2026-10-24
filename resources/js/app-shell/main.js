@@ -6,7 +6,7 @@ import AppShell from './AppShell.vue';
 // `#studylikepro-page-header` template. Both live inside the mount point, so they
 // are read before Vue clears the container.
 const DEFAULT_CONFIG = {
-    appName: 'Studylikepro',
+    appName: 'Study Like Pro',
     logoUrl: '/images/brand/logo-mark.png',
     csrfToken: '',
     user: { name: '', initials: '', roleLabel: 'Member', avatarUrl: null },

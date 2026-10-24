@@ -57,6 +57,7 @@ const { sidebarOpen, closeSidebar } = shell;
         :user="config.user"
         :dashboard-url="config.urls.dashboard"
         :logo-url="config.logoUrl"
+        :app-name="config.appName"
     />
 
     <AppTopbar

@@ -11,6 +11,7 @@ const props = defineProps({
     user: { type: Object, required: true },
     dashboardUrl: { type: String, required: true },
     logoUrl: { type: String, required: true },
+    appName: { type: String, default: 'Study Like Pro' },
 });
 
 const { preset, sidebarOpen, closeSidebar } = useShell();
@@ -34,7 +35,7 @@ const nameClass = computed(() => (preset.value === 'midnight' ? 'text-slate-200'
         <div :class="[dividerClass, 'flex h-16 items-center justify-between border-b px-6']">
             <a :href="dashboardUrl" class="flex items-center gap-2.5 text-lg font-bold text-primary">
                 <AppLogo :src="logoUrl" class="h-9 w-auto" />
-                <span :class="[brandTextClass, 'tracking-tight']">Studylikepro</span>
+                <span :class="[brandTextClass, 'tracking-tight']">{{ appName }}</span>
             </a>
 
             <button
