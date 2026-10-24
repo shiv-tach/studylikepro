@@ -66,6 +66,12 @@
                 ? $offering->max_pages.' '.__('pages')
                 : __('Any pages');
             $detailChips[] = ((int) ($offering->turnaround_hours ?? config('studylikepro.services.marking_default_turnaround_hours'))).'h '.__('turnaround');
+
+            $criteria = $offering->rubricCriteria();
+
+            if ($criteria !== []) {
+                $detailChips[] = trans_choice(':count criterion|:count criteria', count($criteria), ['count' => count($criteria)]);
+            }
         }
 
         return [
@@ -100,6 +106,7 @@
                 'maxSessions' => $offering->max_sessions === null ? null : (int) $offering->max_sessions,
                 'maxPages' => $offering->max_pages === null ? null : (int) $offering->max_pages,
                 'turnaroundHours' => $offering->turnaround_hours === null ? null : (int) $offering->turnaround_hours,
+                'rubric' => $offering->rubricCriteria(),
             ],
             'updateUrl' => route('teacher.services.update', $offering),
             'deleteUrl' => route('teacher.services.destroy', $offering),
@@ -137,6 +144,12 @@
         'maxSessions' => $blankToNull(old('max_sessions')),
         'maxPages' => $blankToNull(old('max_pages')),
         'turnaroundHours' => $blankToNull(old('turnaround_hours')),
+        'rubric' => collect(old('rubric', []))->map(fn ($row, $index) => [
+            'key' => (string) ($row['key'] ?? 'c'.($index + 1)),
+            'title' => (string) ($row['title'] ?? ''),
+            'max' => ($row['max'] ?? '') === '' || ($row['max'] ?? null) === null ? '' : (float) $row['max'],
+            'description' => (string) ($row['description'] ?? ''),
+        ])->values()->all(),
     ] : null;
 
     $errorKeys = [
@@ -162,6 +175,20 @@
         if ($messages !== []) {
             $fieldErrors[$key] = $messages;
         }
+    }
+
+    // Rubric rows fail on `rubric.0.title` / `rubric.2.max`, so they are
+    // collected by prefix instead of by exact key.
+    $rubricErrors = [];
+
+    foreach ($errors->getBag('default')->getMessages() as $key => $messages) {
+        if ($key === 'rubric' || str_starts_with($key, 'rubric.')) {
+            $rubricErrors = array_merge($rubricErrors, array_values($messages));
+        }
+    }
+
+    if ($rubricErrors !== []) {
+        $fieldErrors['rubric'] = $rubricErrors;
     }
 
     $activeCount = $offeringsPayload->where('isActive', true)->count();
@@ -353,6 +380,17 @@
             'turnaround' => __('Turnaround (hours)'),
             'turnaroundPlaceholder' => __('e.g. 72'),
             'turnaroundHint' => __('How long a student waits for their marked paper.'),
+            'rubricTitle' => __('Marking rubric (optional)'),
+            'rubricHint' => __('Criteria the marking studio scores this paper against. Leave it empty to grade with free-form mark rows.'),
+            'rubricCriterion' => __('Criterion'),
+            'rubricCriterionPlaceholder' => __('e.g. Conceptual accuracy'),
+            'rubricPoints' => __('Max points'),
+            'rubricDescription' => __('Description (optional)'),
+            'rubricDescriptionPlaceholder' => __('What a full-mark answer must show'),
+            'rubricAdd' => __('Add criterion'),
+            'rubricRemove' => __('Remove criterion'),
+            'rubricEmpty' => __('No criteria yet — the studio will use free-form mark rows.'),
+            'rubricTotal' => __('Total :points points'),
         ],
         'preview' => [
             'title' => __('Student preview'),
@@ -421,6 +459,10 @@
             'maxPagesMax' => 500,
             'turnaroundMin' => 1,
             'turnaroundMax' => 720,
+            'rubricMaxCount' => 20,
+            'rubricTitleMax' => 120,
+            'rubricPointsMax' => 1000,
+            'rubricDescriptionMax' => 500,
         ],
         'currency' => [
             'symbol' => $currencySymbol,

@@ -241,8 +241,10 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
         // Paper marking inbox.
         Route::get('/marking', [TeacherPaperMarkingController::class, 'index'])->middleware('onboarded')->name('marking.index');
         Route::get('/marking/{order}', [TeacherPaperMarkingController::class, 'show'])->middleware('onboarded')->name('marking.show');
+        Route::patch('/marking/{order}/draft', [TeacherPaperMarkingController::class, 'saveDraft'])->middleware(['onboarded', 'throttle:marking-draft'])->name('marking.draft');
         Route::post('/marking/{order}/mark', [TeacherPaperMarkingController::class, 'mark'])->middleware(['onboarded', 'throttle:uploads'])->name('marking.mark');
         Route::get('/marking/{order}/files/{kind}/{index}', [TeacherPaperMarkingController::class, 'download'])->middleware('onboarded')->name('marking.download');
+        Route::get('/marking/{order}/preview/{kind}/{index}', [TeacherPaperMarkingController::class, 'preview'])->middleware('onboarded')->name('marking.preview');
     });
 
 Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended', LogAdminActivity::class])

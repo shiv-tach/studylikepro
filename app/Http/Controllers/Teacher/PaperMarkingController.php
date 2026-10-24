@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Teacher;
 use App\Enums\MarkingOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MarkPaperRequest;
+use App\Http\Requests\SaveMarkingDraftRequest;
 use App\Models\PaperMarkingOrder;
 use App\Services\PaperMarkingService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -77,13 +79,36 @@ class PaperMarkingController extends Controller
     {
         Gate::authorize('view', $order);
 
-        $order->load('purchase', 'student', 'subject');
+        $order->load('purchase', 'student', 'subject', 'offering');
 
         $this->marking->syncDeadline($order);
 
         return view('teacher.marking.show', [
             'order' => $order,
             'maxFiles' => (int) config('studylikepro.services.marking_max_files'),
+        ]);
+    }
+
+    /**
+     * Autosave the studio's markup, scores and feedback draft.
+     */
+    public function saveDraft(SaveMarkingDraftRequest $request, PaperMarkingOrder $order): JsonResponse
+    {
+        Gate::authorize('draft', $order);
+
+        $order = $this->marking->saveDraft($order, $request->changes());
+
+        return response()->json([
+            'savedAt' => $order->draft_saved_at === null ? null : display_datetime($order->draft_saved_at),
+            'status' => [
+                'value' => $order->status->value,
+                'label' => $order->status->label(),
+            ],
+            'totals' => [
+                'score' => $order->rubricTotal(),
+                'max' => $order->rubricMax(),
+            ],
+            'rubricScores' => $order->rubric_scores ?? [],
         ]);
     }
 
@@ -101,6 +126,9 @@ class PaperMarkingController extends Controller
             $request->file('marked_files'),
             $request->validated('feedback') !== null ? (string) $request->validated('feedback') : null,
             $request->markRows(),
+            $request->rubricScores(),
+            $request->annotationsPayload(),
+            $request->hasAnnotationPayload(),
         );
 
         return redirect()
@@ -124,6 +152,28 @@ class PaperMarkingController extends Controller
         return Storage::disk('local')->response(
             $entry['path'],
             $entry['original_name'] ?? 'download',
+        );
+    }
+
+    /**
+     * The same file with an inline disposition, so pdf.js and <img> can load
+     * it inside the studio. `download` keeps forcing an attachment.
+     */
+    public function preview(PaperMarkingOrder $order, string $kind, int $index): StreamedResponse
+    {
+        Gate::authorize('download', $order);
+
+        abort_unless(in_array($kind, ['files', 'marked_files'], true), 404);
+
+        $entry = data_get($order->{$kind} ?? [], $index);
+
+        abort_if(! is_array($entry) || blank($entry['path'] ?? null), 404);
+
+        return Storage::disk('local')->response(
+            $entry['path'],
+            $entry['original_name'] ?? 'paper',
+            [],
+            'inline',
         );
     }
 }

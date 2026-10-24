@@ -92,7 +92,29 @@
                     <div class="mt-4 whitespace-pre-line rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">{{ $order->feedback }}</div>
                 @endif
 
-                @if (! empty($order->marks))
+                @if (! empty($order->rubric_scores))
+                    <div class="mt-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Rubric') }}</p>
+                            <p class="text-sm font-extrabold text-primary">
+                                {{ \App\Models\PaperMarkingOrder::formatPoints($order->rubricTotal()) }} / {{ \App\Models\PaperMarkingOrder::formatPoints($order->rubricMax()) }}
+                            </p>
+                        </div>
+
+                        <dl class="mt-2 divide-y divide-slate-200 text-sm dark:divide-slate-800">
+                            @foreach ($order->rubric_scores as $row)
+                                <div class="flex items-center justify-between gap-3 py-2">
+                                    <dt class="text-slate-600 dark:text-slate-300">{{ $row['title'] ?? '' }}</dt>
+                                    <dd class="shrink-0 font-semibold text-slate-800 dark:text-slate-100">
+                                        {{ \App\Models\PaperMarkingOrder::formatPoints((float) ($row['score'] ?? 0)) }} / {{ \App\Models\PaperMarkingOrder::formatPoints((float) ($row['max'] ?? 0)) }}
+                                    </dd>
+                                </div>
+                            @endforeach
+                        </dl>
+                    </div>
+                @endif
+
+                @if (empty($order->rubric_scores) && ! empty($order->marks))
                     <table class="mt-4 w-full overflow-hidden rounded-xl text-left text-sm">
                         <thead>
                             <tr class="bg-slate-50 text-xs uppercase tracking-wider text-slate-400 dark:bg-slate-900/60">

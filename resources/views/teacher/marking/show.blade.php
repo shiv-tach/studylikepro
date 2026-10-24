@@ -143,27 +143,48 @@
                             @endforeach
                         </div>
 
-                        <div>
-                            <p class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ $config['copy']['form']['marksLabel'] }}</p>
-                            <p class="mt-1 text-xs text-slate-400">{{ $config['copy']['form']['marksHint'] }}</p>
+                        @if ($config['rubric']['hasCriteria'])
+                            <div>
+                                <p class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ $config['copy']['studio']['rubric']['title'] }}</p>
+                                <p class="mt-1 text-xs text-slate-400">{{ $config['copy']['studio']['rubric']['hint'] }}</p>
 
-                            <div class="mt-2 space-y-2">
-                                @foreach ($config['form']['marks'] as $index => $row)
-                                    <div class="flex items-center gap-2">
-                                        <input type="text" name="marks[{{ $index }}][label]" value="{{ $row['label'] }}" maxlength="120"
-                                               placeholder="{{ $config['copy']['form']['labelPlaceholder'] }}"
-                                               class="block w-2/5 {{ $fieldClasses }}">
-                                        <input type="text" name="marks[{{ $index }}][value]" value="{{ $row['value'] }}" maxlength="120"
-                                               placeholder="{{ $config['copy']['form']['valuePlaceholder'] }}"
-                                               class="block w-2/5 {{ $fieldClasses }}">
-                                    </div>
+                                <div class="mt-2 space-y-2">
+                                    @foreach ($config['rubric']['criteria'] as $index => $criterion)
+                                        <div class="flex items-center gap-3">
+                                            <input type="hidden" name="rubric_scores[{{ $index }}][key]" value="{{ $criterion['key'] }}">
+                                            <input type="number" name="rubric_scores[{{ $index }}][score]" min="0" max="{{ $criterion['max'] }}" step="0.5"
+                                                   value="{{ $criterion['scoreLabel'] }}"
+                                                   class="block w-24 {{ $fieldClasses }}">
+                                            <span class="text-sm text-slate-500 dark:text-slate-400">
+                                                {{ $criterion['title'] }} <span class="text-xs text-slate-400">/ {{ $criterion['maxLabel'] }}</span>
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @else
+                            <div>
+                                <p class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ $config['copy']['form']['marksLabel'] }}</p>
+                                <p class="mt-1 text-xs text-slate-400">{{ $config['copy']['form']['marksHint'] }}</p>
+
+                                <div class="mt-2 space-y-2">
+                                    @foreach ($config['form']['marks'] as $index => $row)
+                                        <div class="flex items-center gap-2">
+                                            <input type="text" name="marks[{{ $index }}][label]" value="{{ $row['label'] }}" maxlength="120"
+                                                   placeholder="{{ $config['copy']['form']['labelPlaceholder'] }}"
+                                                   class="block w-2/5 {{ $fieldClasses }}">
+                                            <input type="text" name="marks[{{ $index }}][value]" value="{{ $row['value'] }}" maxlength="120"
+                                                   placeholder="{{ $config['copy']['form']['valuePlaceholder'] }}"
+                                                   class="block w-2/5 {{ $fieldClasses }}">
+                                        </div>
+                                    @endforeach
+                                </div>
+
+                                @foreach ($config['form']['errors']['marks'] as $message)
+                                    <p class="mt-2 text-sm font-medium text-rose-600 dark:text-rose-400">{{ $message }}</p>
                                 @endforeach
                             </div>
-
-                            @foreach ($config['form']['errors']['marks'] as $message)
-                                <p class="mt-2 text-sm font-medium text-rose-600 dark:text-rose-400">{{ $message }}</p>
-                            @endforeach
-                        </div>
+                        @endif
 
                         @if ($config['form']['errors']['order'])
                             <p class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">

@@ -31,6 +31,10 @@ class PaperMarkingOrder extends Model
         'marked_files',
         'feedback',
         'marks',
+        'rubric_snapshot',
+        'rubric_scores',
+        'annotations',
+        'draft_saved_at',
         'max_pages',
         'turnaround_hours',
         'page_count',
@@ -50,6 +54,10 @@ class PaperMarkingOrder extends Model
             'files' => 'array',
             'marked_files' => 'array',
             'marks' => 'array',
+            'rubric_snapshot' => 'array',
+            'rubric_scores' => 'array',
+            'annotations' => 'array',
+            'draft_saved_at' => 'datetime',
             'max_pages' => 'integer',
             'turnaround_hours' => 'integer',
             'page_count' => 'integer',
@@ -149,5 +157,82 @@ class PaperMarkingOrder extends Model
     public function scopeForTeacher(Builder $query, int $profileId): Builder
     {
         return $query->where('teacher_profile_id', $profileId);
+    }
+
+    /**
+     * The criteria this paper is marked against: the snapshot taken when the
+     * marking started, falling back to the offering's live rubric.
+     *
+     * @return list<array{key: string, title: string, max: float, description: string|null}>
+     */
+    public function rubricCriteria(): array
+    {
+        if (is_array($this->rubric_snapshot) && $this->rubric_snapshot !== []) {
+            return ServiceOffering::normalizeRubric($this->rubric_snapshot);
+        }
+
+        return $this->offering?->rubricCriteria() ?? [];
+    }
+
+    /**
+     * Saved scores keyed by criterion key.
+     *
+     * @return array<string, float>
+     */
+    public function rubricScoreMap(): array
+    {
+        $map = [];
+
+        foreach (is_array($this->rubric_scores) ? $this->rubric_scores : [] as $row) {
+            if (! is_array($row) || ! isset($row['key']) || ! is_numeric($row['score'] ?? null)) {
+                continue;
+            }
+
+            $map[(string) $row['key']] = (float) $row['score'];
+        }
+
+        return $map;
+    }
+
+    public function rubricTotal(): float
+    {
+        return array_sum($this->rubricScoreMap());
+    }
+
+    public function rubricMax(): float
+    {
+        return array_sum(array_map(
+            fn (array $criterion) => (float) $criterion['max'],
+            $this->rubricCriteria(),
+        ));
+    }
+
+    public function hasRubric(): bool
+    {
+        return $this->rubricCriteria() !== [];
+    }
+
+    /**
+     * Whether the studio has markup to resume from.
+     */
+    public function hasDraft(): bool
+    {
+        if ($this->draft_saved_at !== null) {
+            return true;
+        }
+
+        $pages = is_array($this->annotations) ? ($this->annotations['pages'] ?? null) : null;
+
+        return is_array($pages) && $pages !== [];
+    }
+
+    /**
+     * A points value the way a teacher reads it: 18, 12.5, never 18.0.
+     */
+    public static function formatPoints(float|int $points): string
+    {
+        $formatted = rtrim(rtrim(number_format((float) $points, 2, '.', ''), '0'), '.');
+
+        return $formatted === '' || $formatted === '-' ? '0' : $formatted;
     }
 }

@@ -29,6 +29,17 @@ const DEFAULT_CONFIG = {
     files: [],
     canMark: false,
     form: null,
+    rubric: {
+        criteria: [],
+        hasCriteria: false,
+        total: 0,
+        totalLabel: '0',
+        max: 0,
+        maxLabel: '0',
+    },
+    annotations: null,
+    draft: { savedAtLabel: null, hasDraft: false },
+    stamps: [],
     delivery: null,
     dispute: null,
     copy: {},
@@ -50,6 +61,8 @@ function readConfig() {
             ...parsed,
             theme: { ...DEFAULT_CONFIG.theme, ...(parsed.theme ?? {}) },
             order: { ...DEFAULT_CONFIG.order, ...(parsed.order ?? {}) },
+            rubric: { ...DEFAULT_CONFIG.rubric, ...(parsed.rubric ?? {}) },
+            draft: { ...DEFAULT_CONFIG.draft, ...(parsed.draft ?? {}) },
             form: parsed.form
                 ? {
                     ...DEFAULT_FORM,

@@ -16,6 +16,7 @@ import ServiceBasicsFields from './ServiceBasicsFields.vue';
 import ServicePreviewCard from './ServicePreviewCard.vue';
 import ServiceTypePicker from './ServiceTypePicker.vue';
 import TypeSpecificFields from './TypeSpecificFields.vue';
+import RubricBuilder from './RubricBuilder.vue';
 
 const copy = useCopy();
 const page = usePage();
@@ -240,6 +241,7 @@ onBeforeUnmount(() => document.body.classList.remove('overflow-y-hidden'));
                                                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ copy.composer?.settingsHint }}</p>
                                                 </div>
                                                 <TypeSpecificFields />
+                                                <RubricBuilder v-if="currentType.value === 'paper_marking'" />
                                             </section>
                                         </template>
 

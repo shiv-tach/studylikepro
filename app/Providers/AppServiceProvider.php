@@ -93,6 +93,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('uploads', fn (Request $request) => Limit::perMinute($limit('uploads'))
             ->by($request->user()?->id ?: $request->ip()));
 
+        // The studio autosaves every few seconds while a paper is open.
+        RateLimiter::for('marking-draft', fn (Request $request) => Limit::perMinute($limit('marking-draft'))
+            ->by($request->user()?->id ?: $request->ip()));
+
         RateLimiter::for('messages', fn (Request $request) => Limit::perMinute($limit('messages'))
             ->by($request->user()?->id ?: $request->ip()));
 

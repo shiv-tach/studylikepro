@@ -39,6 +39,7 @@ class UpsertServiceOfferingRequest extends FormRequest
             'max_sessions' => $this->blankToNull('max_sessions'),
             'max_pages' => $this->blankToNull('max_pages'),
             'turnaround_hours' => $this->blankToNull('turnaround_hours'),
+            'rubric' => $this->normalizedRubric($this->input('rubric')),
         ]);
 
         $this->merge($this->scopedFieldsForType($type));
@@ -70,10 +71,53 @@ class UpsertServiceOfferingRequest extends FormRequest
                 ServiceType::Qna->value, ServiceType::PaperDiscussion->value => 1,
                 default => null,
             },
-            // Page limits and the turnaround SLA only apply to paper marking.
+            // Page limits, the turnaround SLA and the grading rubric only
+            // apply to paper marking.
             'max_pages' => $type === ServiceType::PaperMarking->value ? $this->input('max_pages') : null,
             'turnaround_hours' => $type === ServiceType::PaperMarking->value ? $this->input('turnaround_hours') : null,
+            'rubric' => $type === ServiceType::PaperMarking->value ? $this->input('rubric') : null,
         ];
+    }
+
+    /**
+     * Trim the rubric rows and give each one a key. Rows that are completely
+     * blank are dropped; a row with a title but no maximum is kept so the
+     * rules below can report it.
+     *
+     * @return list<array{key: string, title: string, max: mixed, description: string|null}>|null
+     */
+    private function normalizedRubric(mixed $rows): ?array
+    {
+        if (! is_array($rows)) {
+            return null;
+        }
+
+        $normalized = [];
+
+        foreach (array_values($rows) as $index => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $title = trim((string) ($row['title'] ?? ''));
+            $description = trim((string) ($row['description'] ?? ''));
+            $max = $row['max'] ?? null;
+
+            if ($title === '' && $description === '' && ($max === null || $max === '')) {
+                continue;
+            }
+
+            $key = trim((string) ($row['key'] ?? ''));
+
+            $normalized[] = [
+                'key' => $key === '' ? 'c'.($index + 1) : $key,
+                'title' => $title,
+                'max' => $max === '' ? null : $max,
+                'description' => $description === '' ? null : $description,
+            ];
+        }
+
+        return $normalized === [] ? null : $normalized;
     }
 
     /**
@@ -104,6 +148,11 @@ class UpsertServiceOfferingRequest extends FormRequest
             'max_sessions' => ['nullable', 'integer', 'min:1', 'max:20'],
             'max_pages' => ['nullable', 'integer', 'min:1', 'max:500'],
             'turnaround_hours' => ['nullable', 'integer', 'min:1', 'max:720'],
+            'rubric' => ['nullable', 'array', 'max:20'],
+            'rubric.*.key' => ['nullable', 'string', 'max:60'],
+            'rubric.*.title' => ['required', 'string', 'max:120'],
+            'rubric.*.max' => ['required', 'numeric', 'min:1', 'max:1000'],
+            'rubric.*.description' => ['nullable', 'string', 'max:500'],
         ];
     }
 

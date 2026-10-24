@@ -526,3 +526,65 @@ it('blocks students from the services console', function () {
         ->get(route('teacher.services.index'))
         ->assertForbidden();
 });
+
+it('saves a paper-marking rubric and normalises its keys and maxima', function () {
+    $this->actingAs($this->teacher)
+        ->post(route('teacher.services.store'), [
+            'service_type' => 'paper_marking',
+            'title' => 'Rubric-marked O/L paper',
+            'price' => '800',
+            'subject_id' => $this->subject->id,
+            'max_pages' => 10,
+            'turnaround_hours' => 48,
+            'rubric' => [
+                ['title' => 'Conceptual accuracy', 'max' => '25', 'description' => '2NF/3NF'],
+                ['title' => 'SQL syntax', 'max' => '40'],
+            ],
+        ])
+        ->assertRedirect(route('teacher.services.index'));
+
+    $offering = ServiceOffering::query()->latest('id')->firstOrFail();
+
+    expect($offering->rubricCriteria())->toHaveCount(2)
+        ->and($offering->rubricCriteria()[0]['key'])->toBe('c1')
+        ->and($offering->rubricCriteria()[0]['max'])->toBe(25.0)
+        ->and($offering->rubricCriteria()[1]['key'])->toBe('c2')
+        ->and($offering->rubricCriteria()[1]['description'])->toBeNull();
+});
+
+it('rejects a rubric row without a maximum', function () {
+    $this->actingAs($this->teacher)
+        ->from(route('teacher.services.index'))
+        ->post(route('teacher.services.store'), [
+            'service_type' => 'paper_marking',
+            'title' => 'Broken rubric',
+            'price' => '800',
+            'subject_id' => $this->subject->id,
+            'rubric' => [
+                ['title' => 'Conceptual accuracy'],
+            ],
+        ])
+        ->assertSessionHasErrors('rubric.0.max');
+
+    expect(ServiceOffering::query()->count())->toBe(0);
+});
+
+it('drops a rubric posted on a non-marking service', function () {
+    $this->actingAs($this->teacher)
+        ->post(route('teacher.services.store'), [
+            'service_type' => 'qna',
+            'title' => 'Drop-in Q&A',
+            'price' => '1000',
+            'subject_id' => $this->subject->id,
+            'default_session_minutes' => 45,
+            'rubric' => [
+                ['title' => 'Should not survive', 'max' => 10],
+            ],
+        ])
+        ->assertRedirect(route('teacher.services.index'));
+
+    $offering = ServiceOffering::query()->latest('id')->firstOrFail();
+
+    expect($offering->rubric)->toBeNull()
+        ->and($offering->rubricCriteria())->toBe([]);
+});

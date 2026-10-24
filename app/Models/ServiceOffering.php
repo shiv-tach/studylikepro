@@ -33,6 +33,7 @@ class ServiceOffering extends Model
         'max_sessions',
         'max_pages',
         'turnaround_hours',
+        'rubric',
         'is_active',
         'sort_order',
     ];
@@ -47,8 +48,73 @@ class ServiceOffering extends Model
             'max_sessions' => 'integer',
             'max_pages' => 'integer',
             'turnaround_hours' => 'integer',
+            'rubric' => 'array',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * The grading criteria this offering marks against, in display order.
+     * An empty list means the studio falls back to free-form marks rows.
+     *
+     * @return list<array{key: string, title: string, max: float, description: string|null}>
+     */
+    public function rubricCriteria(): array
+    {
+        return self::normalizeRubric($this->rubric);
+    }
+
+    /**
+     * Drop blank rows and stamp every kept row with a stable key and a
+     * positive maximum, so both the composer and the studio read one shape.
+     *
+     * @param  array<int, mixed>|null  $rows
+     * @return list<array{key: string, title: string, max: float, description: string|null}>
+     */
+    public static function normalizeRubric(?array $rows): array
+    {
+        if (! is_array($rows)) {
+            return [];
+        }
+
+        $criteria = [];
+        $seen = [];
+
+        foreach (array_values($rows) as $index => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $title = trim((string) ($row['title'] ?? ''));
+            $max = is_numeric($row['max'] ?? null) ? (float) $row['max'] : 0.0;
+
+            if ($title === '' || $max <= 0) {
+                continue;
+            }
+
+            $key = trim((string) ($row['key'] ?? ''));
+
+            if ($key === '' || isset($seen[$key])) {
+                $key = 'c'.($index + 1);
+            }
+
+            while (isset($seen[$key])) {
+                $key .= 'x';
+            }
+
+            $seen[$key] = true;
+
+            $criteria[] = [
+                'key' => $key,
+                'title' => $title,
+                'max' => $max,
+                'description' => filled($row['description'] ?? null)
+                    ? trim((string) $row['description'])
+                    : null,
+            ];
+        }
+
+        return $criteria;
     }
 
     public function teacherProfile(): BelongsTo

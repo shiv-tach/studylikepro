@@ -30,6 +30,14 @@ class PaperMarkingOrderPolicy
     }
 
     /**
+     * Autosaving the studio follows the same rule as delivering it.
+     */
+    public function draft(User $user, PaperMarkingOrder $order): bool
+    {
+        return $this->mark($user, $order);
+    }
+
+    /**
      * The owning student accepts or disputes a returned paper.
      */
     public function accept(User $user, PaperMarkingOrder $order): bool

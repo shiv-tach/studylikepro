@@ -45,14 +45,90 @@ final class TeacherMarkingShowConfig
             'files' => self::files($order, 'files', is_array($order->files) ? $order->files : []),
             'canMark' => $canMark,
             'form' => $canMark ? self::form($order, $maxFiles) : null,
+            'rubric' => self::rubric($order),
+            'annotations' => is_array($order->annotations) ? $order->annotations : null,
+            'draft' => [
+                'savedAtLabel' => $order->draft_saved_at === null ? null : display_datetime($order->draft_saved_at),
+                'hasDraft' => $order->hasDraft(),
+            ],
+            'stamps' => self::stamps(),
             'delivery' => self::delivery($order),
             'dispute' => self::dispute($order),
             'copy' => self::copy($maxFiles),
             'urls' => [
                 'index' => route('teacher.marking.index'),
                 'orders' => route('teacher.orders.index'),
+                'draft' => $canMark ? route('teacher.marking.draft', $order) : null,
+                'next' => $canMark ? self::nextOrderUrl($order) : null,
             ],
         ];
+    }
+
+    /**
+     * The criteria this paper is graded on, with any score already saved.
+     *
+     * @return array<string, mixed>
+     */
+    private static function rubric(PaperMarkingOrder $order): array
+    {
+        $criteria = $order->rubricCriteria();
+        $scores = $order->rubricScoreMap();
+        $max = $order->rubricMax();
+        $total = $order->rubricTotal();
+
+        return [
+            'criteria' => array_map(fn (array $criterion) => [
+                'key' => $criterion['key'],
+                'title' => $criterion['title'],
+                'description' => $criterion['description'],
+                'max' => (float) $criterion['max'],
+                'maxLabel' => PaperMarkingOrder::formatPoints($criterion['max']),
+                'score' => $scores[$criterion['key']] ?? null,
+                'scoreLabel' => array_key_exists($criterion['key'], $scores)
+                    ? PaperMarkingOrder::formatPoints($scores[$criterion['key']])
+                    : null,
+            ], $criteria),
+            'hasCriteria' => $criteria !== [],
+            'total' => $total,
+            'totalLabel' => PaperMarkingOrder::formatPoints($total),
+            'max' => $max,
+            'maxLabel' => PaperMarkingOrder::formatPoints($max),
+        ];
+    }
+
+    /**
+     * The one-click stamps the rail offers. They live here rather than in the
+     * bundle so the labels stay translatable with the rest of the console.
+     *
+     * @return list<array{key: string, label: string, color: string, points: int|null, icon: string}>
+     */
+    private static function stamps(): array
+    {
+        return [
+            ['key' => 'correct', 'label' => __('Correct'), 'color' => '#059669', 'points' => 5, 'icon' => '✓'],
+            ['key' => 'incorrect', 'label' => __('Incorrect'), 'color' => '#e11d48', 'points' => 0, 'icon' => '✕'],
+            ['key' => 'check', 'label' => __('Check formula'), 'color' => '#d97706', 'points' => null, 'icon' => '⚠'],
+            ['key' => 'good', 'label' => __('Good point'), 'color' => '#4f46e5', 'points' => 2, 'icon' => '★'],
+            ['key' => 'citation', 'label' => __('Needs citation'), 'color' => '#7c3aed', 'points' => null, 'icon' => '¶'],
+        ];
+    }
+
+    /**
+     * The next paper waiting for this teacher, so the studio can offer
+     * "save and next" without another round trip.
+     */
+    private static function nextOrderUrl(PaperMarkingOrder $order): ?string
+    {
+        $next = PaperMarkingOrder::query()
+            ->forTeacher((int) $order->teacher_profile_id)
+            ->paid()
+            ->awaitingWork()
+            ->whereKeyNot($order->getKey())
+            ->orderBy('submitted_at')
+            ->orderBy('id')
+            ->first(['id']);
+
+        return $next === null ? null : route('teacher.marking.show', $next);
     }
 
     /**
@@ -127,6 +203,8 @@ final class TeacherMarkingShowConfig
                 'marked_files' => self::errorsWithPrefix($messages, 'marked_files'),
                 'feedback' => $messages['feedback'] ?? [],
                 'marks' => self::errorsWithPrefix($messages, 'marks'),
+                'rubric_scores' => self::errorsWithPrefix($messages, 'rubric_scores'),
+                'annotations' => self::errorsWithPrefix($messages, 'annotations'),
                 'order' => isset($messages['order'][0]) ? (string) $messages['order'][0] : null,
             ],
         ];
@@ -180,7 +258,7 @@ final class TeacherMarkingShowConfig
 
     /**
      * @param  array<int, mixed>  $files
-     * @return list<array{name: string, sizeLabel: string|null, url: string}>
+     * @return list<array{name: string, sizeLabel: string|null, url: string, previewUrl: string, mimeType: string, isPdf: bool}>
      */
     private static function files(PaperMarkingOrder $order, string $kind, array $files): array
     {
@@ -193,10 +271,17 @@ final class TeacherMarkingShowConfig
                 continue;
             }
 
+            $name = (string) ($file['original_name'] ?? basename((string) $file['path']));
+            $mime = (string) ($file['mime_type'] ?? '');
+
             $rows[] = [
-                'name' => (string) ($file['original_name'] ?? basename((string) $file['path'])),
+                'name' => $name,
                 'sizeLabel' => self::sizeLabel((int) ($file['size'] ?? 0)),
                 'url' => route('teacher.marking.download', [$order, $kind, $index]),
+                'previewUrl' => route('teacher.marking.preview', [$order, $kind, $index]),
+                'mimeType' => $mime,
+                'isPdf' => str_contains(strtolower($mime), 'pdf')
+                    || str_ends_with(strtolower($name), '.pdf'),
             ];
         }
 
@@ -371,6 +456,95 @@ final class TeacherMarkingShowConfig
                 'valuePlaceholder' => __('Marks'),
                 'submit' => __('Deliver marking'),
                 'submitting' => __('Delivering…'),
+            ],
+            'studio' => [
+                'topBar' => [
+                    'back' => __('Marking inbox'),
+                    'status' => __('Status'),
+                    'autosaveIdle' => __('Changes save automatically'),
+                    'autosaveSaving' => __('Saving…'),
+                    'autosaveSaved' => __('Saved :time'),
+                    'autosaveError' => __('Could not save — retrying'),
+                    'deliver' => __('Deliver marking'),
+                    'saveNext' => __('Save and next paper'),
+                    'readOnly' => __('This paper is closed. The delivered copy is below.'),
+                ],
+                'tools' => [
+                    'label' => __('Annotate'),
+                    'select' => __('Pointer'),
+                    'pen' => __('Red pen'),
+                    'highlighter' => __('Highlighter'),
+                    'line' => __('Underline'),
+                    'ellipse' => __('Circle'),
+                    'comment' => __('Comment pin'),
+                    'correction' => __('Correction card'),
+                    'stampGroup' => __('Quick stamps'),
+                    'undo' => __('Undo'),
+                    'redo' => __('Redo'),
+                    'clearPage' => __('Clear page'),
+                    'clearConfirm' => __('Clear every mark on this page?'),
+                    'zoomIn' => __('Zoom in'),
+                    'zoomOut' => __('Zoom out'),
+                    'zoomReset' => __('Fit page'),
+                    'color' => __('Pen colour'),
+                ],
+                'pages' => [
+                    'title' => __('Pages'),
+                    'previous' => __('Previous page'),
+                    'next' => __('Next page'),
+                    'label' => __('Page :current of :total'),
+                    'loading' => __('Rendering the paper…'),
+                    'error' => __('This file could not be rendered. Download it instead.'),
+                ],
+                'rubric' => [
+                    'title' => __('Rubric'),
+                    'hint' => __('Score each criterion; the total is calculated for you.'),
+                    'total' => __('Total'),
+                    'outOf' => __('out of :max'),
+                    'noCriteria' => __('No rubric set'),
+                    'noCriteriaHint' => __('This offering has no criteria, so you can add mark rows instead.'),
+                ],
+                'feed' => [
+                    'title' => __('Markup'),
+                    'empty' => __('Nothing marked yet. Pick a tool and start on the paper.'),
+                    'locate' => __('Show on paper'),
+                    'remove' => __('Remove'),
+                    'comment' => __('Comment'),
+                    'stamp' => __('Stamp'),
+                    'correction' => __('Correction'),
+                    'page' => __('Page :page'),
+                ],
+                'feedback' => [
+                    'title' => __('Feedback to the student'),
+                    'hint' => __('Up to :count characters.', ['count' => 5000]),
+                    'placeholder' => __('What went well, what to fix — reference the parts you marked.'),
+                ],
+                'editor' => [
+                    'commentTitle' => __('Comment on this spot'),
+                    'correctionTitle' => __('Correct answer / model step'),
+                    'stampTitle' => __('Add a stamp'),
+                    'textLabel' => __('Note'),
+                    'textPlaceholder' => __('Write the note the student will see…'),
+                    'textRequired' => __('Write the note before placing it.'),
+                    'add' => __('Place on paper'),
+                    'cancel' => __('Cancel'),
+                ],
+                'deliver' => [
+                    'title' => __('Deliver the marking'),
+                    'intro' => __('The marked PDF is generated from your markup and sent with the feedback.'),
+                    'exporting' => __('Building the marked PDF…'),
+                    'exported' => __('Marked PDF ready (:size)'),
+                    'exportError' => __('The PDF could not be generated. Try another browser or upload the marked copy below.'),
+                    'attached' => __('Attached to the delivery'),
+                    'extra' => __('Extra files (optional)'),
+                    'extraHint' => __('Attach photos or a scanned copy in addition to the generated PDF.'),
+                    'missingRubric' => __('Score every criterion before delivering.'),
+                    'confirm' => __('Send the marked copy and finish'),
+                    'sendNow' => __('Send the marked copy'),
+                    'retry' => __('Try again'),
+                    'cancel' => __('Keep marking'),
+                    'sending' => __('Delivering…'),
+                ],
             ],
             'delivery' => [
                 'title' => __('Your delivery'),

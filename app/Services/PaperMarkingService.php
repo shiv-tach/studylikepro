@@ -49,6 +49,9 @@ class PaperMarkingService
                 'max_pages' => $offering->max_pages,
                 'turnaround_hours' => $offering->turnaround_hours,
                 'page_count' => $pageCount,
+                // Freeze the criteria the student paid for. A later offering
+                // edit cannot change how this paper is scored.
+                'rubric_snapshot' => $offering->rubricCriteria() ?: null,
                 'submitted_at' => now(),
             ]);
 
@@ -81,21 +84,15 @@ class PaperMarkingService
     }
 
     /**
-     * The teacher delivers the marked copy. Completes the purchase so the
-     * earning becomes eligible, and marks the order returned.
+     * Persist the studio's work in progress. Only the keys present in the
+     * payload change, so an autosave of the annotations never clears a rubric
+     * score the teacher typed a moment earlier.
      *
-     * @param  list<UploadedFile>  $markedFiles
-     * @param  array<int, array{label: string, value: string}>|null  $marks
+     * @param  array{annotations?: array<string, mixed>|null, rubric_scores?: list<array{key: string, score: float}>, feedback?: string|null}  $changes
      */
-    public function mark(PaperMarkingOrder $order, array $markedFiles, ?string $feedback, ?array $marks): PaperMarkingOrder
+    public function saveDraft(PaperMarkingOrder $order, array $changes): PaperMarkingOrder
     {
-        $purchase = $order->purchase;
-
-        if ($purchase === null || ! in_array($purchase->status, [PurchaseStatus::Active, PurchaseStatus::Completed], true)) {
-            throw ValidationException::withMessages([
-                'order' => __('This paper can only be marked once the student has paid.'),
-            ]);
-        }
+        $this->assertPaid($order);
 
         if (! in_array($order->status, [MarkingOrderStatus::Submitted, MarkingOrderStatus::InProgress], true)) {
             throw ValidationException::withMessages([
@@ -103,8 +100,64 @@ class PaperMarkingService
             ]);
         }
 
-        return DB::transaction(function () use ($order, $markedFiles, $feedback, $marks) {
-            $order->forceFill([
+        return DB::transaction(function () use ($order, $changes) {
+            $this->startMarking($order);
+
+            $attributes = ['draft_saved_at' => now()];
+
+            if ($order->rubric_snapshot === null) {
+                $criteria = $order->offering?->rubricCriteria() ?? [];
+
+                if ($criteria !== []) {
+                    $attributes['rubric_snapshot'] = $criteria;
+                }
+            }
+
+            if (array_key_exists('annotations', $changes)) {
+                $attributes['annotations'] = $changes['annotations'];
+            }
+
+            if (array_key_exists('rubric_scores', $changes)) {
+                $attributes['rubric_scores'] = $this->normalizeScores($order, $changes['rubric_scores'] ?? []);
+            }
+
+            if (array_key_exists('feedback', $changes)) {
+                $attributes['feedback'] = $changes['feedback'];
+            }
+
+            $order->forceFill($attributes)->save();
+
+            return $order;
+        });
+    }
+
+    /**
+     * The teacher delivers the marked copy. Completes the purchase so the
+     * earning becomes eligible, and marks the order returned.
+     *
+     * @param  list<UploadedFile>  $markedFiles
+     * @param  array<int, array{label: string, value: string}>|null  $marks
+     * @param  list<array{key: string, score: float}>|null  $rubricScores
+     */
+    public function mark(
+        PaperMarkingOrder $order,
+        array $markedFiles,
+        ?string $feedback,
+        ?array $marks,
+        ?array $rubricScores = null,
+        ?array $annotations = null,
+        bool $replaceAnnotations = false,
+    ): PaperMarkingOrder {
+        $this->assertPaid($order);
+
+        if (! in_array($order->status, [MarkingOrderStatus::Submitted, MarkingOrderStatus::InProgress], true)) {
+            throw ValidationException::withMessages([
+                'order' => __('This order has already been returned or closed.'),
+            ]);
+        }
+
+        return DB::transaction(function () use ($order, $markedFiles, $feedback, $marks, $rubricScores, $annotations, $replaceAnnotations) {
+            $attributes = [
                 'status' => MarkingOrderStatus::Returned,
                 'returned_at' => now(),
                 'deadline_at' => null,
@@ -118,13 +171,101 @@ class PaperMarkingService
                     ->values()
                     ->all(),
                 'feedback' => $feedback,
-                'marks' => $marks,
-            ])->save();
+            ];
+
+            if ($order->rubric_snapshot === null) {
+                $criteria = $order->offering?->rubricCriteria() ?? [];
+
+                if ($criteria !== []) {
+                    $attributes['rubric_snapshot'] = $criteria;
+                }
+            }
+
+            if ($rubricScores !== null) {
+                $normalized = $this->normalizeScores($order, $rubricScores);
+
+                $attributes['rubric_scores'] = $normalized;
+                // The student-facing page and the legacy mark rows keep one
+                // shape: a criterion label next to "18 / 25".
+                $attributes['marks'] = self::rubricMarks($normalized);
+            } else {
+                $attributes['marks'] = $marks;
+            }
+
+            if ($replaceAnnotations) {
+                $attributes['annotations'] = $annotations;
+            }
+
+            $order->forceFill($attributes)->save();
 
             $this->purchases->complete($order->purchase);
 
             return $order;
         });
+    }
+
+    /**
+     * Clamp each score to its criterion's maximum and reject keys that are not
+     * part of this order's snapshot.
+     *
+     * @param  list<array{key: string, score: float}>  $scores
+     * @return list<array{key: string, title: string, score: float, max: float}>
+     */
+    private function normalizeScores(PaperMarkingOrder $order, array $scores): array
+    {
+        $criteria = collect($order->rubricCriteria())->keyBy('key');
+        $normalized = [];
+        $errors = [];
+
+        foreach ($scores as $row) {
+            $key = (string) ($row['key'] ?? '');
+            $criterion = $criteria->get($key);
+
+            if ($criterion === null) {
+                $errors[] = __(':key is not part of this marking rubric.', ['key' => $key]);
+
+                continue;
+            }
+
+            $normalized[$key] = [
+                'key' => $key,
+                'title' => $criterion['title'],
+                'score' => min((float) $criterion['max'], max(0, (float) ($row['score'] ?? 0))),
+                'max' => (float) $criterion['max'],
+            ];
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages(['rubric_scores' => $errors]);
+        }
+
+        return array_values($normalized);
+    }
+
+    /**
+     * @param  list<array{key: string, title: string, score: float, max: float}>  $scores
+     * @return list<array{label: string, value: string}>
+     */
+    private static function rubricMarks(array $scores): array
+    {
+        return array_map(fn (array $row) => [
+            'label' => $row['title'],
+            'value' => PaperMarkingOrder::formatPoints($row['score']).' / '.PaperMarkingOrder::formatPoints($row['max']),
+        ], $scores);
+    }
+
+    /**
+     * A paper can only be marked once its purchase is live.
+     */
+    private function assertPaid(PaperMarkingOrder $order): void
+    {
+        $purchase = $order->purchase;
+
+        if ($purchase === null || ! in_array($purchase->status, [PurchaseStatus::Active, PurchaseStatus::Completed], true)) {
+            throw ValidationException::withMessages([
+                'order' => __('This paper can only be marked once the student has paid.'),
+            ]);
+        }
     }
 
     /**

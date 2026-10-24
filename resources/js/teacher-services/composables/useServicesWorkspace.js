@@ -142,7 +142,25 @@ export function createServicesWorkspace(config) {
             maxSessions: null,
             maxPages: null,
             turnaroundHours: null,
+            rubric: [],
         };
+    }
+
+    /**
+     * Rubric rows are kept as strings for the form inputs; the server owns the
+     * final keys, maxima and trimming.
+     */
+    function normalizeRubric(rows) {
+        if (!Array.isArray(rows)) {
+            return [];
+        }
+
+        return rows.map((row, index) => ({
+            key: String(row?.key ?? `c${index + 1}`),
+            title: String(row?.title ?? ''),
+            max: row?.max === null || row?.max === undefined || row?.max === '' ? '' : String(row.max),
+            description: String(row?.description ?? ''),
+        }));
     }
 
     function assign(source = {}) {
@@ -161,6 +179,7 @@ export function createServicesWorkspace(config) {
             maxSessions: toId(pick('maxSessions')),
             maxPages: toId(pick('maxPages')),
             turnaroundHours: toId(pick('turnaroundHours')),
+            rubric: normalizeRubric(source.rubric),
         });
     }
 
@@ -178,6 +197,12 @@ export function createServicesWorkspace(config) {
             maxSessions: toId(values.maxSessions),
             maxPages: toId(values.maxPages),
             turnaroundHours: toId(values.turnaroundHours),
+            rubric: normalizeRubric(values.rubric).map((row) => ({
+                key: row.key,
+                title: row.title.trim(),
+                max: row.max === '' ? null : Number(row.max),
+                description: row.description.trim(),
+            })),
         });
     }
 
@@ -248,6 +273,7 @@ export function createServicesWorkspace(config) {
         values.maxSessions = null;
         values.maxPages = null;
         values.turnaroundHours = null;
+        values.rubric = type === 'paper_marking' ? values.rubric : [];
 
         if (!['lesson', 'qna'].includes(type)) {
             values.lessonId = null;

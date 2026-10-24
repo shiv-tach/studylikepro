@@ -470,3 +470,249 @@ it('shows the delivered copy and the dispute on a disputed order', function () {
         ->and($config['dispute']['reason'])->toBe('The marked copy belongs to a different paper.')
         ->and($config['order']['status']['tone'])->toBe('rose');
 });
+
+/**
+ * A paid marking order whose offering defines a two-criterion rubric.
+ *
+ * @return array{order: PaperMarkingOrder, purchase: ServicePurchase, teacher: TeacherProfile, student: User, offering: ServiceOffering}
+ */
+function rubricedMarkingOrder(): array
+{
+    $student = User::factory()->student()->onboarded()->create();
+    $teacher = TeacherProfile::factory()->approved()->create();
+
+    $offering = ServiceOffering::factory()
+        ->forType(ServiceType::PaperMarking)
+        ->create([
+            'teacher_profile_id' => $teacher->id,
+            'rubric' => [
+                ['key' => 'concept', 'title' => 'Conceptual accuracy', 'max' => 25, 'description' => null],
+                ['key' => 'sql', 'title' => 'SQL syntax', 'max' => 40, 'description' => 'GROUP BY and HAVING'],
+            ],
+        ]);
+
+    $order = app(PaperMarkingService::class)->submit(
+        $offering,
+        $student,
+        [UploadedFile::fake()->create('paper.pdf', 120, 'application/pdf')],
+        2,
+    );
+
+    $purchase = $order->purchase;
+
+    payForPurchase($purchase);
+
+    return compact('order', 'purchase', 'teacher', 'student', 'offering');
+}
+
+it('autosaves studio markup and rubric scores as a draft', function () {
+    Storage::fake('local');
+
+    ['order' => $order, 'teacher' => $teacher] = rubricedMarkingOrder();
+
+    $this->actingAs($teacher->user)
+        ->patchJson(route('teacher.marking.draft', $order), [
+            'annotations' => [
+                'version' => 1,
+                'pages' => [[
+                    'file' => 0,
+                    'page' => 0,
+                    'strokes' => [[
+                        'tool' => 'pen',
+                        'color' => '#e11d48',
+                        'width' => 0.003,
+                        'points' => [[0.1, 0.2], [0.12, 0.24]],
+                    ]],
+                    'items' => [[
+                        'type' => 'comment',
+                        'x' => 0.4,
+                        'y' => 0.5,
+                        'text' => 'Check the HAVING clause',
+                    ]],
+                ]],
+            ],
+            'rubric_scores' => [['key' => 'sql', 'score' => 32]],
+            'feedback' => 'Good start.',
+        ])
+        ->assertOk()
+        ->assertJsonPath('status.value', 'in_progress')
+        ->assertJsonPath('totals.score', fn ($value) => (float) $value === 32.0)
+        ->assertJsonPath('totals.max', fn ($value) => (float) $value === 65.0);
+
+    $order->refresh();
+
+    expect($order->status)->toBe(MarkingOrderStatus::InProgress)
+        ->and($order->draft_saved_at)->not->toBeNull()
+        ->and($order->feedback)->toBe('Good start.')
+        ->and($order->annotations['pages'])->toHaveCount(1)
+        ->and($order->annotations['pages'][0]['strokes'][0]['tool'])->toBe('pen')
+        ->and($order->annotations['pages'][0]['items'][0]['text'])->toBe('Check the HAVING clause')
+        ->and($order->rubric_snapshot)->toHaveCount(2)
+        ->and($order->rubric_scores)->toBe([[
+            'key' => 'sql',
+            'title' => 'SQL syntax',
+            'score' => 32,
+            'max' => 40,
+        ]]);
+});
+
+it('refuses a draft from a teacher who does not own the order', function () {
+    Storage::fake('local');
+
+    ['order' => $order] = rubricedMarkingOrder();
+
+    $intruder = TeacherProfile::factory()->approved()->create();
+
+    $this->actingAs($intruder->user)
+        ->patchJson(route('teacher.marking.draft', $order), [
+            'annotations' => null,
+        ])
+        ->assertForbidden();
+
+    expect($order->fresh()->draft_saved_at)->toBeNull();
+});
+
+it('rejects a rubric score for a criterion this paper does not use', function () {
+    Storage::fake('local');
+
+    ['order' => $order, 'teacher' => $teacher] = rubricedMarkingOrder();
+
+    $this->actingAs($teacher->user)
+        ->patchJson(route('teacher.marking.draft', $order), [
+            'rubric_scores' => [['key' => 'not-a-criterion', 'score' => 10]],
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('rubric_scores');
+
+    expect($order->fresh()->rubric_scores)->toBeNull();
+});
+
+it('derives the student-facing marks from the rubric on delivery', function () {
+    Storage::fake('local');
+
+    ['order' => $order, 'teacher' => $teacher, 'purchase' => $purchase] = rubricedMarkingOrder();
+
+    $annotations = [
+        'version' => 1,
+        'pages' => [[
+            'file' => 0,
+            'page' => 1,
+            'strokes' => [],
+            'items' => [[
+                'type' => 'stamp',
+                'x' => 0.8,
+                'y' => 0.9,
+                'text' => 'Correct',
+                'stamp' => 'correct',
+                'color' => '#059669',
+                'points' => 5,
+            ]],
+        ]],
+    ];
+
+    $this->actingAs($teacher->user)
+        ->post(route('teacher.marking.mark', $order), [
+            'marked_files' => [UploadedFile::fake()->create('marked.pdf', 200, 'application/pdf')],
+            'feedback' => 'Rubric scored and marked copy attached.',
+            'rubric_scores' => [
+                ['key' => 'concept', 'score' => 21],
+                ['key' => 'sql', 'score' => 45],
+            ],
+            'annotations' => json_encode($annotations),
+        ])
+        ->assertRedirect(route('teacher.marking.show', $order));
+
+    $order->refresh();
+    $purchase->refresh();
+
+    expect($order->status)->toBe(MarkingOrderStatus::Returned)
+        ->and($order->marked_files)->toHaveCount(1)
+        ->and($order->annotations['pages'][0]['page'])->toBe(1)
+        ->and($order->rubric_scores)->toBe([
+            ['key' => 'concept', 'title' => 'Conceptual accuracy', 'score' => 21, 'max' => 25],
+            // The server clamps a score that runs past the criterion maximum.
+            ['key' => 'sql', 'title' => 'SQL syntax', 'score' => 40, 'max' => 40],
+        ])
+        ->and($order->marks)->toBe([
+            ['label' => 'Conceptual accuracy', 'value' => '21 / 25'],
+            ['label' => 'SQL syntax', 'value' => '40 / 40'],
+        ])
+        ->and($purchase->status)->toBe(PurchaseStatus::Completed);
+});
+
+it('ships the rubric, preview URLs and draft state to the studio island', function () {
+    Storage::fake('local');
+
+    ['order' => $order, 'teacher' => $teacher] = rubricedMarkingOrder();
+
+    $config = teacherMarkingShowConfig(
+        $this->actingAs($teacher->user)->get(route('teacher.marking.show', $order))->assertOk()
+    );
+
+    expect($config['rubric']['hasCriteria'])->toBeTrue()
+        ->and($config['rubric']['criteria'])->toHaveCount(2)
+        ->and($config['rubric']['criteria'][1]['key'])->toBe('sql')
+        ->and($config['rubric']['criteria'][1]['maxLabel'])->toBe('40')
+        ->and($config['rubric']['maxLabel'])->toBe('65')
+        ->and($config['rubric']['totalLabel'])->toBe('0')
+        ->and($config['annotations'])->toBeNull()
+        ->and($config['draft']['hasDraft'])->toBeFalse()
+        ->and($config['files'][0]['isPdf'])->toBeTrue()
+        ->and($config['files'][0]['previewUrl'])->toBe(route('teacher.marking.preview', [$order, 'files', 0]))
+        ->and($config['urls']['draft'])->toBe(route('teacher.marking.draft', $order))
+        ->and($config['urls']['next'])->toBeNull()
+        ->and($config['stamps'])->toHaveCount(5);
+});
+
+it('streams the uploaded paper inline for the studio previewer', function () {
+    Storage::fake('local');
+
+    ['order' => $order, 'teacher' => $teacher] = rubricedMarkingOrder();
+
+    Storage::disk('local')->put($order->files[0]['path'], 'paper-bytes');
+
+    $response = $this->actingAs($teacher->user)
+        ->get(route('teacher.marking.preview', [$order, 'files', 0]))
+        ->assertOk();
+
+    expect($response->headers->get('content-disposition'))->toContain('inline');
+
+    $stranger = TeacherProfile::factory()->approved()->create();
+
+    $this->actingAs($stranger->user)
+        ->get(route('teacher.marking.preview', [$order, 'files', 0]))
+        ->assertForbidden();
+});
+
+it('shows the rubric scores and total on the student order page', function () {
+    ['order' => $order, 'student' => $student] = rubricedMarkingOrder();
+
+    $order->forceFill([
+        'status' => MarkingOrderStatus::Returned,
+        'returned_at' => now(),
+        'rubric_snapshot' => $order->offering->rubricCriteria(),
+        'rubric_scores' => [
+            ['key' => 'concept', 'title' => 'Conceptual accuracy', 'score' => 21, 'max' => 25],
+            ['key' => 'sql', 'title' => 'SQL syntax', 'score' => 33, 'max' => 40],
+        ],
+        // The legacy row list must not render twice next to the rubric.
+        'marks' => [
+            ['label' => 'Conceptual accuracy', 'value' => '21 / 25'],
+            ['label' => 'SQL syntax', 'value' => '33 / 40'],
+        ],
+    ])->save();
+
+    $this->actingAs($student)
+        ->get(route('student.marking-orders.show', $order))
+        ->assertOk()
+        ->assertSee('Rubric')
+        ->assertSee('Conceptual accuracy')
+        ->assertSee('21 / 25')
+        ->assertSee('54 / 65');
+
+    // The rubric block replaces the derived mark table, so each label once.
+    expect(substr_count(
+        $this->actingAs($student)->get(route('student.marking-orders.show', $order))->getContent(),
+        'Conceptual accuracy',
+    ))->toBe(1);
+});

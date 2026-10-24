@@ -95,6 +95,7 @@ return [
         'login' => (int) env('THROTTLE_LOGIN', 20),
         'register' => (int) env('THROTTLE_REGISTER', 10),
         'uploads' => (int) env('THROTTLE_UPLOADS', 30),
+        'marking-draft' => (int) env('THROTTLE_MARKING_DRAFT', 120),
         'messages' => (int) env('THROTTLE_MESSAGES', 60),
         'checkout' => (int) env('THROTTLE_CHECKOUT', 15),
         'contact' => (int) env('THROTTLE_CONTACT', 5),
@@ -198,6 +199,8 @@ return [
         // Paper marking SLA fallback and upload limits.
         'marking_default_turnaround_hours' => (int) env('SERVICES_MARKING_TURNAROUND_HOURS', 72),
         'marking_max_files' => (int) env('SERVICES_MARKING_MAX_FILES', 10),
+        // A studio-generated PDF may be larger than a student's upload.
+        'marking_generated_max_kb' => (int) env('SERVICES_MARKING_GENERATED_MAX_KB', 15360),
         'marking_default_max_pages' => (int) env('SERVICES_MARKING_MAX_PAGES', 20),
         // Q&A sessions reuse the standard lesson durations.
     ],

@@ -163,6 +163,63 @@
                 <x-input-error :messages="$errors->get('turnaround_hours')" class="mt-2" />
             </div>
         </div>
+
+        @php
+            // Keep the edit form's saved rubric visible, and always offer a few
+            // blank rows so the first criterion can be added without JavaScript.
+            $rubricRows = old('rubric');
+
+            if (! is_array($rubricRows)) {
+                $rubricRows = $offering?->rubricCriteria() ?? [];
+
+                while (count($rubricRows) < 3) {
+                    $rubricRows[] = [
+                        'key' => 'c'.(count($rubricRows) + 1),
+                        'title' => '',
+                        'max' => '',
+                        'description' => '',
+                    ];
+                }
+            }
+        @endphp
+
+        <fieldset class="rounded-xl border border-dashed border-slate-300 p-4 dark:border-slate-700">
+            <legend class="px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Marking rubric (optional)') }}</legend>
+            <p class="text-xs text-slate-400">
+                {{ __('Criteria the marking studio scores this paper against. Leave it empty to grade with free-form mark rows.') }}
+            </p>
+
+            <div class="mt-3 space-y-2">
+                @foreach ($rubricRows as $index => $row)
+                    <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)]">
+                        <div>
+                            <input type="hidden" name="rubric[{{ $index }}][key]" value="{{ $row['key'] ?? 'c'.($index + 1) }}">
+                            <input name="rubric[{{ $index }}][title]" type="text" maxlength="120"
+                                   value="{{ $row['title'] ?? '' }}"
+                                   placeholder="{{ __('Criterion, e.g. Conceptual accuracy') }}"
+                                   class="block w-full {{ $fieldClasses }}" />
+                            <x-input-error :messages="$errors->get('rubric.'.$index.'.title')" class="mt-1" />
+                        </div>
+
+                        <div>
+                            <input name="rubric[{{ $index }}][max]" type="number" min="1" max="1000"
+                                   value="{{ $row['max'] ?? '' }}"
+                                   placeholder="{{ __('Points') }}"
+                                   class="block w-full {{ $fieldClasses }}" />
+                            <x-input-error :messages="$errors->get('rubric.'.$index.'.max')" class="mt-1" />
+                        </div>
+
+                        <div>
+                            <input name="rubric[{{ $index }}][description]" type="text" maxlength="500"
+                                   value="{{ $row['description'] ?? '' }}"
+                                   placeholder="{{ __('Optional description') }}"
+                                   class="block w-full {{ $fieldClasses }}" />
+                            <x-input-error :messages="$errors->get('rubric.'.$index.'.description')" class="mt-1" />
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </fieldset>
     @endif
 
     @if ($type === \App\Enums\ServiceType::PaperDiscussion || $type === \App\Enums\ServiceType::Qna)

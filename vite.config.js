@@ -1,6 +1,33 @@
+import { cpSync, existsSync, mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
+
+/**
+ * pdf.js rasterises scanned pages (CCITT, JBIG2 and JPEG-2000) with a wasm
+ * module that it fetches from its `wasmUrl`. Ship those files under public/ so
+ * the same URL works in dev and in a production build — without them a scanned
+ * paper renders as a blank page with only its text layer.
+ */
+function pdfjsWasm() {
+    const source = fileURLToPath(new URL('node_modules/pdfjs-dist/wasm', import.meta.url));
+    const target = fileURLToPath(new URL('public/vendor/pdfjs/wasm', import.meta.url));
+
+    return {
+        name: 'studylikepro:pdfjs-wasm',
+        buildStart() {
+            if (!existsSync(source)) {
+                this.warn('pdfjs-dist wasm files are missing — run npm install.');
+
+                return;
+            }
+
+            mkdirSync(target, { recursive: true });
+            cpSync(source, target, { recursive: true });
+        },
+    };
+}
 
 export default defineConfig({
     plugins: [
@@ -119,5 +146,6 @@ export default defineConfig({
                 transformAssetUrls: { base: null, includeAbsolute: false },
             },
         }),
+        pdfjsWasm(),
     ],
 });
