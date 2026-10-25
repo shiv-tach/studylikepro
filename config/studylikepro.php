@@ -116,9 +116,10 @@ return [
 
     'booking' => [
         'max_advance_days' => 30,
-        // The direct-booking time picker only shows this many of the teacher's
-        // nearest days that actually have an open slot. The full
-        // max_advance_days window is still used to find those days.
+        // The nearest days a teacher profile rail (public and student
+        // workspace alike) and the direct-booking time picker show. Only days
+        // that actually have an open slot count. The full max_advance_days
+        // window is still used to find those days.
         'quick_pick_days' => (int) env('BOOKING_QUICK_PICK_DAYS', 3),
         'hold_ttl_minutes' => 30,
         'student_cancel_window_hours' => (int) env('BOOKING_CANCEL_WINDOW_HOURS', 24),

@@ -309,6 +309,27 @@ it('renders the public teacher profile inside the landing page shell', function 
         ->and($config['booking']['action']['url'])->toBe(route('login'));
 });
 
+it('caps the public availability rail at the nearest open days', function () {
+    $this->travelTo(\Carbon\CarbonImmutable::parse('2026-06-01 09:00', 'UTC'));
+
+    $profile = approvedTeacher('Priya Verma', ['timezone' => 'Asia/Colombo']);
+
+    // Five open weekdays, so the rail has more days than it may show.
+    foreach ([2, 3, 4, 5, 6] as $weekday) {
+        TeacherAvailabilitySlot::factory()->on($weekday, '18:00', '20:00')->create(['teacher_profile_id' => $profile->id]);
+    }
+
+    $response = $this->get(route('teachers.show', $profile))->assertOk();
+
+    preg_match('/<script type="application\/json" id="public-teacher-config">(.*?)<\/script>/s', $response->getContent(), $matches);
+    $config = json_decode($matches[1], true);
+
+    // Same window the student workspace and the booking picker use.
+    expect((int) config('studylikepro.booking.quick_pick_days'))->toBe(3)
+        ->and(array_column($config['availability']['days'], 'date'))
+        ->toBe(['2026-06-02', '2026-06-03', '2026-06-04']);
+});
+
 it('only shows the subjects the admin approved on the public profile', function () {
     $history = Subject::factory()->create(['name' => 'History', 'slug' => 'history']);
     $maths = Subject::factory()->create(['name' => 'Unapproved Mathematics', 'slug' => 'unapproved-mathematics']);

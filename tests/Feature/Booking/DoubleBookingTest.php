@@ -131,10 +131,20 @@ it('hides a held slot from other students on the booking page', function () {
 it('drops booked slots from the public teacher profile preview', function () {
     $scenario = doubleBookingScenario();
 
-    $before = preg_match_all(
-        '/>\d{1,2}:\d{2} [AP]M<\/span>/',
-        $this->get(route('teachers.show', $scenario['teacher']))->assertOk()->getContent(),
-    );
+    // Read the slot island rather than the rendered times: the rail slides to
+    // the nearest open days, so a time string can reappear from a later day.
+    $previewSlots = function () use ($scenario) {
+        $response = $this->get(route('teachers.show', $scenario['teacher']))->assertOk();
+
+        preg_match('/<script type="application\/json" id="public-teacher-config">(.*?)<\/script>/s', $response->getContent(), $matches);
+        $config = json_decode($matches[1], true);
+
+        return collect($config['availability']['days'])
+            ->flatMap(fn (array $day) => $day['slots'])
+            ->map(fn (array $slot) => CarbonImmutable::parse($slot['iso']));
+    };
+
+    $before = $previewSlots();
 
     Booking::factory()->create([
         'student_id' => $scenario['first']->id,
@@ -143,13 +153,12 @@ it('drops booked slots from the public teacher profile preview', function () {
         'ends_at' => $scenario['slot']->addHour(),
     ]);
 
-    $after = preg_match_all(
-        '/>\d{1,2}:\d{2} [AP]M<\/span>/',
-        $this->get(route('teachers.show', $scenario['teacher']))->assertOk()->getContent(),
-    );
+    $after = $previewSlots();
+    $booked = fn (CarbonImmutable $slot) => $slot->equalTo($scenario['slot']);
 
-    expect($before)->toBeGreaterThan(0)
-        ->and($after)->toBe($before - 1);
+    expect($before->contains($booked))->toBeTrue()
+        ->and($after->contains($booked))->toBeFalse()
+        ->and($after)->not->toBeEmpty();
 });
 
 it('keeps a live hold blocking the slot until it is paid or expires', function () {

@@ -216,6 +216,8 @@ final class PublicTeacherPageConfig
     /**
      * The open slots grouped by day in the viewer's timezone, plus the wider
      * windows and the status line the page can keep ticking without a reload.
+     * The day rail is a glance, not a calendar: only the nearest open days are
+     * listed, the same window the student workspace and the booking picker use.
      *
      * @param  array<int, array<string, mixed>>  $slots
      * @param  array<int, array{start: CarbonImmutable, end: CarbonImmutable}>  $windows
@@ -239,8 +241,9 @@ final class PublicTeacherPageConfig
         }
 
         $days = [];
+        $dayLimit = (int) config('studylikepro.booking.quick_pick_days');
 
-        foreach (array_slice($byDate, 0, 7, true) as $date => $daySlots) {
+        foreach (($dayLimit > 0 ? array_slice($byDate, 0, $dayLimit, true) : $byDate) as $date => $daySlots) {
             $day = CarbonImmutable::parse($date, $timezone);
 
             $days[] = [
