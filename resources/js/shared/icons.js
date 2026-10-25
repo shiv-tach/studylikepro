@@ -90,6 +90,9 @@ export const icons = {
         paths: ['M15.8 15.8L20 20'],
         circles: [{ cx: 11, cy: 11, r: 6.5 }],
     },
+    filter: {
+        paths: ['M4.5 6.5h15', 'M7.5 12h9', 'M10.5 17.5h3'],
+    },
     chat: {
         paths: ['M6 5.5h12a2 2 0 012 2v7a2 2 0 01-2 2h-6.5L8 19.5v-3H6a2 2 0 01-2-2v-7a2 2 0 012-2z'],
     },

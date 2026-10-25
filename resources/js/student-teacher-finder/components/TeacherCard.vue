@@ -24,30 +24,33 @@ const panel = usePanel(true);
         :href="teacher.url"
         :class="[panel, 'group flex h-full flex-col overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40']"
     >
-        <!-- Full-bleed banner with a fixed crop height: the card stays a
-             predictable size however wide the results grid gets. The negative
-             margins cancel the panel's p-6 padding. -->
-        <div class="-mx-6 -mt-6 mb-3 h-36 overflow-hidden bg-primary/5 sm:h-40">
-            <img
-                v-if="teacher.avatarUrl"
-                :src="teacher.avatarUrl"
-                :alt="teacher.name"
-                class="h-full w-full object-cover object-top"
-                loading="lazy"
-                decoding="async"
-            >
-            <span
-                v-else
-                class="flex h-full w-full items-center justify-center bg-primary/10 text-4xl font-bold text-primary"
-                aria-hidden="true"
-            >
-                {{ teacher.initials }}
-            </span>
-        </div>
+        <!-- Below sm a single-column card is as wide as the screen, so a
+             full-bleed banner would slice most of the photo away: the avatar
+             sits next to the name instead. The negative margins from sm up
+             cancel the panel's p-6 padding for the full-bleed banner. -->
+        <div class="mb-3 flex items-center gap-3 sm:mb-0 sm:block">
+            <div class="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-primary/5 sm:-mx-6 sm:-mt-6 sm:mb-3 sm:h-40 sm:w-auto sm:rounded-none">
+                <img
+                    v-if="teacher.avatarUrl"
+                    :src="teacher.avatarUrl"
+                    :alt="teacher.name"
+                    class="h-full w-full object-cover object-center sm:object-top"
+                    loading="lazy"
+                    decoding="async"
+                >
+                <span
+                    v-else
+                    class="flex h-full w-full items-center justify-center bg-primary/10 text-2xl font-bold text-primary sm:text-4xl"
+                    aria-hidden="true"
+                >
+                    {{ teacher.initials }}
+                </span>
+            </div>
 
-        <div class="min-w-0">
-            <h3 class="truncate text-base font-bold text-slate-800 dark:text-slate-100">{{ teacher.name }}</h3>
-            <p v-if="teacher.headline" class="mt-0.5 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{{ teacher.headline }}</p>
+            <div class="min-w-0">
+                <h3 class="truncate text-base font-bold text-slate-800 dark:text-slate-100">{{ teacher.name }}</h3>
+                <p v-if="teacher.headline" class="mt-0.5 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{{ teacher.headline }}</p>
+            </div>
         </div>
 
         <div class="mt-3 flex flex-wrap items-center gap-2">

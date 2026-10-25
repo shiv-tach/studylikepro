@@ -92,12 +92,11 @@
         'errorMessage' => $errors->any() ? $errors->first() : null,
         'teachers' => $cards,
         'copy' => [
-            'gradeTitle' => $grade === null ? '' : __('Teachers for :grade', ['grade' => $grade->label]),
-            'gradeBody' => $grade === null ? '' : __('Every teacher below takes :grade lessons. Narrow the list by subject, language, or the day and time you want your lesson.', ['grade' => $grade->label]),
-            'changeGrade' => __('Change grade'),
             'noGrade' => __('Add your grade to your learning profile and we will only show teachers who take it.'),
             'completeProfile' => __('Complete your profile'),
             'filtersLabel' => __('Filter teachers'),
+            'filtersToggle' => __('Filters'),
+            'filtersHide' => __('Hide filters'),
             'subject' => __('Subject'),
             'anySubject' => __('Any subject'),
             'language' => __('Language'),
@@ -132,17 +131,6 @@
 @endphp
 
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <h2 class="font-bold text-xl text-slate-800 dark:text-slate-100 leading-tight">{{ __('Find a teacher') }}</h2>
-            @if ($grade)
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                    🎓 {{ __('Matched to :grade', ['grade' => $grade->label]) }}
-                </span>
-            @endif
-        </div>
-    </x-slot>
-
     <div class="w-full">
         <script type="application/json" id="student-teacher-finder-config">@json($finderPayload, $jsonFlags)</script>
 
@@ -153,17 +141,12 @@
              the Vue app would have rendered. --}}
         <noscript>
             <div class="space-y-5">
-                @if ($grade)
-                    <div class="rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900">
-                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('Teachers for :grade', ['grade' => $grade->label]) }}</h3>
-                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ __('Every teacher below takes :grade lessons.', ['grade' => $grade->label]) }}</p>
-                    </div>
-                @else
+                @unless ($grade)
                     <div class="rounded-2xl border border-amber-200/80 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
                         {{ __('Add your grade to your learning profile and we will only show teachers who take it.') }}
                         <a href="{{ route('student.profile') }}" class="font-semibold underline">{{ __('Complete your profile') }}</a>
                     </div>
-                @endif
+                @endunless
 
                 <form method="GET" action="{{ route('student.teachers.index') }}" class="rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900">
                     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

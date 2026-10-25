@@ -1,6 +1,6 @@
 <script setup>
 /**
- * "Find a teacher": the grade banner, the subject/language/date filters, the
+ * "Find a teacher": the grade warning, the subject/language/date filters, the
  * teacher cards and the empty state. Filtering, sorting and paging stay
  * server-side — the filter panel is a real GET form — so Laravel keeps
  * validating the query string and this app only renders the result.
@@ -10,7 +10,7 @@ import { THEME_PRESET_KEY, useThemePreset } from '../shared/composables/useTheme
 import RevealOnScroll from '../shared/components/RevealOnScroll.vue';
 import { COPY_KEY, URLS_KEY } from './composables/usePageContext';
 import FinderEmptyState from './components/FinderEmptyState.vue';
-import GradeMatchBanner from './components/GradeMatchBanner.vue';
+import GradeNotice from './components/GradeNotice.vue';
 import TeacherCard from './components/TeacherCard.vue';
 import TeacherFinderFilters from './components/TeacherFinderFilters.vue';
 
@@ -25,7 +25,7 @@ provide(URLS_KEY, props.config.urls ?? {});
 </script>
 
 <template>
-    <GradeMatchBanner :grade="config.grade" />
+    <GradeNotice :grade="config.grade" />
 
     <RevealOnScroll>
         <TeacherFinderFilters
@@ -36,12 +36,13 @@ provide(URLS_KEY, props.config.urls ?? {});
             :today="config.today"
             :total-label="config.totalLabel"
             :error-message="config.errorMessage"
+            :has-active-filters="config.hasActiveFilters"
         />
     </RevealOnScroll>
 
     <div
         v-if="config.teachers.length"
-        class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 min-[1800px]:grid-cols-5 min-[2100px]:grid-cols-6"
+        class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 min-[1800px]:grid-cols-5 min-[2100px]:grid-cols-6"
     >
         <RevealOnScroll
             v-for="(teacher, index) in config.teachers"
