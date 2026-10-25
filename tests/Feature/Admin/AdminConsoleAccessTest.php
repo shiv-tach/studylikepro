@@ -59,6 +59,10 @@ it('refuses state changing admin routes to non-admins', function () {
         ->post(route('admin.users.suspend', $booking->student), ['reason' => 'Nope'])
         ->assertForbidden();
 
+    $this->actingAs($teacher)
+        ->post(route('admin.settings.sms-test'), ['mobile' => '0769828874', 'message' => 'Nope'])
+        ->assertForbidden();
+
     expect($booking->refresh()->status)->toBe(BookingStatus::Confirmed)
         ->and($booking->student->refresh()->isSuspended())->toBeFalse();
 });

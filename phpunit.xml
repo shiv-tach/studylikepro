@@ -29,6 +29,13 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- Tests never reach SMSLenz and never inherit a developer's .env:
+             registration specs read the code back from the offline gateway. -->
+        <env name="SMS_PROVIDER" value="fake"/>
+        <env name="SMS_OTP_RESEND_SECONDS" value="60"/>
+        <env name="SMSLENZ_USER_ID" value=""/>
+        <env name="SMSLENZ_API_KEY" value=""/>
+        <env name="SMSLENZ_SENDER_ID" value=""/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

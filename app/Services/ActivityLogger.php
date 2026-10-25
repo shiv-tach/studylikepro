@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
 class ActivityLogger
 {
     /** Keys that must never be written to the log. */
-    private const REDACTED = ['_token', 'password', 'password_confirmation', 'current_password', 'payload', 'signature'];
+    private const REDACTED = ['_token', 'password', 'password_confirmation', 'current_password', 'payload', 'signature', 'api_key', 'smslenz_api_key'];
 
     private ?string $pendingDescription = null;
 

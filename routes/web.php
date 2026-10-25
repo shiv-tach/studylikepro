@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\ServiceController as AdminServiceController;
 use App\Http\Controllers\Admin\ServicePurchaseController as AdminServicePurchaseController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
+use App\Http\Controllers\Admin\SmsTestController as AdminSmsTestController;
 use App\Http\Controllers\Admin\SubjectBasketController as AdminSubjectBasketController;
 use App\Http\Controllers\Admin\SubjectController as AdminSubjectController;
 use App\Http\Controllers\Admin\SubjectRequestController as AdminSubjectRequestController;
@@ -345,6 +346,9 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended'
 
         Route::get('/settings', [AdminSettingsController::class, 'edit'])->name('settings.edit');
         Route::put('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
+        Route::post('/settings/sms-test', [AdminSmsTestController::class, 'store'])
+            ->middleware('throttle:sms-test')
+            ->name('settings.sms-test');
     });
 
 Route::middleware('auth')->group(function () {

@@ -74,4 +74,31 @@ class PhoneNumber
 
         return substr($digits, 0, 3).' '.substr($digits, 3, 3).' '.substr($digits, 6, 2).' '.substr($digits, 8, 2);
     }
+
+    /**
+     * The number in international form: "0769828874" → "+94769828874".
+     *
+     * SMSLenz expects its `contact` parameter in exactly this shape.
+     */
+    public static function international(?string $value): ?string
+    {
+        $digits = self::normalize($value);
+
+        return $digits === null ? null : '+94'.substr($digits, 1);
+    }
+
+    /**
+     * A number safe to show on screen before it is verified:
+     * "0769828874" → "076 ••• 88 74".
+     */
+    public static function mask(?string $value): ?string
+    {
+        $digits = self::normalize($value);
+
+        if ($digits === null) {
+            return null;
+        }
+
+        return substr($digits, 0, 3).' ••• '.substr($digits, 6, 2).' '.substr($digits, 8, 2);
+    }
 }

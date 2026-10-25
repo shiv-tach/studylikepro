@@ -2,16 +2,19 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Exceptions\RegistrationConflictException;
+use App\Exceptions\SmsDeliveryException;
 use App\Http\Controllers\Controller;
 use App\Models\TeacherInvite;
 use App\Models\User;
 use App\Rules\SriLankanMobile;
+use App\Services\MobileRegistrationService;
+use App\Support\PendingRegistration;
 use App\Support\PhoneNumber;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
@@ -24,13 +27,21 @@ class RegisteredUserController extends Controller
      */
     public function create(Request $request): View
     {
+        // Opening the form always starts a fresh attempt: any details waiting
+        // for a passcode are superseded by what is typed here.
+        PendingRegistration::forget();
+
         $invite = null;
         $inviteToken = null;
         $inviteError = null;
 
-        if ($request->filled('invite')) {
-            $inviteToken = (string) $request->query('invite');
-            $invite = $this->resolveInvite($inviteToken);
+        // The invite may arrive in the URL, or be replayed by the "change your
+        // number" button on the verify screen (which returns with old input).
+        $token = $request->query('invite') ?? $request->old('invite');
+
+        if (! blank($token)) {
+            $inviteToken = (string) $token;
+            $invite = TeacherInvite::findUsable($inviteToken);
 
             if ($invite === null) {
                 $inviteError = 'This teacher onboarding link is invalid, expired, or already used.';
@@ -47,9 +58,14 @@ class RegisteredUserController extends Controller
     /**
      * Handle an incoming registration request.
      *
+     * The account is not created here: the details are held in the session and
+     * SMSLenz texts a passcode. MobileVerificationController creates the user
+     * once that code is entered (or straight away when an admin has switched
+     * verification off).
+     *
      * @throws ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, MobileRegistrationService $registration): RedirectResponse
     {
         // Compare and store the number in its canonical local form so
         // "076 982 88 74" and "+94 76 982 8874" are the same account.
@@ -68,53 +84,50 @@ class RegisteredUserController extends Controller
 
         // Public registration always creates a student; only an invite may grant the teacher role.
         $role = $request->string('role')->toString() ?: User::ROLE_STUDENT;
+        $inviteToken = $request->input('invite');
+        $inviteToken = is_string($inviteToken) ? $inviteToken : null;
 
-        $invite = null;
-
-        if ($role === User::ROLE_TEACHER) {
-            $invite = $this->resolveInvite((string) $request->input('invite'));
-
-            if ($invite === null) {
-                throw ValidationException::withMessages([
-                    'invite' => 'Teacher accounts can only be created through a valid onboarding link.',
-                ]);
-            }
+        if ($role === User::ROLE_TEACHER && TeacherInvite::findUsable($inviteToken) === null) {
+            throw ValidationException::withMessages([
+                'invite' => 'Teacher accounts can only be created through a valid onboarding link.',
+            ]);
         }
 
-        $user = User::create([
-            'first_name' => trim($request->string('first_name')->toString()),
-            'last_name' => trim($request->string('last_name')->toString()),
-            'email' => $request->email,
-            'mobile' => $request->mobile,
-            'password' => Hash::make($request->password),
-        ]);
+        try {
+            $user = $registration->begin([
+                'first_name' => $request->string('first_name')->toString(),
+                'last_name' => $request->string('last_name')->toString(),
+                'email' => (string) $request->input('email'),
+                'mobile' => (string) $request->input('mobile'),
+                'password' => (string) $request->input('password'),
+                'role' => $role,
+                'invite' => $inviteToken,
+            ]);
+        } catch (RegistrationConflictException $exception) {
+            return redirect()
+                ->route('register')
+                ->withErrors($exception->errors)
+                ->withInput($exception->input);
+        } catch (SmsDeliveryException) {
+            // The pending registration survives, so the verify screen can offer
+            // a resend instead of making the visitor type everything again.
+            return redirect()
+                ->route('register.verify.show')
+                ->with('status', 'otp-send-failed');
+        }
 
-        $user->assignRole($role);
-
-        if ($invite !== null) {
-            $invite->forceFill(['consumed_at' => now()])->save();
+        if ($user === null) {
+            return redirect()
+                ->route('register.verify.show')
+                ->with('status', 'otp-sent');
         }
 
         event(new Registered($user));
 
         Auth::login($user);
 
+        $request->session()->regenerate();
+
         return redirect(route('dashboard', absolute: false));
-    }
-
-    /**
-     * Find a usable invite for the given plaintext token, or null.
-     */
-    private function resolveInvite(?string $token): ?TeacherInvite
-    {
-        if (blank($token)) {
-            return null;
-        }
-
-        $invite = TeacherInvite::query()
-            ->where('token', hash('sha256', $token))
-            ->first();
-
-        return $invite?->isUsable() ? $invite : null;
     }
 }

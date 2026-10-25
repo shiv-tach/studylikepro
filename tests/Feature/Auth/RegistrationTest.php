@@ -9,7 +9,7 @@ test('registration screen can be rendered', function () {
 });
 
 test('new students can register', function () {
-    $response = $this->post('/register', [
+    $response = registerThroughOtp([
         'first_name' => 'Test',
         'last_name' => 'Student',
         'email' => 'student@example.com',
@@ -50,7 +50,7 @@ test('registration requires a first and last name', function () {
 test('new teachers can register with an invite', function () {
     [, $token] = makeTeacherInvite();
 
-    $response = $this->post('/register', [
+    $response = registerThroughOtp([
         'first_name' => 'Test',
         'last_name' => 'Teacher',
         'email' => 'teacher@example.com',
@@ -143,7 +143,7 @@ test('teachers cannot register with an expired invite', function () {
 });
 
 test('registration without a role creates a student account', function () {
-    $response = $this->post('/register', [
+    $response = registerThroughOtp([
         'first_name' => 'Test',
         'last_name' => 'User',
         'email' => 'test@example.com',
@@ -196,7 +196,7 @@ test('registration requires a mobile number', function () {
 });
 
 test('registration stores the international spelling of the same number', function () {
-    $this->post('/register', [
+    registerThroughOtp([
         'first_name' => 'Test',
         'last_name' => 'Student',
         'email' => 'international@example.com',

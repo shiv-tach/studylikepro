@@ -21,6 +21,7 @@ use App\Services\AdminCsvExporter;
 use App\Services\ConversationService;
 use App\Services\Payments\FakePaymentGateway;
 use App\Services\ReviewService;
+use App\Services\Sms\FakeSmsGateway;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
@@ -85,7 +86,9 @@ function signUp(string $role, array $overrides = []): User
         [, $payload['invite']] = makeTeacherInvite();
     }
 
-    test()->post('/register', $payload)->assertRedirect();
+    test()->post('/register', $payload)->assertRedirect(route('register.verify.show'));
+    test()->post(route('register.verify.store'), ['code' => FakeSmsGateway::lastCode()])
+        ->assertRedirect(route('dashboard', absolute: false));
 
     $user = User::query()->where('email', $email)->firstOrFail();
     $user->markEmailAsVerified();

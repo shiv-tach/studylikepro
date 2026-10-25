@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\BookingFeeType;
 use App\Models\PlatformSetting;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -21,6 +22,8 @@ class PlatformSettings
      *
      * `options` belongs to `select` settings, while `min`/`max`/`step` bound the
      * numeric ones (the settings controller and the console both read them).
+     * `secret` settings (API keys) are stored encrypted and never sent back to
+     * the browser in full.
      *
      * @return array<string, array{default: mixed, type: string, group: string, label: string, description: string, options?: array<string, string>, min?: int|float, max?: int|float, step?: string}>
      */
@@ -116,6 +119,94 @@ class PlatformSettings
                 'label' => 'Maximum sessions per plan',
                 'description' => 'Hard cap on how many sessions a single lesson plan can be split into.',
             ],
+            'sms_provider' => [
+                'default' => (string) config('studylikepro.sms.provider'),
+                'type' => 'select',
+                'group' => 'smslenz',
+                'label' => 'SMS provider',
+                'description' => 'Who delivers text messages. “Demo” writes them to the log instead of sending; SMSLenz needs the credentials below.',
+                'options' => [
+                    'fake' => 'Demo (log only, nothing is sent)',
+                    'smslenz' => 'SMSLenz (live SMS)',
+                ],
+            ],
+            'smslenz_user_id' => [
+                'default' => null,
+                'type' => 'string',
+                'group' => 'smslenz',
+                'label' => 'SMSLenz user ID',
+                'description' => 'From the SMSLenz dashboard (API settings). Leave blank to use the SMSLENZ_USER_ID value from .env.',
+            ],
+            'smslenz_api_key' => [
+                'default' => null,
+                'type' => 'secret',
+                'group' => 'smslenz',
+                'label' => 'SMSLenz API key',
+                'description' => 'Stored encrypted. Leave blank to keep the saved key or the SMSLENZ_API_KEY value from .env.',
+            ],
+            'smslenz_sender_id' => [
+                'default' => null,
+                'type' => 'string',
+                'group' => 'smslenz',
+                'label' => 'SMSLenz sender ID',
+                'description' => 'Your approved sender ID, case sensitive. Use SMSlenzDEMO until your own is approved.',
+            ],
+            'sms_otp_enabled' => [
+                'default' => '1',
+                'type' => 'select',
+                'group' => 'sms',
+                'label' => 'Mobile verification (SMS passcode)',
+                'description' => 'Require a texted passcode before a new account is created. Turn off to let new accounts register in one step.',
+                'options' => [
+                    '1' => 'Required',
+                    '0' => 'Skip verification',
+                ],
+            ],
+            'sms_otp_length' => [
+                'default' => (int) config('studylikepro.sms.otp_length'),
+                'type' => 'int',
+                'group' => 'sms',
+                'label' => 'Passcode length (digits)',
+                'description' => 'How many digits the texted code contains. 6 is the usual length.',
+                'min' => 4,
+                'max' => 8,
+            ],
+            'sms_otp_ttl_minutes' => [
+                'default' => (int) config('studylikepro.sms.otp_ttl_minutes'),
+                'type' => 'int',
+                'group' => 'sms',
+                'label' => 'Passcode lifetime (minutes)',
+                'description' => 'A code stops working this long after it was sent.',
+                'min' => 1,
+                'max' => 60,
+            ],
+            'sms_otp_resend_seconds' => [
+                'default' => (int) config('studylikepro.sms.otp_resend_seconds'),
+                'type' => 'int',
+                'group' => 'sms',
+                'label' => 'Resend cooldown (seconds)',
+                'description' => 'How long the visitor must wait before asking for another code.',
+                'min' => 0,
+                'max' => 600,
+            ],
+            'sms_otp_max_attempts' => [
+                'default' => (int) config('studylikepro.sms.otp_max_attempts'),
+                'type' => 'int',
+                'group' => 'sms',
+                'label' => 'Wrong-code attempts allowed',
+                'description' => 'After this many incorrect codes the pending registration is discarded.',
+                'min' => 1,
+                'max' => 20,
+            ],
+            'sms_otp_max_resends' => [
+                'default' => (int) config('studylikepro.sms.otp_max_resends'),
+                'type' => 'int',
+                'group' => 'sms',
+                'label' => 'Resends per registration',
+                'description' => 'How many replacement codes a visitor may request before starting over.',
+                'min' => 0,
+                'max' => 10,
+            ],
         ];
     }
 
@@ -176,24 +267,34 @@ class PlatformSettings
             return $this->defaults();
         }
 
-        return Cache::rememberForever(self::CACHE_KEY, function () {
-            $stored = PlatformSetting::query()
+        // Only the stored rows are cached; the defaults are read from the live
+        // config on every call, so changing .env is never frozen into a
+        // forever cache.
+        $stored = Cache::rememberForever(self::CACHE_KEY, function () {
+            return PlatformSetting::query()
                 ->get()
                 ->mapWithKeys(fn (PlatformSetting $setting) => [$setting->key => $setting->typedValue()])
                 ->all();
-
-            return array_merge($this->defaults(), $stored);
         });
+
+        return array_merge($this->defaults(), $stored);
     }
 
     public function set(string $key, mixed $value): void
     {
         $definition = self::definitions()[$key] ?? null;
 
+        $stored = is_bool($value) ? ($value ? '1' : '0') : (string) $value;
+
+        // API keys are encrypted at rest; the model decrypts them on read.
+        if (($definition['type'] ?? null) === 'secret' && $stored !== '') {
+            $stored = Crypt::encryptString($stored);
+        }
+
         PlatformSetting::query()->updateOrCreate(
             ['key' => $key],
             [
-                'value' => is_bool($value) ? ($value ? '1' : '0') : (string) $value,
+                'value' => $stored,
                 'type' => $definition['type'] ?? 'string',
                 'group' => $definition['group'] ?? 'general',
                 'label' => $definition['label'] ?? $key,

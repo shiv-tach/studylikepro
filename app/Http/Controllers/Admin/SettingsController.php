@@ -29,11 +29,16 @@ class SettingsController extends Controller
                 // Money settings are entered in whole currency units (Rs), so the
                 // same bounds as the other numeric fields apply.
                 'money' => ['nullable', 'numeric', 'min:0', 'max:100000'],
-                'int' => ['nullable', 'integer', 'min:0', 'max:100000'],
+                // Integer settings carry their own bounds when the definition
+                // needs tighter limits (e.g. a 4-8 digit passcode).
+                'int' => ['nullable', 'integer', 'min:'.($definition['min'] ?? 0), 'max:'.($definition['max'] ?? 100000)],
                 // Float settings carry their own bounds (the booking fee
                 // percentage is 0-100).
                 'float' => ['nullable', 'numeric', 'min:'.($definition['min'] ?? 0), 'max:'.($definition['max'] ?? 1)],
                 'select' => ['nullable', 'string', Rule::in(array_keys($definition['options'] ?? []))],
+                // API keys are encrypted by PlatformSettings; an empty value
+                // means "keep the saved key", never "erase it".
+                'secret' => ['nullable', 'string', 'max:255'],
                 default => ['nullable', 'string', 'max:500'],
             };
         }

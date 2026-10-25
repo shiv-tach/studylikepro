@@ -62,4 +62,20 @@ class TeacherInvite extends Model
 
         return [$invite, $plain];
     }
+
+    /**
+     * The invite a plaintext token points at, when it is still usable.
+     */
+    public static function findUsable(?string $token): ?self
+    {
+        if (blank($token)) {
+            return null;
+        }
+
+        $invite = static::query()
+            ->where('token', hash('sha256', (string) $token))
+            ->first();
+
+        return $invite?->isUsable() ? $invite : null;
+    }
 }

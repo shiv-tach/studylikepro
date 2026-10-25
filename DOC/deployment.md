@@ -70,7 +70,18 @@ RAZORPAY_WEBHOOK_SECRET=
 
 MEETING_PROVIDER=daily
 DAILY_API_KEY=
+
+SMS_PROVIDER=smslenz          # fake only for local/tests; live OTP needs SMSLenz
+SMSLENZ_USER_ID=
+SMSLENZ_API_KEY=
+SMSLENZ_SENDER_ID=            # your approved, case-sensitive sender ID
 ```
+
+The SMSLenz account can also be entered after the first deploy in
+**Admin → Settings → SMSLenz API**. Values saved there win over the `SMSLENZ_*`
+variables (the API key is encrypted at rest); use **Test the connection** on the
+same page to send a sample SMS and confirm the credit balance before relying on
+mobile verification.
 
 Then run the first deploy:
 
@@ -237,6 +248,15 @@ Configure these once, then re-check after any URL change:
 - **Daily.co** → API key with room-creation rights into `DAILY_API_KEY`. Rooms are
   private and tokens expire shortly after the lesson, so no domain allow-list is
   needed; the join links only ever go to the two participants.
+- **SMSLenz** → copy the user ID and API key from
+  `https://smslenz.lk/account/api-key` into `SMSLENZ_USER_ID` and
+  `SMSLENZ_API_KEY`, and the approved sender ID into `SMSLENZ_SENDER_ID`. Keep
+  `SMS_PROVIDER=fake` in local and test environments; with `smslenz` the
+  registration passcode is sent for real. A misspelt value falls back to the demo
+  provider and logs a warning, so check `storage/logs/laravel.log` when no text
+  arrives. The OTP policy (length, lifetime,
+  cooldown, attempts, resends) and an off switch live in `/admin/settings` under
+  **SMS & OTP** — switching it off restores one-step registration.
 - **Mail** → SPF, DKIM and DMARC records for the sending domain, and a verified
   sender. Send one digest to a real inbox and check it is not in spam.
 

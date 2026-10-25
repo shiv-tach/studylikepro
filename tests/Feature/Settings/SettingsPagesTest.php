@@ -112,9 +112,22 @@ it('builds the admin platform settings console from its island', function () {
         'cancellation_policy_text',
         'booking_fee_type',
         'booking_fee_percent',
+        'sms_provider',
+        'smslenz_user_id',
+        'smslenz_api_key',
+        'smslenz_sender_id',
+        'sms_otp_enabled',
+        'sms_otp_length',
+        'sms_otp_ttl_minutes',
+        'sms_otp_resend_seconds',
+        'sms_otp_max_attempts',
+        'sms_otp_max_resends',
     )
         ->and($config['groups'][0]['label'])->toBe('Money')
+        ->and(collect($config['groups'])->pluck('label'))->toContain('SMS & OTP')
+        ->and(collect($config['groups'])->pluck('label'))->toContain('SMSLenz API')
         ->and($config['urls']['update'])->toBe(route('admin.settings.update'))
+        ->and($config['urls']['smsTest'])->toBe(route('admin.settings.sms-test'))
         ->and($config['meta']['currencySymbol'])->not->toBe('');
 
     // The money fields are edited in whole currency units, not minor units.

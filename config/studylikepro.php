@@ -94,11 +94,17 @@ return [
     'throttle' => [
         'login' => (int) env('THROTTLE_LOGIN', 20),
         'register' => (int) env('THROTTLE_REGISTER', 10),
+        // One-time passcodes: sending and checking are bucketed separately so a
+        // legitimate resend does not spend the code-check budget.
+        'otp' => (int) env('THROTTLE_OTP', 5),
+        'otp-verify' => (int) env('THROTTLE_OTP_VERIFY', 10),
         'uploads' => (int) env('THROTTLE_UPLOADS', 30),
         'marking-draft' => (int) env('THROTTLE_MARKING_DRAFT', 120),
         'messages' => (int) env('THROTTLE_MESSAGES', 60),
         'checkout' => (int) env('THROTTLE_CHECKOUT', 15),
         'contact' => (int) env('THROTTLE_CONTACT', 5),
+        // The admin SMSLenz connection test sends a real text message.
+        'sms-test' => (int) env('THROTTLE_SMS_TEST', 5),
         'webhooks' => (int) env('THROTTLE_WEBHOOKS', 120),
     ],
 
@@ -168,6 +174,34 @@ return [
     | Reviews
     |--------------------------------------------------------------------------
     */
+
+    /*
+    |--------------------------------------------------------------------------
+    | SMS and mobile verification
+    |--------------------------------------------------------------------------
+    |
+    | `provider` selects how passcodes leave the server. `fake` keeps the whole
+    | flow offline (local development and tests) and writes the code to the log;
+    | `smslenz` uses the live SMSLenz API with the credentials in
+    | config/services.php. The OTP policy itself is tunable from
+    | /admin/settings (these are only the defaults).
+    |
+    */
+
+    'sms' => [
+        'provider' => env('SMS_PROVIDER', 'fake'),
+        'otp_length' => (int) env('SMS_OTP_LENGTH', 6),
+        'otp_ttl_minutes' => (int) env('SMS_OTP_TTL_MINUTES', 5),
+        'otp_resend_seconds' => (int) env('SMS_OTP_RESEND_SECONDS', 60),
+        'otp_max_attempts' => (int) env('SMS_OTP_MAX_ATTEMPTS', 5),
+        'otp_max_resends' => (int) env('SMS_OTP_MAX_RESENDS', 3),
+        // :code and :minutes are replaced before sending. Keep it inside one
+        // SMS page (160 GSM characters) so the passcode is never truncated.
+        'otp_message' => env(
+            'SMS_OTP_MESSAGE',
+            ':app verification code: :code. Valid for :minutes minutes. Do not share this code.'
+        ),
+    ],
 
     'reviews' => [
         // How long a student can change their mind about a review.

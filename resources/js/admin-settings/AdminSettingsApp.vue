@@ -11,6 +11,7 @@ import UiAlert from '../shared/components/UiAlert.vue';
 import { COPY_KEY, CSRF_KEY, META_KEY, URLS_KEY } from './composables/usePageContext';
 import { SETTINGS_FORM_KEY, createSettingsForm } from './composables/useSettingsForm';
 import SettingsGroupCard from './components/SettingsGroupCard.vue';
+import SmsTestCard from './components/SmsTestCard.vue';
 
 const props = defineProps({
     config: { type: Object, required: true },
@@ -68,5 +69,10 @@ const messages = computed(() => Object.values(props.config.errors ?? {}).flat())
                 </button>
             </div>
         </form>
+
+        <!-- The test is its own POST: forms cannot nest inside the settings form. -->
+        <RevealOnScroll>
+            <SmsTestCard :sms="config.sms" />
+        </RevealOnScroll>
     </div>
 </template>

@@ -49,4 +49,19 @@ return [
         'timeout' => (int) env('DAILY_TIMEOUT', 20),
     ],
 
+    /*
+    | SMSLenz (Sri Lankan SMS gateway)
+    |
+    | Credentials from https://smslenz.lk/account/api-key. `sender_id` is the
+    | approved sender and is case sensitive; SMSlenzDEMO works for testing.
+    | Only the server talks to the provider, so these stay out of the browser.
+    */
+    'smslenz' => [
+        'user_id' => env('SMSLENZ_USER_ID'),
+        'api_key' => env('SMSLENZ_API_KEY'),
+        'sender_id' => env('SMSLENZ_SENDER_ID', 'SMSlenzDEMO'),
+        'base_url' => env('SMSLENZ_BASE_URL', 'https://smslenz.lk/api'),
+        'timeout' => (int) env('SMSLENZ_TIMEOUT', 15),
+    ],
+
 ];

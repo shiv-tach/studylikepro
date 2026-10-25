@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\BookingService;
 use App\Services\Meetings\MeetingService;
 use App\Services\Payments\EarningsService;
+use App\Services\Sms\FakeSmsGateway;
 use App\Support\BookingDraft;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -613,6 +614,21 @@ function notificationsConfig(TestResponse $response): array
 function makeTeacherInvite(?int $expiresInDays = 7): array
 {
     return TeacherInvite::createWithToken($expiresInDays, null);
+}
+
+/**
+ * Complete the two-step registration: submit the form, read the passcode from
+ * the offline SMS gateway and confirm it. Returns the verify response, which
+ * redirects to the dashboard on success.
+ */
+function registerThroughOtp(array $payload, string $url = '/register'): TestResponse
+{
+    test()->post($url, $payload)->assertRedirect(route('register.verify.show'));
+
+    $code = FakeSmsGateway::lastCode();
+    expect($code)->not->toBeNull();
+
+    return test()->post(route('register.verify.store'), ['code' => $code]);
 }
 
 /**

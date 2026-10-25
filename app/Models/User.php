@@ -37,6 +37,7 @@ class User extends Authenticatable
         'last_name',
         'email',
         'mobile',
+        'mobile_verified_at',
         'password',
         'theme',
         'notification_preferences',
@@ -61,6 +62,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'mobile_verified_at' => 'datetime',
             'password' => 'hashed',
             'theme' => 'array',
             'notification_preferences' => 'array',
@@ -149,6 +151,14 @@ class User extends Authenticatable
     public function mobileFormatted(): ?string
     {
         return PhoneNumber::format($this->mobile);
+    }
+
+    /**
+     * Whether the mobile number was proved with an SMS passcode.
+     */
+    public function hasVerifiedMobile(): bool
+    {
+        return $this->mobile_verified_at !== null;
     }
 
     /**

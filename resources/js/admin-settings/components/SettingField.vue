@@ -58,6 +58,8 @@ const controlClasses = 'mt-1 block w-full rounded-xl border-slate-300 bg-white t
             :step="setting.step"
             :min="setting.min"
             :max="setting.max"
+            :placeholder="setting.placeholder"
+            :autocomplete="setting.type === 'secret' ? 'new-password' : null"
             :class="controlClasses"
         >
     </UiFormField>

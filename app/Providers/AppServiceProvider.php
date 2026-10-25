@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\MeetingProvider;
 use App\Contracts\PaymentGateway;
+use App\Contracts\SmsGateway;
 use App\Models\EducationLevel;
 use App\Models\Lesson;
 use App\Models\Subject;
@@ -15,7 +16,10 @@ use App\Services\Meetings\DailyMeetingProvider;
 use App\Services\Meetings\FakeMeetingProvider;
 use App\Services\Payments\FakePaymentGateway;
 use App\Services\Payments\RazorpayGateway;
+use App\Services\Sms\FakeSmsGateway;
+use App\Services\Sms\SmsLenzGateway;
 use App\Support\PhoneNumber;
+use App\Support\SmsLenzConfig;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -49,6 +53,22 @@ class AppServiceProvider extends ServiceProvider
                     (int) config('services.daily.timeout'),
                 ),
                 default => new FakeMeetingProvider,
+            };
+        });
+
+        $this->app->bind(SmsGateway::class, function () {
+            $smsLenz = app(SmsLenzConfig::class);
+            $credentials = $smsLenz->credentials();
+
+            return match ($smsLenz->provider()) {
+                'smslenz' => new SmsLenzGateway(
+                    $credentials['user_id'],
+                    $credentials['api_key'],
+                    $credentials['sender_id'],
+                    $credentials['base_url'],
+                    $credentials['timeout'],
+                ),
+                default => new FakeSmsGateway,
             };
         });
     }
@@ -99,6 +119,22 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('register', fn (Request $request) => Limit::perMinute($limit('register'))->by($request->ip()));
 
+        // Passcodes are bucketed on the number being verified (in canonical
+        // digits) plus the caller, so "076 982 88 74" and "+94 76 982 8874"
+        // share one budget and one noisy network cannot exhaust another's. The
+        // verify screen has no mobile field, so it reads the pending number
+        // from the session.
+        $otpBucket = function (Request $request): string {
+            $mobile = PhoneNumber::normalize((string) $request->input('mobile'))
+                ?? PhoneNumber::normalize((string) data_get($request->session()->get('register.pending'), 'mobile'));
+
+            return ($mobile ?? 'none').'|'.$request->ip();
+        };
+
+        RateLimiter::for('otp', fn (Request $request) => Limit::perMinute($limit('otp'))->by($otpBucket($request)));
+
+        RateLimiter::for('otp-verify', fn (Request $request) => Limit::perMinute($limit('otp-verify'))->by($otpBucket($request)));
+
         RateLimiter::for('uploads', fn (Request $request) => Limit::perMinute($limit('uploads'))
             ->by($request->user()?->id ?: $request->ip()));
 
@@ -113,6 +149,10 @@ class AppServiceProvider extends ServiceProvider
             ->by($request->user()?->id ?: $request->ip()));
 
         RateLimiter::for('contact', fn (Request $request) => Limit::perMinute($limit('contact'))->by($request->ip()));
+
+        // The admin connection test sends a real SMS; one admin cannot loop it.
+        RateLimiter::for('sms-test', fn (Request $request) => Limit::perMinute($limit('sms-test'))
+            ->by($request->user()?->id ?: $request->ip()));
 
         // Providers retry, so the ceiling is high — it only exists to stop a
         // flood from filling the queue.

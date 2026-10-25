@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\MobileVerificationController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
@@ -16,7 +17,24 @@ Route::middleware('guest')->group(function () {
         ->name('register');
 
     Route::post('register', [RegisteredUserController::class, 'store'])
-        ->middleware('throttle:register');
+        ->middleware(['throttle:register', 'throttle:otp']);
+
+    // Step two: the mobile number is proved with the code sent by SMSLenz and
+    // only then is the account created. Resending and restarting the form are
+    // separate actions so each gets its own rate limit.
+    Route::get('register/verify', [MobileVerificationController::class, 'show'])
+        ->name('register.verify.show');
+
+    Route::post('register/verify', [MobileVerificationController::class, 'verify'])
+        ->middleware('throttle:otp-verify')
+        ->name('register.verify.store');
+
+    Route::post('register/verify/resend', [MobileVerificationController::class, 'resend'])
+        ->middleware('throttle:otp')
+        ->name('register.verify.resend');
+
+    Route::post('register/cancel', [MobileVerificationController::class, 'cancel'])
+        ->name('register.cancel');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
