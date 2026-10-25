@@ -34,7 +34,7 @@ const noticeClass =
                     <h3 id="finder-grade" class="text-base font-bold text-slate-800 dark:text-slate-100">
                         {{ copy.gradeTitle }}
                     </h3>
-                    <p class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                    <p class="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500 dark:text-slate-400">
                         {{ copy.gradeBody }}
                     </p>
                 </div>

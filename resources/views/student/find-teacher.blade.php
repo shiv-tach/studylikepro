@@ -143,16 +143,16 @@
         </div>
     </x-slot>
 
-    <div class="mx-auto max-w-6xl">
+    <div class="w-full">
         <script type="application/json" id="student-teacher-finder-config">@json($finderPayload, $jsonFlags)</script>
 
-        <div id="student-teacher-finder-app" class="space-y-6"></div>
+        <div id="student-teacher-finder-app" class="space-y-5"></div>
 
         {{-- Fallback for a browser without JavaScript: the page is a thin shell,
              so repeat the filters as a plain GET form and list the same teachers
              the Vue app would have rendered. --}}
         <noscript>
-            <div class="space-y-6">
+            <div class="space-y-5">
                 @if ($grade)
                     <div class="rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900">
                         <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ __('Teachers for :grade', ['grade' => $grade->label]) }}</h3>

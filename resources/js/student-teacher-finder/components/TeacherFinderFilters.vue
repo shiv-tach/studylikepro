@@ -32,7 +32,7 @@ const submitClass =
 
 <template>
     <form method="GET" :action="urls.index" :class="panel" :aria-label="copy.filtersLabel">
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
             <div>
                 <label for="filter-subject" :class="labelClass">{{ copy.subject }}</label>
                 <select id="filter-subject" name="subject" :class="fieldClass">

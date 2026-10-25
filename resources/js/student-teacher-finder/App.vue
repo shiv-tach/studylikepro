@@ -39,7 +39,10 @@ provide(URLS_KEY, props.config.urls ?? {});
         />
     </RevealOnScroll>
 
-    <div v-if="config.teachers.length" class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+    <div
+        v-if="config.teachers.length"
+        class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 min-[1800px]:grid-cols-5 min-[2100px]:grid-cols-6"
+    >
         <RevealOnScroll
             v-for="(teacher, index) in config.teachers"
             :key="teacher.id"
