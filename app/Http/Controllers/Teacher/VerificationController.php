@@ -12,6 +12,7 @@ use App\Models\TeacherProfile;
 use App\Models\TeacherVerificationDocument;
 use App\Services\TeacherSubjectService;
 use App\Support\TeacherOnboarding;
+use App\Support\VerificationStepConfig;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,24 +26,56 @@ class VerificationController extends Controller
     public function __construct(private readonly TeacherSubjectService $teacherSubjects) {}
 
     /**
-     * Show the verification documents page.
+     * Show the verification step. `$mode` is `onboarding` when the wizard owns
+     * the page and `workspace` when it is the post-onboarding status page.
      */
-    public function index(Request $request): View|RedirectResponse
+    public function index(Request $request, string $mode = 'workspace'): View|RedirectResponse
     {
-        $profile = $request->user()->teacherProfile;
+        $user = $request->user();
+        $profile = $user->teacherProfile;
+
+        // The old URL forwards into the wizard until onboarding is finished;
+        // afterwards it is the status page for the submitted application.
+        if ($mode !== 'onboarding' && ! $user->hasCompletedOnboarding()) {
+            $user->loadMissing('onboardingDraft');
+
+            return redirect()
+                ->route(TeacherOnboarding::nextRouteName($profile, $user->onboardingDraft))
+                ->with('status', TeacherOnboarding::nextStatus($profile, $user->onboardingDraft));
+        }
 
         if ($gate = $this->onboardingGate($profile)) {
             return $gate;
         }
 
-        return view('teacher.verification', [
-            'profile' => $profile->load('documents'),
+        $profile->load('documents');
+        $user->loadMissing('onboardingDraft');
+        $subjectGroups = $this->subjectGroups();
+        $selectedSubjectIds = $this->selectedSubjectIds($profile);
+        $documentTypes = (array) config('studylikepro.verification_document_types');
+        $highlightDocumentId = $request->session()->get('uploaded_document_id');
+
+        $config = VerificationStepConfig::build(
+            $profile,
+            $request->session()->get('errors')?->getBag('default') ?? new \Illuminate\Support\MessageBag,
+            $documentTypes,
+            $subjectGroups,
+            $selectedSubjectIds,
+            $user->theme['preset'] ?? 'classic',
+            $highlightDocumentId !== null ? (int) $highlightDocumentId : null,
+            $mode,
+            $user->onboardingDraft,
+        );
+
+        return view($mode === 'onboarding' ? 'teacher.onboarding.verification' : 'teacher.verification', [
+            'profile' => $profile,
+            'mode' => $mode,
+            'config' => $config,
             'canEditDocuments' => $profile->verification_status->allowsDocumentEditing(),
-            'documentTypes' => config('studylikepro.verification_document_types'),
-            'subjectGroups' => $this->subjectGroups(),
-            'selectedSubjectIds' => $this->selectedSubjectIds($profile),
-            // The row the page rings and labels "just uploaded" after a redirect.
-            'highlightDocumentId' => $request->session()->get('uploaded_document_id'),
+            'documentTypes' => $documentTypes,
+            'subjectGroups' => $subjectGroups,
+            'selectedSubjectIds' => $selectedSubjectIds,
+            'highlightDocumentId' => $highlightDocumentId,
         ]);
     }
 
@@ -62,13 +95,10 @@ class VerificationController extends Controller
                 return self::lockedResponse();
             }
 
-            return redirect()
-                ->route('teacher.verification')
-                ->with('status', 'documents-locked');
+            return $this->redirectAfterAction($request, 'documents-locked');
         }
 
         $file = $request->file('document');
-
         $document = $profile->documents()->create([
             'type' => $request->validated('type'),
             'original_name' => $file->getClientOriginalName(),
@@ -88,9 +118,7 @@ class VerificationController extends Controller
             ]);
         }
 
-        return redirect()
-            ->route('teacher.verification')
-            ->with('status', 'document-uploaded')
+        return $this->redirectAfterAction($request, 'document-uploaded')
             ->with('uploaded_document_id', $document->id);
     }
 
@@ -121,9 +149,7 @@ class VerificationController extends Controller
             ]);
         }
 
-        return redirect()
-            ->route('teacher.verification')
-            ->with('status', 'document-removed');
+        return $this->redirectAfterAction($request, 'document-removed');
     }
 
     /**
@@ -144,9 +170,7 @@ class VerificationController extends Controller
                 return self::lockedResponse();
             }
 
-            return redirect()
-                ->route('teacher.verification')
-                ->with('status', 'documents-locked');
+            return $this->redirectAfterAction($request, 'documents-locked');
         }
 
         $validated = $request->validate([
@@ -169,9 +193,7 @@ class VerificationController extends Controller
             ]);
         }
 
-        return redirect()
-            ->route('teacher.verification')
-            ->with('status', 'subjects-saved');
+        return $this->redirectAfterAction($request, 'subjects-saved');
     }
 
     /**
@@ -186,9 +208,7 @@ class VerificationController extends Controller
         }
 
         if (! $profile->verification_status->allowsDocumentEditing()) {
-            return redirect()
-                ->route('teacher.verification')
-                ->with('status', 'verification-locked');
+            return $this->redirectAfterAction($request, 'verification-locked');
         }
 
         $request->validate([
@@ -217,27 +237,52 @@ class VerificationController extends Controller
             'agreement_version' => (string) config('studylikepro.support.policy_version'),
         ]);
 
+        // Onboarding is finished: nothing is left to restore.
+        $request->user()->onboardingDraft()->delete();
+
         return redirect()
-            ->route('teacher.verification')
+            ->route($this->isOnboardingReturn($request) ? 'teacher.onboarding.submitted' : 'teacher.verification')
             ->with('status', 'submitted-for-review');
     }
 
     /**
-     * The onboarding gate every verification action shares: the profile has to
-     * be saved and at least one weekly range set, otherwise the teacher is sent
-     * to the step they still owe rather than to a dead end.
+     * Everything redirects back to the page the action came from: the wizard
+     * step while onboarding, the workspace status page afterwards.
+     */
+    private function redirectAfterAction(Request $request, string $status): RedirectResponse
+    {
+        return redirect()
+            ->route($this->isOnboardingReturn($request) ? 'teacher.onboarding.verification' : 'teacher.verification')
+            ->with('status', $status);
+    }
+
+    private function isOnboardingReturn(Request $request): bool
+    {
+        return $request->input('return') === 'onboarding' || $request->route('mode') === 'onboarding';
+    }
+
+    /**
+     * The onboarding gate every verification action shares: both profile steps
+     * have to be saved and at least one weekly range set, otherwise the teacher
+     * is sent to the step they still owe rather than to a dead end.
      */
     private function onboardingGate(?TeacherProfile $profile): ?RedirectResponse
     {
-        if (! $profile?->isComplete()) {
+        if (! $profile?->hasCompletedAboutStep()) {
             return redirect()
-                ->route('teacher.profile')
+                ->route('teacher.onboarding.profile')
                 ->with('status', 'complete-your-profile');
+        }
+
+        if (! $profile->hasCompletedPreferencesStep()) {
+            return redirect()
+                ->route('teacher.onboarding.preferences')
+                ->with('status', 'complete-your-preferences');
         }
 
         if (! TeacherOnboarding::hasAvailability($profile)) {
             return redirect()
-                ->route('teacher.availability.setup')
+                ->route('teacher.onboarding.availability')
                 ->with('status', 'complete-your-availability');
         }
 

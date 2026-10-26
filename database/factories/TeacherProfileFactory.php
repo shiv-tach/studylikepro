@@ -27,6 +27,8 @@ class TeacherProfileFactory extends Factory
             'hourly_rate_minor' => 50000,
             'verification_status' => VerificationStatus::Draft,
             'completed_at' => now(),
+            'about_completed_at' => now(),
+            'preferences_completed_at' => now(),
         ];
     }
 
@@ -37,6 +39,8 @@ class TeacherProfileFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'completed_at' => null,
+            'about_completed_at' => null,
+            'preferences_completed_at' => null,
         ]);
     }
 

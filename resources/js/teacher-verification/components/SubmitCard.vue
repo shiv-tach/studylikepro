@@ -49,7 +49,7 @@ function submit() {
 </script>
 
 <template>
-    <section :class="panel">
+    <section id="submit" :class="panel" class="scroll-mt-40">
         <UiSectionHeading :title="copy.submitTitle" :description="copy.submitHint" icon="shield" level="h3" />
 
         <ul class="mt-5 space-y-2.5 text-sm">
@@ -63,6 +63,7 @@ function submit() {
 
         <form ref="form" method="POST" :action="urls.submit" class="mt-5 space-y-3">
             <input type="hidden" name="_token" :value="csrfToken">
+            <input v-if="urls.return" type="hidden" name="return" :value="urls.return">
 
             <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 text-sm text-slate-600 transition-colors hover:border-primary/40 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-300">
                 <input
@@ -88,6 +89,7 @@ function submit() {
 
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p
+                    id="submit-requirements"
                     class="text-xs font-semibold"
                     :class="blockingReason ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'"
                     role="status"
@@ -97,7 +99,7 @@ function submit() {
 
                 <button
                     type="button"
-                    :class="[PRIMARY_BUTTON, 'shrink-0']"
+                    :class="[PRIMARY_BUTTON, 'w-full shrink-0 sm:w-auto']"
                     :disabled="!canSubmit"
                     :aria-describedby="'submit-requirements'"
                     @click="openConfirm"

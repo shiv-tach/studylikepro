@@ -5,17 +5,16 @@ use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
-test('new teachers are redirected to their profile from the dashboard', function () {
+test('new teachers are sent to the onboarding wizard from the dashboard', function () {
     $this->actingAs(User::factory()->teacher()->create())
         ->get(route('teacher.dashboard'))
-        ->assertRedirect(route('teacher.profile'));
+        ->assertRedirect(route('teacher.onboarding.show'));
 });
 
-test('the profile page shows the onboarding form for new teachers', function () {
+test('the workspace profile page sends an un-onboarded teacher to the wizard', function () {
     $this->actingAs(User::factory()->teacher()->create())
         ->get(route('teacher.profile'))
-        ->assertOk()
-        ->assertSee('Set up your teaching profile');
+        ->assertRedirect(route('teacher.onboarding.show'));
 });
 
 test('the profile page ships the live preview of the public teacher card', function () {
@@ -37,14 +36,13 @@ test('the profile page ships the live preview of the public teacher card', funct
         ->and($config['preview']['subjects'])->toHaveCount(1)
         ->and($config['preview']['currencySymbol'])->not->toBe('')
         ->and($config['preview']['verificationLabel'])->toBe('Pending review')
-        ->and($config['steps'])->toHaveCount(3)
-        ->and($config['currentStep'])->toBe(1)
+        ->and($config['steps'])->toHaveCount(5)
         ->and($config['urls']['update'])->toBe(route('teacher.profile.update'))
-        ->and($config['urls']['availability'])->toBe(route('teacher.availability.setup'));
+        ->and($config['urls']['availability'])->toBe(route('teacher.onboarding.availability'));
 });
 
 test('a rejected save hands the answers and messages back to the preview', function () {
-    $user = User::factory()->teacher()->create();
+    $user = User::factory()->teacher()->onboarded()->create();
 
     $this->actingAs($user)
         ->from(route('teacher.profile'))
@@ -76,7 +74,7 @@ test('teachers can complete their profile', function () {
         'hourly_rate' => 750,
     ]);
 
-    $response->assertRedirect(route('teacher.availability.setup'));
+    $response->assertRedirect(route('teacher.onboarding.availability'));
 
     $profile = $user->fresh()->teacherProfile;
 
@@ -87,9 +85,9 @@ test('teachers can complete their profile', function () {
         ->and($profile->timezone)->toBe('Asia/Colombo')
         ->and($profile->verification_status->value)->toBe('draft');
 
-    // Step 2 is now the weekly availability, so the teacher area stays locked.
+    // The availability step is next, so the teacher area stays locked.
     $this->get(route('teacher.dashboard'))
-        ->assertRedirect(route('teacher.availability.setup'))
+        ->assertRedirect(route('teacher.onboarding.availability'))
         ->assertSessionHas('status', 'complete-your-availability');
 });
 

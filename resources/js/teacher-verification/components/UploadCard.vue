@@ -78,7 +78,7 @@ async function onSubmit() {
 </script>
 
 <template>
-    <section id="upload-documents" :class="panel" class="scroll-mt-24">
+    <section id="upload-documents" :class="panel" class="scroll-mt-40">
         <UiSectionHeading :title="copy.uploadTitle" :description="copy.uploadHint" icon="clipboard" level="h3" />
 
         <form
@@ -90,6 +90,7 @@ async function onSubmit() {
             @submit.prevent="onSubmit"
         >
             <input type="hidden" name="_token" :value="csrfToken">
+            <input v-if="urls.return" type="hidden" name="return" :value="urls.return">
 
             <fieldset>
                 <legend class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ copy.uploadTypeLabel }}</legend>
@@ -157,17 +158,18 @@ async function onSubmit() {
                     <label
                         v-if="!pickedFile"
                         for="document"
-                        class="flex cursor-pointer flex-col items-center gap-2 px-6 py-8 text-center"
+                        class="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 px-4 py-6 text-center sm:px-6 sm:py-8"
                     >
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 p-2.5 text-primary">
                             <AppIcon name="clipboard" />
                         </span>
                         <span class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ copy.fileChoose }}</span>
-                        <span class="text-xs text-slate-500 dark:text-slate-400">{{ copy.fileDropHint }}</span>
+                        <span class="text-xs text-slate-500 sm:hidden dark:text-slate-400">{{ copy.fileTapHint }}</span>
+                        <span class="hidden text-xs text-slate-500 sm:inline dark:text-slate-400">{{ copy.fileDropHint }}</span>
                         <span class="text-xs text-slate-400">{{ copy.fileTypes }}</span>
                     </label>
 
-                    <div v-else class="flex items-center gap-3 p-4">
+                    <div v-else class="flex flex-wrap items-center gap-3 p-3 sm:p-4">
                         <img
                             v-if="previewUrl"
                             :src="previewUrl"
@@ -185,7 +187,7 @@ async function onSubmit() {
                             </p>
                         </div>
 
-                        <button type="button" :class="[GHOST_BUTTON, 'shrink-0 text-xs']" @click="clear">
+                        <button type="button" :class="[GHOST_BUTTON, 'w-full justify-center text-xs sm:w-auto']" @click="clear">
                             {{ copy.fileChange }}
                         </button>
                     </div>
@@ -203,7 +205,7 @@ async function onSubmit() {
                 </ul>
             </div>
 
-            <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 pt-4 dark:border-slate-800/80">
+            <div class="flex flex-col gap-3 border-t border-slate-200/80 pt-4 dark:border-slate-800/80 sm:flex-row sm:items-center sm:justify-between">
                 <p
                     class="text-xs font-semibold"
                     :class="uploadResult?.tone === 'rose' ? 'text-rose-600 dark:text-rose-400' : (uploadResult ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400')"
@@ -212,7 +214,7 @@ async function onSubmit() {
                     {{ uploadResult?.message ?? copy.uploadDraftNote }}
                 </p>
 
-                <button type="submit" :class="[PRIMARY_BUTTON, 'shrink-0']" :disabled="uploading">
+                <button type="submit" :class="[PRIMARY_BUTTON, 'w-full shrink-0 sm:w-auto']" :disabled="uploading">
                     <span v-if="uploading" class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none"></span>
                     {{ uploading ? copy.uploadBusy : copy.uploadButton }}
                 </button>

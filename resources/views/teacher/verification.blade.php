@@ -281,13 +281,17 @@
         ],
     ];
 
+    // The island is built by App\Support\VerificationStepConfig so the wizard
+    // step and this status page agree on every key.
+    $payload = $config;
+
     // JSON_UNESCAPED_SLASHES keeps the URLs readable; the HEX flags keep the
     // island safe inside a <script> tag.
     $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
 
     // The noscript form below is plain Blade, so it keeps the same field names,
     // the same values and the same card styling as the Vue cards above it.
-    $cardClasses = 'rounded-2xl border p-6 '.(in_array($themePreset, ['glass', 'ocean'], true)
+    $cardClasses = 'rounded-2xl border p-4 sm:p-6 '.(in_array($themePreset, ['glass', 'ocean'], true)
         ? 'border-slate-200/40 bg-white/70 backdrop-blur-md dark:border-slate-800/40 dark:bg-slate-900/70'
         : 'border-slate-200/80 bg-white dark:border-slate-800/80 dark:bg-slate-900');
     $selectClasses = 'mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900';
@@ -317,7 +321,7 @@
                 </div>
             @endforeach
 
-            <x-teacher-onboarding-steps :current="3" />
+            <x-teacher-onboarding-steps :current="5" />
 
             <!-- Status overview -->
             <div class="{{ $cardClasses }}">

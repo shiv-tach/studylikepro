@@ -39,25 +39,25 @@ const meta = computed(() => [
 
 <template>
     <li
-        class="flex items-center gap-3 rounded-xl border p-3 transition-colors duration-300"
+        class="flex min-w-0 items-center gap-2.5 rounded-xl border p-2.5 transition-colors duration-300 sm:gap-3 sm:p-3"
         :class="highlighted
             ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/20'
             : 'border-slate-200/80 dark:border-slate-800/80'"
     >
-        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 p-2.5 text-primary">
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 p-2 text-primary sm:h-10 sm:w-10 sm:p-2.5">
             <AppIcon :name="icon" />
         </span>
 
         <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-1.5">
-                <p class="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{{ document.typeLabel }}</p>
+                <p class="max-w-full break-words text-sm font-semibold text-slate-800 dark:text-slate-100">{{ document.typeLabel }}</p>
                 <UiChip :tone="document.isRequired ? 'emerald' : 'slate'">
                     {{ document.isRequired ? copy.requiredDocument : copy.optionalDocument }}
                 </UiChip>
                 <UiChip v-if="highlighted" tone="primary">{{ copy.justUploaded }}</UiChip>
             </div>
 
-            <p class="mt-0.5 truncate text-xs text-slate-400">{{ meta }}</p>
+            <p class="mt-0.5 break-words text-xs leading-relaxed text-slate-400">{{ meta }}</p>
         </div>
 
         <button

@@ -30,18 +30,18 @@ it('shows onboarding step 2 with the recommended week pre-loaded', function () {
     $teacher = teacherWithoutWeek();
 
     $response = $this->actingAs($teacher)
-        ->get(route('teacher.availability.setup'))
+        ->get(route('teacher.onboarding.availability'))
         ->assertOk()
         ->assertSee('id="teacher-availability-setup-app"', false)
-        ->assertSee('Set your weekly availability')
+        ->assertSee('When can you teach?')
         ->assertSee('Suggested weeks')
         ->assertSee('School-friendly');
 
     $config = availabilitySetupConfig($response);
 
-    expect($config['currentStep'])->toBe(2)
+    expect($config['currentStep'])->toBe(4)
         ->and(collect($config['steps'])->pluck('label')->all())
-        ->toBe(['Teaching profile', 'Weekly availability', 'Verification'])
+        ->toBe(['Getting started', 'About you', 'Teaching preferences', 'Weekly availability', 'Verification'])
         ->and($config['profile']['isComplete'])->toBeTrue()
         ->and($config['profile']['hasAvailability'])->toBeFalse()
         ->and($config['profile']['lessonDuration'])->toBe(60)
@@ -60,8 +60,8 @@ it('sends a teacher with an incomplete profile back to step 1', function () {
     $teacher = User::factory()->teacher()->create();
 
     $this->actingAs($teacher)
-        ->get(route('teacher.availability.setup'))
-        ->assertRedirect(route('teacher.profile'))
+        ->get(route('teacher.onboarding.availability'))
+        ->assertRedirect(route('teacher.onboarding.profile'))
         ->assertSessionHas('status', 'complete-your-profile');
 });
 
@@ -90,7 +90,7 @@ it('saves several ranges per day and ignores days that are switched off', functi
                 'ranges' => [['start_time' => '08:00', 'end_time' => '20:00']],
             ],
         ]))
-        ->assertRedirect(route('teacher.verification'))
+        ->assertRedirect(route('teacher.onboarding.verification'))
         ->assertSessionHasNoErrors()
         ->assertSessionHas('status', 'availability-saved');
 
@@ -227,14 +227,14 @@ it('replays a rejected save with its values and messages', function () {
     $teacher = teacherWithoutWeek();
 
     $this->actingAs($teacher)
-        ->from(route('teacher.availability.setup'))
+        ->from(route('teacher.onboarding.availability'))
         ->put(route('teacher.availability.setup.update'), weekPayload([
             ['value' => 1, 'enabled' => '1', 'ranges' => [['start_time' => '15:00', 'end_time' => '15:30']]],
         ]))
         ->assertSessionHasErrors('days.0.ranges.0.end_time');
 
     $config = availabilitySetupConfig(
-        $this->actingAs($teacher)->get(route('teacher.availability.setup'))->assertOk()
+        $this->actingAs($teacher)->get(route('teacher.onboarding.availability'))->assertOk()
     );
 
     expect(collect($config['week'])->firstWhere('value', 1)['ranges'])
@@ -248,16 +248,16 @@ it('blocks verification and the dashboard until a weekly range exists', function
 
     $this->actingAs($teacher)
         ->get(route('teacher.verification'))
-        ->assertRedirect(route('teacher.availability.setup'))
+        ->assertRedirect(route('teacher.onboarding.availability'))
         ->assertSessionHas('status', 'complete-your-availability');
 
     $this->actingAs($teacher)
         ->post(route('teacher.verification.submit'), ['agree' => '1'])
-        ->assertRedirect(route('teacher.availability.setup'));
+        ->assertRedirect(route('teacher.onboarding.availability'));
 
     $this->actingAs($teacher)
         ->get(route('teacher.dashboard'))
-        ->assertRedirect(route('teacher.availability.setup'))
+        ->assertRedirect(route('teacher.onboarding.availability'))
         ->assertSessionHas('status', 'complete-your-availability');
 });
 
@@ -268,7 +268,7 @@ it('opens verification again once a range is saved', function () {
         ['value' => 1, 'enabled' => '1', 'ranges' => [['start_time' => '15:00', 'end_time' => '21:00']]],
     ]))->assertSessionHasNoErrors();
 
-    $this->actingAs($teacher)->get(route('teacher.verification'))->assertOk();
+    $this->actingAs($teacher)->get(route('teacher.onboarding.verification'))->assertOk();
 });
 
 it('sends a submitted teacher to the full availability manager', function () {
@@ -286,6 +286,6 @@ it('blocks the setup save when the profile is incomplete', function () {
         ->put(route('teacher.availability.setup.update'), weekPayload([
             ['value' => 1, 'enabled' => '1', 'ranges' => [['start_time' => '15:00', 'end_time' => '21:00']]],
         ]))
-        ->assertRedirect(route('teacher.profile'))
+        ->assertRedirect(route('teacher.onboarding.profile'))
         ->assertSessionHas('status', 'complete-your-profile');
 });

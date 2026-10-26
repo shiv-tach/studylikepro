@@ -241,6 +241,10 @@ export function createVerification(config, { onNotice } = {}) {
         body.append('type', selectedType.value);
         body.append('document', pickedFile.value);
 
+        if (config.urls?.return) {
+            body.append('return', config.urls.return);
+        }
+
         try {
             const { response, payload } = await send(config.urls.upload, { method: 'POST', body });
 
@@ -284,6 +288,10 @@ export function createVerification(config, { onNotice } = {}) {
         const body = new FormData();
         body.append('_token', config.csrfToken ?? '');
         body.append('_method', 'DELETE');
+
+        if (config.urls?.return) {
+            body.append('return', config.urls.return);
+        }
 
         try {
             const { response, payload } = await send(document.destroyUrl, { method: 'POST', body });
@@ -331,6 +339,10 @@ export function createVerification(config, { onNotice } = {}) {
         const body = new FormData();
         body.append('_token', config.csrfToken ?? '');
         ids.forEach((id) => body.append('subjects[]', String(id)));
+
+        if (config.urls?.return) {
+            body.append('return', config.urls.return);
+        }
 
         try {
             const { response, payload } = await send(config.urls.subjects, { method: 'POST', body });

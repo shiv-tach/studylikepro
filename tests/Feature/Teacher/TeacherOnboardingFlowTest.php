@@ -10,31 +10,31 @@ test('a teacher who saved the profile but not the week is sent to the availabili
 
     $this->actingAs($teacher)
         ->get(route('teacher.dashboard'))
-        ->assertRedirect(route('teacher.availability.setup'))
+        ->assertRedirect(route('teacher.onboarding.availability'))
         ->assertSessionHas('status', 'complete-your-availability');
 });
 
-test('a teacher who finished steps 1 and 2 is sent back to verification', function () {
+test('a teacher who finished the profile and week is sent to the verification step', function () {
     $teacher = onboardingTeacher();
 
     $this->actingAs($teacher)
         ->get(route('teacher.dashboard'))
-        ->assertRedirect(route('teacher.verification'))
+        ->assertRedirect(route('teacher.onboarding.verification'))
         ->assertSessionHas('status', 'complete-your-verification');
 
     $this->actingAs($teacher)
         ->get(route('teacher.subjects.index'))
-        ->assertRedirect(route('teacher.verification'));
+        ->assertRedirect(route('teacher.onboarding.verification'));
 });
 
-test('the redirect explains that verification unlocks the teacher area', function () {
+test('the verification step explains what is left before the teacher area unlocks', function () {
     $teacher = onboardingTeacher();
 
     $this->actingAs($teacher)
         ->followingRedirects()
         ->get(route('teacher.dashboard'))
         ->assertOk()
-        ->assertSee('Finish your verification to unlock your dashboard');
+        ->assertSee('Two things and you are in');
 });
 
 test('submitting verification unlocks the teacher area', function () {
@@ -42,8 +42,9 @@ test('submitting verification unlocks the teacher area', function () {
     TeacherVerificationDocument::factory()->for($teacher->teacherProfile)->create();
 
     $this->actingAs($teacher)
-        ->post(route('teacher.verification.submit'), ['agree' => '1'])
-        ->assertRedirect(route('teacher.verification'));
+        ->post(route('teacher.verification.submit'), ['agree' => '1', 'return' => 'onboarding'])
+        ->assertRedirect(route('teacher.onboarding.submitted'))
+        ->assertSessionHas('status', 'submitted-for-review');
 
     $teacher->refresh()->unsetRelation('teacherProfile');
 
@@ -52,74 +53,42 @@ test('submitting verification unlocks the teacher area', function () {
         ->assertOk();
 });
 
-test('the verification step stays locked until the profile is saved', function () {
-    $teacher = User::factory()->teacher()->create();
-
-    $this->actingAs($teacher)
-        ->get(route('teacher.profile'))
-        ->assertOk()
-        ->assertSee('0 of 3 steps completed')
-        ->assertSee('Step 3 · Locked', false)
-        ->assertSee('Unlocks once you save your profile.');
-});
-
-test('the profile page marks the first two steps done and links to verification', function () {
+test('the welcome screen shows the resume point and the remaining steps', function () {
     $teacher = onboardingTeacher();
 
     $this->actingAs($teacher)
-        ->get(route('teacher.profile'))
+        ->get(route('teacher.onboarding.show'))
+        ->assertOk()
+        ->assertSee('Welcome back')
+        ->assertSee('Continue where you left off: Verification')
+        ->assertSee('3 of 4 steps completed');
+});
+
+test('the onboarding layout replaces the dashboard chrome', function () {
+    $teacher = onboardingTeacher();
+
+    $this->actingAs($teacher)
+        ->get(route('teacher.onboarding.show'))
         ->assertOk()
         ->assertSee('Teacher setup')
-        ->assertSee('2 of 3 steps completed')
-        ->assertSee('Step 1 · Completed', false)
-        ->assertSee('Step 2 · Completed', false)
-        ->assertSee('Step 3 · Up next', false)
-        ->assertSee('Continue to verification')
-        ->assertSee(route('teacher.verification'));
+        ->assertSee('Save &amp; exit', false)
+        ->assertDontSee('id="studylikepro-shell"', false);
 });
 
-test('the verification page links back to the completed onboarding steps', function () {
+test('every wizard step uses the onboarding chrome instead of the dashboard', function () {
     $teacher = onboardingTeacher();
 
-    $this->actingAs($teacher)
-        ->get(route('teacher.verification'))
-        ->assertOk()
-        ->assertSee('2 of 3 steps completed')
-        ->assertSee('Step 1 · Completed', false)
-        ->assertSee('Step 2 · Completed', false)
-        ->assertSee('Step 3 · In progress', false)
-        ->assertSee(route('teacher.profile'))
-        ->assertSee(route('teacher.availability.setup'));
-});
-
-test('submitted teachers see every step completed and a dashboard link', function () {
-    $teacher = User::factory()->teacher()->onboarded()->create();
-
-    $teacher->teacherProfile->availabilitySlots()->create([
-        'teacher_profile_id' => $teacher->teacherProfile->id,
-        'day_of_week' => 1,
-        'start_minute' => 1080,
-        'end_minute' => 1260,
-    ]);
-
-    $this->actingAs($teacher)
-        ->get(route('teacher.verification'))
-        ->assertOk()
-        ->assertSee('3 of 3 steps completed')
-        ->assertSee('Step 3 · Completed', false)
-        ->assertSee('Go to dashboard');
-});
-
-test('the sidebar shows the three setup steps while onboarding', function () {
-    $teacher = onboardingTeacher();
-
-    $this->actingAs($teacher)
-        ->get(route('teacher.profile'))
-        ->assertOk()
-        ->assertSee('Teaching profile')
-        ->assertSee('Weekly availability')
-        ->assertSee('Verification')
-        ->assertDontSee('Earnings');
+    foreach ([
+        route('teacher.onboarding.show'),
+        route('teacher.onboarding.preferences'),
+        route('teacher.onboarding.availability'),
+        route('teacher.onboarding.verification'),
+    ] as $url) {
+        $this->actingAs($teacher)
+            ->get($url)
+            ->assertOk()
+            ->assertDontSee('id="studylikepro-shell"', false);
+    }
 });
 
 test('the sidebar shows the full teacher menu once onboarding is complete', function () {
@@ -129,4 +98,16 @@ test('the sidebar shows the full teacher menu once onboarding is complete', func
         ->get(route('teacher.profile'))
         ->assertOk()
         ->assertSee('Earnings');
+});
+
+test('a finished teacher is sent out of the wizard', function () {
+    $teacher = User::factory()->teacher()->onboarded()->create();
+
+    $this->actingAs($teacher)
+        ->get(route('teacher.onboarding.show'))
+        ->assertRedirect(route('teacher.dashboard'));
+
+    $this->actingAs($teacher)
+        ->get(route('teacher.onboarding.profile'))
+        ->assertRedirect(route('teacher.profile'));
 });

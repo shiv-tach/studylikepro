@@ -34,7 +34,7 @@ const rateHint = computed(() => (formattedRate.value
                     <label
                         v-for="language in languages"
                         :key="language"
-                        class="flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm text-slate-700 transition-all duration-300 dark:text-slate-300"
+                        class="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm text-slate-700 transition-all duration-300 dark:text-slate-300"
                         :class="values.languages.includes(language) ? OPTION_ACTIVE : OPTION_IDLE"
                     >
                         <input

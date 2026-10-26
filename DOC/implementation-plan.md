@@ -259,7 +259,7 @@ Each has a locked recommendation so implementation can proceed; changing a recom
 
 **Build**
 - `student_profiles` (grade level, timezone, learning goals, guardian name/phone) + student onboarding form served by the profile page (grade → timezone → goals), with dashboards behind an onboarding gate. *Superseded: onboarding is now a dedicated wizard (level → grade → O/L baskets → learning language → summary) and the profile page is what it claims to be — the place to change those answers. See §14 of [curriculum-and-grade-plan.md](./curriculum-and-grade-plan.md).*
-- `teacher_profiles` (headline, bio, experience, education, languages, timezone, default rate, verification status `draft → pending → approved/rejected`) + teacher onboarding pages (professional info → photo → ID/degree document uploads).
+- `teacher_profiles` (headline, bio, experience, education, languages, timezone, default rate, verification status `draft → pending → approved/rejected`) + teacher onboarding pages (professional info → photo → ID/degree document uploads). *Superseded: onboarding is now a dedicated 5-step wizard at `/teacher/onboarding` (Welcome → About you → Teaching preferences & photo → Weekly availability → Verification) with its own shell, server-side draft autosave and a submitted confirmation screen; `/teacher/profile` is the post-onboarding edit page.*
 - `teacher_verification_documents` on the **private** disk; admin-only signed temporary URLs later.
 - Avatar/photo uploads (2 MB; 5 MB for teacher profile photos; jpg/png/webp) on public disk; delete old file on replace.
 - Profile pages for both roles; verification status banner on teacher dashboard (pending/rejected + reason + resubmit).

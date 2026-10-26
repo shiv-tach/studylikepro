@@ -20,7 +20,7 @@ const { documents, canEdit, highlightId, removingId } = useVerification();
 </script>
 
 <template>
-    <section id="documents" :class="panel" class="scroll-mt-24">
+    <section id="documents" :class="panel" class="scroll-mt-40">
         <UiSectionHeading :title="copy.documentsTitle" :description="copy.documentsHint" icon="folder" level="h3">
             <template #action>
                 <UiChip tone="primary">{{ format(copy.documentsCount, { count: documents.length }) }}</UiChip>

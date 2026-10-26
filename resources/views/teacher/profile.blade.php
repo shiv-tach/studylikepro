@@ -22,143 +22,9 @@
 
     $steps = \App\Support\TeacherOnboarding::steps($profile);
 
-    $payload = [
-        'appName' => config('app.name', 'Studylikepro'),
-        'csrfToken' => csrf_token(),
-        'theme' => ['preset' => $themePreset],
-        'status' => [
-            'updated' => session('status') === 'profile-updated',
-            'incomplete' => session('status') === 'complete-your-profile',
-        ],
-        'teacher' => [
-            'name' => $user->name,
-            'initials' => (string) Str::of($user->name)->substr(0, 2),
-            'avatarUrl' => $user->avatarUrl(),
-        ],
-        'profile' => [
-            'isComplete' => $profileComplete,
-            'hasSubmittedVerification' => $verificationSubmitted,
-            'hasAvailability' => $hasAvailability,
-        ],
-        'languages' => $languages,
-        'limits' => [
-            'headline' => 120,
-            'bio' => 2000,
-            'education' => 255,
-            'experienceYears' => 60,
-            'minRate' => 100,
-            'maxRate' => 100000,
-        ],
-        'values' => [
-            'headline' => old('headline', $profile?->headline) ?? '',
-            'bio' => old('bio', $profile?->bio) ?? '',
-            'experienceYears' => old('experience_years', $profile?->experience_years) ?? '',
-            'education' => old('education', $profile?->education) ?? '',
-            'languages' => array_values(old('languages', $profile?->languages ?? ['English'])),
-            'hourlyRate' => old('hourly_rate', $profile ? (int) $profile->hourlyRate() : ''),
-        ],
-        // What the public directory card shows and the form cannot change yet.
-        'preview' => [
-            'rating' => $ratingCount > 0 ? number_format((float) $profile->rating_avg, 1) : null,
-            'ratingCount' => $ratingCount,
-            'isApproved' => $verificationStatus === \App\Enums\VerificationStatus::Approved,
-            'verificationLabel' => $verificationStatus?->isSubmitted()
-                ? $verificationStatus->label()
-                : __('Awaiting verification'),
-            'subjects' => $previewSubjects->take(3)->map(fn ($subject) => [
-                'label' => trim(($subject->icon ?? '').' '.$subject->name),
-            ])->values(),
-            'extraSubjects' => max(0, $previewSubjects->count() - 3),
-            'metaLabel' => $profile?->gradeScopeLabel(),
-            'nextSlot' => null,
-            'currencySymbol' => platform_settings()->currencySymbol(),
-        ],
-        // Laravel owns the wording of every message; the app only decides where
-        // it is shown, so the two never drift apart.
-        'errors' => [
-            'headline' => $errors->get('headline'),
-            'bio' => $errors->get('bio'),
-            'experienceYears' => $errors->get('experience_years'),
-            'education' => $errors->get('education'),
-            'languages' => $errors->get('languages'),
-            'hourlyRate' => $errors->get('hourly_rate'),
-            'avatar' => $errors->get('avatar'),
-        ],
-        'steps' => $steps,
-        'currentStep' => 1,
-        'urls' => [
-            'update' => route('teacher.profile.update'),
-            'verification' => route('teacher.verification'),
-            'availability' => route('teacher.availability.setup'),
-            'nextStep' => $nextStepIsAvailability
-                ? route('teacher.availability.setup')
-                : route('teacher.verification'),
-        ],
-        'copy' => [
-            'incomplete' => __('Finish your teaching profile to unlock weekly availability and continue to verification.'),
-            'updated' => __('Your teaching profile has been updated.'),
-            'errorTitle' => __('Please fix the following:'),
-            'stepsTitle' => __('Teacher setup'),
-            'stepsCompleted' => __(':completed of :total steps completed'),
-            'stepLabel' => __('Step :number'),
-            'stepStatusDone' => __('Completed'),
-            'stepStatusCurrent' => __('In progress'),
-            'stepStatusUpNext' => __('Up next'),
-            'stepStatusLocked' => __('Locked'),
-            'stepCompleteTitle' => $nextStepIsAvailability
-                ? __('Step 1 complete — next: weekly availability')
-                : __('Step 1 complete — next: verification'),
-            'stepCompleteBody' => $nextStepIsAvailability
-                ? __('Set the days and hours you teach so students can book you. You can load a suggested week and change anything.')
-                : __('Upload your documents and submit them for review to unlock your dashboard.'),
-            'stepCompleteCta' => $nextStepIsAvailability
-                ? __('Continue to availability')
-                : __('Continue to verification'),
-            'professionalTitle' => __('Professional details'),
-            'professionalHint' => __('What students read before they book you.'),
-            'headlineLabel' => __('Headline'),
-            'headlinePlaceholder' => __('e.g. Physics tutor for high school students'),
-            'bioLabel' => __('About you'),
-            'bioHint' => __('Optional, but a clear introduction builds trust.'),
-            'bioPlaceholder' => __('Describe your teaching style, strengths, and the students you work best with.'),
-            'experienceLabel' => __('Years of experience'),
-            'educationLabel' => __('Education'),
-            'educationPlaceholder' => __('e.g. M.Sc. Mathematics, IIT Delhi'),
-            'preferencesTitle' => __('Teaching preferences'),
-            'preferencesHint' => __('How, and at what rate, you take lessons.'),
-            'languagesLabel' => __('Languages you teach in'),
-            'languagesHint' => __('Pick every language you can run a lesson in.'),
-            'rateLabel' => __('Hourly rate'),
-            'rateHint' => __('Students see :amount per 60-minute lesson before commission.'),
-            'rateHintEmpty' => __('Students see your hourly rate per 60-minute lesson before commission.'),
-            'photoTitle' => __('Profile photo'),
-            'photoHint' => __('A clear, friendly photo builds trust with students. JPG, PNG or WebP up to 5 MB.'),
-            'photoChoose' => __('Upload photo'),
-            'photoReplace' => __('Choose another'),
-            'photoClear' => __('Clear'),
-            'unsaved' => __('You have unsaved changes.'),
-            'saved' => __('All changes saved.'),
-            'saving' => __('Saving…'),
-            'undo' => __('Undo changes'),
-            'save' => __('Save changes'),
-            'saveAndContinue' => __('Save profile & continue to availability'),
-            'previewTitle' => __('Public card preview'),
-            'previewLive' => __('Live'),
-            'previewHint' => __('This is the card students see in the teacher directory.'),
-            'previewHeadlineEmpty' => __('Your headline will appear here'),
-            'previewRateEmpty' => __('Set your hourly rate'),
-            'previewNote' => __('Your languages show here until a subject is assigned. Ratings and availability fill in once your profile is approved and students start booking.'),
-            'newTeacher' => __('New teacher'),
-            'verified' => __('Verified'),
-            'nextLabel' => __('Next:'),
-            'noSlots' => __('No slots in the next 7 days'),
-            'perHour' => __('/hr'),
-            'view' => __('View'),
-        ],
-    ];
-
     // JSON_UNESCAPED_SLASHES keeps the URLs readable; the HEX flags keep the
-    // island safe inside a <script> tag.
+    // island safe inside a <script> tag. The island itself is built by
+    // App\Support\TeacherProfileConfig so the wizard and this page agree.
     $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
 
     // The noscript form below is plain Blade, so it keeps the same field names,
@@ -181,7 +47,7 @@
         </div>
     </x-slot>
 
-    <script type="application/json" id="teacher-profile-config">@json($payload, $jsonFlags)</script>
+    <script type="application/json" id="teacher-profile-config">@json($config, $jsonFlags)</script>
 
     <div id="teacher-profile-app"></div>
 
@@ -199,7 +65,7 @@
                 </div>
             @endif
 
-            <x-teacher-onboarding-steps :current="1" />
+            <x-teacher-onboarding-steps :current="2" />
 
             @if ($profileComplete && ! $verificationSubmitted)
                 <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">

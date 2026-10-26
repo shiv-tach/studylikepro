@@ -97,7 +97,7 @@ function clearTab() {
 </script>
 
 <template>
-    <section id="subjects" :class="panel" class="scroll-mt-24">
+    <section id="subjects" :class="panel" class="scroll-mt-40">
         <UiSectionHeading
             :title="copy.subjectsTitle"
             :description="canEdit ? copy.subjectsHint : copy.subjectsLockedHint"
@@ -109,6 +109,7 @@ function clearTab() {
              and always carries the full selection, whatever tab is open. -->
         <form ref="form" method="POST" :action="urls.subjects" class="contents">
             <input type="hidden" name="_token" :value="csrfToken">
+            <input v-if="urls.return" type="hidden" name="return" :value="urls.return">
             <input v-for="id in subjectIds" :key="id" type="hidden" name="subjects[]" :value="id">
         </form>
 
@@ -121,7 +122,7 @@ function clearTab() {
                     role="tab"
                     :aria-selected="activeTab === index ? 'true' : 'false'"
                     :aria-controls="`subject-tab-${group.key}`"
-                    class="rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors"
+                    class="min-h-9 rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors"
                     :class="activeTab === index
                         ? 'bg-primary text-white shadow-sm shadow-primary/30'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'"
@@ -132,8 +133,8 @@ function clearTab() {
             </div>
 
             <div v-if="activeGroup" :id="`subject-tab-${activeGroup.key}`" role="tabpanel">
-                <div class="mt-4 flex flex-wrap items-center gap-3">
-                    <label class="relative min-w-48 flex-1">
+                <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                    <label class="relative w-full sm:min-w-48 sm:flex-1">
                         <span class="sr-only">{{ copy.subjectsSearch }}</span>
                         <span class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400">
                             <AppIcon name="search" />
@@ -142,22 +143,24 @@ function clearTab() {
                             v-model="query"
                             type="search"
                             :placeholder="copy.subjectsSearch"
-                            class="w-full rounded-xl border border-slate-200/80 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                            class="min-h-11 w-full rounded-xl border border-slate-200/80 bg-white py-2 pl-9 pr-3 text-base shadow-sm focus:border-primary focus:ring-primary dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 sm:text-sm"
                         >
                     </label>
-                    <button type="button" :class="[GHOST_BUTTON, 'text-xs']" @click="selectAllInTab">
-                        {{ copy.subjectsSelectAll }}
-                    </button>
-                    <button type="button" :class="[GHOST_BUTTON, 'text-xs']" @click="clearTab">
-                        {{ copy.subjectsClear }}
-                    </button>
+                    <div class="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+                        <button type="button" :class="[GHOST_BUTTON, 'text-xs']" @click="selectAllInTab">
+                            {{ copy.subjectsSelectAll }}
+                        </button>
+                        <button type="button" :class="[GHOST_BUTTON, 'text-xs']" @click="clearTab">
+                            {{ copy.subjectsClear }}
+                        </button>
+                    </div>
                 </div>
 
                 <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     <label
                         v-for="subject in filteredSubjects"
                         :key="subject.id"
-                        class="flex cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-2.5 transition-all duration-200"
+                        class="flex min-h-11 min-w-0 cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-2.5 transition-all duration-200"
                         :class="isSelected(subject.id)
                             ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20'
                             : 'border-slate-200/80 hover:border-primary/40 dark:border-slate-800 dark:hover:border-primary/30'"
@@ -170,7 +173,7 @@ function clearTab() {
                             @change="toggle(subject.id)"
                         >
                         <span class="text-base leading-none" aria-hidden="true">{{ subject.icon }}</span>
-                        <span class="truncate text-sm font-semibold text-slate-700 dark:text-slate-200">{{ subject.name }}</span>
+                        <span class="min-w-0 break-words text-sm font-semibold text-slate-700 dark:text-slate-200">{{ subject.name }}</span>
                     </label>
                 </div>
 

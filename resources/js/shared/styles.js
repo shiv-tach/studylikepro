@@ -3,7 +3,7 @@
  * full so Tailwind's scanner picks every class up. `panelClass` switches
  * between an opaque card and the frosted glass the translucent presets use.
  */
-const SURFACE = 'rounded-2xl border p-6 transition-all duration-300';
+const SURFACE = 'rounded-2xl border p-4 transition-all duration-300 sm:p-6';
 
 export const PANEL = `${SURFACE} border-slate-200/80 bg-white dark:border-slate-800/80 dark:bg-slate-900`;
 

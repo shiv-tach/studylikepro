@@ -23,16 +23,13 @@ class EnsureOnboardingCompleted
         }
 
         if ($user->isTeacher() && ! $user->hasCompletedOnboarding()) {
-            // Step 1 is the teaching profile, step 2 the weekly availability and
-            // step 3 verification. Send the teacher to the first step they owe.
-            return match (true) {
-                ! $user->teacherProfile?->isComplete()
-                    => redirect()->route('teacher.profile')->with('status', 'complete-your-profile'),
-                ! TeacherOnboarding::hasAvailability($user->teacherProfile)
-                    => redirect()->route('teacher.availability.setup')->with('status', 'complete-your-availability'),
-                default
-                    => redirect()->route('teacher.verification')->with('status', 'complete-your-verification'),
-            };
+            // The wizard resumes at the first step the teacher still owes —
+            // including a step with an unfinished draft.
+            $user->loadMissing('onboardingDraft');
+
+            return redirect()
+                ->route(TeacherOnboarding::nextRouteName($user->teacherProfile, $user->onboardingDraft))
+                ->with('status', TeacherOnboarding::nextStatus($user->teacherProfile, $user->onboardingDraft));
         }
 
         return $next($request);

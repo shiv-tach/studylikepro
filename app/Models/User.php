@@ -281,6 +281,14 @@ class User extends Authenticatable
         return $this->hasOne(TeacherProfile::class);
     }
 
+    /**
+     * The unsaved answers of the teacher onboarding wizard.
+     */
+    public function onboardingDraft(): HasOne
+    {
+        return $this->hasOne(TeacherOnboardingDraft::class);
+    }
+
     public function interestedSubjects(): BelongsToMany
     {
         return $this->belongsToMany(Subject::class, 'student_subject_interests')->withTimestamps();

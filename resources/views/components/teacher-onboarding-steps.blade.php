@@ -17,7 +17,7 @@
         </p>
     </div>
 
-    <ol class="mt-4 grid gap-3 sm:grid-cols-3">
+    <ol class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         @foreach ($steps as $step)
             @php
                 $status = $step['done']

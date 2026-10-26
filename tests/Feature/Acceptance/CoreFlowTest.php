@@ -148,7 +148,7 @@ function verifiedTeacher(Subject $subject, Lesson $lesson, CarbonImmutable $wind
                 ['value' => 1, 'enabled' => '1', 'ranges' => [['start_time' => '15:00', 'end_time' => '17:00']]],
             ],
         ])
-        ->assertRedirect(route('teacher.verification'));
+        ->assertRedirect(route('teacher.onboarding.verification'));
 
     $teacherUser->refresh()->unsetRelation('teacherProfile');
 

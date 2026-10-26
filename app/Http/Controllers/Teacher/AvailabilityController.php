@@ -12,31 +12,52 @@ use App\Models\TeacherAvailabilitySlot;
 use App\Models\TeacherProfile;
 use App\Models\TeacherTimeOff;
 use App\Services\SlotService;
+use App\Services\TeacherOnboardingService;
 use App\Services\WeeklyAvailabilityService;
 use App\Support\AvailabilityManagerConfig;
+use App\Support\AvailabilitySetupConfig;
+use App\Support\TeacherOnboarding;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AvailabilityController extends Controller
 {
-    public function __construct(private readonly WeeklyAvailabilityService $weeks) {}
+    public function __construct(
+        private readonly WeeklyAvailabilityService $weeks,
+        private readonly TeacherOnboardingService $onboarding,
+    ) {}
 
     /**
-     * Onboarding step 2: set the whole week in one place, with presets.
+     * Wizard step 4: set the whole week in one place, with presets.
      */
-    public function setup(Request $request): View|RedirectResponse
+    public function setup(Request $request, string $mode = 'legacy'): View|RedirectResponse
     {
-        $profile = $request->user()->teacherProfile;
+        $user = $request->user();
+        $profile = $user->teacherProfile;
+
+        // The old URL only forwards: the wizard owns the setup screen now.
+        if ($mode !== 'onboarding') {
+            return $profile?->hasSubmittedVerification()
+                ? redirect()->route('teacher.availability.index')
+                : redirect()->route('teacher.onboarding.availability');
+        }
 
         if ($gate = $this->onboardingGate($profile)) {
             return $gate;
         }
 
         $profile->load('availabilitySlots');
+        $user->loadMissing('onboardingDraft');
 
-        return view('teacher.availability-setup', [
+        return view('teacher.onboarding.availability', [
             'profile' => $profile,
+            'config' => AvailabilitySetupConfig::build(
+                $profile,
+                $request->session()->get('errors')?->getBag('default') ?? new \Illuminate\Support\MessageBag,
+                $user->theme['preset'] ?? 'classic',
+                $user->onboardingDraft,
+            ),
         ]);
     }
 
@@ -45,30 +66,38 @@ class AvailabilityController extends Controller
      */
     public function updateWeek(WeeklyAvailabilityRequest $request): RedirectResponse
     {
-        $profile = $request->user()->teacherProfile;
+        $user = $request->user();
+        $profile = $user->teacherProfile;
 
         if ($gate = $this->onboardingGate($profile)) {
             return $gate;
         }
 
         $this->weeks->replace($profile, $request->input('days', []));
+        $this->onboarding->clearDraft($user, TeacherOnboarding::STEP_AVAILABILITY);
 
         return redirect()
-            ->route('teacher.verification')
+            ->route('teacher.onboarding.verification')
             ->with('status', 'availability-saved');
     }
 
     /**
-     * The setup screen belongs to onboarding: the profile has to be saved
-     * first, and a teacher who already submitted their documents keeps using
-     * the full manager instead.
+     * The setup screen belongs to onboarding: both profile steps have to be
+     * saved first, and a teacher who already submitted their documents keeps
+     * using the full manager instead.
      */
     private function onboardingGate(?TeacherProfile $profile): ?RedirectResponse
     {
-        if (! $profile?->isComplete()) {
+        if (! $profile?->hasCompletedAboutStep()) {
             return redirect()
-                ->route('teacher.profile')
+                ->route('teacher.onboarding.profile')
                 ->with('status', 'complete-your-profile');
+        }
+
+        if (! $profile->hasCompletedPreferencesStep()) {
+            return redirect()
+                ->route('teacher.onboarding.preferences')
+                ->with('status', 'complete-your-preferences');
         }
 
         if ($profile->hasSubmittedVerification()) {

@@ -90,6 +90,33 @@ export function createWeekEditor(config) {
         });
     }
 
+    /**
+     * Replace the editor contents with a snapshot (a draft restored from this
+     * device, newer than the one the server rendered).
+     */
+    function applyDays(source) {
+        const next = clone(source);
+
+        if (next.length === 0) {
+            return;
+        }
+
+        days.splice(0, days.length, ...next);
+    }
+
+    /**
+     * The exact shape the draft endpoint stores and restores.
+     */
+    function draftSnapshot() {
+        return {
+            days: days.map((day) => ({
+                value: day.value,
+                enabled: Boolean(day.enabled),
+                ranges: day.ranges.map((range) => ({ start: range.start, end: range.end })),
+            })),
+        };
+    }
+
     function minutesOf(range) {
         if (!range.start || !range.end) {
             return 0;
@@ -162,6 +189,8 @@ export function createWeekEditor(config) {
         applyPreset,
         clearWeek,
         undo,
+        applyDays,
+        draftSnapshot,
         rowErrors,
         dayErrors,
     };

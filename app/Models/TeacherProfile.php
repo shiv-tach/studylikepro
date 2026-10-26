@@ -33,6 +33,8 @@ class TeacherProfile extends Model
         'submitted_at',
         'verified_at',
         'completed_at',
+        'about_completed_at',
+        'preferences_completed_at',
         'agreement_accepted_at',
         'agreement_version',
     ];
@@ -45,6 +47,8 @@ class TeacherProfile extends Model
             'submitted_at' => 'datetime',
             'verified_at' => 'datetime',
             'completed_at' => 'datetime',
+            'about_completed_at' => 'datetime',
+            'preferences_completed_at' => 'datetime',
             'agreement_accepted_at' => 'datetime',
             'rating_avg' => 'decimal:2',
         ];
@@ -414,6 +418,23 @@ class TeacherProfile extends Model
     public function isComplete(): bool
     {
         return $this->completed_at !== null;
+    }
+
+    /**
+     * The "About you" onboarding step saved. Legacy profiles that completed the
+     * old single-step form are treated as done as well.
+     */
+    public function hasCompletedAboutStep(): bool
+    {
+        return $this->about_completed_at !== null || $this->completed_at !== null;
+    }
+
+    /**
+     * The "Teaching preferences" onboarding step saved.
+     */
+    public function hasCompletedPreferencesStep(): bool
+    {
+        return $this->preferences_completed_at !== null || $this->completed_at !== null;
     }
 
     public function hasSubmittedVerification(): bool

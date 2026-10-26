@@ -13,6 +13,12 @@ import { GHOST_BUTTON, PRIMARY_BUTTON } from '../styles';
 const copy = useCopy();
 const panel = usePanel();
 
+const props = defineProps({
+    // The onboarding wizard renders its own sticky action bar, so the summary
+    // card only shows the numbers there.
+    showSubmit: { type: Boolean, default: true },
+});
+
 const {
     dirty,
     submitting,
@@ -44,6 +50,7 @@ const {
         </dl>
 
         <p
+            v-if="showSubmit"
             class="text-xs font-semibold"
             :class="dirty ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'"
             role="status"
@@ -55,11 +62,11 @@ const {
             {{ copy.emptySubmit }}
         </p>
 
-        <button type="submit" :class="[PRIMARY_BUTTON, 'w-full']" :disabled="!canSave || submitting">
+        <button v-if="showSubmit" type="submit" :class="[PRIMARY_BUTTON, 'w-full']" :disabled="!canSave || submitting">
             {{ submitting ? copy.saving : copy.save }}
         </button>
 
-        <button v-if="dirty" type="button" :class="[GHOST_BUTTON, 'w-full']" @click="undo">
+        <button v-if="showSubmit && dirty" type="button" :class="[GHOST_BUTTON, 'w-full']" @click="undo">
             {{ copy.undo }}
         </button>
 

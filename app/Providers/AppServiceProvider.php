@@ -81,7 +81,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
         $this->flushCatalogCacheOnWrites();
 
-        View::composer('layouts.app', function ($view) {
+        View::composer(['layouts.app', 'layouts.onboarding'], function ($view) {
             $user = auth()->user();
 
             $view->with('userTheme', $user?->theme);
@@ -95,7 +95,10 @@ class AppServiceProvider extends ServiceProvider
                 ]);
             }
         });
-    }
+        // The onboarding wizard has its own shell: it only needs the theme.
+        View::composer('layouts.onboarding', function ($view) {
+            $view->with('userTheme', auth()->user()?->theme);
+        });    }
 
     /**
      * Named limits applied on the routes. Everything that writes, uploads or
@@ -140,6 +143,10 @@ class AppServiceProvider extends ServiceProvider
 
         // The studio autosaves every few seconds while a paper is open.
         RateLimiter::for('marking-draft', fn (Request $request) => Limit::perMinute($limit('marking-draft'))
+            ->by($request->user()?->id ?: $request->ip()));
+
+        // The onboarding wizard autosaves one step while it is being filled in.
+        RateLimiter::for('onboarding-draft', fn (Request $request) => Limit::perMinute($limit('onboarding-draft'))
             ->by($request->user()?->id ?: $request->ip()));
 
         RateLimiter::for('messages', fn (Request $request) => Limit::perMinute($limit('messages'))

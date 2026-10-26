@@ -52,6 +52,7 @@ use App\Http\Controllers\Teacher\AvailabilityController as TeacherAvailabilityCo
 use App\Http\Controllers\Teacher\BookingController as TeacherBookingController;
 use App\Http\Controllers\Teacher\DashboardController as TeacherDashboardController;
 use App\Http\Controllers\Teacher\EarningsController as TeacherEarningsController;
+use App\Http\Controllers\Teacher\OnboardingController as TeacherOnboardingController;
 use App\Http\Controllers\Teacher\PaperMarkingController as TeacherPaperMarkingController;
 use App\Http\Controllers\Teacher\OrderController as TeacherOrderController;
 use App\Http\Controllers\Teacher\ProfileController as TeacherProfileController;
@@ -192,6 +193,22 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
     ->name('teacher.')
     ->group(function () {
         Route::get('/dashboard', TeacherDashboardController::class)->middleware('onboarded')->name('dashboard');
+
+        // The onboarding wizard. Every step is its own URL so a reload always
+        // lands where the teacher was, and each step autosaves into a draft.
+        Route::prefix('onboarding')->name('onboarding.')->group(function () {
+            Route::get('/', [TeacherOnboardingController::class, 'show'])->name('show');
+            Route::get('/profile', [TeacherProfileController::class, 'editAbout'])->name('profile');
+            Route::put('/profile', [TeacherProfileController::class, 'updateAbout'])->middleware('throttle:uploads')->name('profile.update');
+            Route::get('/preferences', [TeacherProfileController::class, 'editPreferences'])->name('preferences');
+            Route::put('/preferences', [TeacherProfileController::class, 'updatePreferences'])->middleware('throttle:uploads')->name('preferences.update');
+            Route::get('/availability', [TeacherAvailabilityController::class, 'setup'])->defaults('mode', 'onboarding')->name('availability');
+            Route::put('/availability', [TeacherAvailabilityController::class, 'updateWeek'])->name('availability.update');
+            Route::get('/verification', [TeacherVerificationController::class, 'index'])->defaults('mode', 'onboarding')->name('verification');
+            Route::get('/submitted', [TeacherOnboardingController::class, 'submitted'])->name('submitted');
+            Route::patch('/draft', [TeacherOnboardingController::class, 'saveDraft'])->middleware('throttle:onboarding-draft')->name('draft');
+            Route::delete('/draft', [TeacherOnboardingController::class, 'destroyDraft'])->middleware('throttle:onboarding-draft')->name('draft.destroy');
+        });
 
         Route::get('/profile', [TeacherProfileController::class, 'edit'])->name('profile');
         Route::put('/profile', [TeacherProfileController::class, 'update'])->middleware('throttle:uploads')->name('profile.update');

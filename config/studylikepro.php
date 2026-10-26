@@ -100,6 +100,8 @@ return [
         'otp-verify' => (int) env('THROTTLE_OTP_VERIFY', 10),
         'uploads' => (int) env('THROTTLE_UPLOADS', 30),
         'marking-draft' => (int) env('THROTTLE_MARKING_DRAFT', 120),
+        // The onboarding wizard autosaves a step every second or so.
+        'onboarding-draft' => (int) env('THROTTLE_ONBOARDING_DRAFT', 120),
         'messages' => (int) env('THROTTLE_MESSAGES', 60),
         'checkout' => (int) env('THROTTLE_CHECKOUT', 15),
         'contact' => (int) env('THROTTLE_CONTACT', 5),

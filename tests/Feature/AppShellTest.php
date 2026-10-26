@@ -39,18 +39,13 @@ test('the shell island carries the user, the route map and the student menu', fu
         ->toContain('My subjects', 'My lessons', 'Find a teacher');
 });
 
-test('an onboarding teacher only gets the three setup steps in the sidebar', function () {
+test('the onboarding wizard replaces the dashboard shell for a new teacher', function () {
     $teacher = User::factory()->teacher()->create();
 
-    $config = shellConfig(
-        $this->actingAs($teacher)->get(route('teacher.profile'))->assertOk()
-    );
-
-    $labels = collect($config['navItems'])->pluck('label')->all();
-
-    // The dashboard/setup steps, then the profile + settings links every role gets.
-    expect(array_slice($labels, 0, 3))->toEqual(['Teaching profile', 'Weekly availability', 'Verification']);
-    expect($labels)->not->toContain('Earnings');
+    $this->actingAs($teacher)
+        ->get(route('teacher.onboarding.show'))
+        ->assertOk()
+        ->assertDontSee('id="studylikepro-shell"', false);
 });
 
 test('a teacher sidebar counts the lessons still to teach and never badges reviews', function () {
