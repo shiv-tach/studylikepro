@@ -120,7 +120,7 @@ const dayTabClass = (day) => [
                     <p class="text-xs" :class="MUTED_TEXT">{{ selectedDay.slotCountLabel }}</p>
                 </div>
 
-                <div class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+                <div class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
                     <span
                         v-for="slot in selectedDay.slots"
                         :key="slot.value"

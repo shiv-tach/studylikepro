@@ -256,7 +256,7 @@
     {{-- Fallback for a browser without JavaScript: the page is a thin shell, so
          print the same teacher the Vue app would have rendered. --}}
     <noscript>
-        <div class="mx-auto max-w-6xl space-y-6">
+        <div class="w-full space-y-6">
             <div class="rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900">
                 <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ $teacher->user->name }}</h3>
                 @if ($teacher->headline)

@@ -35,7 +35,7 @@ const panel = usePanel();
         </p>
 
         <template v-else>
-            <div class="mt-4 space-y-2">
+            <div class="mt-4 max-w-3xl space-y-2">
                 <div v-for="row in reviews.breakdown" :key="row.label" class="flex items-center gap-3 text-xs">
                     <span class="w-8 shrink-0 font-semibold text-slate-500 dark:text-slate-400">{{ row.label }}</span>
                     <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
@@ -45,7 +45,7 @@ const panel = usePanel();
                 </div>
             </div>
 
-            <div class="mt-5 space-y-4 border-t border-slate-200/80 pt-5 dark:border-slate-800">
+            <div class="mt-5 grid gap-4 border-t border-slate-200/80 pt-5 dark:border-slate-800 xl:grid-cols-2">
                 <article
                     v-for="review in reviews.items"
                     :key="review.id"

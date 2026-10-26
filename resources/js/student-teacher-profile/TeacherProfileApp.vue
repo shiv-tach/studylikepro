@@ -31,7 +31,7 @@ provide(CSRF_KEY, props.config.csrfToken ?? '');
 </script>
 
 <template>
-    <div class="mx-auto max-w-6xl space-y-6">
+    <div class="w-full space-y-6">
         <UiBreadcrumbs :items="config.breadcrumbs" />
 
         <!-- No grade on the learning profile: nothing can be priced or scoped yet. -->
@@ -54,9 +54,9 @@ provide(CSRF_KEY, props.config.csrfToken ?? '');
             </UiAlert>
         </RevealOnScroll>
 
-        <div class="grid gap-6 lg:grid-cols-3">
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_16rem] xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:grid-cols-[minmax(0,1fr)_22rem]">
             <!-- Main column -->
-            <div class="space-y-6 lg:col-span-2">
+            <div class="min-w-0 space-y-6">
                 <RevealOnScroll>
                     <TeacherHeroCard :teacher="config.teacher" />
                 </RevealOnScroll>

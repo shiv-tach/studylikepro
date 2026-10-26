@@ -25,7 +25,7 @@ const panel = usePanel();
 
         <UiEmptyState v-if="!subjects.length" class="mt-4" icon="book" :message="copy.subjectsEmpty" />
 
-        <div v-else class="mt-4 space-y-4">
+        <div v-else class="mt-4 grid gap-4 xl:grid-cols-2">
             <div
                 v-for="subject in subjects"
                 :key="subject.id"

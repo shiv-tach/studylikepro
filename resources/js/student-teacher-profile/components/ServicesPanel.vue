@@ -55,7 +55,7 @@ const actionClass = (action) => (action.variant === 'outline' ? outlineClass : p
                     </span>
                 </div>
 
-                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                <div class="mt-3 grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                     <article
                         v-for="offering in group.items"
                         :key="offering.id"
