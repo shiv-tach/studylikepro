@@ -2,6 +2,7 @@
 
 use App\Enums\ApprovalStatus;
 use App\Enums\ServiceType;
+use App\Models\EducationLevel;
 use App\Models\Grade;
 use App\Models\Lesson;
 use App\Models\ServiceOffering;
@@ -587,4 +588,29 @@ it('drops a rubric posted on a non-marking service', function () {
 
     expect($offering->rubric)->toBeNull()
         ->and($offering->rubricCriteria())->toBe([]);
+});
+
+it('offers every grade of the level when an approved subject has no grade scope', function () {
+    // A legacy approval left the pivot without a scope and no lessons behind,
+    // which used to render an empty grade -> subject -> lesson cascade.
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $this->subject->update(['education_level_id' => $ol->id]);
+
+    $this->profile->lessons()->detach();
+    $this->profile->subjects()->updateExistingPivot($this->subject->id, ['grade_levels' => null]);
+
+    $config = teacherServicesConfig(
+        $this->actingAs($this->teacher)->get(route('teacher.services.index'))->assertOk()
+    );
+
+    $levelGradeIds = Grade::query()
+        ->where('education_level_id', $ol->id)
+        ->where('is_active', true)
+        ->pluck('id')
+        ->map(fn ($id) => (int) $id)
+        ->all();
+
+    expect($levelGradeIds)->not->toBeEmpty()
+        ->and(array_column($config['options']['grades'], 'id'))->toEqualCanonicalizing($levelGradeIds)
+        ->and($config['options']['subjects'][0]['grades'])->toEqualCanonicalizing($levelGradeIds);
 });

@@ -9,12 +9,15 @@ use App\Http\Requests\RejectVerificationRequest;
 use App\Models\TeacherProfile;
 use App\Notifications\TeacherVerificationApproved;
 use App\Notifications\TeacherVerificationRejected;
+use App\Services\TeacherSubjectService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class TeacherVerificationController extends Controller
 {
+    public function __construct(private readonly TeacherSubjectService $teacherSubjects) {}
+
     /**
      * The verification queue with status tabs.
      */
@@ -63,6 +66,11 @@ class TeacherVerificationController extends Controller
      * Approve a pending application. Every pending subject is approved unless
      * the review form explicitly unchecked it (then it is marked rejected); a
      * legacy approval that posts no subject list approves them all.
+     *
+     * Approval runs through TeacherSubjectService so the granted subject keeps
+     * its full default scope: every active grade of its level plus the lessons
+     * in those grades, which is what the teacher's /teacher/subjects setup and
+     * the /teacher/services grade -> subject -> lesson cascade read.
      */
     public function approve(Request $request, TeacherProfile $teacherProfile): RedirectResponse
     {
@@ -80,12 +88,11 @@ class TeacherVerificationController extends Controller
             ->values();
 
         foreach ($pendingSubjects as $subject) {
-            $teacherProfile->subjects()->updateExistingPivot(
-                $subject->id,
-                $approvedIds->contains($subject->id)
-                    ? ['status' => ApprovalStatus::Approved, 'approved_at' => now()]
-                    : ['status' => ApprovalStatus::Rejected]
-            );
+            if ($approvedIds->contains($subject->id)) {
+                $this->teacherSubjects->grantApproved($teacherProfile, $subject);
+            } else {
+                $this->teacherSubjects->reject($teacherProfile, $subject);
+            }
         }
 
         $teacherProfile->update([

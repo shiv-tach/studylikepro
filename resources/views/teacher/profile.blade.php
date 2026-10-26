@@ -188,7 +188,7 @@
     {{-- Fallback for a browser without JavaScript: the form is a real PUT form
          either way, so the same field names and values are submitted. --}}
     <noscript>
-        <div class="mx-auto max-w-3xl space-y-6">
+        <div class="w-full space-y-6">
             @if (session('status') === 'complete-your-profile')
                 <div class="rounded-2xl border border-amber-200/80 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
                     {{ __('Finish your teaching profile to unlock weekly availability and continue to verification.') }}

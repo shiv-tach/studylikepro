@@ -2,6 +2,8 @@
 
 use App\Enums\VerificationStatus;
 use App\Models\ActivityLog;
+use App\Models\Grade;
+use App\Models\StudentProfile;
 use App\Models\TeacherProfile;
 use App\Models\User;
 use App\Notifications\AdminNotice;
@@ -11,13 +13,17 @@ use Illuminate\Support\Facades\Notification;
 it('lists and filters the people on the platform', function () {
     $admin = User::factory()->admin()->create();
     $student = User::factory()->student()->create(['name' => 'Nisha Kapoor']);
+    StudentProfile::factory()->for($student)->create([
+        'grade_id' => Grade::factory()->create(['label' => 'Grade 11'])->id,
+    ]);
     User::factory()->teacher()->create(['name' => 'Vikram Sen']);
 
     $this->actingAs($admin)
         ->get(route('admin.users.index'))
         ->assertOk()
         ->assertSee('Nisha Kapoor')
-        ->assertSee('Vikram Sen');
+        ->assertSee('Vikram Sen')
+        ->assertSee('Grade 11');
 
     $this->actingAs($admin)
         ->get(route('admin.users.index', ['role' => User::ROLE_STUDENT]))

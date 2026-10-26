@@ -38,7 +38,7 @@ const messages = computed(() => Object.values(props.config.errors ?? {}).flat())
 </script>
 
 <template>
-    <div class="mx-auto max-w-5xl space-y-6">
+    <div class="w-full space-y-6">
         <RevealOnScroll v-if="config.status?.updated">
             <UiAlert tone="emerald" icon="check-circle">{{ config.copy.updated }}</UiAlert>
         </RevealOnScroll>

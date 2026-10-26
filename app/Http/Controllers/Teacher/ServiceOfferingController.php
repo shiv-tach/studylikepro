@@ -37,7 +37,6 @@ class ServiceOfferingController extends Controller
         // Reuse this loaded collection inside gradeIdsFor() instead of
         // re-querying per subject.
         $profile->setRelation('subjects', $subjects);
-
         $lessons = $profile->lessons()
             ->active()
             ->ordered()
@@ -46,11 +45,14 @@ class ServiceOfferingController extends Controller
             ->get();
 
         // The grades this teacher covers, pooled from their subject scopes and
-        // their lesson picks, ordered for the cascade dropdown.
+        // their lesson picks, ordered for the cascade dropdown. An approved
+        // subject with an empty pivot scope offers every grade of its level
+        // (scopedGradeIdsFor), matching the scope rule UpsertServiceOfferingRequest
+        // validates against — otherwise the cascade renders empty.
         $gradeIds = collect();
 
         foreach ($subjects as $subject) {
-            $gradeIds = $gradeIds->merge($profile->gradeIdsFor($subject));
+            $gradeIds = $gradeIds->merge($profile->scopedGradeIdsFor($subject));
         }
 
         $gradeIds = $gradeIds->merge($lessons->pluck('grade_id'))->filter()->unique();
@@ -62,7 +64,7 @@ class ServiceOfferingController extends Controller
                 'id' => (int) $subject->id,
                 'name' => $subject->name,
                 'level_name' => $subject->educationLevel?->name,
-                'grades' => array_map('intval', $profile->gradeIdsFor($subject)),
+                'grades' => array_map('intval', $profile->scopedGradeIdsFor($subject)),
             ])
             ->values()
             ->all();

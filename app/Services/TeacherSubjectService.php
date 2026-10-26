@@ -7,13 +7,14 @@ use App\Models\Grade;
 use App\Models\Lesson;
 use App\Models\Subject;
 use App\Models\TeacherProfile;
-use Illuminate\Support\Collection;
 
 /**
  * Shared subject-pivot rules for both onboarding (the verification step) and
  * the teacher's subject management page: new picks attach as pending with the
  * subject's full default scope, already-approved rows keep their approval, and
- * removed rows drop their lessons with them.
+ * removed rows drop their lessons with them. Both admin approval screens (the
+ * verification review and the subject request queue) come through here so an
+ * approved subject always carries its grades and lessons.
  */
 class TeacherSubjectService
 {
@@ -60,8 +61,8 @@ class TeacherSubjectService
 
     /**
      * Grant one subject to the teacher: the pivot row becomes approved (created
-     * if missing) and gets the subject's full default scope. Used when an admin
-     * approves a subject request.
+     * if missing, a rejected row is flipped back) and gets the subject's full
+     * default scope. Used by both admin approval screens.
      */
     public function grantApproved(TeacherProfile $profile, Subject $subject): void
     {
@@ -76,8 +77,27 @@ class TeacherSubjectService
     }
 
     /**
+     * Withdraw one subject from the teacher: the pivot row stays (so the
+     * teacher may request the subject again) but loses its approval, its grade
+     * scope and the lessons that only existed because of it.
+     */
+    public function reject(TeacherProfile $profile, Subject $subject): void
+    {
+        $profile->subjects()->updateExistingPivot($subject->id, [
+            'status' => ApprovalStatus::Rejected,
+            'approved_at' => null,
+        ]);
+
+        $profile->lessons()->detach(
+            Lesson::query()->where('subject_id', $subject->id)->pluck('id')
+        );
+    }
+
+    /**
      * Assign a subject's full default scope: every active grade of its level
-     * and every active lesson in those grades.
+     * and every active lesson in those grades. The subject's lesson picks are
+     * authoritative (approving a pruned subject resets them); the lessons of
+     * the teacher's other subjects are left alone.
      */
     public function assignLevelDefaults(TeacherProfile $profile, Subject $subject): void
     {
@@ -93,7 +113,13 @@ class TeacherSubjectService
             ->whereIn('grade_id', $gradeIds)
             ->pluck('id');
 
-        $profile->lessons()->syncWithoutDetaching($lessonIds->all());
+        $otherLessons = $profile->lessons()
+            ->where('lessons.subject_id', '!=', $subject->id)
+            ->pluck('lessons.id');
+
+        $profile->lessons()->sync(
+            $otherLessons->merge($lessonIds)->unique()->values()->all()
+        );
 
         $profile->subjects()->updateExistingPivot($subject->id, [
             'grade_levels' => $gradeIds->map(fn ($id) => (string) $id)->all(),

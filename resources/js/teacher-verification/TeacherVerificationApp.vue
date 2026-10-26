@@ -65,7 +65,7 @@ async function confirmRemoval() {
 </script>
 
 <template>
-    <div class="mx-auto max-w-5xl space-y-6">
+    <div class="w-full space-y-6">
         <UiToastStack
             :toasts="toasts"
             :label="copy.toastLabel"

@@ -209,6 +209,45 @@ class TeacherProfile extends Model
     }
 
     /**
+     * The grade ids the teacher-sides consoles offer for one subject: the
+     * pivot's own scope, or every active grade of the subject's level when the
+     * row is unscoped. An empty scope means "all level grades" everywhere else
+     * (PublicTeacherPageConfig, UpsertServiceOfferingRequest), so the composer
+     * cascade must not come up empty for an approved subject.
+     *
+     * @param  Collection<int, Grade>|null  $grades  preloaded grades keyed by id
+     * @return list<int>
+     */
+    public function scopedGradeIdsFor(Subject $subject, ?Collection $grades = null): array
+    {
+        $ids = $this->gradeIdsFor($subject);
+
+        if ($ids !== []) {
+            return $ids;
+        }
+
+        $levelGrades = $grades
+            ? $grades->filter(fn (Grade $grade) => (int) $grade->education_level_id === (int) $subject->education_level_id
+                && (bool) $grade->is_active)
+            : null;
+
+        if ($levelGrades === null || $levelGrades->isEmpty()) {
+            $levelGrades = Grade::query()
+                ->where('education_level_id', $subject->education_level_id)
+                ->where('is_active', true)
+                ->ordered()
+                ->get();
+        }
+
+        return $levelGrades
+            ->sortBy('sort_order')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    /**
      * The price for every grade this teacher covers on a subject, in grade
      * order, so public pages can show one rate per grade.
      *

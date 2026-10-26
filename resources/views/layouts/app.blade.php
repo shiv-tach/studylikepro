@@ -128,7 +128,7 @@
           }">
         <div class="min-h-screen flex flex-col md:flex-row relative">
             <!-- Main Layout Content -->
-            <div class="flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out md:pl-64">
+            <div class="flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-300 ease-in-out md:pl-64">
                 {{-- The sidebar, top bar and mobile drawer are rendered by
                      resources/js/app-shell; this include drops the mount point and
                      its JSON island into the content column. --}}

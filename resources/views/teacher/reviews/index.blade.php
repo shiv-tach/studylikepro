@@ -32,7 +32,7 @@
         </div>
     </x-slot>
 
-    <div class="mx-auto max-w-4xl">
+    <div class="w-full">
         <script type="application/json" id="teacher-reviews-config">@json($config, $jsonFlags)</script>
 
         <div id="teacher-reviews-app" class="space-y-6"></div>

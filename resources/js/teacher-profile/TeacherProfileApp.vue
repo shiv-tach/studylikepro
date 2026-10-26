@@ -44,7 +44,7 @@ const messages = computed(() => Object.values(props.config.errors ?? {}).flat())
 </script>
 
 <template>
-    <div class="mx-auto max-w-6xl space-y-6">
+    <div class="w-full space-y-6">
         <RevealOnScroll v-if="config.status?.incomplete">
             <UiAlert tone="amber" icon="alert">{{ copy.incomplete }}</UiAlert>
         </RevealOnScroll>

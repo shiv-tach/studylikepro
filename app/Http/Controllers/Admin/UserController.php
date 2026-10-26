@@ -32,7 +32,7 @@ class UserController extends Controller
         ]);
 
         $users = User::query()
-            ->with(['teacherProfile', 'studentProfile'])
+            ->with(['teacherProfile', 'studentProfile.grade'])
             ->whereHas('roles', fn (Builder $query) => $query->whereIn('name', [User::ROLE_STUDENT, User::ROLE_TEACHER]))
             ->when($filters['role'] ?? null, fn (Builder $query, string $role) => $query->role($role))
             ->when(($filters['status'] ?? null) === 'suspended', fn (Builder $query) => $query->whereNotNull('suspended_at'))

@@ -25,7 +25,7 @@ provide(URLS_KEY, props.config.urls ?? {});
 </script>
 
 <template>
-    <section class="mx-auto max-w-3xl space-y-4" :aria-label="config.copy.threadsLabel">
+    <section class="w-full space-y-4" :aria-label="config.copy.threadsLabel">
         <RevealOnScroll v-if="config.totalUnread > 0 && config.copy.unreadSummary">
             <UnreadBanner :label="config.copy.unreadSummary" />
         </RevealOnScroll>

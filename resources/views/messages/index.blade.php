@@ -93,7 +93,7 @@
         {{-- Fallback for a browser without JavaScript: the page is a thin shell,
              so list the same threads the Vue app would have rendered. --}}
         <noscript>
-            <div class="mx-auto max-w-3xl space-y-4">
+            <div class="w-full space-y-4">
                 @if ($totalUnread > 0)
                     <div class="rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm text-primary">
                         {{ $messagesPayload['copy']['unreadSummary'] }}
@@ -150,7 +150,7 @@
         {{-- Laravel keeps pagination server-rendered: the links are URLs and
              markup, which is exactly what Blade still owns. --}}
         @if ($conversations->hasPages())
-            <div class="mx-auto mt-4 max-w-3xl">{{ $conversations->links() }}</div>
+            <div class="mt-4 w-full">{{ $conversations->links() }}</div>
         @endif
     </div>
 

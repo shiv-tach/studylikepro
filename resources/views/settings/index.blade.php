@@ -150,14 +150,14 @@
     {{-- Fallback for a browser without JavaScript: the same cards as plain links
          and the same email preference as a real POST form. --}}
     <noscript>
-        <div class="mx-auto max-w-5xl space-y-8">
+        <div class="w-full space-y-8">
             @if (session('status') === 'notifications-updated')
                 <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
                     {{ __('Notification preferences saved.') }}
                 </div>
             @endif
 
-            <div class="grid gap-5 sm:grid-cols-2">
+            <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 @foreach ($cards as $card)
                     @if ($card['kind'] === 'link')
                         <a href="{{ $card['href'] }}" class="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">

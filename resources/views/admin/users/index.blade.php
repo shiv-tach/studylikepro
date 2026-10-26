@@ -66,6 +66,7 @@
                         <tr class="text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
                             <th class="px-6 py-3">{{ __('Person') }}</th>
                             <th class="px-6 py-3">{{ __('Role') }}</th>
+                            <th class="px-6 py-3">{{ __('Grade') }}</th>
                             <th class="px-6 py-3">{{ __('Teacher status') }}</th>
                             <th class="px-6 py-3">{{ __('Joined') }}</th>
                             <th class="px-6 py-3"></th>
@@ -88,6 +89,13 @@
                                     @endforeach
                                 </td>
                                 <td class="px-6 py-4">
+                                    @if ($user->studentProfile?->grade)
+                                        <span class="{{ $chip }}">{{ $user->studentProfile->grade->label }}</span>
+                                    @else
+                                        <span class="text-xs text-slate-400">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4">
                                     @if ($user->teacherProfile)
                                         <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $user->teacherProfile->verification_status->badgeClasses() }}">
                                             {{ $user->teacherProfile->verification_status->label() }}
@@ -106,7 +114,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-10 text-center text-sm text-slate-500 dark:text-slate-400">{{ __('Nobody matches those filters.') }}</td>
+                                <td colspan="6" class="px-6 py-10 text-center text-sm text-slate-500 dark:text-slate-400">{{ __('Nobody matches those filters.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

@@ -1,5 +1,10 @@
 <?php
 
+use App\Enums\ApprovalStatus;
+use App\Models\EducationLevel;
+use App\Models\Grade;
+use App\Models\Lesson;
+use App\Models\Subject;
 use App\Models\TeacherProfile;
 use App\Models\TeacherVerificationDocument;
 use App\Models\User;
@@ -69,6 +74,65 @@ test('admins can approve a pending application and the teacher is notified', fun
         ->and($profile->verified_at)->not->toBeNull();
 
     Notification::assertSentTo($user, TeacherVerificationApproved::class);
+});
+
+test('approving grants the checked subject its grade scope and lessons', function () {
+    Notification::fake();
+
+    [, $profile] = createPendingTeacherAccount();
+
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade = Grade::query()->where('education_level_id', $ol->id)->where('number', 11)->firstOrFail();
+
+    $subject = Subject::factory()->create([
+        'name' => 'Verification Scope Mathematics',
+        'slug' => 'verification-scope-mathematics',
+        'education_level_id' => $ol->id,
+    ]);
+    $lesson = Lesson::factory()->for($subject)->create(['grade_id' => $grade->id]);
+
+    $profile->subjects()->attach($subject->id, ['status' => ApprovalStatus::Pending]);
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->post(route('admin.verifications.approve', $profile), ['subject_ids' => [$subject->id]])
+        ->assertRedirect(route('admin.verifications.index'))
+        ->assertSessionHas('status', 'teacher-approved');
+
+    $pivot = $profile->subjects()->where('subjects.id', $subject->id)->firstOrFail()->pivot;
+
+    expect($pivot->status)->toBe(ApprovalStatus::Approved)
+        ->and($pivot->approved_at)->not->toBeNull()
+        ->and(array_map('intval', $pivot->grade_levels))->toContain($grade->id)
+        ->and($profile->lessons()->pluck('lessons.id')->all())->toContain($lesson->id);
+});
+
+test('unchecked subjects are rejected and lose their lessons', function () {
+    Notification::fake();
+
+    [, $profile] = createPendingTeacherAccount();
+
+    $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade = Grade::query()->where('education_level_id', $ol->id)->where('number', 11)->firstOrFail();
+
+    $kept = Subject::factory()->create(['education_level_id' => $ol->id]);
+    $dropped = Subject::factory()->create(['education_level_id' => $ol->id]);
+
+    $keptLesson = Lesson::factory()->for($kept)->create(['grade_id' => $grade->id]);
+    $droppedLesson = Lesson::factory()->for($dropped)->create(['grade_id' => $grade->id]);
+
+    $profile->subjects()->attach($kept->id, ['status' => ApprovalStatus::Pending]);
+    $profile->subjects()->attach($dropped->id, ['status' => ApprovalStatus::Pending]);
+    $profile->lessons()->sync([$keptLesson->id, $droppedLesson->id]);
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->post(route('admin.verifications.approve', $profile), ['subject_ids' => [$kept->id]])
+        ->assertSessionHas('status', 'teacher-approved');
+
+    $droppedPivot = $profile->subjects()->where('subjects.id', $dropped->id)->firstOrFail()->pivot;
+
+    expect($droppedPivot->status)->toBe(ApprovalStatus::Rejected)
+        ->and($droppedPivot->approved_at)->toBeNull()
+        ->and($profile->lessons()->pluck('lessons.id')->all())->toBe([$keptLesson->id]);
 });
 
 test('admins can reject a pending application with a reason', function () {

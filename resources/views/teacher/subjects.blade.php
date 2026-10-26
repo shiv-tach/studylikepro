@@ -34,6 +34,19 @@
         $pivot = $subject->pivot;
 
         $savedGradeIds = array_map('intval', $pivot->grade_levels ?? []);
+
+        // An approved subject can predate the grade scope assignment (a legacy
+        // row): everywhere else an empty scope means "every grade of the level"
+        // (PublicTeacherPageConfig, UpsertServiceOfferingRequest), so the card
+        // seeds the level's grades instead of showing zero classes. Saving then
+        // writes that scope explicitly.
+        if ($savedGradeIds === []) {
+            $savedGradeIds = ($subject->educationLevel?->grades ?? collect())
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
         $savedGradeRates = collect($pivot->grade_rates ?? [])
             ->mapWithKeys(fn ($rate, $gradeId) => [(int) $gradeId => (int) $rate])
             ->all();

@@ -309,7 +309,7 @@
     {{-- Fallback for a browser without JavaScript: the upload and submit forms
          post to the same routes as the Vue cards. --}}
     <noscript>
-        <div class="mx-auto max-w-3xl space-y-6">
+        <div class="w-full space-y-6">
             @foreach ($notices as $notice)
                 <div class="rounded-2xl border border-slate-200/80 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-800/80 dark:bg-slate-900/60 dark:text-slate-200">
                     <p class="font-semibold">{{ $notice['title'] }}</p>

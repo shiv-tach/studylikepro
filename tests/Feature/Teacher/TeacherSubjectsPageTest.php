@@ -271,3 +271,28 @@ test('a flash status becomes a toast notice on the island', function () {
         ->and($config['notices'][0]['tone'])->toBe('emerald')
         ->and($config['notices'][0]['message'])->toBe('Teaching preferences saved.');
 });
+
+test('an approved subject without a saved scope opens with its level grades', function () {
+    ['user' => $user, 'profile' => $profile, 'subject' => $subject, 'ol' => $ol] = subjectsPageScenario();
+
+    // A legacy approval: approved pivot, no grade scope, no lessons picked.
+    $profile->subjects()->updateExistingPivot($subject->id, ['grade_levels' => null]);
+    $profile->lessons()->sync([]);
+
+    $config = teacherSubjectsConfig(
+        $this->actingAs($user)->get(route('teacher.subjects.index'))
+    );
+
+    $levelGradeIds = Grade::query()
+        ->where('education_level_id', $ol->id)
+        ->where('is_active', true)
+        ->pluck('id')
+        ->map(fn ($id) => (int) $id)
+        ->all();
+
+    $payload = collect($config['subjects'])->firstWhere('id', $subject->id);
+
+    expect(array_column($payload['grades'], 'id'))->toEqualCanonicalizing($levelGradeIds)
+        ->and(collect($payload['grades'])->where('selected', true))->toHaveCount(count($levelGradeIds))
+        ->and($payload['counts']['selectedGrades'])->toBe(count($levelGradeIds));
+});

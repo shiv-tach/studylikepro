@@ -150,7 +150,7 @@
     {{-- Fallback for a browser without JavaScript: the form is a real PUT form
          either way, so the same field names and values are submitted. --}}
     <noscript>
-        <div class="mx-auto max-w-3xl space-y-6">
+        <div class="w-full space-y-6">
             @if (session('status') === 'profile-updated')
                 <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
                     {{ __('Your profile has been updated.') }}

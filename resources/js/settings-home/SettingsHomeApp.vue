@@ -45,7 +45,7 @@ function cardProps(card) {
 </script>
 
 <template>
-    <div class="mx-auto max-w-5xl space-y-8">
+    <div class="w-full space-y-8">
         <RevealOnScroll v-if="config.status?.notificationsUpdated">
             <UiAlert tone="emerald" icon="check-circle">{{ config.copy.notificationsUpdated }}</UiAlert>
         </RevealOnScroll>
@@ -58,7 +58,7 @@ function cardProps(card) {
             />
         </RevealOnScroll>
 
-        <div class="grid gap-5 sm:grid-cols-2">
+        <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             <RevealOnScroll v-for="(card, index) in config.cards" :key="card.key" :delay="index * 20">
                 <component
                     :is="CARD_COMPONENTS[card.kind] ?? SettingsLinkCard"
