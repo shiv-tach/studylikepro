@@ -7,6 +7,7 @@ use App\Enums\ServiceType;
 use App\Http\Controllers\Controller;
 use App\Models\ServiceOffering;
 use App\Models\ServicePurchase;
+use App\Services\Payments\PaymentService;
 use App\Services\PurchaseService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -21,7 +22,10 @@ use Illuminate\View\View;
  */
 class PurchaseController extends Controller
 {
-    public function __construct(private readonly PurchaseService $purchases) {}
+    public function __construct(
+        private readonly PurchaseService $purchases,
+        private readonly PaymentService $payments,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -33,7 +37,7 @@ class PurchaseController extends Controller
         $tab = ($filters['tab'] ?? null) === 'past' ? 'past' : 'active';
 
         $purchases = $this->bucket($request->user()->servicePurchases(), $tab)
-            ->with(['offering', 'teacherProfile.user', 'subject', 'lesson', 'markingOrder'])
+            ->with(['offering', 'teacherProfile.user', 'subject', 'lesson', 'markingOrder', 'payments'])
             ->when($filters['type'] ?? null, fn ($query, string $type) => $query->where('service_type', $type))
             ->latest()
             ->paginate(8)
@@ -97,6 +101,7 @@ class PurchaseController extends Controller
         return view('student.purchases.show', [
             'purchase' => $purchase,
             'capturedPayment' => $this->purchases->capturedFor($purchase),
+            'manualPayment' => $this->payments->latestManualFor($purchase),
         ]);
     }
 

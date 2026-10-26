@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Enums\BookingStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\PurchaseStatus;
 use App\Enums\ServiceType;
 use App\Models\Booking;
@@ -24,10 +25,13 @@ class ExpireServicePurchases extends Command
         RefundService $refunds,
         BookingTransitionService $transitions,
     ): int {
-        // Unpaid purchase holds go back on the market.
+        // Unpaid purchase holds go back on the market. A submitted slip pauses
+        // the clock while an admin checks the proof.
         $holds = ServicePurchase::query()
             ->where('status', PurchaseStatus::PendingPayment->value)
             ->where('expires_at', '<=', now())
+            ->whereDoesntHave('payments', fn ($query) => $query
+                ->where('status', PaymentStatus::Submitted->value))
             ->get();
 
         foreach ($holds as $purchase) {

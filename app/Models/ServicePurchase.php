@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Contracts\Payable;
 use App\Enums\BookingStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\PurchaseStatus;
 use App\Enums\ServiceType;
 use Database\Factories\ServicePurchaseFactory;
@@ -134,14 +135,18 @@ class ServicePurchase extends Model implements Payable
     }
 
     /**
-     * Pending-payment holds whose payment window is still open.
+     * Pending-payment holds whose payment window is still open. A submitted
+     * slip pauses the clock until an admin checks it.
      */
     public function scopeHoldOpen(Builder $query): Builder
     {
         return $query->where('status', PurchaseStatus::PendingPayment->value)
-            ->where(fn (Builder $window) => $window
-                ->whereNull('expires_at')
-                ->orWhere('expires_at', '>', now()));
+            ->where(fn (Builder $hold) => $hold
+                ->where(fn (Builder $window) => $window
+                    ->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now()))
+                ->orWhereHas('payments', fn (Builder $payment) => $payment
+                    ->where('status', PaymentStatus::Submitted->value)));
     }
 
     /**
@@ -153,7 +158,9 @@ class ServicePurchase extends Model implements Payable
     {
         return $query->where('status', PurchaseStatus::PendingPayment->value)
             ->whereNotNull('expires_at')
-            ->where('expires_at', '<=', now());
+            ->where('expires_at', '<=', now())
+            ->whereDoesntHave('payments', fn (Builder $payment) => $payment
+                ->where('status', PaymentStatus::Submitted->value));
     }
 
     public function scopeConsumable(Builder $query): Builder
@@ -182,13 +189,29 @@ class ServicePurchase extends Model implements Payable
     /**
      * Whether this is a hold whose payment window has already closed. The row
      * still says "awaiting payment" until the scheduler catches up, but it can
-     * no longer be paid for, so it is shown as expired in the meantime.
+     * no longer be paid for, so it is shown as expired in the meantime. A slip
+     * waiting for an admin pauses the clock.
      */
     public function isHoldLapsed(): bool
     {
         return $this->status === PurchaseStatus::PendingPayment
             && $this->expires_at !== null
-            && $this->expires_at->isPast();
+            && $this->expires_at->isPast()
+            && ! $this->hasSubmittedPayment();
+    }
+
+    /**
+     * Whether a manual slip is with the admin team.
+     */
+    public function hasSubmittedPayment(): bool
+    {
+        if ($this->relationLoaded('payments')) {
+            return $this->payments->contains(
+                fn (Payment $payment) => $payment->status === PaymentStatus::Submitted,
+            );
+        }
+
+        return $this->payments()->where('status', PaymentStatus::Submitted->value)->exists();
     }
 
     /**

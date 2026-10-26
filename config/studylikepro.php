@@ -145,6 +145,19 @@ return [
         'fake_webhook_secret' => env('FAKE_PAYMENT_WEBHOOK_SECRET', 'studylikepro-fake-webhook-secret'),
         // Orders older than this are worth re-checking with the provider.
         'reconcile_after_minutes' => 30,
+
+        // Manual settlement (defaults; the admin Payment setup page retunes them).
+        // Online transfers must survive at least 15 minutes from the moment the
+        // bank details are shown, so the value is never allowed below that.
+        'online_transfer_hold_minutes' => (int) env('PAYMENTS_ONLINE_TRANSFER_HOLD_MINUTES', 15),
+        // A bank-deposit customer has to reach a branch, so the window is hours.
+        'bank_deposit_hold_hours' => (int) env('PAYMENTS_BANK_DEPOSIT_HOLD_HOURS', 24),
+        // Slip/proof upload cap, matching the other student upload limits.
+        'slip_max_kb' => (int) env('PAYMENTS_SLIP_MAX_KB', 5120),
+        'instructions' => [
+            'online_transfer' => 'Transfer the exact amount to the account below using your bank app, then upload the transfer slip. Keep the reference number handy in case we need to check it.',
+            'bank_deposit' => 'Deposit the exact amount at any branch of the bank below, then upload the deposit slip. Your slot stays reserved while we check the deposit.',
+        ],
     ],
 
     /*

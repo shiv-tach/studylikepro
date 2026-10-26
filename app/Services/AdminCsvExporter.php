@@ -61,7 +61,7 @@ class AdminCsvExporter
     {
         return match ($type) {
             'bookings' => ['Reference', 'Status', 'Starts at', 'Student', 'Teacher', 'Subject', 'Lesson', 'Price', 'Platform fee', 'Teacher payout', 'Booking fee', 'Fee discount', 'Currency', 'Payment status', 'Created at'],
-            'payments' => ['Payment', 'Gateway', 'Order id', 'Status', 'Amount', 'Refunded', 'Currency', 'Method', 'Captured at', 'Student', 'Booking'],
+            'payments' => ['Payment', 'Gateway', 'Order id', 'Status', 'Amount', 'Refunded', 'Currency', 'Method', 'Payment method', 'Bank reference', 'Captured at', 'Student', 'Booking'],
             'refunds' => ['Refund', 'Booking', 'Payment', 'Amount', 'Percent', 'Initiated by', 'Reason', 'Status', 'Created at'],
             'payouts' => ['Reference', 'Teacher', 'Lessons', 'Amount', 'Currency', 'Status', 'Paid at', 'Notes'],
             'teachers' => ['Teacher', 'Email', 'Verification', 'Rating', 'Reviews', 'Lessons completed', 'Gross billed', 'Commission', 'Net to teacher', 'Available balance', 'Pending balance'],
@@ -129,6 +129,8 @@ class AdminCsvExporter
                 $this->money($payment->refundedMinor()),
                 $payment->currency,
                 $payment->method,
+                $payment->payment_method?->value,
+                $payment->bank_reference,
                 $this->date($payment->captured_at),
                 $payment->student->name,
                 $payment->booking_id,

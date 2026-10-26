@@ -1,6 +1,7 @@
 @php
     use App\Enums\BookingStatus;
     use App\Enums\MarkingOrderStatus;
+    use App\Enums\PaymentStatus;
     use App\Enums\PurchaseStatus;
     use App\Enums\ServiceType;
     use Illuminate\Support\Facades\Gate;
@@ -42,6 +43,11 @@
     $status = $purchase->isHoldLapsed() ? PurchaseStatus::Expired : $purchase->status;
     $isPending = $status === PurchaseStatus::PendingPayment;
 
+    // A manual slip that is with (or was turned down by) an admin changes what
+    // this page may offer: no second payment while the proof is being checked.
+    $manualSubmitted = $isPending && $manualPayment?->status === PaymentStatus::Submitted;
+    $manualRejected = $isPending && $manualPayment?->status === PaymentStatus::Rejected;
+
     // Only a lesson plan carries a balance, so the remaining minutes are read for
     // exactly the panel that displays them.
     $allocation = (int) $purchase->allocation_minutes;
@@ -60,19 +66,29 @@
     $actions = [];
 
     if ($isPending) {
-        $actions[] = [
-            'kind' => 'form',
-            'url' => route('student.purchases.checkout', $purchase),
-            'label' => __('Pay now'),
-            'amount' => $money($purchase->totalMinor()),
-            'variant' => 'primary',
-        ];
-        $actions[] = [
-            'kind' => 'form',
-            'url' => route('student.purchases.cancel', $purchase),
-            'label' => __('Cancel purchase'),
-            'variant' => 'outline',
-        ];
+        if ($manualSubmitted) {
+            $actions[] = [
+                'kind' => 'link',
+                'url' => route('student.payments.checkout', $manualPayment),
+                'label' => __('Check the payment'),
+                'amount' => null,
+                'variant' => 'outline',
+            ];
+        } else {
+            $actions[] = [
+                'kind' => 'form',
+                'url' => route('student.purchases.checkout', $purchase),
+                'label' => __('Pay now'),
+                'amount' => $money($purchase->totalMinor()),
+                'variant' => 'primary',
+            ];
+            $actions[] = [
+                'kind' => 'form',
+                'url' => route('student.purchases.cancel', $purchase),
+                'label' => __('Cancel purchase'),
+                'variant' => 'outline',
+            ];
+        }
     }
 
     // One banner per redirect this page can be reached with, so it explains what
@@ -134,8 +150,9 @@
 
     // A live hold is the only panel racing a clock, so it carries its deadline as
     // an instant and the amount it would charge, and the countdown is filled in
-    // by the component instead of a pre-rendered sentence.
-    $hold = $isPending && $purchase->expires_at?->isFuture()
+    // by the component instead of a pre-rendered sentence. A submitted slip
+    // pauses that clock until an admin decides.
+    $hold = $isPending && ! $manualSubmitted && $purchase->expires_at?->isFuture()
         ? ['deadline' => $purchase->expires_at->toIso8601String(), 'amount' => $money($purchase->totalMinor())]
         : null;
 
@@ -190,7 +207,8 @@
             'tone' => $purchaseTone($status),
             // The window is labelled by what it is: a payment deadline while the
             // money is outstanding, a validity date once the purchase is live.
-            'expiry' => $purchase->expires_at === null ? null : [
+            // A submitted slip pauses the deadline, so it is hidden.
+            'expiry' => $manualSubmitted || $purchase->expires_at === null ? null : [
                 'label' => $isPending ? __('Payment hold until') : __('Valid until'),
                 'value' => display_datetime($purchase->expires_at->copy()->setTimezone($timezone)),
             ],
@@ -209,6 +227,21 @@
             ],
             'hold' => $hold,
             'actions' => $actions,
+            // A manual slip is either with the admin team or was turned down;
+            // both states carry their own copy and links.
+            'manual' => $manualPayment === null ? null : [
+                'submitted' => $manualSubmitted,
+                'rejected' => $manualRejected,
+                'label' => $manualPayment->status->label(),
+                'reason' => $manualPayment->failure_reason,
+                'submittedAt' => $manualPayment->submitted_at === null
+                    ? null
+                    : __('Submitted :when', ['when' => display_datetime($manualPayment->submitted_at->copy()->setTimezone($timezone))]),
+                'slipUrl' => filled($manualPayment->slip_path) ? route('student.payments.slip.show', $manualPayment) : null,
+                'slipLabel' => __('View the slip'),
+                'checkoutUrl' => route('student.payments.checkout', $manualPayment),
+                'checkoutLabel' => __('Open the checkout'),
+            ],
             // What the panel becomes if the countdown reaches zero while the page
             // stays open, so it never keeps offering a payment that lapsed.
             'expired' => [

@@ -54,6 +54,17 @@
             @endforeach
         </div>
 
+        @php
+            $pendingVerification = \App\Models\Payment::query()->awaitingVerification()->count();
+        @endphp
+        @if ($pendingVerification > 0)
+            <a href="{{ route('admin.payments.index', ['status' => \App\Enums\PaymentStatus::Submitted->value]) }}"
+               class="block rounded-2xl border border-sky-200/80 bg-sky-50 p-4 text-sm text-sky-800 transition-colors hover:border-sky-300 dark:border-sky-900/40 dark:bg-sky-950/30 dark:text-sky-200">
+                <span class="font-semibold">{{ trans_choice(':count payment is waiting for a slip check|:count payments are waiting for a slip check', $pendingVerification, ['count' => $pendingVerification]) }}</span>
+                <span class="ml-1 font-semibold text-primary">{{ __('Review them') }} &rarr;</span>
+            </a>
+        @endif
+
         <form method="GET" action="{{ route('admin.payments.index') }}" class="{{ $cardBase }}" :class="{{ $cardTheme }}">
             <div class="grid gap-4 sm:grid-cols-6">
                 <div>
@@ -69,8 +80,8 @@
                     <x-input-label for="filter-gateway" :value="__('Gateway')" />
                     <select id="filter-gateway" name="gateway" class="mt-1 block w-full {{ $fieldClasses }}">
                         <option value="">{{ __('Any gateway') }}</option>
-                        @foreach (['fake', 'razorpay'] as $gateway)
-                            <option value="{{ $gateway }}" @selected(($filters['gateway'] ?? null) === $gateway)>{{ $gateway }}</option>
+                        @foreach (['fake', 'razorpay', 'manual'] as $gateway)
+                            <option value="{{ $gateway }}" @selected(($filters['gateway'] ?? null) === $gateway)>{{ ucfirst($gateway) }}</option>
                         @endforeach
                     </select>
                 </div>

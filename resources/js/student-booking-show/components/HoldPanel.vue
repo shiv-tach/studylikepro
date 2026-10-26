@@ -49,10 +49,42 @@ const outlineClass =
         </div>
     </div>
 
-    <!-- The hold lapsed, or the lesson was called off. -->
+    <!-- The uploaded slip is with the admin team. -->
+    <div
+        v-else-if="banner.kind === 'verifying'"
+        :class="[panel, 'border-sky-200/80 bg-sky-50/60 dark:border-sky-900/40 dark:bg-sky-950/20']"
+    >
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="flex items-start gap-3">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-xl dark:bg-sky-900/40">🧾</span>
+                <div>
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ banner.title }}</h3>
+                    <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">{{ banner.body }}</p>
+                    <p v-if="banner.submittedAt" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {{ banner.submittedAt }}
+                    </p>
+                    <p v-if="banner.note" class="mt-2 text-xs text-sky-800 dark:text-sky-300">{{ banner.note }}</p>
+                </div>
+            </div>
+
+            <div class="text-right">
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ banner.total }}</p>
+                <a v-if="banner.slipUrl" :href="banner.slipUrl" target="_blank" rel="noopener" :class="[outlineClass, 'mt-2']">
+                    {{ banner.slipLabel }}
+                </a>
+                <a v-if="banner.action" :href="banner.action.url" :class="[outlineClass, 'mt-2']">
+                    {{ banner.action.label }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- The hold lapsed, the slip was rejected, or the lesson was called off. -->
     <div
         v-else
-        :class="[panel, 'border-slate-200/80 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60']"
+        :class="[panel, banner.kind === 'rejected'
+            ? 'border-rose-200/80 bg-rose-50/60 dark:border-rose-900/40 dark:bg-rose-950/20'
+            : 'border-slate-200/80 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60']"
     >
         <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ banner.title }}</h3>
         <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">

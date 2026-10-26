@@ -11,6 +11,7 @@ use App\Models\Refund;
 use App\Models\TeacherEarning;
 use App\Services\ActivityLogger;
 use App\Services\AdminCsvExporter;
+use App\Services\Payments\ManualPaymentService;
 use App\Services\Payments\RefundService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -18,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -54,6 +56,8 @@ class PaymentController extends Controller
             'refunds',
             'purchase.teacherProfile.user',
             'purchase.subject',
+            'bankAccount',
+            'verifier',
         ]);
 
         return view('admin.payments.show', [
@@ -99,6 +103,66 @@ class PaymentController extends Controller
         return redirect()
             ->route('admin.payments.show', $payment)
             ->with('status', $refund ? 'refund-issued' : 'refund-skipped');
+    }
+
+    /**
+     * The money arrived: capture the manual payment (confirms the booking or
+     * activates the purchase through the regular capture path).
+     */
+    public function verify(Request $request, Payment $payment, ManualPaymentService $manual, ActivityLogger $activity): RedirectResponse
+    {
+        Gate::authorize('verify', $payment);
+
+        $manual->verify($payment, $request->user());
+
+        $activity->describe(sprintf(
+            'Verified manual payment #%d (%s)',
+            $payment->id,
+            platform_settings()->formatMinor($payment->amount_minor),
+        ));
+
+        return redirect()
+            ->route('admin.payments.show', $payment)
+            ->with('status', 'payment-verified');
+    }
+
+    /**
+     * The slip could not be matched to a deposit; the student may resubmit.
+     */
+    public function reject(Request $request, Payment $payment, ManualPaymentService $manual, ActivityLogger $activity): RedirectResponse
+    {
+        Gate::authorize('reject', $payment);
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        $manual->reject($payment, $request->user(), $validated['reason']);
+
+        $activity->describe(sprintf('Rejected manual payment #%d: %s', $payment->id, $validated['reason']));
+
+        return redirect()
+            ->route('admin.payments.show', $payment)
+            ->with('status', 'payment-rejected');
+    }
+
+    /**
+     * Stream the uploaded slip for the verifier.
+     */
+    public function slip(Payment $payment): StreamedResponse
+    {
+        Gate::authorize('viewSlip', $payment);
+
+        abort_unless(
+            filled($payment->slip_path)
+                && Storage::disk(ManualPaymentService::SLIP_DISK)->exists($payment->slip_path),
+            404,
+        );
+
+        return Storage::disk(ManualPaymentService::SLIP_DISK)->response(
+            $payment->slip_path,
+            $payment->slip_original_name ?: 'payment-slip',
+        );
     }
 
     /**

@@ -85,13 +85,49 @@ const reload = () => window.location.reload();
             </template>
 
             <template v-else>
-                <form v-for="action in actions" :key="action.url" method="POST" :action="action.url">
-                    <input type="hidden" name="_token" :value="csrfToken">
-                    <button type="submit" :class="action.variant === 'primary' ? primaryClass : outlineClass">
-                        {{ action.label }}<template v-if="action.amount"> — {{ action.amount }}</template>
-                    </button>
-                </form>
+                <template v-for="action in actions" :key="action.url">
+                    <a
+                        v-if="action.kind === 'link'"
+                        :href="action.url"
+                        :class="action.variant === 'primary' ? primaryClass : outlineClass"
+                    >
+                        {{ action.label }}
+                    </a>
+
+                    <form v-else method="POST" :action="action.url">
+                        <input type="hidden" name="_token" :value="csrfToken">
+                        <button type="submit" :class="action.variant === 'primary' ? primaryClass : outlineClass">
+                            {{ action.label }}<template v-if="action.amount"> — {{ action.amount }}</template>
+                        </button>
+                    </form>
+                </template>
             </template>
+        </div>
+
+        <!-- A manual slip is with the admin team, or was turned down. -->
+        <div
+            v-if="status.manual"
+            :class="['mt-4 rounded-xl border p-3 text-xs', status.manual.rejected
+                ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300'
+                : 'border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-300']"
+        >
+            <p class="font-semibold">{{ status.manual.label }}</p>
+            <p v-if="status.manual.reason" class="mt-1">{{ status.manual.reason }}</p>
+            <p v-if="status.manual.submittedAt" class="mt-1">{{ status.manual.submittedAt }}</p>
+            <div class="mt-2 flex flex-wrap gap-3">
+                <a
+                    v-if="status.manual.slipUrl"
+                    :href="status.manual.slipUrl"
+                    target="_blank"
+                    rel="noopener"
+                    class="font-semibold underline"
+                >
+                    {{ status.manual.slipLabel }}
+                </a>
+                <a :href="status.manual.checkoutUrl" class="font-semibold underline">
+                    {{ status.manual.checkoutLabel }}
+                </a>
+            </div>
         </div>
 
         <p v-if="status.payment" class="mt-4 text-xs text-slate-400">{{ status.payment.label }}</p>

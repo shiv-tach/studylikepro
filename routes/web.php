@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\LessonController as AdminLessonController;
 use App\Http\Controllers\Admin\ModerationController as AdminModerationController;
 use App\Http\Controllers\Admin\PaperMarkingController as AdminPaperMarkingController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
+use App\Http\Controllers\Admin\PaymentSetupController as AdminPaymentSetupController;
 use App\Http\Controllers\Admin\PayoutController as AdminPayoutController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\ServiceController as AdminServiceController;
@@ -34,6 +35,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Student\BookingController as StudentBookingController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\InterestsController as StudentInterestsController;
+use App\Http\Controllers\Student\ManualPaymentController as StudentManualPaymentController;
 use App\Http\Controllers\Student\OnboardingController as StudentOnboardingController;
 use App\Http\Controllers\Student\PaperMarkingController as StudentPaperMarkingController;
 use App\Http\Controllers\Student\PaymentController as StudentPaymentController;
@@ -154,6 +156,12 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_STUDENT, 'not-suspende
 
         Route::post('/lessons/{booking}/checkout', [StudentPaymentController::class, 'checkout'])->middleware(['onboarded', 'throttle:checkout'])->name('bookings.checkout');
         Route::get('/payments/{payment}', [StudentPaymentController::class, 'show'])->middleware('onboarded')->name('payments.checkout');
+
+        // Manual settlement (bank transfer / deposit): pick the method, then
+        // upload the slip the admin verifies.
+        Route::post('/payments/{payment}/method', [StudentManualPaymentController::class, 'selectMethod'])->middleware('onboarded')->name('payments.method');
+        Route::post('/payments/{payment}/slip', [StudentManualPaymentController::class, 'storeSlip'])->middleware(['onboarded', 'throttle:uploads'])->name('payments.slip.store');
+        Route::get('/payments/{payment}/slip', [StudentManualPaymentController::class, 'showSlip'])->middleware('onboarded')->name('payments.slip.show');
 
         // Service catalog: lesson plans, paper marking, discussions & Q&A.
         Route::get('/purchases', [StudentPurchaseController::class, 'index'])->middleware('onboarded')->name('purchases.index');
@@ -323,6 +331,19 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended'
         Route::get('/payments/export', [AdminPaymentController::class, 'export'])->name('payments.export');
         Route::get('/payments/{payment}', [AdminPaymentController::class, 'show'])->name('payments.show');
         Route::post('/payments/{payment}/refund', [AdminPaymentController::class, 'refund'])->name('payments.refund');
+        // Manual settlement: check the uploaded slip, then confirm or reject it.
+        Route::get('/payments/{payment}/slip', [AdminPaymentController::class, 'slip'])->name('payments.slip');
+        Route::post('/payments/{payment}/verify', [AdminPaymentController::class, 'verify'])->name('payments.verify');
+        Route::post('/payments/{payment}/reject', [AdminPaymentController::class, 'reject'])->name('payments.reject');
+
+        // Bank accounts and the checkouts that are offered to students.
+        Route::get('/payment-setup', [AdminPaymentSetupController::class, 'index'])->name('payment-setup.index');
+        Route::put('/payment-setup/settings', [AdminPaymentSetupController::class, 'updateSettings'])->name('payment-setup.settings.update');
+        Route::post('/payment-setup/bank-accounts', [AdminPaymentSetupController::class, 'store'])->name('payment-setup.bank-accounts.store');
+        Route::put('/payment-setup/bank-accounts/{bankAccount}', [AdminPaymentSetupController::class, 'update'])->name('payment-setup.bank-accounts.update');
+        Route::delete('/payment-setup/bank-accounts/{bankAccount}', [AdminPaymentSetupController::class, 'destroy'])->name('payment-setup.bank-accounts.destroy');
+        Route::post('/payment-setup/bank-accounts/{bankAccount}/default', [AdminPaymentSetupController::class, 'makeDefault'])->name('payment-setup.bank-accounts.default');
+        Route::post('/payment-setup/bank-accounts/{bankAccount}/toggle', [AdminPaymentSetupController::class, 'toggle'])->name('payment-setup.bank-accounts.toggle');
 
         Route::get('/payouts', [AdminPayoutController::class, 'index'])->name('payouts.index');
         Route::post('/payouts', [AdminPayoutController::class, 'store'])->name('payouts.store');

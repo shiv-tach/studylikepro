@@ -33,6 +33,102 @@
             <div class="rounded-2xl border border-slate-200/80 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
                 {{ __('Nothing left to refund on this payment.') }}
             </div>
+        @elseif (session('status') === 'payment-verified')
+            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                {{ __('Payment verified — the booking or purchase is confirmed and the receipt is live.') }}
+            </div>
+        @elseif (session('status') === 'payment-rejected')
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
+                {{ __('Slip rejected. The student has been asked to upload a better proof.') }}
+            </div>
+        @endif
+
+        @if ($payment->payment_method || $payment->slip_path)
+            @php
+                $isSubmitted = $payment->status === \App\Enums\PaymentStatus::Submitted;
+                $slipIsImage = $payment->slip_path !== null
+                    && in_array(strtolower(pathinfo($payment->slip_path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'], true);
+            @endphp
+
+            <div class="rounded-2xl border border-sky-200/80 bg-sky-50/60 p-6 dark:border-sky-900/40 dark:bg-sky-950/20">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('Manual payment proof') }}</h3>
+                        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                            {{ __('The student paid by :method and uploaded a slip. Confirm it only after the money shows in the account.', ['method' => $payment->payment_method?->label() ?? __('bank transfer')]) }}
+                        </p>
+                    </div>
+                    <span class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $payment->status->badgeClasses() }}">{{ $payment->status->label() }}</span>
+                </div>
+
+                <dl class="mt-4 grid gap-4 border-t border-sky-200/70 pt-4 text-sm sm:grid-cols-2 lg:grid-cols-4 dark:border-sky-900/40">
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-sky-700/70 dark:text-sky-400/80">{{ __('Paid into') }}</dt>
+                        <dd class="mt-1 text-slate-800 dark:text-slate-100">
+                            @if ($payment->bankAccount)
+                                {{ $payment->bankAccount->bank_name }}
+                                <span class="block text-xs text-slate-500 dark:text-slate-400">
+                                    {{ $payment->bankAccount->account_name }} · <span class="font-mono">{{ $payment->bankAccount->account_number }}</span>
+                                </span>
+                            @else
+                                —
+                            @endif
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-sky-700/70 dark:text-sky-400/80">{{ __('Bank reference') }}</dt>
+                        <dd class="mt-1 font-mono text-xs text-slate-700 dark:text-slate-200">{{ $payment->bank_reference ?: '—' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-sky-700/70 dark:text-sky-400/80">{{ __('Submitted') }}</dt>
+                        <dd class="mt-1 text-slate-700 dark:text-slate-200">{{ display_datetime($payment->submitted_at?->copy()->setTimezone($timezone)) ?? '—' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-sky-700/70 dark:text-sky-400/80">{{ __('Checked by') }}</dt>
+                        <dd class="mt-1 text-slate-700 dark:text-slate-200">{{ $payment->verifier?->name ?? '—' }}</dd>
+                    </div>
+                </dl>
+
+                @if ($payment->slip_path)
+                    <div class="mt-4 border-t border-sky-200/70 pt-4 dark:border-sky-900/40">
+                        <a href="{{ route('admin.payments.slip', $payment) }}" target="_blank" rel="noopener"
+                           class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                            {{ __('Open the slip') }}{{ $payment->slip_original_name ? ' · '.$payment->slip_original_name : '' }}
+                        </a>
+
+                        @if ($slipIsImage)
+                            <img src="{{ route('admin.payments.slip', $payment) }}" alt="{{ __('Uploaded payment slip') }}"
+                                 class="mt-3 max-h-80 w-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                        @endif
+                    </div>
+                @endif
+
+                @error('payment')
+                    <p class="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{{ $message }}</p>
+                @enderror
+
+                @if ($isSubmitted)
+                    <div class="mt-5 grid gap-4 border-t border-sky-200/70 pt-5 sm:grid-cols-2 dark:border-sky-900/40">
+                        <form method="POST" action="{{ route('admin.payments.verify', $payment) }}" class="space-y-2">
+                            @csrf
+                            <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Confirms the booking or activates the purchase, and tells the student and teacher.') }}</p>
+                            <x-primary-button>{{ __('Verify and confirm payment') }}</x-primary-button>
+                        </form>
+
+                        <form method="POST" action="{{ route('admin.payments.reject', $payment) }}" class="space-y-2">
+                            @csrf
+                            <x-input-label for="reject-reason" :value="__('Reason for rejecting the slip')" />
+                            <textarea id="reject-reason" name="reason" rows="2" required
+                                      placeholder="{{ __('e.g. The reference does not match any deposit') }}"
+                                      class="block w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">{{ old('reason') }}</textarea>
+                            @error('reason')
+                                <p class="text-xs text-rose-600 dark:text-rose-400">{{ $message }}</p>
+                            @enderror
+                            <x-secondary-button>{{ __('Reject the slip') }}</x-secondary-button>
+                        </form>
+                    </div>
+                @endif
+            </div>
         @endif
 
         <div class="grid gap-6 lg:grid-cols-3">

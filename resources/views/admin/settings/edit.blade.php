@@ -12,6 +12,7 @@
         'bookings' => __('Bookings'),
         'refunds' => __('Cancellations & refunds'),
         'services' => __('Services'),
+        'payments' => __('Checkout & payments'),
         'smslenz' => __('SMSLenz API'),
         'sms' => __('SMS & OTP'),
     ];

@@ -40,6 +40,9 @@ export const icons = {
     card: {
         paths: ['M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'],
     },
+    bank: {
+        paths: ['M3 21h18M5 21V9m4 12V9m6 12V9m4 12V9M3 9l9-5 9 5H3z'],
+    },
     wallet: {
         paths: [
             'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2m0-6h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a3 3 0 010-6z',

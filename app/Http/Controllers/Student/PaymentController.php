@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Student;
 
 use App\Contracts\PaymentGateway;
+use App\Exceptions\UnsupportedCurrencyException;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Services\Payments\FakePaymentGateway;
 use App\Services\Payments\PaymentService;
+use App\Support\CheckoutPaymentOptions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -41,13 +43,17 @@ class PaymentController extends Controller
 
         $payment->load(['booking.teacherProfile.user', 'booking.subject', 'booking.lesson', 'booking.bookingFeePromotion']);
 
+        $timezone = $request->user()->studentProfile?->timezone
+            ?? config('studylikepro.default_display_timezone');
+
         return view('student.checkout.show', [
             'payment' => $payment,
             'booking' => $payment->booking,
-            'checkout' => $this->gateway->checkoutPayload($payment),
+            'checkout' => $this->checkoutPayload($payment),
             'localCapture' => $this->localPayload($payment, 'capture'),
             'localFailure' => $this->localPayload($payment, 'failure'),
             'isLocalGateway' => $this->gateway instanceof FakePaymentGateway,
+            'manual' => CheckoutPaymentOptions::build($payment, $timezone),
         ]);
     }
 
@@ -65,6 +71,24 @@ class PaymentController extends Controller
         return redirect()
             ->route('student.bookings.show', $payment->booking_id)
             ->with('status', $payment->status->isSettled() ? 'booking-confirmed' : 'payment-pending');
+    }
+
+    /**
+     * The widget payload the gateway would hand to its checkout script.
+     *
+     * A gateway that cannot settle the marketplace currency (the card method
+     * is "coming soon") simply has nothing to render — the page still shows the
+     * manual methods.
+     *
+     * @return array<string, mixed>
+     */
+    private function checkoutPayload(Payment $payment): array
+    {
+        try {
+            return $this->gateway->checkoutPayload($payment);
+        } catch (UnsupportedCurrencyException) {
+            return [];
+        }
     }
 
     /**

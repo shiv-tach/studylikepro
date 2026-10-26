@@ -64,8 +64,17 @@
                 </div>
                 <div>
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Payment method') }}</dt>
-                    <dd class="mt-1 font-semibold text-slate-800 dark:text-slate-100">{{ strtoupper((string) ($payment->method ?? $payment->gateway)) }}</dd>
-                    <dd class="font-mono text-xs text-slate-500 dark:text-slate-400">{{ $payment->gateway_payment_id }}</dd>
+                    <dd class="mt-1 font-semibold text-slate-800 dark:text-slate-100">
+                        {{ $payment->payment_method?->label() ?? strtoupper((string) ($payment->method ?? $payment->gateway)) }}
+                    </dd>
+                    <dd class="font-mono text-xs text-slate-500 dark:text-slate-400">
+                        {{ $payment->bank_reference ?: $payment->gateway_payment_id }}
+                    </dd>
+                    @if ($payment->bankAccount)
+                        <dd class="text-xs text-slate-500 dark:text-slate-400">
+                            {{ $payment->bankAccount->bank_name }} · {{ $payment->bankAccount->account_number }}
+                        </dd>
+                    @endif
                 </div>
                 <div>
                     <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Order reference') }}</dt>

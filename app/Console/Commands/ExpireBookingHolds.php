@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Enums\BookingStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Services\BookingTransitionService;
 use Illuminate\Console\Command;
@@ -19,6 +20,9 @@ class ExpireBookingHolds extends Command
             ->where('status', BookingStatus::PendingPayment->value)
             ->whereNotNull('expires_at')
             ->where('expires_at', '<=', now())
+            // A submitted slip pauses the clock: an admin still has to check it.
+            ->whereDoesntHave('payments', fn ($query) => $query
+                ->where('status', PaymentStatus::Submitted->value))
             ->get();
 
         foreach ($lapsed as $booking) {

@@ -1,5 +1,6 @@
 @php
     use App\Enums\MarkingOrderStatus;
+    use App\Enums\PaymentStatus;
     use App\Enums\PurchaseStatus;
     use App\Enums\ServiceType;
     use Illuminate\Support\Facades\Gate;
@@ -57,6 +58,14 @@
         // expired and never offers a payment the gateway would refuse.
         $status = $purchase->isHoldLapsed() ? PurchaseStatus::Expired : $purchase->status;
 
+        // A slip that is with an admin pauses the payment clock and replaces
+        // "Pay now" with the checkout that shows its state.
+        $manualPayment = $purchase->payments
+            ->sortByDesc('id')
+            ->first(fn ($payment) => in_array($payment->status, [PaymentStatus::Submitted, PaymentStatus::Rejected], true));
+        $manualSubmitted = $status === PurchaseStatus::PendingPayment
+            && $manualPayment?->status === PaymentStatus::Submitted;
+
         // Only a consumable lesson plan carries a balance, so the remaining
         // minutes are read for exactly the cards that display them.
         $remaining = $purchase->isLessonPlan() && $allocation > 0 && $status->isConsumable()
@@ -65,7 +74,7 @@
 
         // A live hold is the only card racing a clock, so the countdown — and
         // the expiry it can reach while the page stays open — are its business.
-        $payBy = $status === PurchaseStatus::PendingPayment && $purchase->expires_at?->isFuture()
+        $payBy = $status === PurchaseStatus::PendingPayment && ! $manualSubmitted && $purchase->expires_at?->isFuture()
             ? ['deadline' => $purchase->expires_at->toIso8601String()]
             : null;
 
@@ -94,7 +103,7 @@
 
         // Only a window that has not closed yet earns a chip; a deadline that
         // already passed would read as the opposite of its meaning.
-        $expiresLabel = $payBy === null && $status->isConsumable() && $purchase->expires_at?->isFuture()
+        $expiresLabel = $payBy === null && ! $manualSubmitted && $status->isConsumable() && $purchase->expires_at?->isFuture()
             ? __('Usable until :date', ['date' => $purchase->expires_at->format('d M Y')])
             : null;
 
@@ -104,6 +113,12 @@
         // One action per card, decided here so the Vue component never has to
         // know which statuses may be paid, booked or opened.
         $action = match (true) {
+            $manualSubmitted => [
+                'kind' => 'link',
+                'url' => route('student.payments.checkout', $manualPayment),
+                'label' => __('Check the payment'),
+                'variant' => 'outline',
+            ],
             $status === PurchaseStatus::PendingPayment => [
                 'kind' => 'form',
                 'url' => route('student.purchases.checkout', $purchase),
@@ -136,7 +151,8 @@
             'typeIcon' => $typeIcon($purchase->type()),
             'typeLabel' => $purchase->type()->label(),
             'status' => $status->value,
-            'statusLabel' => $status->label(),
+            'statusLabel' => $manualSubmitted ? __('Awaiting verification') : $status->label(),
+            'manualSubmitted' => $manualSubmitted,
             'title' => $title,
             'teacherLabel' => __('with :name', ['name' => $purchase->teacherProfile->user->name]),
             // The scope line is dropped when it would only repeat the title.

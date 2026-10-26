@@ -46,7 +46,7 @@
                 <div class="text-right">
                     <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Amount') }}</p>
                     <p class="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{{ platform_settings()->formatMinor($payment->amount_minor) }}</p>
-                    <p class="mt-1 text-xs text-slate-400">{{ $payment->gateway }}</p>
+                    <p class="mt-1 text-xs text-slate-400">{{ $manual['selectedLabel'] ?? __('Method not chosen yet') }}</p>
                 </div>
             </div>
 
@@ -104,64 +104,13 @@
                         {{ __('Receipt') }}
                     </a>
                 </div>
-            @elseif ($isLocalGateway)
-                <div class="mt-5 rounded-xl border border-dashed border-slate-300 p-4 dark:border-slate-700">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Demo gateway') }}</p>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        {{ __('The provider is running in offline mode, so these buttons post a signed provider webhook through the real endpoint — signature check, idempotency store and all.') }}
-                    </p>
-                    <div class="mt-4 flex flex-wrap gap-3">
-                        <form method="POST" action="{{ route('payments.webhook', 'fake') }}" data-demo-payment
-                              data-redirect="{{ route('student.bookings.show', $booking) }}">
-                            <input type="hidden" name="payload" value="{{ $localCapture['payload'] }}">
-                            <input type="hidden" name="signature" value="{{ $localCapture['signature'] }}">
-                            <x-primary-button>{{ __('Pay :amount', ['amount' => platform_settings()->formatMinor($payment->amount_minor)]) }}</x-primary-button>
-                        </form>
-                        <form method="POST" action="{{ route('payments.webhook', 'fake') }}" data-demo-payment
-                              data-redirect="{{ route('student.bookings.show', $booking) }}">
-                            <input type="hidden" name="payload" value="{{ $localFailure['payload'] }}">
-                            <input type="hidden" name="signature" value="{{ $localFailure['signature'] }}">
-                            <x-secondary-button>{{ __('Simulate a declined card') }}</x-secondary-button>
-                        </form>
-                    </div>
-                </div>
-                <script>
-                    document.querySelectorAll('form[data-demo-payment]').forEach((form) => {
-                        form.addEventListener('submit', async (event) => {
-                            event.preventDefault();
-                            const button = form.querySelector('button');
-                            button.disabled = true;
-                            await fetch(form.action, {
-                                method: 'POST',
-                                body: new FormData(form),
-                                headers: { Accept: 'application/json' },
-                            });
-                            window.location.href = form.dataset.redirect;
-                        });
-                    });
-                </script>
-            @else
-                <div class="mt-5">
-                    <button id="razorpay-pay" type="button"
-                            class="inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition hover:bg-primary/90">
-                        {{ __('Pay :amount', ['amount' => platform_settings()->formatMinor($payment->amount_minor)]) }}
-                    </button>
-                    <p class="mt-2 text-xs text-slate-400">{{ __('You will be redirected to the secure Razorpay checkout.') }}</p>
-                </div>
             @endif
         </div>
 
-        @unless ($paid || $isLocalGateway)
-            <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-            <script>
-                document.getElementById('razorpay-pay').addEventListener('click', function () {
-                    const razorpay = new Razorpay(@js($checkout));
-                    razorpay.on('payment.failed', function (response) {
-                        window.location.href = @js(route('student.bookings.show', $booking));
-                    });
-                    razorpay.open();
-                });
-            </script>
+        @unless ($paid)
+            @include('student.checkout.partials.payment-options', [
+                'demoReturnUrl' => route('student.bookings.show', $booking),
+            ])
         @endunless
     </div>
 </x-app-layout>

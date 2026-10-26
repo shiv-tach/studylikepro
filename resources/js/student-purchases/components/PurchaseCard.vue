@@ -52,7 +52,12 @@ const status = computed(() => (holdExpired.value && props.purchase.expiredStatus
     ? props.purchase.expiredStatus
     : { value: props.purchase.status, label: props.purchase.statusLabel }));
 
-const statusTone = computed(() => statusTones[status.value.value] ?? statusTones.cancelled);
+// A manual slip awaiting an admin reads as its own state rather than as the
+// unpaid "Awaiting payment" chip.
+const manualTone = 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400';
+const statusTone = computed(() => (props.purchase.manualSubmitted && !holdExpired.value
+    ? manualTone
+    : statusTones[status.value.value] ?? statusTones.cancelled));
 const actionClass = computed(() => (props.purchase.action?.variant === 'primary' ? buttonClass : outlineClass));
 
 const reload = () => window.location.reload();

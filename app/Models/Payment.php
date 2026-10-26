@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\RefundStatus;
 use Database\Factories\PaymentFactory;
@@ -28,6 +29,13 @@ class Payment extends Model
         'currency',
         'status',
         'method',
+        'payment_method',
+        'bank_account_id',
+        'slip_path',
+        'slip_original_name',
+        'bank_reference',
+        'submitted_at',
+        'verified_by',
         'captured_at',
         'failed_at',
         'refunded_at',
@@ -39,7 +47,9 @@ class Payment extends Model
     {
         return [
             'status' => PaymentStatus::class,
+            'payment_method' => PaymentMethod::class,
             'amount_minor' => 'integer',
+            'submitted_at' => 'datetime',
             'captured_at' => 'datetime',
             'failed_at' => 'datetime',
             'refunded_at' => 'datetime',
@@ -57,9 +67,35 @@ class Payment extends Model
         return $this->belongsTo(ServicePurchase::class, 'service_purchase_id');
     }
 
+    /**
+     * The booking or service purchase this payment settles.
+     */
+    public function payable(): Booking|ServicePurchase|null
+    {
+        return $this->booking_id !== null
+            ? $this->booking
+            : $this->purchase;
+    }
+
     public function student(): BelongsTo
     {
         return $this->belongsTo(User::class, 'student_id');
+    }
+
+    /**
+     * The bank account a manual payment was made into.
+     */
+    public function bankAccount(): BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class);
+    }
+
+    /**
+     * The admin who checked the uploaded slip.
+     */
+    public function verifier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 
     public function refunds(): HasMany
@@ -88,6 +124,22 @@ class Payment extends Model
     {
         return $query->whereIn('status', [PaymentStatus::Created->value, PaymentStatus::Authorized->value])
             ->where('created_at', '<=', now()->subMinutes($minutes));
+    }
+
+    /**
+     * Manual payments whose slip is waiting for an admin to check it.
+     */
+    public function scopeAwaitingVerification(Builder $query): Builder
+    {
+        return $query->where('status', PaymentStatus::Submitted->value);
+    }
+
+    /**
+     * Whether this payment is a manual one (transfer/deposit) with a slip.
+     */
+    public function isManual(): bool
+    {
+        return $this->payment_method?->requiresSlip() ?? false;
     }
 
     public function refundedMinor(): int

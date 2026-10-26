@@ -29,6 +29,11 @@
         ? \App\Models\Review::query()->flagged()->whereNull('hidden_at')->count()
         : null;
 
+    // Manual payments waiting for a slip check (bank transfer / deposit).
+    $pendingPaymentVerifications = $user->isAdmin()
+        ? \App\Models\Payment::query()->awaitingVerification()->count()
+        : null;
+
     $upcomingLessons = $user->isStudent()
         ? $user->bookings()->upcoming()->whereIn('status', ['pending_payment', 'confirmed', 'in_progress'])->count()
         : null;
@@ -110,7 +115,8 @@
         $navItems[] = ['label' => 'Services', 'url' => route('admin.services.index'), 'active' => request()->routeIs('admin.services*'), 'icon' => 'tag', 'badge' => null];
         $navItems[] = ['label' => 'Purchases', 'url' => route('admin.purchases.index'), 'active' => request()->routeIs('admin.purchases*'), 'icon' => 'wallet', 'badge' => null];
         $navItems[] = ['label' => 'Marking', 'url' => route('admin.marking.index'), 'active' => request()->routeIs('admin.marking*'), 'icon' => 'check', 'badge' => null];
-        $navItems[] = ['label' => 'Payments', 'url' => route('admin.payments.index'), 'active' => request()->routeIs('admin.payments*'), 'icon' => 'card', 'badge' => null];
+        $navItems[] = ['label' => 'Payments', 'url' => route('admin.payments.index'), 'active' => request()->routeIs('admin.payments*'), 'icon' => 'card', 'badge' => $pendingPaymentVerifications ?: null];
+        $navItems[] = ['label' => 'Payment setup', 'url' => route('admin.payment-setup.index'), 'active' => request()->routeIs('admin.payment-setup*'), 'icon' => 'bank', 'badge' => null];
         $navItems[] = ['label' => 'Payouts', 'url' => route('admin.payouts.index'), 'active' => request()->routeIs('admin.payouts*'), 'icon' => 'wallet', 'badge' => null];
         $navItems[] = ['label' => 'Special offers', 'url' => route('admin.offers.index'), 'active' => request()->routeIs('admin.offers*'), 'icon' => 'tag', 'badge' => null];
         $navItems[] = ['label' => 'Activity log', 'url' => route('admin.activity.index'), 'active' => request()->routeIs('admin.activity*'), 'icon' => 'clock', 'badge' => null];

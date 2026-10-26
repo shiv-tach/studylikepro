@@ -4,11 +4,14 @@ namespace App\Services\Payments;
 
 use App\Contracts\PaymentGateway;
 use App\Enums\BookingStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Events\PaymentCaptured;
 use App\Events\PaymentFailed;
+use App\Exceptions\UnsupportedCurrencyException;
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Models\ServicePurchase;
 use App\Services\BookingTransitionService;
 use App\Services\PurchaseService;
 use App\Support\Payments\GatewayEvent;
@@ -58,6 +61,14 @@ class PaymentService
             ]);
         }
 
+        // A manual slip is with our team; opening a second checkout would
+        // invite a double payment.
+        if ($booking->payments()->where('status', PaymentStatus::Submitted->value)->exists()) {
+            throw ValidationException::withMessages([
+                'status' => __('Your payment slip is awaiting verification — we will confirm it shortly.'),
+            ]);
+        }
+
         $existing = $booking->payments()
             ->where('status', PaymentStatus::Created->value)
             ->where('amount_minor', $booking->totalMinor())
@@ -68,18 +79,71 @@ class PaymentService
             return $existing;
         }
 
-        $order = $this->gateway->createOrder($booking, $booking->totalMinor(), $booking->currency);
+        // The card checkout is "coming soon", so a provider order is only
+        // opened when the gateway can price this marketplace's currency. A
+        // gateway that cannot simply leaves the payment method-less for now;
+        // the student picks a manual method on the checkout page.
+        $order = null;
+
+        try {
+            $order = $this->gateway->createOrder($booking, $booking->totalMinor(), $booking->currency);
+        } catch (UnsupportedCurrencyException) {
+            // Manual settlement does not need a provider order.
+        }
 
         return Payment::query()->create([
             'booking_id' => $booking->id,
             'student_id' => $booking->student_id,
             'gateway' => $this->gateway->name(),
-            'gateway_order_id' => $order->id,
-            'amount_minor' => $order->amountMinor,
-            'currency' => $order->currency,
+            'gateway_order_id' => $order?->id,
+            'amount_minor' => $order?->amountMinor ?? $booking->totalMinor(),
+            'currency' => $order?->currency ?? $booking->currency,
             'status' => PaymentStatus::Created,
-            'gateway_payload' => $order->payload,
+            'gateway_payload' => $order?->payload,
         ]);
+    }
+
+    /**
+     * Switch a manual checkout back to the card gateway (the student changed
+     * their mind before uploading a slip). A fresh provider order is opened so
+     * the checkout widget has a live order to charge.
+     */
+    public function resetToGateway(Payment $payment): Payment
+    {
+        if ($payment->status === PaymentStatus::Submitted) {
+            throw ValidationException::withMessages([
+                'method' => __('Your slip is already with our team — replace it instead of switching back.'),
+            ]);
+        }
+
+        if ($payment->status->isSettled()) {
+            throw ValidationException::withMessages([
+                'method' => __('This payment is already settled.'),
+            ]);
+        }
+
+        $payable = $payment->payable();
+
+        if ($payable === null) {
+            throw ValidationException::withMessages([
+                'method' => __('This payment is no longer attached to an order.'),
+            ]);
+        }
+
+        $order = $this->gateway->createOrder($payable, $payment->amount_minor, $payment->currency);
+
+        $payment->forceFill([
+            'gateway' => $this->gateway->name(),
+            'gateway_order_id' => $order->id,
+            'gateway_payment_id' => null,
+            'gateway_payload' => $order->payload,
+            'payment_method' => PaymentMethod::Gateway,
+            'status' => PaymentStatus::Created,
+            'failed_at' => null,
+            'failure_reason' => null,
+        ])->save();
+
+        return $payment->refresh();
     }
 
     /**
@@ -209,6 +273,20 @@ class PaymentService
                 PaymentStatus::Captured->value,
                 PaymentStatus::PartiallyRefunded->value,
                 PaymentStatus::Refunded->value,
+            ])
+            ->latest()
+            ->first();
+    }
+
+    /**
+     * The manual payment waiting on (or turned down by) an admin, if any.
+     */
+    public function latestManualFor(Booking|ServicePurchase $payable): ?Payment
+    {
+        return $payable->payments()
+            ->whereIn('status', [
+                PaymentStatus::Submitted->value,
+                PaymentStatus::Rejected->value,
             ])
             ->latest()
             ->first();

@@ -48,7 +48,38 @@
     // The one banner that owns the money, decided by the booking's own state.
     $banner = null;
 
-    if ($isHold && ! $holdLapsed) {
+    if ($isHold && $manualPayment?->status === PaymentStatus::Submitted) {
+        $banner = [
+            'kind' => 'verifying',
+            'title' => __('Your payment slip is being checked'),
+            'body' => __('We have your proof of payment and will confirm the lesson as soon as it matches. Nothing else is needed from you.'),
+            'note' => $booking->expires_at?->isFuture()
+                ? __('Your slot stays reserved until :time while we check it.', [
+                    'time' => display_datetime($booking->expires_at->copy()->setTimezone($timezone)),
+                ])
+                : __('Your slot stays reserved while we check it.'),
+            'submittedAt' => display_datetime($manualPayment->submitted_at?->copy()->setTimezone($timezone)),
+            'total' => $money($booking->totalMinor()),
+            'slipUrl' => $manualPayment->slip_path ? route('student.payments.slip.show', $manualPayment) : null,
+            'slipLabel' => __('View the slip'),
+            'action' => [
+                'label' => __('Open the checkout'),
+                'url' => route('student.payments.checkout', $manualPayment),
+            ],
+        ];
+    } elseif ($isHold && $manualPayment?->status === PaymentStatus::Rejected) {
+        $banner = [
+            'kind' => 'rejected',
+            'title' => __('We could not verify your payment'),
+            'body' => $manualPayment->failure_reason ?: __('The slip could not be matched to a deposit.'),
+            'reason' => null,
+            'action' => [
+                'label' => __('Upload another slip'),
+                'url' => route('student.payments.checkout', $manualPayment),
+                'variant' => 'primary',
+            ],
+        ];
+    } elseif ($isHold && ! $holdLapsed) {
         $banner = [
             'kind' => 'hold',
             'title' => __('Your slot is held'),
@@ -150,8 +181,9 @@
             // Payment status colors live in the PHP enum, outside Tailwind's scan.
             'statusTone' => match ($payment->status) {
                 PaymentStatus::Created, PaymentStatus::Authorized => 'amber',
+                PaymentStatus::Submitted => 'sky',
                 PaymentStatus::Captured => 'emerald',
-                PaymentStatus::Failed => 'rose',
+                PaymentStatus::Failed, PaymentStatus::Rejected => 'rose',
                 default => 'slate',
             },
             'gatewayId' => $payment->gateway_payment_id,

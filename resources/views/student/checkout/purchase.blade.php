@@ -51,7 +51,7 @@
                 <div class="text-right">
                     <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Amount') }}</p>
                     <p class="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{{ platform_settings()->formatMinor($payment->amount_minor) }}</p>
-                    <p class="mt-1 text-xs text-slate-400">{{ $payment->gateway }}</p>
+                    <p class="mt-1 text-xs text-slate-400">{{ $manual['selectedLabel'] ?? __('Method not chosen yet') }}</p>
                 </div>
             </div>
 
@@ -105,51 +105,13 @@
                         {{ __('Open the purchase') }}
                     </a>
                 </div>
-            @elseif ($isLocalGateway)
-                <div class="mt-5 rounded-xl border border-dashed border-slate-300 p-4 dark:border-slate-700">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Demo gateway') }}</p>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        {{ __('The provider is running in offline mode, so these buttons post a signed provider webhook through the real endpoint — signature check, idempotency store and all.') }}
-                    </p>
-                    <div class="mt-4 flex flex-wrap gap-3">
-                        <form method="POST" action="{{ route('payments.webhook', 'fake') }}" data-demo-payment
-                              data-redirect="{{ route('student.purchases.checkout.return', $payment) }}">
-                            @csrf
-                            <input type="hidden" name="payload" value="{{ $localCapture['payload'] }}">
-                            <input type="hidden" name="signature" value="{{ $localCapture['signature'] }}">
-                            <button type="submit"
-                                    class="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500">
-                                {{ __('Simulate successful payment') }}
-                            </button>
-                        </form>
-                        <form method="POST" action="{{ route('payments.webhook', 'fake') }}" data-demo-payment
-                              data-redirect="{{ route('student.purchases.checkout.return', $payment) }}">
-                            @csrf
-                            <input type="hidden" name="payload" value="{{ $localFailure['payload'] }}">
-                            <input type="hidden" name="signature" value="{{ $localFailure['signature'] }}">
-                            <button type="submit"
-                                    class="inline-flex items-center rounded-xl border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400">
-                                {{ __('Simulate a failed payment') }}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-                <script>
-                    document.querySelectorAll('form[data-demo-payment]').forEach((form) => {
-                        form.addEventListener('submit', async (event) => {
-                            event.preventDefault();
-                            const button = form.querySelector('button');
-                            button.disabled = true;
-                            await fetch(form.action, {
-                                method: 'POST',
-                                body: new FormData(form),
-                                headers: { Accept: 'application/json' },
-                            });
-                            window.location.href = form.dataset.redirect;
-                        });
-                    });
-                </script>
             @endif
         </div>
+
+        @unless ($paid)
+            @include('student.checkout.partials.payment-options', [
+                'demoReturnUrl' => route('student.purchases.checkout.return', $payment),
+            ])
+        @endunless
     </div>
 </x-app-layout>

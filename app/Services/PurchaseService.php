@@ -7,6 +7,7 @@ use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\PurchaseStatus;
 use App\Enums\ServiceType;
+use App\Exceptions\UnsupportedCurrencyException;
 use App\Models\Payment;
 use App\Models\ServiceOffering;
 use App\Models\ServicePurchase;
@@ -84,6 +85,14 @@ class PurchaseService
             ]);
         }
 
+        // A manual slip is with our team; opening a second checkout would
+        // invite a double payment.
+        if ($purchase->payments()->where('status', PaymentStatus::Submitted->value)->exists()) {
+            throw ValidationException::withMessages([
+                'status' => __('Your payment slip is awaiting verification — we will confirm it shortly.'),
+            ]);
+        }
+
         $existing = $purchase->payments()
             ->where('status', PaymentStatus::Created->value)
             ->where('amount_minor', $purchase->totalMinor())
@@ -94,17 +103,25 @@ class PurchaseService
             return $existing;
         }
 
-        $order = $this->gateway->createOrder($purchase, $purchase->totalMinor(), $purchase->getCurrency());
+        // The card checkout is "coming soon", so the provider order is only
+        // opened when the gateway can price this marketplace's currency.
+        $order = null;
+
+        try {
+            $order = $this->gateway->createOrder($purchase, $purchase->totalMinor(), $purchase->getCurrency());
+        } catch (UnsupportedCurrencyException) {
+            // Manual settlement does not need a provider order.
+        }
 
         return Payment::query()->create([
             'service_purchase_id' => $purchase->id,
             'student_id' => $purchase->student_id,
             'gateway' => $this->gateway->name(),
-            'gateway_order_id' => $order->id,
-            'amount_minor' => $order->amountMinor,
-            'currency' => $order->currency,
+            'gateway_order_id' => $order?->id,
+            'amount_minor' => $order?->amountMinor ?? $purchase->totalMinor(),
+            'currency' => $order?->currency ?? $purchase->getCurrency(),
             'status' => PaymentStatus::Created,
-            'gateway_payload' => $order->payload,
+            'gateway_payload' => $order?->payload,
         ]);
     }
 

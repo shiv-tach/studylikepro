@@ -268,6 +268,7 @@ class BookingController extends Controller
             'timezone' => $this->timezoneFor($request),
             'canCancel' => Gate::allows('cancel', $booking),
             'payment' => $payments->capturedFor($booking),
+            'manualPayment' => $payments->latestManualFor($booking),
         ]);
     }
 
