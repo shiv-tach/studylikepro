@@ -14,7 +14,7 @@ demands it.
 | PHP | 8.2+ with `pdo_mysql`, `mbstring`, `gd` or `imagick`, `zip`, `intl` | `bcmath` is not required; money is stored in minor units. |
 | Database | MySQL 8 / MariaDB 10.4+ (PostgreSQL works too) | `utf8mb4` collation, UTC timezone on the connection. |
 | Cache / queue | Database (default) or Redis when available | `CACHE_STORE=redis`, `QUEUE_CONNECTION=redis` once traffic grows. |
-| Web server | Nginx + PHP-FPM | Document root is `public/`; deny access to `.env`, `storage/`, `vendor/`. |
+| Web server | Nginx + PHP-FPM, or Apache/LiteSpeed with `public/.htaccess` | Document root is `public/`; deny access to `.env`, `storage/`, `vendor/`. The shipped `.htaccess` also maps `.mjs`/`.wasm` to their MIME types — without it the pdf.js worker is served as `text/plain` and the marking studio cannot render papers. |
 | Node (build time only) | Node 20+ for `npm ci && npm run build` | The built assets are committed to the release, not to git. |
 | Object storage | S3-compatible bucket for avatars and chat photos (optional) | Keeps uploads off the app server; set `FILESYSTEM_DISK`, `AWS_*`. |
 | SMTP | Any transactional provider | `MAIL_MAILER=smtp` + host/user/password, and a verified `MAIL_FROM_ADDRESS`. |
@@ -113,6 +113,10 @@ php artisan down --secret="<one-time-bypass>"     # optional; skip for tiny rele
 git fetch --tags && git checkout "$RELEASE_TAG"   # or rsync the release folder
 composer install --no-dev --optimize-autoloader
 npm ci && npm run build
+# The build also regenerates public/vendor/pdfjs/ (the pdf.js wasm decoders).
+# It is gitignored like public/build, so whenever the build runs somewhere other
+# than the server, upload that directory next to public/build — otherwise scanned
+# papers fail to decode.
 
 php artisan migrate --force                        # never --seed in production
 php artisan db:seed --class=CatalogSeeder --force  # only when the release adds curriculum rows (idempotent)
