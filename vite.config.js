@@ -1,30 +1,70 @@
-import { cpSync, existsSync, mkdirSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
 
 /**
- * pdf.js rasterises scanned pages (CCITT, JBIG2 and JPEG-2000) with a wasm
- * module that it fetches from its `wasmUrl`. Ship those files under public/ so
- * the same URL works in dev and in a production build — without them a scanned
- * paper renders as a blank page with only its text layer.
+ * pdf.js needs two things that are not ordinary imports: its worker and the wasm
+ * modules that rasterise scanned pages (CCITT, JBIG2 and JPEG-2000). Both are
+ * copied to public/vendor/pdfjs for the dev server and emitted into the build
+ * output as assets/pdfjs-<version>/ for production, so a release carries them
+ * inside the build directory rather than depending on `public/` being deployed
+ * whole. See usePaperDocument.js for the URLs.
+ *
+ * The worker is emitted as `.js` on purpose: Apache/LiteSpeed serve `.mjs` as
+ * `text/plain`, and a browser refuses to start that as a module worker, which is
+ * what "Setting up fake worker failed" means.
  */
-function pdfjsWasm() {
-    const source = fileURLToPath(new URL('node_modules/pdfjs-dist/wasm', import.meta.url));
-    const target = fileURLToPath(new URL('public/vendor/pdfjs/wasm', import.meta.url));
+function pdfjsAssets() {
+    const dist = fileURLToPath(new URL('node_modules/pdfjs-dist', import.meta.url));
+    const wasmSource = `${dist}/wasm`;
+    const workerSource = `${dist}/build/pdf.worker.min.mjs`;
+    const devTarget = fileURLToPath(new URL('public/vendor/pdfjs', import.meta.url));
+
+    let version = 'unknown';
+
+    try {
+        version = JSON.parse(readFileSync(`${dist}/package.json`, 'utf8')).version;
+    } catch {
+        // Left as-is: buildStart warns about the missing package.
+    }
+
+    const assetDir = `assets/pdfjs-${version}`;
 
     return {
-        name: 'studylikepro:pdfjs-wasm',
+        name: 'studylikepro:pdfjs-assets',
         buildStart() {
-            if (!existsSync(source)) {
-                this.warn('pdfjs-dist wasm files are missing — run npm install.');
+            if (!existsSync(wasmSource) || !existsSync(workerSource)) {
+                this.warn('pdfjs-dist worker or wasm files are missing — run npm install.');
 
                 return;
             }
 
-            mkdirSync(target, { recursive: true });
-            cpSync(source, target, { recursive: true });
+            mkdirSync(`${devTarget}/wasm`, { recursive: true });
+            cpSync(wasmSource, `${devTarget}/wasm`, { recursive: true });
+            cpSync(workerSource, `${devTarget}/pdf.worker.min.js`);
+        },
+        generateBundle() {
+            if (!existsSync(wasmSource) || !existsSync(workerSource)) {
+                return;
+            }
+
+            this.emitFile({
+                type: 'asset',
+                fileName: `${assetDir}/pdf.worker.min.js`,
+                source: readFileSync(workerSource),
+            });
+
+            readdirSync(wasmSource, { withFileTypes: true })
+                .filter((entry) => entry.isFile())
+                .forEach((entry) => {
+                    this.emitFile({
+                        type: 'asset',
+                        fileName: `${assetDir}/wasm/${entry.name}`,
+                        source: readFileSync(`${wasmSource}/${entry.name}`),
+                    });
+                });
         },
     };
 }
@@ -146,6 +186,6 @@ export default defineConfig({
                 transformAssetUrls: { base: null, includeAbsolute: false },
             },
         }),
-        pdfjsWasm(),
+        pdfjsAssets(),
     ],
 });

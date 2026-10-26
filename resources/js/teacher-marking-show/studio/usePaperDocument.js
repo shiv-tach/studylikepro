@@ -1,5 +1,4 @@
 import * as pdfjsLib from 'pdfjs-dist';
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 /**
  * The uploaded paper as the studio sees it: one flat list of pages across
@@ -11,12 +10,20 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
  * page size and the page count, and a page is only rasterised when it is
  * displayed (or exported).
  */
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+
+// The worker and the wasm decoders live outside the JS graph: vite.config.js
+// copies them to public/vendor/pdfjs for the dev server and emits them into the
+// build's own assets directory for production (BASE_URL already ends in /build/).
+const pdfjsAssetBase = import.meta.env.DEV
+    ? `${import.meta.env.BASE_URL}vendor/pdfjs/`
+    : `${import.meta.env.BASE_URL}assets/pdfjs-${pdfjsLib.version}/`;
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `${pdfjsAssetBase}pdf.worker.min.js`;
 
 // Scanned pages are decoded by pdf.js's wasm module, which it fetches from this
-// directory (copied out of pdfjs-dist by vite.config.js). Without it an image-only
-// page renders blank, leaving just the text layer — e.g. a paper's watermark.
-const wasmUrl = `${import.meta.env.BASE_URL}vendor/pdfjs/wasm/`;
+// directory. Without it an image-only page renders blank, leaving just the text
+// layer — e.g. a paper's watermark.
+const wasmUrl = `${pdfjsAssetBase}wasm/`;
 
 function loadImage(url) {
     return new Promise((resolve, reject) => {

@@ -112,11 +112,7 @@ php artisan down --secret="<one-time-bypass>"     # optional; skip for tiny rele
 
 git fetch --tags && git checkout "$RELEASE_TAG"   # or rsync the release folder
 composer install --no-dev --optimize-autoloader
-npm ci && npm run build
-# The build also regenerates public/vendor/pdfjs/ (the pdf.js wasm decoders).
-# It is gitignored like public/build, so whenever the build runs somewhere other
-# than the server, upload that directory next to public/build — otherwise scanned
-# papers fail to decode.
+npm ci && npm run build                           # emits the pdf.js worker + wasm decoders into public/build/assets
 
 php artisan migrate --force                        # never --seed in production
 php artisan db:seed --class=CatalogSeeder --force  # only when the release adds curriculum rows (idempotent)

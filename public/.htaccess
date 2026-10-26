@@ -1,7 +1,6 @@
-# pdf.js loads its worker as an ES module (.mjs) and its image decoders as wasm.
-# Apache/LiteSpeed ship no default mapping for either extension, so they are
-# served as text/plain and the browser refuses to execute the worker — the
-# marking studio then fails with "Setting up fake worker failed".
+# pdf.js ships its image decoders as wasm, and ES-module builds (Vite) can emit
+# .mjs. Apache/LiteSpeed have no default mapping for either extension, so they are
+# served as text/plain and the browser refuses to execute them as module scripts.
 <IfModule mod_mime.c>
     AddType text/javascript .mjs
     AddType application/wasm .wasm
