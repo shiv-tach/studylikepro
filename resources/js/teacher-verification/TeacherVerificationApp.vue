@@ -74,6 +74,9 @@ if (draft) {
 // Every message Laravel sent back that is not already attached to a field below.
 const messages = computed(() => Object.values(props.config.errors ?? {}).flat());
 
+// Nothing is submitted yet, so there is no status to report above the form.
+const showStatus = computed(() => (props.config.status?.current ?? 'draft') !== 'draft');
+
 const pendingRemoval = ref(null);
 const deleteForm = ref(null);
 
@@ -125,7 +128,7 @@ async function confirmRemoval() {
 
         <div class="grid gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
             <div class="min-w-0 space-y-5 sm:space-y-6">
-                <RevealOnScroll>
+                <RevealOnScroll v-if="showStatus">
                     <StatusCard :status="config.status ?? {}" :profile="config.profile ?? {}" />
                 </RevealOnScroll>
 

@@ -5,7 +5,7 @@
  * the same route as the no-JS form and save immediately; the admin approves
  * them together with the application.
  */
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { usePanel } from '../../shared/composables/usePanel';
 import AppIcon from '../../shared/components/AppIcon.vue';
 import UiChip from '../../shared/components/UiChip.vue';
@@ -21,9 +21,14 @@ const panel = usePanel();
 
 const { subjectGroups, subjectIds, syncingSubjects, canEdit, errors, syncSubjects } = useVerification();
 
+// A level can hold several dozen subjects (O/L alone has 46), so the list opens
+// with a short first page instead of a wall of checkboxes.
+const VISIBLE_LIMIT = 10;
+
 const form = ref(null);
 const activeTab = ref(0);
 const query = ref('');
+const expanded = ref(false);
 
 const activeGroup = computed(() => subjectGroups[activeTab.value] ?? null);
 
@@ -42,6 +47,27 @@ const filteredSubjects = computed(() => {
 });
 
 const selectedCount = computed(() => subjectIds.value.length);
+
+const isSearching = computed(() => query.value.trim().length > 0);
+
+// Collapsed shows the first page plus anything already picked beyond it, so a
+// choice can never hide behind the "show all" button. Searching drops the cap.
+const visibleSubjects = computed(() => {
+    const matches = filteredSubjects.value;
+
+    if (expanded.value || isSearching.value) {
+        return matches;
+    }
+
+    const head = matches.slice(0, VISIBLE_LIMIT);
+    const shown = new Set(head.map((subject) => Number(subject.id)));
+
+    return [...head, ...matches.filter((subject) => !shown.has(Number(subject.id)) && isSelected(subject.id))];
+});
+
+const hiddenCount = computed(() => filteredSubjects.value.length - visibleSubjects.value.length);
+
+const canToggleList = computed(() => expanded.value || hiddenCount.value > 0);
 
 // The chosen subjects across every level, for the read-only view after submit.
 const selectedSubjects = computed(() => {
@@ -94,6 +120,11 @@ function clearTab() {
     const removable = new Set(activeGroup.value.subjects.map((subject) => Number(subject.id)));
     void persist(subjectIds.value.filter((id) => !removable.has(Number(id))));
 }
+
+// Opening another level, or starting a new search, goes back to the short list.
+watch([activeTab, query], () => {
+    expanded.value = false;
+});
 </script>
 
 <template>
@@ -158,7 +189,7 @@ function clearTab() {
 
                 <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     <label
-                        v-for="subject in filteredSubjects"
+                        v-for="subject in visibleSubjects"
                         :key="subject.id"
                         class="flex min-h-11 min-w-0 cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-2.5 transition-all duration-200"
                         :class="isSelected(subject.id)
@@ -178,6 +209,19 @@ function clearTab() {
                 </div>
 
                 <p v-if="filteredSubjects.length === 0" class="mt-3 text-sm text-slate-400">{{ copy.subjectsEmpty }}</p>
+
+                <button
+                    v-else-if="!isSearching && canToggleList"
+                    type="button"
+                    :class="[GHOST_BUTTON, 'mt-3 w-full border border-slate-200/80 text-xs dark:border-slate-800']"
+                    :aria-expanded="expanded ? 'true' : 'false'"
+                    @click="expanded = !expanded"
+                >
+                    <span class="h-4 w-4 transition-transform motion-reduce:transition-none" :class="expanded ? 'rotate-180' : ''">
+                        <AppIcon name="chevron-down" />
+                    </span>
+                    {{ expanded ? copy.subjectsShowLess : format(copy.subjectsShowAll, { count: filteredSubjects.length }) }}
+                </button>
 
                 <ul v-if="errors.subjects?.length" class="mt-3 space-y-1" role="alert">
                     <li v-for="(message, index) in errors.subjects" :key="index" class="text-sm font-medium text-rose-600 dark:text-rose-400">

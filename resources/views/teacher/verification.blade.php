@@ -323,34 +323,31 @@
 
             <x-teacher-onboarding-steps :current="5" />
 
-            <!-- Status overview -->
-            <div class="{{ $cardClasses }}">
-                @if ($status === \App\Enums\VerificationStatus::Pending)
-                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Application under review</h3>
-                    <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                        Thanks! We received your application {{ $profile->submitted_at?->diffForHumans() }}. Our team reviews documents within 1–2 business days.
-                        You will be notified when your profile is approved and visible to students.
-                    </p>
-                @elseif ($status === \App\Enums\VerificationStatus::Approved)
-                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">You are verified 🎉</h3>
-                    <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                        Your profile was approved {{ $profile->verified_at?->diffForHumans() }}. Verified teachers appear in student search and can be booked for live lessons.
-                    </p>
-                @elseif ($status === \App\Enums\VerificationStatus::Rejected)
-                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Action needed</h3>
-                    <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                        Our team could not approve the application yet. Please address the notes below, update your documents, and resubmit.
-                    </p>
-                    <div class="mt-4 rounded-xl border border-rose-200/80 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
-                        {{ $profile->verification_notes }}
-                    </div>
-                @else
-                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Get verified</h3>
-                    <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                        Upload your documents below, then submit your application. Verification keeps quality high and builds student trust.
-                    </p>
-                @endif
-            </div>
+            @unless ($status === \App\Enums\VerificationStatus::Draft)
+                <!-- Status overview -->
+                <div class="{{ $cardClasses }}">
+                    @if ($status === \App\Enums\VerificationStatus::Pending)
+                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Application under review</h3>
+                        <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                            Thanks! We received your application {{ $profile->submitted_at?->diffForHumans() }}. Our team reviews documents within 1–2 business days.
+                            You will be notified when your profile is approved and visible to students.
+                        </p>
+                    @elseif ($status === \App\Enums\VerificationStatus::Approved)
+                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">You are verified 🎉</h3>
+                        <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                            Your profile was approved {{ $profile->verified_at?->diffForHumans() }}. Verified teachers appear in student search and can be booked for live lessons.
+                        </p>
+                    @elseif ($status === \App\Enums\VerificationStatus::Rejected)
+                        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Action needed</h3>
+                        <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                            Our team could not approve the application yet. Please address the notes below, update your documents, and resubmit.
+                        </p>
+                        <div class="mt-4 rounded-xl border border-rose-200/80 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
+                            {{ $profile->verification_notes }}
+                        </div>
+                    @endif
+                </div>
+            @endunless
 
             @if ($status->isSubmitted())
                 <!-- Step 2 is done: the rest of the teacher area is unlocked. -->

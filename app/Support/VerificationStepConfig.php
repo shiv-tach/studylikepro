@@ -308,6 +308,8 @@ final class VerificationStepConfig
             'subjectsSearch' => __('Search subjects'),
             'subjectsSelected' => __(':count selected'),
             'subjectsSelectAll' => __('Select all'),
+            'subjectsShowAll' => __('Show all :count'),
+            'subjectsShowLess' => __('Show fewer'),
             'subjectsClear' => __('Clear'),
             'subjectsEmpty' => __('No subjects match your search.'),
             'subjectsSaveFailed' => __('Your subjects could not be saved. Please try again.'),
