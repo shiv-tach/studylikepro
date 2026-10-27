@@ -5,6 +5,7 @@ use App\Models\Subject;
 use App\Models\TeacherProfile;
 use App\Models\TeacherVerificationDocument;
 use App\Models\User;
+use App\Services\Sms\FakeSmsGateway;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -156,6 +157,50 @@ test('teachers can submit their application for review', function () {
         ->and($profile->submitted_at)->not->toBeNull()
         ->and($profile->agreement_accepted_at)->not->toBeNull()
         ->and($profile->agreement_version)->toBe((string) config('studylikepro.support.policy_version'));
+});
+
+test('submitting an application texts the admin alert number', function () {
+    config(['studylikepro.sms.admin_alert_mobile' => '0769828874']);
+
+    $user = onboardingTeacher();
+    TeacherVerificationDocument::factory()->for($user->teacherProfile)->create();
+
+    $this->actingAs($user)
+        ->post(route('teacher.verification.submit'), ['agree' => '1'])
+        ->assertSessionHas('status', 'submitted-for-review');
+
+    $alert = FakeSmsGateway::last();
+
+    expect($alert)->not->toBeNull()
+        ->and($alert['to'])->toBe('0769828874')
+        ->and($alert['message'])->toBe('New teacher verification: '.$user->displayName().'.');
+});
+
+test('the admin alert can be turned off with a blank number', function () {
+    config(['studylikepro.sms.admin_alert_mobile' => '']);
+
+    $user = onboardingTeacher();
+    TeacherVerificationDocument::factory()->for($user->teacherProfile)->create();
+
+    $this->actingAs($user)
+        ->post(route('teacher.verification.submit'), ['agree' => '1'])
+        ->assertSessionHas('status', 'submitted-for-review');
+
+    expect(FakeSmsGateway::messages())->toBe([]);
+});
+
+test('an undeliverable admin alert never blocks the submission', function () {
+    FakeSmsGateway::fail();
+
+    $user = onboardingTeacher();
+    TeacherVerificationDocument::factory()->for($user->teacherProfile)->create();
+
+    $this->actingAs($user)
+        ->post(route('teacher.verification.submit'), ['agree' => '1'])
+        ->assertRedirect(route('teacher.verification'))
+        ->assertSessionHas('status', 'submitted-for-review');
+
+    expect($user->teacherProfile->fresh()->verification_status->value)->toBe('pending');
 });
 
 test('the terms checklist keeps showing acceptance after the application is submitted', function () {

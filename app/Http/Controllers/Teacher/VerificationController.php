@@ -11,6 +11,7 @@ use App\Models\Subject;
 use App\Models\TeacherProfile;
 use App\Models\TeacherVerificationDocument;
 use App\Services\TeacherSubjectService;
+use App\Services\VerificationAlertService;
 use App\Support\TeacherOnboarding;
 use App\Support\VerificationStepConfig;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +24,10 @@ use Illuminate\View\View;
 
 class VerificationController extends Controller
 {
-    public function __construct(private readonly TeacherSubjectService $teacherSubjects) {}
+    public function __construct(
+        private readonly TeacherSubjectService $teacherSubjects,
+        private readonly VerificationAlertService $alerts,
+    ) {}
 
     /**
      * Show the verification step. `$mode` is `onboarding` when the wizard owns
@@ -239,6 +243,8 @@ class VerificationController extends Controller
 
         // Onboarding is finished: nothing is left to restore.
         $request->user()->onboardingDraft()->delete();
+
+        $this->alerts->notifyNewSubmission($profile);
 
         return redirect()
             ->route($this->isOnboardingReturn($request) ? 'teacher.onboarding.submitted' : 'teacher.verification')

@@ -75,6 +75,7 @@ SMS_PROVIDER=smslenz          # fake only for local/tests; live OTP needs SMSLen
 SMSLENZ_USER_ID=
 SMSLENZ_API_KEY=
 SMSLENZ_SENDER_ID=            # your approved, case-sensitive sender ID
+SMS_ADMIN_ALERT_MOBILE=0769828874   # texted when a teacher submits verification
 ```
 
 The SMSLenz account can also be entered after the first deploy in

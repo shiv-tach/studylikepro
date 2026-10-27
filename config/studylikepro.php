@@ -217,6 +217,10 @@ return [
         // with "The message field is required.", so treat blank as unset.
         'otp_message' => trim((string) env('SMS_OTP_MESSAGE'))
             ?: ':app verification code: :code. Valid for :minutes minutes. Do not share this code.',
+        // The operations mobile that is texted whenever a teacher submits a new
+        // verification application, so the admin queue is never left waiting.
+        // Any accepted spelling works ("+94 76 982 8874"); blank turns it off.
+        'admin_alert_mobile' => trim((string) env('SMS_ADMIN_ALERT_MOBILE', '0769828874')),
     ],
 
     'reviews' => [
