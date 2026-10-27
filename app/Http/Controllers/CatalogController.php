@@ -12,6 +12,7 @@ use App\Support\PublicSubjectPageConfig;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class CatalogController extends Controller
@@ -57,7 +58,7 @@ class CatalogController extends Controller
     /**
      * The catalog read behind both the page and its island.
      *
-     * @return array{levels: \Illuminate\Support\Collection<int, mixed>, level: mixed, grade: mixed, gradeCounts: array<int, int>, baskets: \Illuminate\Support\Collection<int, mixed>, groupedByBasket: bool, subjectGroups: \Illuminate\Support\Collection<int, mixed>}
+     * @return array{levels: Collection<int, mixed>, level: mixed, grade: mixed, gradeCounts: array<int, int>, baskets: Collection<int, mixed>, groupedByBasket: bool, subjectGroups: Collection<int, mixed>}
      */
     private function state(Request $request): array
     {
@@ -75,7 +76,7 @@ class CatalogController extends Controller
         $baskets = $grade === null ? collect() : $this->catalog->basketsForGrade($grade);
 
         // The basket groups only mean something where the choice happens and
-        // the baskets actually carry subjects (the O/L: Category I from Grade
+        // the baskets actually carry subjects (the O/L: Category II from Grade
         // 6, all three baskets in Grades 10-11). Everywhere else the grid
         // stays flat and a note says when the baskets begin.
         $groupedByBasket = $baskets->isNotEmpty()

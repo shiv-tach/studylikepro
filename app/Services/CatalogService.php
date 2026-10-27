@@ -239,7 +239,7 @@ class CatalogService
     }
 
     /**
-     * The active baskets a grade chooses from, in basket order: Category I for
+     * The active baskets a grade chooses from, in basket order: Category II for
      * the junior grades and all three O/L baskets for Grades 10-11. Empty for
      * a grade that picks nothing.
      *

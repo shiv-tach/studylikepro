@@ -13,12 +13,15 @@ use Illuminate\Support\Facades\DB;
  */
 return new class extends Migration
 {
-    /** Existing O/L subjects -> the basket they belong to. */
+    /**
+     * Existing O/L subjects -> the basket they belong to: Category I holds the
+     * academic subjects, Category III the technical ones.
+     */
     private const SUBJECT_BASKETS = [
-        'ict' => 'category_2',
-        'health-physical-education' => 'category_2',
-        'geography' => 'category_3',
-        'commerce' => 'category_3',
+        'ict' => 'category_3',
+        'health-physical-education' => 'category_3',
+        'geography' => 'category_1',
+        'commerce' => 'category_1',
     ];
 
     public function up(): void

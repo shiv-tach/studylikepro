@@ -103,7 +103,7 @@ defineProps({
                 </div>
 
                 <figcaption class="mt-3 text-center text-[11px] font-medium text-ink-500 lg:text-right">
-                    Live 1-on-1 lessons · Grades 1–13 · Paid in rupees
+                    Live 1-on-1 lessons · Grades 6–13 · Paid in rupees
                 </figcaption>
             </figure>
 

@@ -1,7 +1,7 @@
 <script setup>
 /**
  * The onboarding subject picker: the catalog grouped into level tabs (O/L,
- * A/L, Primary, ...), searchable, with per-tab select-all/clear. Picks post to
+ * A/L, ...), searchable, with per-tab select-all/clear. Picks post to
  * the same route as the no-JS form and save immediately; the admin approves
  * them together with the application.
  */

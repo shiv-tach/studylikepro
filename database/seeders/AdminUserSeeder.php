@@ -20,7 +20,7 @@ class AdminUserSeeder extends Seeder
             // Use the credentials provided by the environment.
         } elseif (app()->environment('local')) {
             $email = 'admin@studylikepro.test';
-            $password = 'password';
+            $password = '123123123';
         } else {
             return;
         }

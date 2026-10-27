@@ -71,7 +71,7 @@ test('the interests page shows compulsory subjects and only the picked basket su
         // The basket group keeps its header and the picked subject is marked
         // chosen; the other basket options stay off the page.
         ->assertSee('chosen')
-        ->assertSee('Aesthetic, music, dancing, literature and drama subjects')
+        ->assertSee('Academic, commerce and second-language subjects')
         ->assertDontSee($unpicked->name)
         // The page is a display, not a picker: no checkboxes, no lessons.
         ->assertDontSee('name="subjects"', false)
@@ -80,13 +80,13 @@ test('the interests page shows compulsory subjects and only the picked basket su
         ->assertDontSee('data-basket-group', false);
 });
 
-test('the interests page stays ungrouped below the O/L basket grades', function () {
+test('the interests page stays ungrouped outside the O/L basket grades', function () {
     $user = User::factory()->student()->onboarded()->create();
-    $grade = Grade::query()->whereKey(gradeId(5))->firstOrFail();
+    $grade = Grade::query()->whereKey(gradeId(13))->firstOrFail();
     $user->studentProfile->update(['grade_id' => $grade->id]);
 
     $subject = Subject::factory()->create([
-        'name' => 'Primary Mathematics',
+        'name' => 'A/L Mathematics',
         'education_level_id' => $grade->education_level_id,
     ]);
     Lesson::factory()->for($subject)->create(['grade_id' => $grade->id]);
@@ -94,19 +94,19 @@ test('the interests page stays ungrouped below the O/L basket grades', function 
     $this->actingAs($user)
         ->get(route('student.interests.edit'))
         ->assertOk()
-        ->assertSee('Primary Mathematics')
+        ->assertSee('A/L Mathematics')
         ->assertDontSee('Compulsory subjects')
         ->assertDontSee('pick one');
 });
 
-test('a grade 6 to 9 student sees their picked Category I subject grouped', function () {
+test('a grade 6 to 9 student sees their picked Category II subject grouped', function () {
     $user = User::factory()->student()->onboarded()->create();
     $grade = Grade::query()->whereKey(gradeId(8))->firstOrFail();
     $user->studentProfile->update(['grade_id' => $grade->id]);
 
     $basket = SubjectBasket::query()
         ->where('education_level_id', $grade->education_level_id)
-        ->where('key', 'category_1')
+        ->where('key', 'category_2')
         ->firstOrFail();
 
     $art = Subject::factory()->create([
@@ -128,7 +128,7 @@ test('a grade 6 to 9 student sees their picked Category I subject grouped', func
         ->get(route('student.interests.edit'))
         ->assertOk()
         ->assertSee('Compulsory subjects')
-        ->assertSee('Category I')
+        ->assertSee('Category II')
         ->assertSee('Junior Art')
         ->assertSee('Junior Mathematics');
 });
@@ -179,14 +179,14 @@ test('an incomplete basket choice is saved with a reminder', function () {
     expect($student->fresh()->interestedSubjects()->count())->toBe(1);
 });
 
-test('the one subject from Category I limit applies to the junior grades too', function () {
+test('the one subject from Category II limit applies to the junior grades too', function () {
     $user = User::factory()->student()->onboarded()->create();
     $grade = Grade::query()->whereKey(gradeId(9))->firstOrFail();
     $user->studentProfile->update(['grade_id' => $grade->id]);
 
     $basket = SubjectBasket::query()
         ->where('education_level_id', $grade->education_level_id)
-        ->where('key', 'category_1')
+        ->where('key', 'category_2')
         ->firstOrFail();
 
     $first = Subject::factory()->create([

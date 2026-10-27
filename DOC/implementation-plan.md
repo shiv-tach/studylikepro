@@ -113,7 +113,7 @@ V1 assumptions to confirm (see Section 5): single market, single currency, Engli
 | Entity | Key fields / relations |
 | --- | --- |
 | `users` | existing + `status` (active/suspended), role via spatie |
-| `education_levels` / `grades` | the Sri Lankan structure: Primary (1–5), O/L (6–11), A/L (12–13), Other; a subject belongs to one level, a lesson to one subject **and** one grade |
+| `education_levels` / `grades` | the Sri Lankan structure: O/L (6–11) and A/L (12–13); a subject belongs to one level, a lesson to one subject **and** one grade |
 | `student_profiles` | user_id, grade_id → grades, timezone, learning goals, guardian name/phone |
 | `teacher_profiles` | user_id, headline, bio, experience, education, languages, timezone, base hourly rate, verification_status, rating_avg/rating_count, lessons_completed_count |
 | `teacher_verification_documents` | teacher_profile_id, type, private file path |

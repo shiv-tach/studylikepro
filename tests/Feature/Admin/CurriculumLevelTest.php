@@ -30,7 +30,7 @@ test('admins can list the levels with grades and subject counts', function () {
     $this->actingAs(User::factory()->admin()->create())
         ->get(route('admin.curriculum.index'))
         ->assertOk()
-        ->assertSee('Primary')
+        ->assertDontSee('Primary')
         ->assertSee('O/L (Ordinary Level)')
         ->assertSee('A/L (Advanced Level)')
         ->assertSee('Grade 6')
@@ -41,20 +41,20 @@ test('admins can list the levels with grades and subject counts', function () {
 });
 
 test('admins can rename, reorder and deactivate a level', function () {
-    $level = EducationLevel::query()->where('key', 'primary')->firstOrFail();
+    $level = EducationLevel::query()->where('key', 'al')->firstOrFail();
 
     $this->actingAs(User::factory()->admin()->create())
         ->put(route('admin.curriculum.levels.update', $level), [
-            'name' => 'Primary school',
-            'icon' => 'P',
+            'name' => 'Advanced Level',
+            'icon' => 'A',
             'sort_order' => 9,
         ])
         ->assertRedirect(route('admin.curriculum.index'));
 
     $level->refresh();
 
-    expect($level->name)->toBe('Primary school')
-        ->and($level->icon)->toBe('P')
+    expect($level->name)->toBe('Advanced Level')
+        ->and($level->icon)->toBe('A')
         ->and($level->sort_order)->toBe(9)
         ->and($level->is_active)->toBeFalse();
 });
@@ -99,7 +99,7 @@ test('admins can delete a level that has no subjects', function () {
 });
 
 test('a level that still has subjects cannot be deleted', function () {
-    $level = EducationLevel::query()->where('key', 'primary')->firstOrFail();
+    $level = EducationLevel::query()->where('key', 'ol')->firstOrFail();
     Subject::factory()->create(['education_level_id' => $level->id]);
 
     $this->actingAs(User::factory()->admin()->create())
@@ -114,13 +114,13 @@ test('deactivating a level drops it from the public catalog', function () {
     // Prime the cached catalog, then switch the level off.
     $this->get(route('catalog.subjects.index'))
         ->assertOk()
-        ->assertSee('Primary');
+        ->assertSee('Advanced Level');
 
     $this->actingAs(User::factory()->admin()->create())
-        ->put(route('admin.curriculum.levels.update', 'primary'), ['name' => 'Primary'])
+        ->put(route('admin.curriculum.levels.update', 'al'), ['name' => 'Advanced Level'])
         ->assertRedirect(route('admin.curriculum.index'));
 
     $this->get(route('catalog.subjects.index'))
         ->assertOk()
-        ->assertDontSee('Primary');
+        ->assertDontSee('Advanced Level');
 });

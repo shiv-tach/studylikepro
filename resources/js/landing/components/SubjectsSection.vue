@@ -66,7 +66,7 @@ const activeLevel = computed(() => levels.find((level) => level.key === activeKe
             </div>
 
             <p class="mt-6 text-xs text-ink-500">
-                Levels: Primary (Grades 1–5) · O/L (Grades 6–11, with the optional subject baskets) · A/L (Grades 12–13) · Other.
+                Levels: O/L (Grades 6–11, with the optional subject baskets) · A/L (Grades 12–13).
             </p>
         </div>
     </section>

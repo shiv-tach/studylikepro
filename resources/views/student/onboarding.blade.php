@@ -237,6 +237,10 @@
                         @php
                             $stepGrade = $levels->flatMap->grades->firstWhere('id', $gradeId);
                             $juniorGrades = ($stepGrade?->number ?? 10) < 10;
+                            // The basket a junior grade picks from is the one that opens below
+                            // Grade 10 - Category II today, read from the basket itself so the
+                            // copy follows any future reordering.
+                            $juniorBasketName = $groups->first()['basket']->name ?? '';
                         @endphp
                         {{-- x-if, not x-show: a hidden card would keep radios with the same name and
                              value in the same native group, so Alpine's checked sync on the hidden copy
@@ -251,7 +255,7 @@
                                 </div>
                                 <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                                     {{ $juniorGrades
-                                        ? __('Grades 6 to 9 pick one subject from their Category I basket. Pick the subject you are studying for it.')
+                                        ? __('Grades 6 to 9 pick one subject from their :basket basket. Pick the subject you are studying for it.', ['basket' => $juniorBasketName])
                                         : __('Grade 10 and 11 students take one subject from each of the three O/L baskets. Pick the subject you are studying for each one.') }}
                                 </p>
 

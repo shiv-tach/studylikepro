@@ -44,7 +44,7 @@
 | Level key | Name | Grades | Notes |
 | --- | --- | --- | --- |
 | `primary` | Primary | 1, 2, 3, 4, 5 | |
-| `ol` | Ordinary Level (O/L) | 6, 7, 8, 9, 10, 11 | Grades 6-9 add the **Category I** basket and Grades 10-11 all three **basket** categories; a candidate picks one optional subject from each basket their grade offers (see §13) |
+| `ol` | Ordinary Level (O/L) | 6, 7, 8, 9, 10, 11 | Grades 6-9 add the **Category II** basket and Grades 10-11 all three **basket** categories; a candidate picks one optional subject from each basket their grade offers (see §13) |
 | `al` | Advanced Level (A/L) | 12, 13 | Streams exist but are **out of scope for V1**; subjects themselves differ per stream is a future extension |
 | `other` | Other | — (no numbered grade) | Adult learners, hobby, professional help |
 
@@ -669,13 +669,13 @@ Each phase ends with the full Pest suite green (current standard: suite in `test
 
 **Status:** implemented. Alongside the mandatory subjects, an O/L candidate picks **one optional
 subject from each basket** ("baskets"/categories) the Department of Examinations defines: Grades
-10-11 from all three baskets, and the junior Grades 6-9 from Category I alone.
+10-11 from all three baskets, and the junior Grades 6-9 from Category II alone.
 
 | Basket | Key | Starter catalog |
 | --- | --- | --- |
-| Category I | `category_1` | Art · Eastern, Western and Carnatic Music · Eastern and Bharatha Dancing · English, Sinhala, Tamil and Arabic Literature · Drama & Theatre |
-| Category II | `category_2` | ICT · Agriculture & Food Technology · Aquatic Bioresources Technology · Arts & Crafts · Home Economics · Health & Physical Education · Communication & Media Studies · Design & Construction, Mechanical, Electrical & Electronic Technology · Electronic Writing & Shorthand |
-| Category III | `category_3` | Commerce (the Business & Accounting Studies slot) · Geography · Civic Education · Entrepreneurship Studies · Second Language Sinhala/Tamil · Pali · Sanskrit · French · German · Hindi · Japanese · Arabic |
+| Category I — Academic, commerce and second-language | `category_1` | Commerce (the Business & Accounting Studies slot) · Geography · Civic Education · Entrepreneurship Studies · Second Language Sinhala/Tamil · Pali · Sanskrit · French · German · Hindi · Japanese · Arabic |
+| Category II — Aesthetic, music, dancing, literature and drama | `category_2` | Art · Eastern, Western and Carnatic Music · Eastern and Bharatha Dancing · English, Sinhala, Tamil and Arabic Literature · Drama & Theatre |
+| Category III — Technical, practical and technology | `category_3` | ICT · Agriculture & Food Technology · Aquatic Bioresources Technology · Arts & Crafts · Home Economics · Health & Physical Education · Communication & Media Studies · Design & Construction, Mechanical, Electrical & Electronic Technology · Electronic Writing & Shorthand |
 
 ### 13.1 Data model
 
@@ -686,20 +686,20 @@ EducationLevel
 ```
 
 A subject reaches a student only when three things cover the grade: its **level**, its **basket**
-(Category I runs from Grade 6, Categories II and III from Grade 10) and its own **grade band**
+(Category II runs from Grade 6, Categories I and III from Grade 10) and its own **grade band**
 ("All grades" by default, or the junior/senior halves of its level — read as Grades 6-9 and
 Grades 10-11 for O/L, whose grades start at 6).
 
 | Artifact | Change |
 | --- | --- |
 | `subject_baskets` | New table: `education_level_id`, `key`, `name`, `description`, `icon`, `sort_order`, `is_active`; unique `(education_level_id, key)` — `2026_10_08_000011` (description added by `2026_10_08_000014`, which also backfills the seeded text — the baskets are created before that column exists) |
-| `subject_baskets.grade_min`/`grade_max` | Nullable `unsignedTinyInteger` range of the grades the basket runs in (null = every grade of the level); `2026_10_12_000002` also backfills the seeded range, e.g. Category I `6-11`, Categories II and III `10-11` — the baskets are created before these columns exist |
+| `subject_baskets.grade_min`/`grade_max` | Nullable `unsignedTinyInteger` range of the grades the basket runs in (null = every grade of the level); `2026_10_12_000002` also backfills the seeded range, e.g. Category II `6-11`, Categories I and III `10-11` — the baskets are created before these columns exist |
 | `subjects.basket_id` | Nullable FK → `subject_baskets`, `nullOnDelete` (deleting a basket detaches, never deletes, its subjects) — `2026_10_08_000012` |
 | `subjects.grade_band` | `string(16)`, default `all`: `all` · `junior` (the lower half of the level) · `senior` (Grades 10-11) — `2026_10_12_000001`; `App\Enums\GradeBand` labels the options relative to the level (`labelWithin()`, so the O/L junior band reads Grades 6-9), `Subject::appliesToGrade()` reads them |
-| `2026_10_08_000013_backfill_subject_baskets` | Creates the baskets of every level that defines them and maps the O/L subjects that already existed: `ict`, `health-physical-education` → II; `geography`, `commerce` → III |
+| `2026_10_08_000013_backfill_subject_baskets` | Creates the baskets of every level that defines them and maps the O/L subjects that already existed: `ict`, `health-physical-education` → III; `geography`, `commerce` → I |
 | [config/studylikepro.php](../config/studylikepro.php) | `education_levels.ol.baskets` (keys, names, the one-line descriptions students see, icons, and the `grades` each basket covers) and `education_levels.ol.basket_grades` = `[6…11]` — the config stays the reference the seeder and the backfills read |
 | [SubjectBasketSeeder](../database/seeders/SubjectBasketSeeder.php) | Inserts missing baskets from config and leaves admin renames alone; safe to re-run |
-| [CatalogSeeder](../database/seeders/CatalogSeeder.php) | Ships the official basket subject list, assigns each subject to its basket and never overwrites an admin's basket choice. The aesthetic Category I subjects (Art, the three Musics, the two Dancings, Drama & Theatre) run from Grade 6 so the junior grades have something to pick, while the four Literature subjects stay in Grades 10-11 |
+| [CatalogSeeder](../database/seeders/CatalogSeeder.php) | Ships the official basket subject list, assigns each subject to its basket and never overwrites an admin's basket choice. The aesthetic Category II subjects (Art, the three Musics, the two Dancings, Drama & Theatre) run from Grade 6 so the junior grades have something to pick, while the four Literature subjects stay in Grades 10-11 |
 | [CatalogService](../app/Services/CatalogService.php) | Levels payload carries `subjectBaskets`, subjects payload carries `basket` and `grade_band`; `basketsForGrade()` is the one place that decides which baskets a grade chooses from, `basketGroupsForGrade()` wraps them with their subjects, and `groupByBasket()` is the grouping the public catalog and the student interests page both render; `subjectsForGrade()` keeps a subject out of grades its band does not cover. The cache stores plain attribute rows that are rehydrated on read (the seeded catalog was ~2 MB as serialized models — more than a database cache store can write where MySQL keeps the legacy 1 MB `max_allowed_packet` — and a few hundred KB as rows); cache keys bumped to `v7`, and `AppServiceProvider` flushes the cache on `SubjectBasket` writes like it already did for levels, subjects and lessons |
 
 ### 13.2 Admin
@@ -710,19 +710,19 @@ Grades 10-11 for O/L, whose grades start at 6).
 
 ### 13.3 Public catalog
 
-Step 3 of `/subjects` (after level and grade) groups the subject cards for the basket grades: **Compulsory subjects** (chip *all students*) first, then the baskets the grade chooses from — **🎨 Category I · 🛠️ Category II · 📚 Category III** for Grades 10-11, **Category I** alone for Grades 6-9 — (chip *pick one*, each with its description), plus a line explaining the rule. Subjects of a basket the grade does not choose from stay in the compulsory grid, so the same subject (e.g. ICT) is never presented as a choice before the choice exists; when no basket carries subjects for the grade at all the grid stays flat and a note names the grades the baskets begin in. A basket subject's own page carries a "Category II · pick one" chip.
+Step 3 of `/subjects` (after level and grade) groups the subject cards for the basket grades: **Compulsory subjects** (chip *all students*) first, then the baskets the grade chooses from — **📚 Category I · 🎨 Category II · 🛠️ Category III** for Grades 10-11, **Category II** alone for Grades 6-9 — (chip *pick one*, each with its description), plus a line explaining the rule. Subjects of a basket the grade does not choose from stay in the compulsory grid, so the same subject (e.g. ICT) is never presented as a choice before the choice exists; when no basket carries subjects for the grade at all the grid stays flat and a note names the grades the baskets begin in. A basket subject's own page carries a "Category II · pick one" chip.
 
 The subject page is the landing design's Vue island too, and its sections are the page's own navigation: a sticky tab rail — **Services · Teachers · Lessons** with a count each — swaps the panel in place, defaults to the first section that has content and keeps the choice in the URL hash (`#services`, `#teachers`, `#lessons`), so a visitor reads the whole subject without leaving it. Opening a subject from the catalog does not reload the document either: the card click fetches the same island from `catalog.subjects.show.data` (`/subjects/{subject}/data`) — one builder, [PublicSubjectPageConfig](../app/Support/PublicSubjectPageConfig.php), feeds both the page and the endpoint — and the app swaps it in, updating the URL, the title and the history entry, with Back restoring the catalog and its scroll position. The student redirect holds there too: the endpoint sends a signed-in student to their workspace page and the catalog follows it as a normal navigation. Everything the island renders also sits in the page's `<noscript>` fallback for crawlers.
 
 ### 13.4 Student
 
-- The interests page groups a basket-grade student's subjects into their baskets plus **Compulsory subjects** (the same order and chips as the catalog); a Grade 6-9 student's Category I pick is grouped under Category I just like a Grade 10-11 pick.
+- The interests page groups a basket-grade student's subjects into their baskets plus **Compulsory subjects** (the same order and chips as the catalog); a Grade 6-9 student's Category II pick is grouped under Category II just like a Grade 10-11 pick.
 - Saving is limited server-side to **one subject per basket** (`InterestsRequest`), for the junior grades as well; the remaining subjects stay free to choose. An empty basket never blocks the save — the page then shows a reminder naming the baskets left empty.
 - In levels without baskets (Primary, A/L, Other) nothing changes: one flat list, no limit.
 
 ### 13.5 Verified
 
-`tests/Feature/Student/BasketSubjectsTest.php` (grouping above and below the basket grades, a Grade 8 pick grouped under Category I, one-per-basket save, a second Category I pick rejected in Grade 9 and Grade 10, reminder for an incomplete choice), `tests/Feature/Admin/SubjectBasketTest.php` (basket listing, rename/reorder/description/toggle, subject assignment, cross-level basket rejected, non-admin forbidden, a basket edit reaching the public catalog immediately — the cache flush — and the subjects page's basket manager: grouping a level's subjects under its baskets, moving a subject between baskets and out of one, cross-level basket rejected, non-admin forbidden, and the panel absent without a level filter), `tests/Feature/Admin/SubjectManagementTest.php` (the grade band defaults to All grades, accepts junior/senior, rejects anything else, and both forms offer the three options) and `tests/Feature/CatalogTest.php` (basket ranges seeded as 6-11 / 10-11, the aesthetic Category I subjects seeded from Grade 6 while the literatures stay in Grades 10-11, existing subjects mapped, seeder idempotent, step 3 grouped for Grade 7 and Grade 10, and the flat "baskets begin" note when a basket carries no subjects yet, category chip on a basket subject page). On the MySQL dev database `migrate` creates the three baskets and `db:seed --class=CatalogSeeder` adds the 35 basket subjects (11 · 11 · 13).
+`tests/Feature/Student/BasketSubjectsTest.php` (grouping above and below the basket grades, a Grade 8 pick grouped under Category II, one-per-basket save, a second Category II pick rejected in Grade 9 and Grade 10, reminder for an incomplete choice), `tests/Feature/Admin/SubjectBasketTest.php` (basket listing, rename/reorder/description/toggle, subject assignment, cross-level basket rejected, non-admin forbidden, a basket edit reaching the public catalog immediately — the cache flush — and the subjects page's basket manager: grouping a level's subjects under its baskets, moving a subject between baskets and out of one, cross-level basket rejected, non-admin forbidden, and the panel absent without a level filter), `tests/Feature/Admin/SubjectManagementTest.php` (the grade band defaults to All grades, accepts junior/senior, rejects anything else, and both forms offer the three options) and `tests/Feature/CatalogTest.php` (basket ranges seeded as 10-11 / 6-11 / 10-11, the aesthetic Category II subjects seeded from Grade 6 while the literatures stay in Grades 10-11, existing subjects mapped, seeder idempotent, step 3 grouped for Grade 7 and Grade 10, and the flat "baskets begin" note when a basket carries no subjects yet, category chip on a basket subject page). On the MySQL dev database `migrate` creates the three baskets and `db:seed --class=CatalogSeeder` adds the 35 basket subjects (11 · 11 · 13).
 
 Deleting from the curriculum page is covered there too: a level with no subjects is deleted and the action is logged, a level that still holds subjects is kept with an explanation of why, a deleted basket leaves its subjects in the catalog without one, and non-admins are forbidden from both deletes.
 
@@ -747,8 +747,8 @@ Register  →  /student/onboarding  →  level → grade → [O/L baskets] → l
 | `student_profiles.learning_language` | New nullable `string(32)` (Sinhala / English) — `2026_10_08_000015`; the wizard requires it, the profile page edits it ([config/studylikepro.php](../config/studylikepro.php) `student_learning_languages` is the one list both validate against) |
 | [Student/OnboardingController](../app/Http/Controllers/Student/OnboardingController.php) | `show()` builds the wizard (levels with their grades and each basket grade's baskets, plus the submitted-answer prefill); `store()` writes the profile, syncs the basket picks into the student's interests and completes onboarding. Both redirect an already-onboarded student to the dashboard |
 | [StudentOnboardingRequest](../app/Http/Requests/StudentOnboardingRequest.php) | The grade must live in the chosen level, every basket of that grade needs one of its own subjects, a grade without baskets must not send any, and the language must be one the platform teaches in |
-| [student/onboarding.blade.php](../resources/views/student/onboarding.blade.php) | One page, one submit: Alpine drives the steps (the basket step exists only for a grade that chooses from baskets — Grades 6-11 in the O/L — so a Primary student sees four steps and an O/L student five, with the copy naming Category I for Grades 6-9 and the three baskets above), real radio inputs so the browser, keyboard and server all agree, and a summary that repeats every answer with an Edit link back to its step. Theme-aware cards/badges, no hardcoded accent colours |
-| [CatalogService::basketGroupsForGrade()](../app/Services/CatalogService.php) | The baskets a grade chooses from — Category I for Grades 6-9, all three for Grades 10-11 — each carrying only the subjects that run in that grade and fall inside their grade band; empty when a grade has no basket choice or no basket carries subjects yet, so a partially catalogued level never demands a pick from an empty basket |
+| [student/onboarding.blade.php](../resources/views/student/onboarding.blade.php) | One page, one submit: Alpine drives the steps (the basket step exists only for a grade that chooses from baskets — Grades 6-11 in the O/L — so a Primary student sees four steps and an O/L student five, with the copy naming Category II for Grades 6-9, read from the basket that opens below Grade 10, and the three baskets above), real radio inputs so the browser, keyboard and server all agree, and a summary that repeats every answer with an Edit link back to its step. Theme-aware cards/badges, no hardcoded accent colours |
+| [CatalogService::basketGroupsForGrade()](../app/Services/CatalogService.php) | The baskets a grade chooses from — Category II for Grades 6-9, all three for Grades 10-11 — each carrying only the subjects that run in that grade and fall inside their grade band; empty when a grade has no basket choice or no basket carries subjects yet, so a partially catalogued level never demands a pick from an empty basket |
 | [EnsureOnboardingCompleted](../app/Http/Middleware/EnsureOnboardingCompleted.php) | Students now go to `student.onboarding.show` (teachers are unchanged) |
 | [ProfileController](../app/Http/Controllers/Student/ProfileController.php) | `edit()` sends an un-onboarded student to the wizard; `update()` is a plain edit — completing onboarding is the wizard's job only |
 | [layouts/navigation.blade.php](../resources/views/layouts/navigation.blade.php) | A student mid-onboarding sees a single **Get started** item instead of workspace links that would bounce back to the wizard (the teacher equivalent already existed) |
@@ -758,8 +758,8 @@ Register  →  /student/onboarding  →  level → grade → [O/L baskets] → l
 `tests/Feature/Student/StudentOnboardingTest.php`: the dashboard and the profile page both send a
 new student to the wizard; levels, grades, basket subjects and languages are all offered; a full
 Grade 10 submit stores the grade, the language, the timezone, `completed_at` and all three basket
-picks as interests, and unlocks the dashboard; a Grade 6-9 submit stores its single Category I
-pick, shows Category I alone and rejects a Category II subject; a subject banded to Grades 10-11
+picks as interests, and unlocks the dashboard; a Grade 6-9 submit stores its single Category II
+pick, shows Category II alone and rejects a Category III subject; a subject banded to Grades 10-11
 is refused for a junior grade and a subject banded to the senior Grades 10-11 for Grade 9; a grade outside the
 chosen level, a missing basket, a subject filed under the wrong basket and a language the platform
 does not teach are all rejected; a grade in a level without baskets finishes without any; a failed

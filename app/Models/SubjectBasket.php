@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * A basket of optional subjects inside one education level - the O/L has three
  * (Categories I, II and III). A subject belongs to at most one basket, and the
- * basket runs in a range of grades: Category I from Grade 6, so the junior
+ * basket runs in a range of grades: Category II from Grade 6, so the junior
  * grades pick from it alone, while Grades 10-11 pick from all three.
  */
 class SubjectBasket extends Model

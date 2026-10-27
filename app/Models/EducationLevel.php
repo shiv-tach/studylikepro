@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * One of the four Sri Lankan education levels: Primary, O/L, A/L or Other.
+ * One of the Sri Lankan education levels: O/L and A/L in the seeded catalog,
+ * plus any level an admin adds from the curriculum console.
  */
 class EducationLevel extends Model
 {
@@ -55,7 +56,7 @@ class EducationLevel extends Model
 
     /**
      * The grade numbers where this level's students pick a basket subject
-     * (O/L: Grades 6-11, Category I alone below Grade 10). Empty for levels
+     * (O/L: Grades 6-11, Category II alone below Grade 10). Empty for levels
      * without baskets.
      *
      * @return list<int>

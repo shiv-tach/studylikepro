@@ -87,11 +87,11 @@ function prefetchGrade(option) {
             <CatalogSkeleton v-if="pending" class="mt-8" />
 
             <template v-else>
-                <!-- No level yet: the same four cards the page has always opened with. -->
+                <!-- No level yet: one card per level in the catalog. -->
                 <div v-if="!level" class="pt-10">
                     <p class="text-xs font-semibold tracking-widest text-ink-400 uppercase">{{ copy.levelStep }}</p>
 
-                    <div v-if="levels.length" class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div v-if="levels.length" class="mt-5 grid gap-4 sm:grid-cols-2">
                         <a
                             v-for="option in levels"
                             :key="option.key"

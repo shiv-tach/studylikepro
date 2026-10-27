@@ -116,13 +116,13 @@ test('lessons from another subject are rejected', function () {
 });
 
 test('updating a subject targets it by slug even when another level shares the name', function () {
-    $primary = EducationLevel::query()->where('key', 'primary')->firstOrFail();
+    $al = EducationLevel::query()->where('key', 'al')->firstOrFail();
     $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
 
     Subject::factory()->create([
         'name' => 'Mathematics',
         'slug' => 'mathematics',
-        'education_level_id' => $primary->id,
+        'education_level_id' => $al->id,
     ]);
     $olMath = Subject::factory()->create([
         'name' => 'Mathematics',

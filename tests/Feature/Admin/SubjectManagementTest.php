@@ -107,13 +107,13 @@ test('a duplicate subject name in the same level fails validation, not the datab
 });
 
 test('the same subject name in another level gets a level-prefixed slug', function () {
-    $primary = EducationLevel::query()->where('key', 'primary')->firstOrFail();
+    $al = EducationLevel::query()->where('key', 'al')->firstOrFail();
     $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
     $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)
         ->post(route('admin.subjects.store'), [
-            'education_level_id' => $primary->id,
+            'education_level_id' => $al->id,
             'name' => 'Mathematics',
         ])
         ->assertRedirect();
@@ -130,10 +130,10 @@ test('the same subject name in another level gets a level-prefixed slug', functi
 });
 
 test('an explicit slug that another level owns is rejected', function () {
-    $primary = EducationLevel::query()->where('key', 'primary')->firstOrFail();
+    $al = EducationLevel::query()->where('key', 'al')->firstOrFail();
     $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
 
-    Subject::factory()->create(['slug' => 'mathematics', 'education_level_id' => $primary->id]);
+    Subject::factory()->create(['slug' => 'mathematics', 'education_level_id' => $al->id]);
 
     $this->actingAs(User::factory()->admin()->create())
         ->post(route('admin.subjects.store'), [
@@ -147,10 +147,10 @@ test('an explicit slug that another level owns is rejected', function () {
 });
 
 test('subject slugs are globally unique in the database', function () {
-    $primary = EducationLevel::query()->where('key', 'primary')->firstOrFail();
+    $al = EducationLevel::query()->where('key', 'al')->firstOrFail();
     $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
 
-    Subject::factory()->create(['slug' => 'mathematics', 'education_level_id' => $primary->id]);
+    Subject::factory()->create(['slug' => 'mathematics', 'education_level_id' => $al->id]);
 
     expect(fn () => Subject::factory()->create(['slug' => 'mathematics', 'education_level_id' => $ol->id]))
         ->toThrow(QueryException::class);

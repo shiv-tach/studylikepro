@@ -36,7 +36,7 @@ class InterestsRequest extends FormRequest
     }
 
     /**
-     * A student picks one subject per basket their grade offers - Category I
+     * A student picks one subject per basket their grade offers - Category II
      * from Grade 6 and all three O/L baskets in Grades 10-11 - so a second
      * pick inside the same basket is rejected while a missing basket is only a
      * reminder, never a blocked save.

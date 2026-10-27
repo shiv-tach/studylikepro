@@ -12,8 +12,8 @@ use Illuminate\Support\Str;
 
 /**
  * Seeds the starter Sri Lankan curriculum used by search, matching and AI
- * classification: the four levels (via EducationLevelSeeder), the subject
- * baskets of each level (via SubjectBasketSeeder), a subject list per level -
+ * classification: the O/L and A/L levels (via EducationLevelSeeder), the
+ * subject baskets of each level (via SubjectBasketSeeder), a subject list per level -
  * each subject pointing at its basket when it is an optional (O/L) subject -
  * and a per-grade lesson list for every subject.
  *
@@ -51,7 +51,7 @@ class CatalogSeeder extends Seeder
             foreach ($subjects as $sort => $data) {
                 // Slugs are globally unique (route binding resolves by slug
                 // alone), so a name another level already owns gets the level
-                // key prefixed: "Mathematics" → "ol-mathematics".
+                // key prefixed: "Mathematics" in A/L → "al-mathematics".
                 $slug = Str::slug($data['name']);
 
                 if (Subject::query()->where('slug', $slug)->where('education_level_id', '!=', $level->id)->exists()) {
@@ -110,13 +110,6 @@ class CatalogSeeder extends Seeder
     private function catalog(): array
     {
         return [
-            // 'primary' => [
-            //     ['name' => 'Mathematics', 'icon' => '🔢', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
-            //     ['name' => 'English', 'icon' => '📖', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
-            //     ['name' => 'Sinhala', 'icon' => '📜', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
-            //     ['name' => 'Tamil', 'icon' => '📜', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
-            //     ['name' => 'Environmental Studies', 'icon' => '🌱', 'grades' => [1, 2, 3, 4, 5], 'lessons' => 4],
-            // ],
             'ol' => [
                 // Mandatory subjects: every O/L student takes these, no basket.
                 ['name' => 'Mathematics', 'icon' => '🔢', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 10, 'lessons_by_grade' => [6 => 12, 7 => 10]],
@@ -127,51 +120,51 @@ class CatalogSeeder extends Seeder
                 ['name' => 'History', 'icon' => '🏛️', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6],
                 ['name' => 'Buddhism', 'icon' => '☸️', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6],
 
-                // Category I: aesthetic, literary and drama subjects. The
-                // aesthetic and performing ones run from Grade 6 (the junior
-                // grades pick their Category I subject from them) while the
-                // literature subjects stay in the O/L Grades 10-11.
-                ['name' => 'Art', 'icon' => '🎨', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Eastern Music', 'icon' => '🪕', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Western Music', 'icon' => '🎹', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Carnatic Music', 'icon' => '🎻', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Eastern Dancing', 'icon' => '💃', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Bharatha Dancing', 'icon' => '🩰', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'English Literature', 'icon' => '📚', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Sinhala Literature', 'icon' => '📚', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Tamil Literature', 'icon' => '📚', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Arabic Literature', 'icon' => '📚', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
-                ['name' => 'Drama & Theatre', 'icon' => '🎭', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                // Category I: academic, commerce and second-language subjects.
+                // Commerce holds the Business & Accounting Studies slot of the
+                // official list and can be renamed by an admin.
+                ['name' => 'Commerce', 'icon' => '💼', 'grades' => [10, 11], 'lessons' => 8, 'basket' => 'category_1'],
+                ['name' => 'Geography', 'icon' => '🌍', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Civic Education', 'icon' => '🏛️', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Entrepreneurship Studies', 'icon' => '🚀', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Second Language - Sinhala', 'icon' => '📜', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Second Language - Tamil', 'icon' => '📜', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Pali', 'icon' => '📖', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Sanskrit', 'icon' => '🕉️', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'French', 'icon' => '🇫🇷', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'German', 'icon' => '🇩🇪', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Hindi', 'icon' => '🇮🇳', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Japanese', 'icon' => '🇯🇵', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
+                ['name' => 'Arabic', 'icon' => '🕌', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_1'],
 
-                // Category II: technical and practical subjects.
-                ['name' => 'ICT', 'icon' => '💻', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_2'],
-                ['name' => 'Agriculture & Food Technology', 'icon' => '🌾', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_2'],
-                ['name' => 'Aquatic Bioresources Technology', 'icon' => '🐟', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_2'],
-                ['name' => 'Arts & Crafts', 'icon' => '🧵', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_2'],
-                ['name' => 'Home Economics', 'icon' => '🏠', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_2'],
-                ['name' => 'Health & Physical Education', 'icon' => '🏃', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 4, 'basket' => 'category_2'],
-                ['name' => 'Communication & Media Studies', 'icon' => '📣', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_2'],
-                ['name' => 'Design & Construction Technology', 'icon' => '📐', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_2'],
-                ['name' => 'Design & Mechanical Technology', 'icon' => '⚙️', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_2'],
-                ['name' => 'Design, Electrical & Electronic Technology', 'icon' => '🔌', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_2'],
-                ['name' => 'Electronic Writing & Shorthand', 'icon' => '⌨️', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_2'],
+                // Category II: aesthetic, music, dancing, literature and drama
+                // subjects. The aesthetic and performing ones run from Grade 6
+                // (the junior grades pick their Category II subject from them)
+                // while the literature subjects stay in the O/L Grades 10-11.
+                ['name' => 'Art', 'icon' => '🎨', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_2'],
+                ['name' => 'Eastern Music', 'icon' => '🪕', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_2'],
+                ['name' => 'Western Music', 'icon' => '🎹', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_2'],
+                ['name' => 'Carnatic Music', 'icon' => '🎻', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_2'],
+                ['name' => 'Eastern Dancing', 'icon' => '💃', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_2'],
+                ['name' => 'Bharatha Dancing', 'icon' => '🩰', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_2'],
+                ['name' => 'English Literature', 'icon' => '📚', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_2'],
+                ['name' => 'Sinhala Literature', 'icon' => '📚', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_2'],
+                ['name' => 'Tamil Literature', 'icon' => '📚', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_2'],
+                ['name' => 'Arabic Literature', 'icon' => '📚', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_2'],
+                ['name' => 'Drama & Theatre', 'icon' => '🎭', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_2'],
 
-                // Category III: academic and second-language subjects. Commerce
-                // holds the Business & Accounting Studies slot of the official
-                // list and can be renamed by an admin.
-                ['name' => 'Commerce', 'icon' => '💼', 'grades' => [10, 11], 'lessons' => 8, 'basket' => 'category_3'],
-                ['name' => 'Geography', 'icon' => '🌍', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_3'],
-                ['name' => 'Civic Education', 'icon' => '🏛️', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
-                ['name' => 'Entrepreneurship Studies', 'icon' => '🚀', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
-                ['name' => 'Second Language - Sinhala', 'icon' => '📜', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
-                ['name' => 'Second Language - Tamil', 'icon' => '📜', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
-                ['name' => 'Pali', 'icon' => '📖', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
-                ['name' => 'Sanskrit', 'icon' => '🕉️', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
-                ['name' => 'French', 'icon' => '🇫🇷', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
-                ['name' => 'German', 'icon' => '🇩🇪', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
-                ['name' => 'Hindi', 'icon' => '🇮🇳', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
-                ['name' => 'Japanese', 'icon' => '🇯🇵', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
-                ['name' => 'Arabic', 'icon' => '🕌', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
+                // Category III: technical, practical and technology subjects.
+                ['name' => 'ICT', 'icon' => '💻', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 6, 'basket' => 'category_3'],
+                ['name' => 'Agriculture & Food Technology', 'icon' => '🌾', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
+                ['name' => 'Aquatic Bioresources Technology', 'icon' => '🐟', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
+                ['name' => 'Arts & Crafts', 'icon' => '🧵', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
+                ['name' => 'Home Economics', 'icon' => '🏠', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
+                ['name' => 'Health & Physical Education', 'icon' => '🏃', 'grades' => [6, 7, 8, 9, 10, 11], 'lessons' => 4, 'basket' => 'category_3'],
+                ['name' => 'Communication & Media Studies', 'icon' => '📣', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
+                ['name' => 'Design & Construction Technology', 'icon' => '📐', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
+                ['name' => 'Design & Mechanical Technology', 'icon' => '⚙️', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
+                ['name' => 'Design, Electrical & Electronic Technology', 'icon' => '🔌', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
+                ['name' => 'Electronic Writing & Shorthand', 'icon' => '⌨️', 'grades' => [10, 11], 'lessons' => 6, 'basket' => 'category_3'],
             ],
             'al' => [
                 ['name' => 'Combined Mathematics', 'icon' => '🔢', 'grades' => [12, 13], 'lessons' => 12],
@@ -182,12 +175,7 @@ class CatalogSeeder extends Seeder
                 ['name' => 'Economics', 'icon' => '📈', 'grades' => [12, 13], 'lessons' => 10],
                 ['name' => 'Business Studies', 'icon' => '💼', 'grades' => [12, 13], 'lessons' => 10],
                 ['name' => 'ICT', 'icon' => '💻', 'grades' => [12, 13], 'lessons' => 10],
-            ],
-            'other' => [
-                ['name' => 'English Conversation', 'icon' => '🗣️', 'grades' => ['other'], 'lessons' => 8],
-                ['name' => 'Adult Mathematics', 'icon' => '🔢', 'grades' => ['other'], 'lessons' => 6],
-                ['name' => 'Computer Coding', 'icon' => '💻', 'grades' => ['other'], 'lessons' => 8],
-            ],
+            ]
         ];
     }
 }

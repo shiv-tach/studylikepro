@@ -14,7 +14,7 @@ export const trustPoints = [
 ];
 
 export const stats = [
-    { value: 'Grades 1–13', label: 'Sri Lankan curriculum, Primary through A/L' },
+    { value: 'Grades 6–13', label: 'Sri Lankan curriculum, O/L through A/L' },
     { value: 'Verified only', label: 'Every tutor is reviewed before their first lesson' },
     { value: 'Live 1-on-1', label: 'A private lesson room — never a crowded class' },
     { value: 'LKR pricing', label: 'Clear rates, receipts and a published refund policy' },
@@ -22,8 +22,7 @@ export const stats = [
 
 // Marquee strip beneath the hero — the syllabus the catalog actually covers.
 export const boards = [
-    'Grades 1–13',
-    'Primary',
+    'Grades 6–13',
     'O/L',
     'A/L',
     'Mathematics',
@@ -41,19 +40,6 @@ export const boards = [
 ];
 
 export const levels = [
-    {
-        key: 'primary',
-        name: 'Primary',
-        grades: 'Grades 1–5',
-        blurb: 'Foundations in literacy, numeracy and the environment, taught patiently to young learners.',
-        subjects: [
-            { name: 'Mathematics', icon: '🔢' },
-            { name: 'English', icon: '📖' },
-            { name: 'Sinhala', icon: '📜' },
-            { name: 'Tamil', icon: '📜' },
-            { name: 'Environmental Studies', icon: '🌱' },
-        ],
-    },
     {
         key: 'ol',
         name: 'O/L',
@@ -90,17 +76,6 @@ export const levels = [
             { name: 'ICT', icon: '💻' },
         ],
     },
-    {
-        key: 'other',
-        name: 'Other',
-        grades: 'No grade needed',
-        blurb: 'Adult learners, exam retakes, hobbies and professional skills — pick whatever you want to work on.',
-        subjects: [
-            { name: 'English Conversation', icon: '🗣️' },
-            { name: 'Adult Mathematics', icon: '🔢' },
-            { name: 'Computer Coding', icon: '💻' },
-        ],
-    },
 ];
 
 export const steps = [
@@ -108,7 +83,7 @@ export const steps = [
         icon: 'book',
         title: 'Choose your subject & lesson',
         summary: 'Browse the catalog for your own grade.',
-        detail: 'Primary, O/L and A/L are separate catalogs, so the subjects and lessons you see always match the grade on your profile.',
+        detail: 'O/L and A/L are separate catalogs, so the subjects and lessons you see always match the grade on your profile.',
     },
     {
         icon: 'users',
@@ -156,7 +131,7 @@ export const features = [
     {
         icon: 'layers',
         title: 'Grade-aware catalog',
-        description: 'Primary, O/L and A/L are separate catalogs with lesson lists built grade by grade, so Grade 6 never sees A/L work.',
+        description: 'O/L and A/L are separate catalogs with lesson lists built grade by grade, so Grade 6 never sees A/L work.',
     },
     {
         icon: 'calendar',
@@ -202,7 +177,7 @@ export const testimonials = [
     {
         quote: 'Lessons appear on our calendar and the reminder means we are never late. The teacher knows exactly where we are in the syllabus.',
         name: 'Parent',
-        meta: 'Primary · Grade 4',
+        meta: 'O/L · Grade 8',
     },
     {
         quote: 'Pricing was clear before I paid and the receipt was available straight away. The refund policy was right there in writing.',
@@ -222,7 +197,7 @@ export const faqs = [
     },
     {
         question: 'Which grades and subjects are covered?',
-        answer: 'The catalog follows the Sri Lankan structure: Primary (Grades 1–5), O/L (Grades 6–11) with its optional subject baskets, and A/L (Grades 12–13). Adult and hobby learners are covered under the Other level.',
+        answer: 'The catalog follows the Sri Lankan structure: O/L (Grades 6–11) with its optional subject baskets, and A/L (Grades 12–13). Every subject carries a lesson list for each grade it runs in.',
     },
     {
         question: 'How do payments and refunds work?',

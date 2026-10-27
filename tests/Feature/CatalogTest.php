@@ -12,19 +12,20 @@ use App\Models\TeacherProfile;
 use App\Models\User;
 use Database\Seeders\CatalogSeeder;
 
-test('the public catalog starts with the four education levels', function () {
+test('the public catalog starts with the O/L and A/L levels', function () {
     $this->seed(CatalogSeeder::class);
 
     // Subjects stay hidden until a level and a grade are chosen.
-    $this->get(route('catalog.subjects.index'))
+    $response = $this->get(route('catalog.subjects.index'))
         ->assertOk()
         ->assertSee('Choose your level')
-        ->assertSee('Primary')
         ->assertSee('O/L')
         ->assertSee('A/L')
-        ->assertSee('Other')
+        ->assertDontSee('Primary')
         ->assertDontSee('Environmental Studies')
         ->assertDontSee('Commerce');
+
+    expect(array_column(publicSubjectsConfig($response)['levels'], 'key'))->toBe(['ol', 'al']);
 });
 
 test('choosing a level reveals its grades', function () {
@@ -373,44 +374,44 @@ test('the catalog seeder builds the o/l basket subjects', function () {
 
     expect($baskets->keys()->all())->toBe(['category_1', 'category_2', 'category_3']);
 
-    // Category I runs from Grade 6 (the junior grades pick from that basket
-    // alone) and Categories II and III from Grade 10.
+    // Category II runs from Grade 6 (the junior grades pick from that basket
+    // alone) and Categories I and III from Grade 10.
     $ranges = SubjectBasket::query()
         ->where('education_level_id', $ol->id)
         ->get()
         ->mapWithKeys(fn (SubjectBasket $basket) => [$basket->key => $basket->gradeNumbers()]);
 
-    expect($ranges['category_1'])->toBe([6, 7, 8, 9, 10, 11])
-        ->and($ranges['category_2'])->toBe([10, 11])
+    expect($ranges['category_1'])->toBe([10, 11])
+        ->and($ranges['category_2'])->toBe([6, 7, 8, 9, 10, 11])
         ->and($ranges['category_3'])->toBe([10, 11]);
 
-    // An aesthetic Category I subject runs in both ends of the level, while a
+    // An aesthetic Category II subject runs in both ends of the level, while a
     // literature subject stays in the O/L Grades 10-11.
     $art = Subject::query()->where('slug', 'art')->first();
     $literature = Subject::query()->where('slug', 'english-literature')->first();
 
     expect($art)->not->toBeNull()
-        ->and($art->basket_id)->toBe($baskets['category_1'])
+        ->and($art->basket_id)->toBe($baskets['category_2'])
         ->and($art->lessons()->where('grade_id', $grade6->id)->count())->toBeGreaterThan(0)
         ->and($art->lessons()->where('grade_id', $grade10->id)->count())->toBeGreaterThan(0)
         ->and($literature)->not->toBeNull()
-        ->and($literature->basket_id)->toBe($baskets['category_1'])
+        ->and($literature->basket_id)->toBe($baskets['category_2'])
         ->and($literature->lessons()->where('grade_id', $grade6->id)->count())->toBe(0);
 
     // Existing O/L subjects map onto their basket, and mandatory subjects stay
     // outside every basket.
-    expect(Subject::query()->where('slug', 'geography')->firstOrFail()->basket_id)->toBe($baskets['category_3'])
-        ->and(Subject::query()->where('slug', 'ict')->firstOrFail()->basket_id)->toBe($baskets['category_2'])
-        ->and(Subject::query()->where('slug', 'health-physical-education')->firstOrFail()->basket_id)->toBe($baskets['category_2'])
-        ->and(Subject::query()->where('slug', 'commerce')->firstOrFail()->basket_id)->toBe($baskets['category_3'])
-        ->and(Subject::query()->where('slug', 'ol-mathematics')->firstOrFail()->basket_id)->toBeNull();
+    expect(Subject::query()->where('slug', 'geography')->firstOrFail()->basket_id)->toBe($baskets['category_1'])
+        ->and(Subject::query()->where('slug', 'ict')->firstOrFail()->basket_id)->toBe($baskets['category_3'])
+        ->and(Subject::query()->where('slug', 'health-physical-education')->firstOrFail()->basket_id)->toBe($baskets['category_3'])
+        ->and(Subject::query()->where('slug', 'commerce')->firstOrFail()->basket_id)->toBe($baskets['category_1'])
+        ->and(Subject::query()->where('slug', 'mathematics')->firstOrFail()->basket_id)->toBeNull();
 });
 
 test('the catalog seeder builds the grade by grade curriculum', function () {
     $this->seed(CatalogSeeder::class);
 
     $mathematics = Subject::query()
-        ->where('slug', 'ol-mathematics')
+        ->where('slug', 'mathematics')
         ->first();
 
     $grade6 = Grade::query()->where('number', 6)->first();
@@ -450,16 +451,17 @@ test('the catalog step three groups a basket grade by basket', function () {
         ->assertSee('Art')
         ->assertSee('Mathematics');
 
-    // The junior grades pick their Category I subject alone: the other two
+    // The junior grades pick their Category II subject alone: the other two
     // baskets start in Grade 10, so their subjects stay compulsory here.
     $this->get(route('catalog.subjects.index', ['level' => 'ol', 'grade' => $grade7->id]))
         ->assertOk()
         ->assertSee('Compulsory subjects')
-        ->assertSee('Category I')
+        ->assertSee('Category II')
         ->assertSee('Art')
         ->assertSee('ICT')
-        ->assertDontSee('Category II')
-        ->assertDontSee('Category III');
+        ->assertDontSee('Category III')
+        ->assertDontSee('Academic, commerce and second-language subjects')
+        ->assertDontSee('Technical, practical and technology subjects');
 });
 
 test('a basket grade with no basket subjects stays flat and names the basket grades', function () {
@@ -488,7 +490,7 @@ test('a basket subject page shows its category', function () {
 
     $this->get(route('catalog.subjects.show', $art))
         ->assertOk()
-        ->assertSee('Category I')
+        ->assertSee('Category II')
         ->assertSee('pick one');
 });
 
@@ -507,15 +509,15 @@ test('the interests page shows compulsory subjects and only the picked basket su
         ->get(route('student.interests.edit'))
         ->assertOk()
         ->assertSee('Compulsory subjects')
-        ->assertSee('Category I')
+        ->assertSee('Category II')
         ->assertSee('View lessons and teachers')
         // Compulsory subjects and the picked basket subject open the student's
         // dedicated subject page, scoped to the student's own grade.
-        ->assertSee(route('student.subjects.show', ['subject' => 'ol-mathematics', 'grade' => $grade10->id]))
+        ->assertSee(route('student.subjects.show', ['subject' => 'mathematics', 'grade' => $grade10->id]))
         ->assertSee(route('student.subjects.show', ['subject' => 'art', 'grade' => $grade10->id]))
         // Only the picked basket subjects appear — the unpicked options stay
         // off this page.
-        ->assertDontSee('Category II')
+        ->assertDontSee('Category III')
         ->assertDontSee($ict->name)
         // The page is no longer a picker: no checkboxes or lesson list.
         ->assertDontSee('name="subjects"', false)

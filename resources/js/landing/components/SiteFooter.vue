@@ -64,7 +64,7 @@ const columns = computed(() => [
                         <span class="font-display text-xl font-semibold tracking-tight">{{ appName }}</span>
                     </a>
                     <p class="mt-4 max-w-md text-sm leading-relaxed text-ink-500">
-                        Live 1-on-1 lessons for grades 1–13, mapped to the Sri Lankan syllabus — taught by verified
+                        Live 1-on-1 lessons for grades 6–13, mapped to the Sri Lankan syllabus — taught by verified
                         teachers and paid securely in rupees.
                     </p>
                     <ul v-if="hasSupport" class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">

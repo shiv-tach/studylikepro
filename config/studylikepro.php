@@ -270,13 +270,14 @@ return [
     | Sri Lankan Education Structure
     |--------------------------------------------------------------------------
     |
-    | Bootstrap definition of the four education levels. The rows live in the
-    | `education_levels` and `grades` tables (seeded by EducationLevelSeeder);
-    | this config is the reference the seeder and the backfill read.
+    | Bootstrap definition of the catalog's education levels - O/L and A/L.
+    | The rows live in the `education_levels` and `grades` tables (seeded by
+    | EducationLevelSeeder); this config is the reference the seeder and the
+    | backfill read.
     |
     | `baskets` groups the optional subjects of a level the way the examination
     | does - in the O/L a Grade 10-11 candidate picks one subject from each of
-    | the three categories, while Grades 6-9 pick their Category I subject only
+    | the three categories, while Grades 6-9 pick their Category II subject only
     | - and `basket_grades` lists every grade where that choice happens. Each
     | basket also declares the `grades` it runs in. The basket rows live in
     | `subject_baskets` (seeded by SubjectBasketSeeder) and carry that range as
@@ -288,7 +289,6 @@ return [
     */
 
     'education_levels' => [
-        'primary' => ['name' => 'Primary', 'grade_min' => 1, 'grade_max' => 5, 'icon' => '🎒'],
         'ol' => [
             'name' => 'O/L (Ordinary Level)',
             'grade_min' => 6,
@@ -298,26 +298,25 @@ return [
             'baskets' => [
                 'category_1' => [
                     'name' => 'Category I',
+                    'icon' => '📚',
+                    'description' => 'Academic, commerce and second-language subjects',
+                    'grades' => [10, 11],
+                ],
+                'category_2' => [
+                    'name' => 'Category II',
                     'icon' => '🎨',
                     'description' => 'Aesthetic, music, dancing, literature and drama subjects',
                     'grades' => [6, 7, 8, 9, 10, 11],
                 ],
-                'category_2' => [
-                    'name' => 'Category II',
-                    'icon' => '🛠️',
-                    'description' => 'Technical, practical and technology subjects',
-                    'grades' => [10, 11],
-                ],
                 'category_3' => [
                     'name' => 'Category III',
-                    'icon' => '📚',
-                    'description' => 'Academic, commerce and second-language subjects',
+                    'icon' => '🛠️',
+                    'description' => 'Technical, practical and technology subjects',
                     'grades' => [10, 11],
                 ],
             ],
         ],
         'al' => ['name' => 'A/L (Advanced Level)', 'grade_min' => 12, 'grade_max' => 13, 'icon' => '🎓'],
-        'other' => ['name' => 'Other', 'grade_min' => null, 'grade_max' => null, 'icon' => '🧭'],
     ],
 
     // The languages a teacher can teach in.

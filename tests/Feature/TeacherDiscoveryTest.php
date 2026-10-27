@@ -115,13 +115,13 @@ it('rejects an unknown level filter', function () {
 });
 
 it('drops subjects of a deactivated level from the directory pickers', function () {
-    $primary = EducationLevel::query()->where('key', 'primary')->firstOrFail();
+    $al = EducationLevel::query()->where('key', 'al')->firstOrFail();
     $ol = EducationLevel::query()->where('key', 'ol')->firstOrFail();
 
     Subject::factory()->create([
-        'name' => 'Primary Mathematics',
-        'slug' => 'primary-mathematics',
-        'education_level_id' => $primary->id,
+        'name' => 'Advanced Mathematics',
+        'slug' => 'advanced-mathematics',
+        'education_level_id' => $al->id,
     ]);
 
     Subject::factory()->create([
@@ -130,12 +130,12 @@ it('drops subjects of a deactivated level from the directory pickers', function 
         'education_level_id' => $ol->id,
     ]);
 
-    $primary->update(['is_active' => false]);
+    $al->update(['is_active' => false]);
 
     $this->get(route('teachers.index'))
         ->assertOk()
         ->assertSee('Ordinary Mathematics')
-        ->assertDontSee('Primary Mathematics');
+        ->assertDontSee('Advanced Mathematics');
 });
 
 it('filters teachers by grade and language', function () {

@@ -600,7 +600,7 @@ class DemoDataSeeder extends Seeder
     /**
      * The subject with this slug in the given level. Slugs are globally unique,
      * so a name another level already owns carries the level key as a prefix
-     * ("mathematics" in Primary vs "ol-mathematics" in O/L).
+     * ("mathematics" in O/L vs "al-mathematics" in A/L).
      */
     private function subjectFor(string $levelKey, string $slug): ?Subject
     {

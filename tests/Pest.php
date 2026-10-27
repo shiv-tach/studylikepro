@@ -632,7 +632,7 @@ function registerThroughOtp(array $payload, string $url = '/register'): TestResp
 }
 
 /**
- * The id of the seeded grade with this number (1-13). The migrations seed the
+ * The id of the seeded grade with this number (6-13). The migrations seed the
  * Sri Lankan levels and grades, so tests can rely on them being present.
  */
 function gradeId(int $number): int

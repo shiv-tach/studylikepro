@@ -43,7 +43,7 @@
         @endif
 
         <p class="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-            The Sri Lankan structure every subject and lesson hangs off — Primary (Grades 1–5), O/L (Grades 6–11), A/L (Grades 12–13) and Other.
+            The Sri Lankan structure every subject and lesson hangs off — O/L (Grades 6–11) and A/L (Grades 12–13).
             Grades are fixed; levels can be renamed, reordered, switched off or deleted. Lessons are managed per subject, grade by grade; the O/L's optional
             subjects are grouped into the three baskets a Grade 10–11 student picks one subject from each.
         </p>
@@ -115,7 +115,14 @@
                     <div class="mt-5 border-t border-slate-100 pt-4 dark:border-slate-800">
                         <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ __('Subject baskets') }}</p>
                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            {{ __('A student picks one subject from each basket their grade offers — Grades 6 to 9 choose their Category I subject, Grades 10 and 11 all three. Subjects join their basket in the subject editor.') }}
+                            {{ __('A student picks one subject from each basket their grade offers — Grades 6 to 9 choose their :basket subject, Grades 10 and 11 all three. Subjects join their basket in the subject editor.', [
+                                // The basket that opens below Grade 10 is the one the junior grades
+                                // pick from - Category II today, read from the basket rows so the
+                                // copy follows any future reordering.
+                                'basket' => $level->subjectBaskets
+                                    ->first(fn ($basket) => ($gradeNumbers = $basket->gradeNumbers()) === [] || min($gradeNumbers) < 10)
+                                    ?->name ?? __('basket'),
+                            ]) }}
                         </p>
 
                         <div class="mt-3 space-y-3">

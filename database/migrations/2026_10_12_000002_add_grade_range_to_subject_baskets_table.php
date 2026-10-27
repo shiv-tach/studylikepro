@@ -6,8 +6,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * The grades a basket runs in: the O/L's Category I starts in Grade 6 (the
- * junior grades pick from that basket alone), Categories II and III in Grade
+ * The grades a basket runs in: the O/L's Category II starts in Grade 6 (the
+ * junior grades pick from that basket alone), Categories I and III in Grade
  * 10. A null range means every grade of the level.
  *
  * Baskets that already exist get the range of their catalog config, so a

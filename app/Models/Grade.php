@@ -10,7 +10,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * A grade inside an education level: 1-13, or the single "Other" grade.
+ * A grade inside an education level: Grades 6-13 in the seeded O/L and A/L
+ * levels. A level an admin adds without a numeric range holds a single grade
+ * whose number is null.
  */
 class Grade extends Model
 {

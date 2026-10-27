@@ -60,8 +60,8 @@ test('admins can rename, reorder and switch a basket off', function () {
 
     $this->actingAs(User::factory()->admin()->create())
         ->put(route('admin.curriculum.baskets.update', $basket), [
-            'name' => 'Category II - Technical',
-            'description' => 'Technical and practical subjects',
+            'name' => 'Category II - Aesthetic',
+            'description' => 'Aesthetic, music and dancing subjects',
             'icon' => '🛠️',
             'sort_order' => 5,
         ])
@@ -69,8 +69,8 @@ test('admins can rename, reorder and switch a basket off', function () {
 
     $basket->refresh();
 
-    expect($basket->name)->toBe('Category II - Technical')
-        ->and($basket->description)->toBe('Technical and practical subjects')
+    expect($basket->name)->toBe('Category II - Aesthetic')
+        ->and($basket->description)->toBe('Aesthetic, music and dancing subjects')
         ->and($basket->icon)->toBe('🛠️')
         ->and($basket->sort_order)->toBe(5)
         ->and($basket->is_active)->toBeFalse();
@@ -112,8 +112,8 @@ test('a basket edit reaches the public catalog right away', function () {
 
     $this->actingAs(User::factory()->admin()->create())
         ->put(route('admin.curriculum.baskets.update', $basket), [
-            'name' => 'Category I - Aesthetic',
-            'description' => 'Art, music, dancing and literature',
+            'name' => 'Category I - Academic',
+            'description' => 'Academic and commerce subjects',
             'sort_order' => 0,
             'is_active' => '1',
         ])
@@ -121,8 +121,8 @@ test('a basket edit reaches the public catalog right away', function () {
 
     $this->get(route('catalog.subjects.index', ['level' => 'ol', 'grade' => $grade10->id]))
         ->assertOk()
-        ->assertSee('Category I - Aesthetic')
-        ->assertSee('Art, music, dancing and literature');
+        ->assertSee('Category I - Academic')
+        ->assertSee('Academic and commerce subjects');
 });
 
 test('a basket from another level is rejected', function () {

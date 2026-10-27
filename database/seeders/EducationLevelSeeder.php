@@ -6,9 +6,10 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Creates the four Sri Lankan education levels and their grades (1-13 plus a
- * single "Other" grade per level). Idempotent: existing rows - including any
- * admin renames - are left untouched, only missing rows are inserted.
+ * Creates the Sri Lankan education levels the catalog seeds - O/L (Grades
+ * 6-11) and A/L (Grades 12-13) - and their grades. Idempotent: existing rows -
+ * including any admin renames - are left untouched, only missing rows are
+ * inserted.
  */
 class EducationLevelSeeder extends Seeder
 {
@@ -33,12 +34,10 @@ class EducationLevelSeeder extends Seeder
                 ]);
             }
 
-            $grades = $level['grade_min'] === null
-                ? [['number' => null, 'label' => 'Other / Adult', 'sort_order' => 100]]
-                : array_map(
-                    fn (int $number) => ['number' => $number, 'label' => "Grade {$number}", 'sort_order' => $number],
-                    range($level['grade_min'], $level['grade_max']),
-                );
+            $grades = array_map(
+                fn (int $number) => ['number' => $number, 'label' => "Grade {$number}", 'sort_order' => $number],
+                range($level['grade_min'], $level['grade_max']),
+            );
 
             foreach ($grades as $grade) {
                 $exists = DB::table('grades')

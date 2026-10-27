@@ -12,7 +12,7 @@
 
 <x-public-page
     :title="$copy['title']"
-    :description="__('Browse the Sri Lankan syllabus subject by subject — primary, O/L and A/L — and open a grade to see its subjects and lessons.')"
+    :description="__('Browse the Sri Lankan syllabus subject by subject — O/L and A/L — and open a grade to see its subjects and lessons.')"
     :og-image="asset('images/hero/hero-students-1200.jpg')"
     :vite="['resources/css/app.css', 'resources/js/public/main.js']"
 >

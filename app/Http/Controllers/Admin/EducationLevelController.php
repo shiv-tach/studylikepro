@@ -10,9 +10,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 /**
- * The curriculum backbone: the four Sri Lankan education levels with their
- * grades. Grades are seeded and read-only here; the levels themselves can be
- * renamed, reordered, switched off and deleted.
+ * The curriculum backbone: the education levels with their grades. Grades are
+ * seeded and read-only here; the levels themselves can be renamed, reordered,
+ * switched off and deleted.
  */
 class EducationLevelController extends Controller
 {

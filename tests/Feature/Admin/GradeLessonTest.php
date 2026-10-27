@@ -94,7 +94,7 @@ test('copying twice does not duplicate anything', function () {
 });
 
 test('copy rejects the same grade twice and grades outside the level', function () {
-    $primaryGrade = Grade::query()->where('number', 3)->firstOrFail();
+    $otherLevelGrade = Grade::query()->where('number', 12)->firstOrFail();
 
     $this->actingAs($this->admin)
         ->post(route('admin.subjects.lessons.copy', $this->subject), [
@@ -106,7 +106,7 @@ test('copy rejects the same grade twice and grades outside the level', function 
     $this->actingAs($this->admin)
         ->post(route('admin.subjects.lessons.copy', $this->subject), [
             'from_grade_id' => $this->grade6->id,
-            'to_grade_id' => $primaryGrade->id,
+            'to_grade_id' => $otherLevelGrade->id,
         ])
         ->assertSessionHasErrors('to_grade_id');
 });
@@ -175,11 +175,11 @@ test('bulk activating a grade refreshes the public catalog', function () {
 });
 
 test('bulk activate rejects a grade outside the subject level', function () {
-    $primaryGrade = Grade::query()->where('number', 3)->firstOrFail();
+    $otherLevelGrade = Grade::query()->where('number', 12)->firstOrFail();
 
     $this->actingAs($this->admin)
         ->post(route('admin.subjects.lessons.bulk-active', $this->subject), [
-            'grade_id' => $primaryGrade->id,
+            'grade_id' => $otherLevelGrade->id,
             'is_active' => '1',
         ])
         ->assertSessionHasErrors('grade_id');

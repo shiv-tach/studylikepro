@@ -2,7 +2,7 @@ Student
 •	Registration 
 •	Parent/student profile 
 •	Subject selection 
-• Grade & lesson selection (Sri Lankan grades 1–13)
+• Grade & lesson selection (Sri Lankan grades 6–13)
 •	Browse teachers 
 •	Teacher profile 
 •	Booking 

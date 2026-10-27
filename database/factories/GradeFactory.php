@@ -15,7 +15,7 @@ class GradeFactory extends Factory
 
     public function definition(): array
     {
-        // Real seeded grades use numbers 1-13; factory grades start above
+        // Real seeded grades use numbers 6-13; factory grades start above
         // that range so they never collide with them.
         return [
             'education_level_id' => EducationLevel::factory(),
