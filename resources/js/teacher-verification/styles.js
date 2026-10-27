@@ -22,3 +22,17 @@ export const DANGER_GHOST_BUTTON =
 export const EMPTY_RING = 'border-dashed border-slate-300 dark:border-slate-700';
 
 export const DONE_RING = 'border-emerald-200 bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/40';
+
+/**
+ * The upload slot's drop target. Layout only — the border colour is picked by
+ * the component so a hover/dragring never fights a second literal class.
+ */
+export const UPLOAD_ZONE =
+    'flex w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-3 py-4 text-center transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none';
+
+/** The live upload bar: one track, one filled bar, both literal for Tailwind. */
+export const PROGRESS_TRACK =
+    'mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800';
+
+export const PROGRESS_BAR =
+    'h-full rounded-full bg-primary transition-all duration-200 ease-out motion-reduce:transition-none';

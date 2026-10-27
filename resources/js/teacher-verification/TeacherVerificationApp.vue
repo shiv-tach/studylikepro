@@ -22,7 +22,6 @@ import RequirementsCard from './components/RequirementsCard.vue';
 import StatusCard from './components/StatusCard.vue';
 import SubjectsCard from './components/SubjectsCard.vue';
 import SubmitCard from './components/SubmitCard.vue';
-import UploadCard from './components/UploadCard.vue';
 
 const props = defineProps({
     config: { type: Object, required: true },
@@ -72,7 +71,14 @@ if (draft) {
 }
 
 // Every message Laravel sent back that is not already attached to a field below.
-const messages = computed(() => Object.values(props.config.errors ?? {}).flat());
+// Listed explicitly: `errors` also carries `byType` (an object for the slot that
+// failed), which must not leak into this list as "[object Object]".
+const messages = computed(() => [
+    ...(props.config.errors?.type ?? []),
+    ...(props.config.errors?.document ?? []),
+    ...(props.config.errors?.agree ?? []),
+    ...(props.config.errors?.subjects ?? []),
+]);
 
 // Nothing is submitted yet, so there is no status to report above the form.
 const showStatus = computed(() => (props.config.status?.current ?? 'draft') !== 'draft');
@@ -141,10 +147,6 @@ async function confirmRemoval() {
 
                 <RevealOnScroll :delay="20">
                     <DocumentsCard @request-remove="pendingRemoval = $event" />
-                </RevealOnScroll>
-
-                <RevealOnScroll v-if="canEdit" :delay="30">
-                    <UploadCard />
                 </RevealOnScroll>
 
                 <RevealOnScroll :delay="40">

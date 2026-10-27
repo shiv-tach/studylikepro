@@ -17,7 +17,17 @@ import { DONE_RING, EMPTY_RING } from '../styles';
 const copy = useCopy();
 const panel = usePanel();
 
-const { requirements, progress, canEdit } = useVerification();
+const { requirements, progress, canEdit, openSlot } = useVerification();
+
+/**
+ * A jump link points at a slot that is folded away by default, so the click also
+ * opens it — otherwise the teacher lands on a closed heading and has to click again.
+ */
+function followAction(action) {
+    if (action.slot) {
+        openSlot(action.slot);
+    }
+}
 </script>
 
 <template>
@@ -72,6 +82,7 @@ const { requirements, progress, canEdit } = useVerification();
                         v-if="item.action"
                         :href="item.action.href"
                         class="mt-1 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                        @click="followAction(item.action)"
                     >
                         {{ item.action.label }}
                     </a>

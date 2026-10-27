@@ -267,6 +267,68 @@ test('the verification page ships the checklist, documents and notices as an isl
         ->and($config['urls']['upload'])->toBe(route('teacher.verification.documents.store'));
 });
 
+test('every document type ships its own upload slot', function () {
+    $user = onboardingTeacher();
+
+    $config = verificationConfig(
+        $this->actingAs($user)->get(route('teacher.onboarding.verification'))->assertOk()
+    );
+
+    $types = collect($config['documentTypes']);
+
+    expect($types->pluck('value')->all())->toBe(['id_proof', 'degree', 'certificate', 'other'])
+        ->and($types->firstWhere('value', 'id_proof')['icon'])->toBe('shield')
+        ->and($types->firstWhere('value', 'degree')['icon'])->toBe('graduation')
+        // A two-page ID scan is normal, so every slot accepts more than one file.
+        ->and($types->every(fn (array $type) => $type['multiple'] === true))->toBeTrue()
+        // The picker uploads on choice: the page has to say so, show progress and
+        // offer a retry, and hold submission while a file is still in flight.
+        ->and($config['copy']['uploadAutoNote'])->not->toBeEmpty()
+        ->and($config['copy']['uploadAddAnother'])->not->toBeEmpty()
+        ->and($config['copy']['uploadRetry'])->not->toBeEmpty()
+        ->and($config['copy']['uploadCancelled'])->not->toBeEmpty()
+        ->and($config['copy']['uploadProgress'])->toContain(':percent')
+        ->and($config['copy']['submitBlockedUpload'])->not->toBeEmpty()
+        ->and($config['errors']['byType'])->toBeNull();
+});
+
+test('the no-js fallback renders one upload form per document type', function () {
+    $user = onboardingTeacher();
+
+    $html = $this->actingAs($user)
+        ->get(route('teacher.onboarding.verification'))
+        ->assertOk()
+        ->assertSee('Upload a document')
+        ->getContent();
+
+    expect(substr_count($html, 'action="'.route('teacher.verification.documents.store').'"'))
+        ->toBe(count(config('studylikepro.verification_document_types')))
+        ->and(substr_count($html, 'name="type" value="id_proof"'))->toBe(1);
+});
+
+test('a rejected upload points at the slot it came from', function () {
+    Storage::fake('local');
+
+    $user = onboardingTeacher();
+
+    $this->actingAs($user)
+        ->from(route('teacher.onboarding.verification'))
+        ->post(route('teacher.verification.documents.store'), [
+            'type' => 'degree',
+            'document' => UploadedFile::fake()->create('virus.exe', 10),
+            'return' => 'onboarding',
+        ])
+        ->assertSessionHasErrors(['document']);
+
+    $config = verificationConfig(
+        $this->actingAs($user)->get(route('teacher.onboarding.verification'))->assertOk()
+    );
+
+    expect($config['errors']['byType']['type'])->toBe('degree')
+        ->and($config['errors']['byType']['messages'])->not->toBeEmpty()
+        ->and($config['documents'])->toHaveCount(0);
+});
+
 test('an uploaded document is shipped with the flash notice for the toast', function () {
     Storage::fake('local');
 

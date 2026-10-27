@@ -36,60 +36,75 @@
                 </div>
             @endif
 
-            @if ($profile->documents->isNotEmpty())
-                <div class="{{ $cardClasses }}">
-                    <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('Your documents') }}</h2>
-                    <ul class="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
-                        @foreach ($profile->documents as $document)
-                            <li class="flex items-center justify-between gap-3 py-2 text-sm">
-                                <span class="min-w-0">
-                                    <span class="block truncate font-semibold text-slate-800 dark:text-slate-100">{{ $document->typeLabel() }}</span>
-                                    <span class="block truncate text-xs text-slate-400">{{ $document->original_name }}</span>
+            <!-- Documents: one upload block per document type. The type is part of
+                 the block, so nothing has to be matched up by hand. -->
+            <div class="{{ $cardClasses }}">
+                <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('Your documents') }}</h2>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    {{ __('Everything our team will review. Choose a file in the section it belongs to — each upload is saved as a draft right away.') }}
+                </p>
+
+                @if ($errors->has('type') || $errors->has('document'))
+                    <div class="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
+                        <x-input-error :messages="$errors->get('type')" />
+                        <x-input-error :messages="$errors->get('document')" />
+                    </div>
+                @endif
+
+                <div class="mt-4 space-y-3">
+                    @foreach ($documentTypes as $value => $label)
+                        @php($typeDocuments = $profile->documents->where('type', $value))
+
+                        <div class="rounded-xl border border-slate-200/80 p-3 dark:border-slate-800/80">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <p class="break-words text-sm font-bold text-slate-800 dark:text-slate-100">{{ $label }}</p>
+                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $value === 'id_proof' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' }}">
+                                    {{ $value === 'id_proof' ? __('Required') : __('Optional') }}
                                 </span>
-                                @if ($canEditDocuments)
-                                    <form method="POST" action="{{ route('teacher.verification.documents.destroy', $document) }}">
-                                        @csrf
-                                        @method('DELETE')
-                                        <input type="hidden" name="return" value="onboarding">
-                                        <button type="submit" class="text-xs font-semibold text-rose-600 hover:underline">{{ __('Remove') }}</button>
-                                    </form>
-                                @endif
-                            </li>
-                        @endforeach
-                    </ul>
+                            </div>
+
+                            @if ($typeDocuments->isNotEmpty())
+                                <ul class="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
+                                    @foreach ($typeDocuments as $document)
+                                        <li class="flex items-center justify-between gap-3 py-2 text-sm">
+                                            <span class="min-w-0 break-words text-xs text-slate-600 dark:text-slate-300">
+                                                {{ $document->original_name }}
+                                                <span class="block text-[11px] text-slate-400">{{ $document->created_at->format('d M Y') }}</span>
+                                            </span>
+                                            @if ($canEditDocuments)
+                                                <form method="POST" action="{{ route('teacher.verification.documents.destroy', $document) }}">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <input type="hidden" name="return" value="onboarding">
+                                                    <button type="submit" class="text-xs font-semibold text-rose-600 hover:underline">{{ __('Remove') }}</button>
+                                                </form>
+                                            @endif
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
+
+                            @if ($canEditDocuments)
+                                <form method="POST" action="{{ route('teacher.verification.documents.store') }}" enctype="multipart/form-data" class="mt-3 space-y-2">
+                                    @csrf
+                                    <input type="hidden" name="return" value="onboarding">
+                                    <input type="hidden" name="type" value="{{ $value }}">
+
+                                    <label class="sr-only" for="document-{{ $value }}">{{ __('Upload a document') }} — {{ $label }}</label>
+                                    <input id="document-{{ $value }}" name="document" type="file" accept="application/pdf,image/jpeg,image/png,image/webp"
+                                           class="block w-full text-sm text-slate-500 file:mr-3 file:rounded-xl file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-primary hover:file:bg-primary/20 dark:text-slate-400" />
+
+                                    <div class="flex justify-end">
+                                        <x-secondary-button type="submit">{{ __('Upload document') }}</x-secondary-button>
+                                    </div>
+                                </form>
+                            @endif
+                        </div>
+                    @endforeach
                 </div>
-            @endif
+            </div>
 
             @if ($canEditDocuments)
-                <div class="{{ $cardClasses }}">
-                    <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('Upload a document') }}</h2>
-
-                    <form method="POST" action="{{ route('teacher.verification.documents.store') }}" enctype="multipart/form-data" class="mt-4 space-y-4">
-                        @csrf
-                        <input type="hidden" name="return" value="onboarding">
-
-                        <div>
-                            <x-input-label for="type" :value="__('Document type')" />
-                            <select id="type" name="type" class="mt-1 block w-full rounded-xl border-slate-300 bg-white text-base shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 sm:text-sm">
-                                @foreach ($documentTypes as $value => $label)
-                                    <option value="{{ $value }}" @selected(old('type') === $value)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            <x-input-error :messages="$errors->get('type')" class="mt-2" />
-                        </div>
-
-                        <div>
-                            <x-input-label for="document" :value="__('File')" />
-                            <input id="document" name="document" type="file" accept="application/pdf,image/jpeg,image/png,image/webp"
-                                   class="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:rounded-xl file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/20 dark:text-slate-400" />
-                            <x-input-error :messages="$errors->get('document')" class="mt-2" />
-                        </div>
-
-                        <div class="flex justify-end">
-                            <x-secondary-button type="submit">{{ __('Upload document') }}</x-secondary-button>
-                        </div>
-                    </form>
-                </div>
 
                 <div class="{{ $cardClasses }}">
                     <h2 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ __('What will you teach?') }}</h2>

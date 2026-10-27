@@ -16,6 +16,8 @@ const props = defineProps({
     highlighted: { type: Boolean, default: false },
     canEdit: { type: Boolean, default: false },
     removing: { type: Boolean, default: false },
+    // Inside an upload slot the heading already says what the type is.
+    showType: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['remove']);
@@ -50,8 +52,8 @@ const meta = computed(() => [
 
         <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-1.5">
-                <p class="max-w-full break-words text-sm font-semibold text-slate-800 dark:text-slate-100">{{ document.typeLabel }}</p>
-                <UiChip :tone="document.isRequired ? 'emerald' : 'slate'">
+                <p v-if="showType" class="max-w-full break-words text-sm font-semibold text-slate-800 dark:text-slate-100">{{ document.typeLabel }}</p>
+                <UiChip v-if="showType" :tone="document.isRequired ? 'emerald' : 'slate'">
                     {{ document.isRequired ? copy.requiredDocument : copy.optionalDocument }}
                 </UiChip>
                 <UiChip v-if="highlighted" tone="primary">{{ copy.justUploaded }}</UiChip>

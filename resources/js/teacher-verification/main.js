@@ -20,7 +20,7 @@ const DEFAULT_CONFIG = {
     highlightDocumentId: null,
     limits: {},
     values: { agree: false },
-    errors: {},
+    errors: { type: [], document: [], agree: [], subjects: [], byType: null },
     notices: [],
     steps: [],
     currentStep: 3,

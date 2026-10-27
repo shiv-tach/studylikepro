@@ -45,18 +45,37 @@ final class VerificationStepConfig
             'other' => __('Anything else that supports your application.'),
         ];
 
+        // Each type gets its own upload slot, so the icon travels with it and the
+        // no-JS twin can draw the same list. Multiple files per type are allowed
+        // (a two-page ID scan is common), which the section heading explains.
+        $typeIcons = [
+            'id_proof' => 'shield',
+            'degree' => 'graduation',
+            'certificate' => 'check-circle',
+            'other' => 'folder',
+        ];
+
         $documentTypesPayload = collect($documentTypes)
             ->map(fn (string $label, string $value) => [
                 'value' => $value,
                 'label' => $label,
                 'hint' => $typeHints[$value] ?? '',
                 'required' => $value === 'id_proof',
+                'icon' => $typeIcons[$value] ?? 'folder',
+                'multiple' => true,
             ])
             ->values();
 
         $uploadedTypes = $profile->documents->pluck('type')->all();
         $selectedType = collect(array_keys($documentTypes))
             ->first(fn (string $type) => ! in_array($type, $uploadedTypes, true)) ?? 'id_proof';
+
+        // A rejected upload redirects back with the old `type`, so the slot that
+        // failed can carry the server's message instead of a loose page alert.
+        $failedType = old('type');
+        $failedType = is_string($failedType) && array_key_exists($failedType, $documentTypes)
+            ? $failedType
+            : null;
 
         // Acceptance is stored on the profile when the application is submitted,
         // so the checklist keeps showing it as done afterwards. A failed submit
@@ -112,12 +131,17 @@ final class VerificationStepConfig
                 'agree' => $agreementAccepted,
             ],
             // Laravel owns the wording of every message; the app only decides
-            // where it is shown, so the two never drift apart.
+            // where it is shown, so the two never drift apart. `byType` tells the
+            // matching upload slot which file failed after a full-page bounce.
             'errors' => [
                 'type' => $errors->get('type'),
                 'document' => $errors->get('document'),
                 'agree' => $errors->get('agree'),
                 'subjects' => $errors->get('subjects'),
+                'byType' => $failedType === null ? null : [
+                    'type' => $failedType,
+                    'messages' => array_values(array_merge($errors->get('type'), $errors->get('document'))),
+                ],
             ],
             'notices' => $notices,
             'steps' => TeacherOnboarding::steps($profile),
@@ -274,7 +298,7 @@ final class VerificationStepConfig
             'reqTermsHintDone' => __('Accepted.'),
             'reqTermsHintMissing' => __('Tick the box on the submit card.'),
             'documentsTitle' => __('Your documents'),
-            'documentsHint' => __('Everything our team will review.'),
+            'documentsHint' => __('Everything our team will review. Open the document type you want to add — the upload starts on its own.'),
             'documentsCount' => __(':count on file'),
             'documentsEmptyTitle' => __('No documents uploaded yet'),
             'documentsEmptyHint' => __('Start with your government ID — it is the one we need before you can submit.'),
@@ -302,6 +326,22 @@ final class VerificationStepConfig
             'uploadSuccess' => __('Saved to your documents.'),
             'uploadFailed' => __('That upload did not go through. Please try again.'),
             'uploadDraftNote' => __('Saved as a draft — not sent for review yet.'),
+            // One upload slot per document type: a file starts uploading the
+            // moment it is chosen, so every state needs a word of its own.
+            'uploadAutoNote' => __('Uploading starts the moment you choose a file.'),
+            'uploadAddAnother' => __('Add another file'),
+            'uploadRetry' => __('Try again'),
+            'uploadCancel' => __('Cancel'),
+            'uploadCancelled' => __('Upload cancelled.'),
+            'uploadProgress' => __('Uploading… :percent%'),
+            'uploadSlotEmpty' => __('No file yet'),
+            'uploadSlotUploading' => __('Uploading'),
+            'uploadSlotInvalid' => __('Not uploaded'),
+            'uploadFailedShort' => __('Upload failed'),
+            'uploadRequiredHint' => __('Needed before you can submit.'),
+            'uploadOptionalHint' => __('Optional — it still helps our team.'),
+            'uploadStartHere' => __('Start here'),
+            'submitBlockedUpload' => __('Wait for your upload to finish before submitting.'),
             'subjectsTitle' => __('What will you teach?'),
             'subjectsHint' => __('Pick every subject you can teach — you can choose from more than one level. Your selection goes to our team with your documents and is approved together with your application.'),
             'subjectsLockedHint' => __('Your subjects are locked while the application is under review.'),
