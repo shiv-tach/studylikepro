@@ -30,6 +30,7 @@ class LessonController extends Controller
         $lesson = $subject->lessons()->create([
             'grade_id' => $request->validated('grade_id'),
             'name' => $request->validated('name'),
+            'name_si' => $request->validated('name_si'),
             'slug' => $request->validated('slug') ?: Str::slug($request->validated('name')),
             'description' => $request->validated('description'),
             'sort_order' => (int) $request->validated('sort_order'),
@@ -53,6 +54,7 @@ class LessonController extends Controller
         $lesson->update([
             'grade_id' => $request->validated('grade_id'),
             'name' => $request->validated('name'),
+            'name_si' => $request->validated('name_si'),
             'slug' => $request->validated('slug') ?: Str::slug($request->validated('name')),
             'description' => $request->validated('description'),
             'sort_order' => (int) $request->validated('sort_order'),
@@ -103,6 +105,7 @@ class LessonController extends Controller
             $subject->lessons()->create([
                 'grade_id' => $to,
                 'name' => $lesson->name,
+                'name_si' => $lesson->name_si,
                 'slug' => $lesson->slug,
                 'description' => $lesson->description,
                 'sort_order' => $lesson->sort_order,

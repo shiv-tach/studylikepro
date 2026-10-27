@@ -179,8 +179,13 @@
                         <input type="hidden" name="grade_id" :value="grade">
                         <div class="min-w-40 flex-1">
                             <x-input-label for="new-lesson-name" :value="__('New lesson in the selected grade')" />
-                            <x-text-input id="new-lesson-name" name="name" type="text" class="mt-1 block w-full" :value="old('name')" placeholder="e.g. Unit 13" />
+                            <x-text-input id="new-lesson-name" name="name" type="text" class="mt-1 block w-full" :value="old('name')" placeholder="e.g. Fractions" />
                             <x-input-error :messages="$errors->get('name')" class="mt-2" />
+                        </div>
+                        <div class="min-w-40 flex-1">
+                            <x-input-label for="new-lesson-name-si" :value="__('Sinhala name (optional)')" />
+                            <x-text-input id="new-lesson-name-si" name="name_si" type="text" class="mt-1 block w-full" :value="old('name_si')" placeholder="e.g. භාග" />
+                            <x-input-error :messages="$errors->get('name_si')" class="mt-2" />
                         </div>
                         <div class="min-w-48 flex-1">
                             <x-input-label for="new-lesson-description" :value="__('Description (optional)')" />
@@ -302,6 +307,8 @@
                                             <div class="min-w-40 flex-1">
                                                 <input type="text" name="name" value="{{ $lesson->name }}" required aria-label="{{ __('Lesson name') }}"
                                                        class="w-full rounded-xl border-slate-300 bg-white text-sm shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900" />
+                                                <input type="text" name="name_si" value="{{ $lesson->name_si }}" placeholder="{{ __('Sinhala name (optional)') }}" aria-label="{{ __('Sinhala lesson name') }}"
+                                                       class="mt-1 w-full rounded-xl border-slate-200/80 bg-white text-xs text-slate-500 shadow-sm focus:border-primary focus:ring-primary dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400" />
                                                 <input type="text" name="description" value="{{ $lesson->description }}" placeholder="{{ __('Description (optional)') }}" aria-label="{{ __('Lesson description') }}"
                                                        class="mt-1 w-full rounded-xl border-slate-200/80 bg-white text-xs text-slate-500 shadow-sm focus:border-primary focus:ring-primary dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400" />
                                             </div>

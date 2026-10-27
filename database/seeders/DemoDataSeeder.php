@@ -79,7 +79,7 @@ class DemoDataSeeder extends Seeder
             $mathematicsGrades = $this->gradeIdsFor($mathematics);
             $scienceGrades = $this->gradeIdsFor($science);
             $student->interestedSubjects()->sync([$mathematics->id, $science->id]);
-            $student->interestedLessons()->sync($this->lessonIds($mathematics, ['unit-01']));
+            $student->interestedLessons()->sync($this->lessonIds($mathematics, [1]));
 
             $teacherProfile->subjects()->syncWithPivotValues([$mathematics->id, $science->id], ['status' => 'approved']);
             $teacherProfile->subjects()->updateExistingPivot($mathematics->id, [
@@ -92,8 +92,8 @@ class DemoDataSeeder extends Seeder
                 'status' => 'approved',
             ]);
             $teacherProfile->lessons()->sync(array_merge(
-                $this->lessonIds($mathematics, ['unit-01', 'unit-02', 'unit-03']),
-                $this->lessonIds($science, ['unit-01', 'unit-02'])
+                $this->lessonIds($mathematics, [1, 2, 3]),
+                $this->lessonIds($science, [1, 2])
             ));
         }
 
@@ -122,7 +122,7 @@ class DemoDataSeeder extends Seeder
                 'status' => 'approved',
             ]);
             $verifiedProfile->lessons()->sync(
-                $this->lessonIds($mathematics, ['unit-01', 'unit-02'])
+                $this->lessonIds($mathematics, [1, 2])
             );
         }
 
@@ -159,8 +159,8 @@ class DemoDataSeeder extends Seeder
                 'status' => 'approved',
             ]);
             $chemistryProfile->lessons()->sync(array_merge(
-                $this->lessonIds($chemistry, ['unit-01', 'unit-02']),
-                $this->lessonIds($biology, ['unit-01', 'unit-02'])
+                $this->lessonIds($chemistry, [1, 2]),
+                $this->lessonIds($biology, [1, 2])
             ));
         }
 
@@ -246,7 +246,7 @@ class DemoDataSeeder extends Seeder
         $chemistry = $this->subjectFor('al', 'chemistry');
 
         if ($mathematics) {
-            $lesson = $this->lessonFor($mathematics, 'unit-01');
+            $lesson = $this->lessonAt($mathematics, 1);
             $startsAt = $this->nextWeekday(CarbonInterface::TUESDAY, $timezone)->setTime(17, 0);
             $price = $bookings->priceMinor($mathematicsTeacher, $mathematics, 45);
 
@@ -269,7 +269,7 @@ class DemoDataSeeder extends Seeder
         }
 
         if ($chemistry && $mathematics) {
-            $lesson = $this->lessonFor($mathematics, 'unit-02');
+            $lesson = $this->lessonAt($mathematics, 2);
             $startsAt = $this->nextWeekday(CarbonInterface::THURSDAY, $timezone)->setTime(16, 0);
             $price = $bookings->priceMinor($mathematicsTeacher, $mathematics, 45);
 
@@ -291,7 +291,7 @@ class DemoDataSeeder extends Seeder
                 ...$this->bookingFee($price),
             ]);
 
-            $lesson = $this->lessonFor($chemistry, 'unit-01');
+            $lesson = $this->lessonAt($chemistry, 1);
             $deliveredAt = CarbonImmutable::now($timezone)->subDays(6)->setTime(7, 30);
             $price = $bookings->priceMinor($chemistryTeacher, $chemistry, 60);
 
@@ -427,7 +427,7 @@ class DemoDataSeeder extends Seeder
                 'name' => 'Aisha Khan',
                 'email' => 'aisha@studylikepro.test',
                 'days_ago' => 21,
-                'lesson' => 'unit-01',
+                'lesson' => 1,
                 'rating' => 5,
                 'comment' => 'Priya turned algebra into something I look forward to. She spotted the gaps from my old tests and fixed them one by one.',
             ],
@@ -435,7 +435,7 @@ class DemoDataSeeder extends Seeder
                 'name' => 'Rohan Mehta',
                 'email' => 'rohan@studylikepro.test',
                 'days_ago' => 28,
-                'lesson' => 'unit-02',
+                'lesson' => 2,
                 'rating' => 4,
                 'comment' => 'Great session — we ran out of time before the last topic, but the method for limits finally clicked.',
             ],
@@ -454,7 +454,7 @@ class DemoDataSeeder extends Seeder
                 ]
             );
 
-            $entryLesson = $this->lessonFor($mathematics, $entry['lesson']);
+            $entryLesson = $this->lessonAt($mathematics, $entry['lesson']);
             $startsAt = CarbonImmutable::now('Asia/Colombo')->subDays($entry['days_ago'])->setTime(17, 0);
             $price = $bookings->priceMinor($mathematicsTeacher, $mathematics, 45);
 
@@ -589,12 +589,22 @@ class DemoDataSeeder extends Seeder
     }
 
     /**
-     * @param  list<string>  $slugs
+     * Lesson ids at the given 1-based positions of the subject's curriculum
+     * order — the titles themselves come from the official syllabus, so the
+     * demo data pins positions instead of slug strings.
+     *
+     * @param  list<int>  $positions
      * @return list<int>
      */
-    private function lessonIds(Subject $subject, array $slugs): array
+    private function lessonIds(Subject $subject, array $positions): array
     {
-        return $subject->lessons()->whereIn('slug', $slugs)->pluck('id')->all();
+        $ordered = $subject->lessons()->active()->ordered()->pluck('id')->values();
+
+        return collect($positions)
+            ->map(fn (int $position) => $ordered->get($position - 1))
+            ->filter()
+            ->values()
+            ->all();
     }
 
     /**
@@ -621,9 +631,9 @@ class DemoDataSeeder extends Seeder
             ->all();
     }
 
-    private function lessonFor(Subject $subject, string $slug): ?Lesson
+    private function lessonAt(Subject $subject, int $position): ?Lesson
     {
-        return $subject->lessons()->where('slug', $slug)->orderBy('grade_id')->first();
+        return $subject->lessons()->active()->ordered()->get()->get($position - 1);
     }
 
     private function createUser(string $name, string $email, string $role): User

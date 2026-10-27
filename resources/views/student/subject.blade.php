@@ -137,6 +137,7 @@
             'items' => $group->map(fn ($lesson) => [
                 'id' => $lesson->id,
                 'name' => $lesson->name,
+                'nameSi' => $lesson->name_si,
             ])->values()->all(),
         ])
         ->values();

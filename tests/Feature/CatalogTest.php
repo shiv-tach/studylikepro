@@ -62,7 +62,7 @@ test('choosing a level and grade reveals the subjects that run in that grade', f
     $this->get(route('catalog.subjects.index', ['level' => 'ol', 'grade' => $grade6->id]))
         ->assertOk()
         ->assertSee('Mathematics')
-        ->assertSee('12 lessons')
+        ->assertSee('24 lessons')
         ->assertDontSee('Commerce');
 });
 
@@ -179,6 +179,25 @@ test('the subject page island is the one the catalog opens on click', function (
         ->and($opened['config'])->toEqual($island)
         ->and($island['subject']['name'])->toBe('Mathematics')
         ->and($island['lessonGroups'][0]['items'][0]['name'])->toBe('Fractions');
+});
+
+test('the subject page lists official unit titles with their sinhala subtitle', function () {
+    $this->seed(CatalogSeeder::class);
+
+    $level = EducationLevel::query()->where('key', 'ol')->firstOrFail();
+    $grade = Grade::query()->where('education_level_id', $level->id)->where('number', 7)->firstOrFail();
+    $subject = Subject::query()->where('education_level_id', $level->id)->where('name', 'Mathematics')->firstOrFail();
+
+    $response = $this->get(route('catalog.subjects.show', ['subject' => $subject, 'grade' => $grade->id]))->assertOk();
+    $island = publicSubjectConfig($response);
+    $items = collect($island['lessonGroups'])->flatMap(fn (array $group) => $group['items']);
+
+    expect($items)->toHaveCount(29)
+        ->and($items->first()['name'])->toBe('Symmetry')
+        ->and($items->first()['nameSi'])->toBe('සමමිතිය');
+
+    // The no-JS twin renders the same pair.
+    $response->assertSee('Symmetry')->assertSee('සමමිතිය');
 });
 
 test('signed-in students never receive the public subject island', function () {
@@ -419,8 +438,8 @@ test('the catalog seeder builds the grade by grade curriculum', function () {
 
     expect($mathematics)->not->toBeNull()
         ->and($mathematics->educationLevel->key)->toBe('ol')
-        ->and($mathematics->lessons()->where('grade_id', $grade6->id)->count())->toBe(12)
-        ->and($mathematics->lessons()->where('grade_id', $grade7->id)->count())->toBe(10);
+        ->and($mathematics->lessons()->where('grade_id', $grade6->id)->count())->toBe(24)
+        ->and($mathematics->lessons()->where('grade_id', $grade7->id)->count())->toBe(29);
 
     // Slugs are the {subject} route key, so the seeder must never create two
     // subjects with the same one — same-named subjects get a level prefix.

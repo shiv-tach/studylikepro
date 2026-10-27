@@ -21,6 +21,7 @@ class Lesson extends Model
         'subject_id',
         'grade_id',
         'name',
+        'name_si',
         'slug',
         'description',
         'is_active',

@@ -56,6 +56,7 @@ test('copy duplicates a grade into another grade and skips existing slugs', func
     Lesson::factory()->for($this->subject)->create([
         'grade_id' => $this->grade6->id, 'name' => 'Unit 02', 'slug' => 'unit-02', 'sort_order' => 2,
         'description' => 'Fractions',
+        'name_si' => 'භාග',
     ]);
     $existing = Lesson::factory()->for($this->subject)->create([
         'grade_id' => $this->grade7->id, 'name' => 'Grade 7 Unit 01', 'slug' => 'unit-01', 'sort_order' => 1,
@@ -74,6 +75,7 @@ test('copy duplicates a grade into another grade and skips existing slugs', func
     expect($grade7)->toHaveCount(2)
         ->and($grade7->pluck('slug')->all())->toEqualCanonicalizing(['unit-01', 'unit-02'])
         ->and($grade7->firstWhere('slug', 'unit-01')->name)->toBe('Grade 7 Unit 01')
+        ->and($grade7->firstWhere('slug', 'unit-02')->name_si)->toBe('භාග')
         ->and($grade7->firstWhere('slug', 'unit-02')->description)->toBe('Fractions')
         ->and($existing->fresh()->name)->toBe('Grade 7 Unit 01')
         ->and($first->fresh()->name)->toBe('Unit 01');

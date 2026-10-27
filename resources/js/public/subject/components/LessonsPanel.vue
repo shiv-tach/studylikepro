@@ -41,7 +41,10 @@ const grade = computed(() => props.config.subject?.grade ?? null);
                         class="hairline flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5"
                     >
                         <span class="size-2 shrink-0 rounded-full bg-brand-500" aria-hidden="true"></span>
-                        <span class="text-sm font-medium text-ink">{{ lesson.name }}</span>
+                        <span class="min-w-0">
+                            <span class="block text-sm font-medium text-ink">{{ lesson.name }}</span>
+                            <span v-if="lesson.nameSi" class="block text-xs text-ink-400">{{ lesson.nameSi }}</span>
+                        </span>
                     </li>
                 </ul>
             </div>

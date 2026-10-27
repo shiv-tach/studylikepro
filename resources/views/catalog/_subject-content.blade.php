@@ -329,7 +329,12 @@
                         @foreach ($gradeLessons as $lesson)
                             <div class="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 transition-colors hover:border-primary/40 dark:border-slate-800/80 dark:bg-slate-900 dark:hover:border-primary/40">
                                 <span class="h-2 w-2 shrink-0 rounded-full bg-primary"></span>
-                                <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ $lesson->name }}</span>
+                                <span class="min-w-0">
+                                    <span class="block text-sm font-semibold text-slate-700 dark:text-slate-200">{{ $lesson->name }}</span>
+                                    @if ($lesson->name_si)
+                                        <span class="block text-xs text-slate-400 dark:text-slate-500">{{ $lesson->name_si }}</span>
+                                    @endif
+                                </span>
                             </div>
                         @endforeach
                     </div>

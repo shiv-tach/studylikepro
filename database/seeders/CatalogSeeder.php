@@ -7,6 +7,7 @@ use App\Models\Grade;
 use App\Models\Lesson;
 use App\Models\Subject;
 use App\Models\SubjectBasket;
+use App\Support\CurriculumSyllabus;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -17,11 +18,11 @@ use Illuminate\Support\Str;
  * each subject pointing at its basket when it is an optional (O/L) subject -
  * and a per-grade lesson list for every subject.
  *
- * Lesson names are intentionally generic placeholders ("Unit 01" ...) until an
- * admin renames them to the official syllabus lessons in the curriculum
- * matrix; the lesson counts (e.g. O/L Mathematics: 12 in Grade 6, 10 in Grade
- * 7) follow the real structure so the grade-by-grade shape is right from day
- * one.
+ * Lessons come from database/data/curriculum.php when the subject has an
+ * official unit list there (English title + Sinhala subtitle, one lesson per
+ * textbook unit). Subjects without a list fall back to generic "Unit 01…"
+ * placeholders, so electives keep a browsable shape until their units are
+ * entered.
  */
 class CatalogSeeder extends Seeder
 {
@@ -85,6 +86,23 @@ class CatalogSeeder extends Seeder
                     }
 
                     $lessonCount = $data['lessons_by_grade'][$gradeNumber] ?? $data['lessons'];
+                    $syllabus = CurriculumSyllabus::lessons($level->key, $data['name'], (int) $gradeNumber);
+
+                    if ($syllabus !== []) {
+                        foreach ($syllabus as $unit) {
+                            Lesson::query()->firstOrCreate(
+                                ['subject_id' => $subject->id, 'grade_id' => $grade->id, 'slug' => $unit['slug']],
+                                [
+                                    'name' => $unit['name'],
+                                    'name_si' => $unit['name_si'],
+                                    'is_active' => true,
+                                    'sort_order' => $unit['sort_order'],
+                                ],
+                            );
+                        }
+
+                        continue;
+                    }
 
                     for ($index = 1; $index <= $lessonCount; $index++) {
                         $name = sprintf('Unit %02d', $index);
@@ -175,7 +193,7 @@ class CatalogSeeder extends Seeder
                 ['name' => 'Economics', 'icon' => '📈', 'grades' => [12, 13], 'lessons' => 10],
                 ['name' => 'Business Studies', 'icon' => '💼', 'grades' => [12, 13], 'lessons' => 10],
                 ['name' => 'ICT', 'icon' => '💻', 'grades' => [12, 13], 'lessons' => 10],
-            ]
+            ],
         ];
     }
 }

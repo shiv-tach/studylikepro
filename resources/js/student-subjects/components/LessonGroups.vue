@@ -44,7 +44,10 @@ const copy = useCopy();</script>
                         ]"
                     >
                         <span class="h-2 w-2 shrink-0 rounded-full bg-primary"></span>
-                        <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ lesson.name }}</span>
+                        <span class="min-w-0">
+                            <span class="block text-sm font-semibold text-slate-700 dark:text-slate-200">{{ lesson.name }}</span>
+                            <span v-if="lesson.nameSi" class="block text-xs text-slate-400 dark:text-slate-500">{{ lesson.nameSi }}</span>
+                        </span>
                     </div>
                 </div>
             </div>

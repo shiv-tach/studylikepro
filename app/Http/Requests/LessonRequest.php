@@ -34,7 +34,8 @@ class LessonRequest extends FormRequest
         $lesson = $this->route('lesson');
 
         return [
-            'name' => ['required', 'string', 'max:100'],
+            'name' => ['required', 'string', 'max:150'],
+            'name_si' => ['nullable', 'string', 'max:150'],
             'grade_id' => [
                 'required',
                 'integer',
