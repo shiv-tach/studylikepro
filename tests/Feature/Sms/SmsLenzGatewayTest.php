@@ -63,6 +63,15 @@ test('missing credentials throw without calling the provider', function () {
     Http::assertNothingSent();
 });
 
+test('an empty message throws without calling the provider', function () {
+    Http::fake();
+
+    expect(fn () => smsLenzGateway()->send('0769828874', ''))
+        ->toThrow(SmsDeliveryException::class, 'The SMS message body is empty.');
+
+    Http::assertNothingSent();
+});
+
 test('sendAndReport returns the campaign id and credit balance', function () {
     Http::fake([
         'smslenz.lk/api/send-sms' => Http::response([

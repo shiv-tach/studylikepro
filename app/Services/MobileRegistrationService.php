@@ -317,10 +317,20 @@ class MobileRegistrationService
 
     private function message(string $code): string
     {
+        $template = trim((string) config('studylikepro.sms.otp_message'));
+
+        // Never text an empty body: SMSLenz answers 422 "The message field is
+        // required." and the visitor is left without a code. This also covers
+        // a config cache built while SMS_OTP_MESSAGE was blank, where the
+        // config file's own fallback would not have run yet.
+        if ($template === '') {
+            $template = ':app verification code: :code. Valid for :minutes minutes. Do not share this code.';
+        }
+
         return str_replace(
             [':app', ':code', ':minutes'],
             [(string) config('app.name'), $code, (string) $this->policy()['ttl_minutes']],
-            (string) config('studylikepro.sms.otp_message'),
+            $template,
         );
     }
 }

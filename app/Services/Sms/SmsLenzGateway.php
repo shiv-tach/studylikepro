@@ -55,6 +55,12 @@ class SmsLenzGateway implements SmsGateway
             throw new SmsDeliveryException('The mobile number is not a valid Sri Lankan number.');
         }
 
+        if (trim($message) === '') {
+            Log::warning('SMSLenz message body was empty', ['endpoint' => 'send-sms']);
+
+            throw new SmsDeliveryException('The SMS message body is empty.');
+        }
+
         $this->assertCredentials();
 
         return $this->request('send-sms', [

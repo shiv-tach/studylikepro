@@ -41,6 +41,20 @@ test('submitting the form texts a code without creating an account', function ()
         ->and(PendingRegistration::get()['mobile'])->toBe('0769828874');
 });
 
+test('a blank OTP message template falls back to the default instead of texting an empty body', function () {
+    config(['studylikepro.sms.otp_message' => '']);
+
+    $this->post('/register', registrationPayload())
+        ->assertRedirect(route('register.verify.show'))
+        ->assertSessionHas('status', 'otp-sent');
+
+    $message = FakeSmsGateway::last()['message'];
+
+    expect($message)->not->toBe('')
+        ->and($message)->toContain('verification code')
+        ->and(FakeSmsGateway::lastCode())->toMatch('/^\d{6}$/');
+});
+
 test('the verify screen masks the pending number', function () {
     $this->post('/register', registrationPayload());
 

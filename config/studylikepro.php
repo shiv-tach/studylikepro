@@ -213,10 +213,10 @@ return [
         'otp_max_resends' => (int) env('SMS_OTP_MAX_RESENDS', 3),
         // :code and :minutes are replaced before sending. Keep it inside one
         // SMS page (160 GSM characters) so the passcode is never truncated.
-        'otp_message' => env(
-            'SMS_OTP_MESSAGE',
-            ':app verification code: :code. Valid for :minutes minutes. Do not share this code.'
-        ),
+        // A blank SMS_OTP_MESSAGE (set but empty) made SMSLenz reject the send
+        // with "The message field is required.", so treat blank as unset.
+        'otp_message' => trim((string) env('SMS_OTP_MESSAGE'))
+            ?: ':app verification code: :code. Valid for :minutes minutes. Do not share this code.',
     ],
 
     'reviews' => [
