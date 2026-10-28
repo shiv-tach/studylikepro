@@ -85,6 +85,13 @@
         $navItems = [
             ['label' => 'Finish setup', 'url' => route('teacher.onboarding.show'), 'active' => request()->routeIs('teacher.onboarding*'), 'icon' => 'shield', 'badge' => null],
         ];
+    } elseif ($user->isTeacher() && ! $user->teacherProfile?->isApproved()) {
+        // Focused pending workspace: only what can work before approval. The
+        // rest of the teacher area unlocks once an admin approves the profile.
+        $navItems[] = ['label' => 'Approval status', 'url' => route('teacher.approval.status'), 'active' => request()->routeIs('teacher.approval*', 'teacher.onboarding.submitted'), 'icon' => 'shield', 'badge' => null];
+        $navItems[] = ['label' => 'Preview profile', 'url' => route('teacher.profile.preview'), 'active' => request()->routeIs('teacher.profile.preview'), 'icon' => 'user', 'badge' => null];
+        $navItems[] = ['label' => 'Availability', 'url' => route('teacher.availability.index'), 'active' => request()->routeIs('teacher.availability*'), 'icon' => 'calendar', 'badge' => null];
+        $navItems[] = ['label' => 'Messages', 'url' => route('messages.index'), 'active' => request()->routeIs('messages.*'), 'icon' => 'chat', 'badge' => ($unreadMessageCount ?? 0) ?: null];
     } elseif ($user->isTeacher()) {
         $navItems[] = ['label' => 'Orders', 'url' => route('teacher.orders.index'), 'active' => request()->routeIs('teacher.orders*'), 'icon' => 'wallet', 'badge' => null];
         $navItems[] = ['label' => 'My lessons', 'url' => route('teacher.schedule.index'), 'active' => request()->routeIs('teacher.schedule*') || request()->routeIs('teacher.bookings*'), 'icon' => 'clock', 'badge' => $lessonsToTeach ?: null];

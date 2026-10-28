@@ -18,7 +18,9 @@ class WeeklyAvailabilityRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->isTeacher() ?? false;
+        // The invite wizard (join.*) collects the week before the account
+        // exists, so a guest is allowed here as well.
+        return ($this->user()?->isTeacher() ?? false) || $this->routeIs('join.*');
     }
 
     /**
@@ -43,7 +45,7 @@ class WeeklyAvailabilityRequest extends FormRequest
                 return;
             }
 
-            $profile = $this->user()->teacherProfile;
+            $profile = $this->user()?->teacherProfile;
             $duration = $profile?->lessonDuration() ?? 60;
             $weekdays = config('studylikepro.weekdays');
             $saved = 0;

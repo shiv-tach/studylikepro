@@ -3,6 +3,10 @@
     // landing page's shell. Blade keeps ownership of the grade scope, the rates,
     // the permission checks and the route map, then hands them over as a JSON
     // island — so a visitor keeps the public navigation they arrived with.
+    //
+    // `$preview` is the teacher's own watermarked view of this page: it renders
+    // the same content before approval, marked noindex and never bookable.
+    $preview = $preview ?? false;
     $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT
         | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
 
@@ -16,7 +20,15 @@
     :description="$description"
     :og-image="asset('images/hero/hero-students-1200.jpg')"
     :vite="['resources/css/app.css', 'resources/js/public/main.js']"
+    :noindex="$preview"
 >
+    @if ($preview)
+        <div class="sticky top-0 z-50 border-b border-amber-300 bg-amber-50 px-4 py-2.5 text-center text-xs font-semibold text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/80 dark:text-amber-200">
+            {{ __('Preview only — your profile is not public yet.') }}
+            <a href="{{ route('teacher.approval.status') }}" class="underline">{{ __('Back to approval status') }}</a>
+        </div>
+    @endif
+
     <script type="application/json" id="public-teacher-config">@json($config, $jsonFlags)</script>
 
     <div id="public-teacher-app"></div>

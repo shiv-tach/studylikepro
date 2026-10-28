@@ -191,7 +191,7 @@
             ],
             'statusBodies' => [
                 'draft' => __('Upload your documents below, then submit your application. Verification keeps quality high and builds student trust.'),
-                'pending' => __('Thanks! We received your application on :submitted. Our team reviews documents within 1–2 business days, and you will be notified when your profile is approved.'),
+                'pending' => __('Thanks! We received your application on :submitted. You are not visible to students yet — our team reviews documents within 1–2 business days and you will be notified when your profile is approved.'),
                 'approved' => __('Your profile was approved on :verified. Verified teachers appear in student search and can be booked for live lessons.'),
                 'rejected' => __('Our team could not approve the application yet. Please address the notes below, update your documents, and resubmit.'),
             ],
@@ -266,7 +266,7 @@
             'submitBlockedSubjects' => __('Choose at least one subject you will teach to enable submission.'),
             'submitBlockedTerms' => __('Tick the terms box to enable submission.'),
             'confirmTitle' => __('Submit your application for review?'),
-            'confirmBody' => __('Your documents will be locked while our team reviews them, so please make sure they are clear and correct first. Reviews usually take 1–2 business days and you will be notified once your profile is approved.'),
+            'confirmBody' => __('Your documents will be locked while our team reviews them, so please make sure they are clear and correct first. Submitting does not make you visible yet — an admin approves your profile first, usually within 1–2 business days.'),
             'confirmYes' => __('Yes, submit for review'),
             'confirmNo' => __('Not yet'),
             'confirmClose' => __('Close'),

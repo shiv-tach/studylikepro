@@ -7,6 +7,7 @@ use App\Models\TeacherOnboardingDraft;
 use App\Models\TeacherProfile;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\Str;
 
@@ -25,10 +26,11 @@ final class TeacherProfileConfig
      * @param  'workspace'|'onboarding'  $mode
      * @param  'all'|'about'|'preferences'  $stepKey
      * @param  Collection<int, mixed>|null  $subjects
+     * @param  bool  $guest  the invite wizard, where no `users` row exists yet
      * @return array<string, mixed>
      */
     public static function build(
-        User $user,
+        ?User $user,
         ?TeacherProfile $profile,
         ?TeacherOnboardingDraft $draft,
         MessageBag $errors,
@@ -36,6 +38,7 @@ final class TeacherProfileConfig
         string $mode = 'workspace',
         string $stepKey = 'all',
         ?Collection $subjects = null,
+        bool $guest = false,
     ): array {
         $profileComplete = (bool) $profile?->isComplete();
         $verificationSubmitted = (bool) $profile?->hasSubmittedVerification();
@@ -51,7 +54,9 @@ final class TeacherProfileConfig
         $source = $restored ? $draftStep : [];
         $languages = config('studylikepro.languages');
 
-        $steps = TeacherOnboarding::steps($profile, $draft);
+        $steps = $guest
+            ? TeacherOnboarding::guestSteps(PendingTeacherSignup::answers())
+            : TeacherOnboarding::steps($profile, $draft);
         $currentStep = match ($stepKey) {
             'about' => 2,
             'preferences' => 3,
@@ -68,16 +73,23 @@ final class TeacherProfileConfig
         ];
 
         $updateUrl = match (true) {
+            $onboarding && $guest && $stepKey === 'about' => route('join.profile.update'),
+            $onboarding && $guest && $stepKey === 'preferences' => route('join.preferences.update'),
             $onboarding && $stepKey === 'about' => route('teacher.onboarding.profile.update'),
             $onboarding && $stepKey === 'preferences' => route('teacher.onboarding.preferences.update'),
             default => route('teacher.profile.update'),
         };
+
+        $urls = $guest
+            ? self::guestUrls($stepKey, $hasAvailability)
+            : self::teacherUrls($onboarding, $stepKey, $hasAvailability, $updateUrl);
 
         return [
             'appName' => config('app.name', 'Studylikepro'),
             'csrfToken' => csrf_token(),
             'theme' => ['preset' => $themePreset],
             'mode' => $mode,
+            'guest' => $guest,
             'stepKey' => $stepKey,
             'status' => [
                 'updated' => session('status') === 'profile-updated',
@@ -87,10 +99,12 @@ final class TeacherProfileConfig
                 'preferencesSaved' => session('status') === 'preferences-saved',
             ],
             'teacher' => [
-                'name' => $user->name,
-                'firstName' => $user->displayName(),
-                'initials' => (string) Str::of($user->name)->substr(0, 2),
-                'avatarUrl' => $user->avatarUrl(),
+                'name' => $user?->name ?? '',
+                'firstName' => $user?->displayName() ?? '',
+                'initials' => $user !== null ? (string) Str::of($user->name)->substr(0, 2) : '',
+                // A guest's photo is parked on the public disk until the account
+                // exists, so the preview still shows what they uploaded.
+                'avatarUrl' => $user?->avatarUrl() ?? ($guest ? self::pendingAvatarUrl() : null),
             ],
             'profile' => [
                 'isComplete' => $profileComplete,
@@ -145,29 +159,80 @@ final class TeacherProfileConfig
                 'hasAny' => $draft !== null && ! $draft->isEmpty(),
                 'step' => $stepKey,
             ],
-            'urls' => [
-                'update' => $updateUrl,
-                'back' => match (true) {
-                    $onboarding && $stepKey === 'about' => route('teacher.onboarding.show'),
-                    $onboarding && $stepKey === 'preferences' => route('teacher.onboarding.profile'),
-                    default => null,
-                },
-                'next' => match (true) {
-                    $onboarding && $stepKey === 'about' => route('teacher.onboarding.preferences'),
-                    $onboarding && $stepKey === 'preferences' => route('teacher.onboarding.availability'),
-                    default => null,
-                },
-                'draft' => $onboarding ? route('teacher.onboarding.draft') : null,
-                'draftDelete' => $onboarding ? route('teacher.onboarding.draft.destroy') : null,
-                'hub' => route('teacher.onboarding.show'),
-                'verification' => route('teacher.onboarding.verification'),
-                'availability' => route('teacher.onboarding.availability'),
-                'nextStep' => $hasAvailability
-                    ? route('teacher.onboarding.verification')
-                    : route('teacher.onboarding.availability'),
-            ],
+            'urls' => $urls + ['update' => $updateUrl],
             'copy' => self::copy($mode),
         ];
+    }
+
+    /**
+     * The URL map of the signed-in wizard and the workspace page.
+     *
+     * @return array<string, string|null>
+     */
+    private static function teacherUrls(bool $onboarding, string $stepKey, bool $hasAvailability, string $updateUrl): array
+    {
+        return [
+            'back' => match (true) {
+                $onboarding && $stepKey === 'about' => route('teacher.onboarding.show'),
+                $onboarding && $stepKey === 'preferences' => route('teacher.onboarding.profile'),
+                default => null,
+            },
+            'next' => match (true) {
+                $onboarding && $stepKey === 'about' => route('teacher.onboarding.preferences'),
+                $onboarding && $stepKey === 'preferences' => route('teacher.onboarding.availability'),
+                default => null,
+            },
+            'draft' => $onboarding ? route('teacher.onboarding.draft') : null,
+            'draftDelete' => $onboarding ? route('teacher.onboarding.draft.destroy') : null,
+            'hub' => route('teacher.onboarding.show'),
+            'verification' => route('teacher.onboarding.verification'),
+            'availability' => route('teacher.onboarding.availability'),
+            'nextStep' => $hasAvailability
+                ? route('teacher.onboarding.verification')
+                : route('teacher.onboarding.availability'),
+        ];
+    }
+
+    /**
+     * The same keys for the invite wizard: the account does not exist yet, so
+     * "next" leads to the next guest step and the last one to the account form.
+     *
+     * @return array<string, string|null>
+     */
+    private static function guestUrls(string $stepKey, bool $hasAvailability): array
+    {
+        return [
+            'back' => match ($stepKey) {
+                'about' => route('join.start'),
+                'preferences' => route('join.profile'),
+                default => null,
+            },
+            'next' => match ($stepKey) {
+                'about' => route('join.preferences'),
+                'preferences' => route('join.availability'),
+                default => null,
+            },
+            'draft' => route('join.draft'),
+            'draftDelete' => null,
+            'hub' => route('join.start'),
+            'verification' => route('join.account'),
+            'availability' => route('join.availability'),
+            'nextStep' => $hasAvailability ? route('join.account') : route('join.availability'),
+        ];
+    }
+
+    /**
+     * A guest's photo, uploaded before the user existed.
+     */
+    private static function pendingAvatarUrl(): ?string
+    {
+        $path = PendingTeacherSignup::avatarPath();
+
+        if ($path === null || ! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($path);
     }
 
     /**

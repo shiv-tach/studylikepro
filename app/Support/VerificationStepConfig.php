@@ -355,6 +355,14 @@ final class VerificationStepConfig
             'subjectsSaveFailed' => __('Your subjects could not be saved. Please try again.'),
             'submitTitle' => __('Submit for review'),
             'submitHint' => __('Nothing reaches our team until you submit. After that your documents are locked while we review — usually 1–2 business days.'),
+            // The three stages are shown above the button so "submit" never reads
+            // as "finished": it is the start of the review, not the end of setup.
+            'submitStages' => [
+                ['title' => __('Submit'), 'body' => __('Send your documents and subjects to our team.')],
+                ['title' => __('Review'), 'body' => __('An admin checks them — usually 1–2 business days.')],
+                ['title' => __('Go live'), 'body' => __('Approved teachers appear in student search and can be booked.')],
+            ],
+            'termsAcknowledge' => __('I understand my profile stays hidden from students until it is approved.'),
             'termsLead' => __('I have read and accept the'),
             'termsLink' => __('teacher terms'),
             'termsAnd' => __('and the'),
@@ -367,7 +375,7 @@ final class VerificationStepConfig
             'submitBlockedSubjects' => __('Choose at least one subject you will teach to enable submission.'),
             'submitBlockedTerms' => __('Tick the terms box to enable submission.'),
             'confirmTitle' => __('Submit your application for review?'),
-            'confirmBody' => __('Your documents will be locked while our team reviews them, so please make sure they are clear and correct first. Reviews usually take 1–2 business days and you will be notified once your profile is approved.'),
+            'confirmBody' => __('Your documents will be locked while our team reviews them, so please make sure they are clear and correct first. Submitting does not make you visible yet — an admin approves your profile first, usually within 1–2 business days.'),
             'confirmYes' => __('Yes, submit for review'),
             'confirmNo' => __('Not yet'),
             'confirmClose' => __('Close'),
@@ -376,13 +384,16 @@ final class VerificationStepConfig
             'removeConfirm' => __('Remove document'),
             'removeCancel' => __('Keep it'),
             'removeFailed' => __('That document could not be removed. Please try again.'),
-            'completeTitle' => __('Onboarding complete'),
-            'completeBody' => __('You can use your dashboard while our team reviews your application, or update your documents if we ask for changes.'),
+            'completeTitle' => __('You are live'),
+            'completeBody' => __('Your profile is approved. Students can find you in search and book your open slots.'),
             'completeCta' => __('Go to dashboard'),
+            'reviewTitle' => __('Application in review'),
+            'reviewBody' => __('Your documents are with our team. You are not visible to students yet — we will notify you as soon as your profile is approved.'),
+            'reviewCta' => __('View approval status'),
             // Wizard additions.
             'back' => __('Back to availability'),
             'stepTitle' => __('Verification'),
-            'stepBody' => __('Two things and you are in: your government ID and the subjects you teach.'),
+            'stepBody' => __('Two things left before review: your government ID and the subjects you teach.'),
             'stepOf' => $onboarding ? __('Step :current of :total') : '',
         ];
     }

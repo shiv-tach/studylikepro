@@ -25,6 +25,7 @@ final class AvailabilitySetupConfig
         MessageBag $errors,
         string $themePreset = 'classic',
         ?TeacherOnboardingDraft $draft = null,
+        bool $guest = false,
     ): array {
         $weekdays = config('studylikepro.weekdays');
         $presets = AvailabilityPresets::all();
@@ -133,8 +134,11 @@ final class AvailabilitySetupConfig
             ],
             'errors' => $rowErrors,
             'errorMessages' => $errors->all(),
-            'steps' => TeacherOnboarding::steps($profile, $draft),
+            'steps' => $guest
+                ? TeacherOnboarding::guestSteps(PendingTeacherSignup::answers())
+                : TeacherOnboarding::steps($profile, $draft),
             'currentStep' => 4,
+            'guest' => $guest,
             'draft' => [
                 'restored' => $restored,
                 'savedAt' => $restored ? $draft?->saved_at?->toIso8601String() : null,
@@ -142,29 +146,42 @@ final class AvailabilitySetupConfig
                 'hasAny' => $draft !== null && ! $draft->isEmpty(),
                 'step' => TeacherOnboarding::STEP_AVAILABILITY,
             ],
-            'urls' => [
-                'update' => route('teacher.onboarding.availability.update'),
-                'back' => route('teacher.onboarding.preferences'),
-                'next' => route('teacher.onboarding.verification'),
-                'draft' => route('teacher.onboarding.draft'),
-                'draftDelete' => route('teacher.onboarding.draft.destroy'),
-                'profile' => route('teacher.onboarding.profile'),
-                'availability' => route('teacher.availability.index'),
-            ],
-            'copy' => self::copy($timezone, $lessonDuration),
+            'urls' => $guest
+                ? [
+                    'update' => route('join.availability.update'),
+                    'back' => route('join.preferences'),
+                    'next' => route('join.account'),
+                    'draft' => route('join.draft'),
+                    'draftDelete' => null,
+                    'profile' => route('join.profile'),
+                    'availability' => route('join.availability'),
+                ]
+                : [
+                    'update' => route('teacher.onboarding.availability.update'),
+                    'back' => route('teacher.onboarding.preferences'),
+                    'next' => route('teacher.onboarding.verification'),
+                    'draft' => route('teacher.onboarding.draft'),
+                    'draftDelete' => route('teacher.onboarding.draft.destroy'),
+                    'profile' => route('teacher.onboarding.profile'),
+                    'availability' => route('teacher.availability.index'),
+                ],
+            'copy' => self::copy($timezone, $lessonDuration, $guest),
         ];
     }
 
     /**
      * @return array<string, string>
      */
-    private static function copy(string $timezone, int $lessonDuration): array
+    private static function copy(string $timezone, int $lessonDuration, bool $guest = false): array
     {
         return [
             'profileCompletedTitle' => __('Welcome to your weekly hours'),
             'profileCompletedBody' => __('Your profile is saved. Set the days and hours you teach so students can book you.'),
             'preferencesCompletedTitle' => __('Teaching preferences saved'),
-            'preferencesCompletedBody' => __('Almost there — set your weekly hours, then upload your documents.'),
+            // A guest has no documents step yet: the account itself comes next.
+            'preferencesCompletedBody' => $guest
+                ? __('Almost there — create your account in the last step.')
+                : __('Almost there — set your weekly hours, then upload your documents.'),
             'errorTitle' => __('Please fix the following:'),
             'stepsTitle' => __('Teacher setup'),
             'stepsCompleted' => __(':completed of :total steps completed'),

@@ -9,6 +9,7 @@
     'description' => null,
     'vite' => [],
     'ogImage' => null,
+    'noindex' => false,
 ])
 
 @php
@@ -23,6 +24,9 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>{{ $fullTitle }}</title>
+        @if ($noindex)
+            <meta name="robots" content="noindex,nofollow">
+        @endif
         @if ($description)
             <meta name="description" content="{{ $description }}">
         @endif

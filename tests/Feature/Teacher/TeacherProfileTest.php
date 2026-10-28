@@ -35,8 +35,8 @@ test('the profile page ships the live preview of the public teacher card', funct
         ->and($config['values']['hourlyRate'])->toBe((int) $user->teacherProfile->hourlyRate())
         ->and($config['preview']['subjects'])->toHaveCount(1)
         ->and($config['preview']['currencySymbol'])->not->toBe('')
-        ->and($config['preview']['verificationLabel'])->toBe('Pending review')
-        ->and($config['steps'])->toHaveCount(5)
+        ->and($config['preview']['verificationLabel'])->toBe('Verified')
+        ->and($config['steps'])->toHaveCount(6)
         ->and($config['urls']['update'])->toBe(route('teacher.profile.update'))
         ->and($config['urls']['availability'])->toBe(route('teacher.onboarding.availability'));
 });

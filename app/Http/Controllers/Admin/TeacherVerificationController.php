@@ -49,6 +49,8 @@ class TeacherVerificationController extends Controller
             'profiles' => $profiles,
             'status' => $status,
             'counts' => $counts,
+            // Applications that have waited past the promise made to teachers.
+            'overdue' => TeacherProfile::query()->overdueForReview()->count(),
         ]);
     }
 
@@ -99,6 +101,9 @@ class TeacherVerificationController extends Controller
             'verification_status' => VerificationStatus::Approved,
             'verified_at' => now(),
             'verification_notes' => null,
+            // A one-time "You're live" screen is owed from now on — including
+            // when a previously approved teacher is approved again.
+            'approved_seen_at' => null,
         ]);
 
         $teacherProfile->user->notify(new TeacherVerificationApproved(

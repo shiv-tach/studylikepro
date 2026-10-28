@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ApprovalStatus;
 use App\Enums\VerificationStatus;
+use App\Support\TeacherApproval;
 use Database\Factories\TeacherProfileFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,6 +33,7 @@ class TeacherProfile extends Model
         'verification_notes',
         'submitted_at',
         'verified_at',
+        'approved_seen_at',
         'completed_at',
         'about_completed_at',
         'preferences_completed_at',
@@ -46,6 +48,7 @@ class TeacherProfile extends Model
             'verification_status' => VerificationStatus::class,
             'submitted_at' => 'datetime',
             'verified_at' => 'datetime',
+            'approved_seen_at' => 'datetime',
             'completed_at' => 'datetime',
             'about_completed_at' => 'datetime',
             'preferences_completed_at' => 'datetime',
@@ -464,6 +467,40 @@ class TeacherProfile extends Model
     public function isApproved(): bool
     {
         return $this->verification_status === VerificationStatus::Approved;
+    }
+
+    /**
+     * Submitted and waiting for an admin decision: setup is done, but the
+     * profile is not public and nothing can be booked yet.
+     */
+    public function isPending(): bool
+    {
+        return $this->verification_status === VerificationStatus::Pending;
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->verification_status === VerificationStatus::Rejected;
+    }
+
+    /**
+     * The teacher still owes the "You're live" celebration: approved, but the
+     * approval screen has never been acknowledged.
+     */
+    public function owesLiveAnnouncement(): bool
+    {
+        return $this->isApproved() && $this->approved_seen_at === null;
+    }
+
+    /**
+     * Pending applications that have waited longer than the review promise.
+     */
+    public function scopeOverdueForReview(Builder $query): Builder
+    {
+        return $query
+            ->where('verification_status', VerificationStatus::Pending)
+            ->whereNotNull('submitted_at')
+            ->where('submitted_at', '<=', now()->subWeekdays(TeacherApproval::REVIEW_BUSINESS_DAYS));
     }
 
     public function hourlyRate(): float

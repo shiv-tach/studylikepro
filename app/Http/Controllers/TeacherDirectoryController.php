@@ -18,6 +18,56 @@ use Illuminate\View\View;
 class TeacherDirectoryController extends Controller
 {
     /**
+     * A teacher-only, watermarked preview of their own public profile. It works
+     * before approval so the teacher can see exactly what students will see,
+     * while the page itself stays unlisted and unbookable.
+     */
+    public function preview(Request $request, SlotService $slots, TeacherStatsService $stats): View|RedirectResponse
+    {
+        $profile = $request->user()->teacherProfile;
+
+        if ($profile === null) {
+            return redirect()->route('teacher.onboarding.show');
+        }
+
+        $profile->load([
+            'user',
+            // The preview shows everything except subjects the admin rejected,
+            // so the teacher can judge the page they are building.
+            'subjects' => fn ($relation) => $relation
+                ->where('subjects.is_active', true)
+                ->wherePivot('status', '!=', ApprovalStatus::Rejected->value)
+                ->with([
+                    'educationLevel.grades' => fn ($query) => $query->where('is_active', true)->ordered(),
+                ]),
+        ]);
+
+        $reviews = $profile->visibleReviews()
+            ->with('booking.lesson', 'booking.subject', 'student')
+            ->limit(5)
+            ->get();
+
+        $offerings = $profile->offerings()->active()->get(['service_type']);
+
+        return view('teachers.show', [
+            'teacher' => $profile,
+            'preview' => true,
+            'config' => PublicTeacherPageConfig::build($profile, [
+                'offerings' => $offerings,
+                'gradesById' => $profile->subjects
+                    ->flatMap(fn (Subject $subject) => $subject->educationLevel?->grades ?? collect())
+                    ->keyBy('id'),
+                'availability' => $slots->upcoming($profile, 14, 40, excludeBookings: true),
+                'windows' => $slots->availabilityWindows($profile),
+                'slotLimit' => 40,
+                'reviews' => $reviews,
+                'breakdown' => $stats->ratingBreakdown($profile),
+                'preview' => true,
+            ]),
+        ]);
+    }
+
+    /**
      * Public teacher listing with filters and sorting. Students browse through
      * their own grade-matched finder instead.
      */

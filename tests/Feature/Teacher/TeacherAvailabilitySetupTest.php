@@ -41,7 +41,7 @@ it('shows onboarding step 2 with the recommended week pre-loaded', function () {
 
     expect($config['currentStep'])->toBe(4)
         ->and(collect($config['steps'])->pluck('label')->all())
-        ->toBe(['Getting started', 'About you', 'Teaching preferences', 'Weekly availability', 'Verification'])
+        ->toBe(['Getting started', 'About you', 'Teaching preferences', 'Weekly availability', 'Verification', 'Review & approval'])
         ->and($config['profile']['isComplete'])->toBeTrue()
         ->and($config['profile']['hasAvailability'])->toBeFalse()
         ->and($config['profile']['lessonDuration'])->toBe(60)

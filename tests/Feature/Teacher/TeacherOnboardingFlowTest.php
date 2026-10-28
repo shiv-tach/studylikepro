@@ -27,17 +27,17 @@ test('a teacher who finished the profile and week is sent to the verification st
         ->assertRedirect(route('teacher.onboarding.verification'));
 });
 
-test('the verification step explains what is left before the teacher area unlocks', function () {
+test('the verification step explains what is left before review', function () {
     $teacher = onboardingTeacher();
 
     $this->actingAs($teacher)
         ->followingRedirects()
         ->get(route('teacher.dashboard'))
         ->assertOk()
-        ->assertSee('Two things and you are in');
+        ->assertSee('Two things left before review');
 });
 
-test('submitting verification unlocks the teacher area', function () {
+test('a submitted teacher is sent to the approval status page, not the workspace', function () {
     $teacher = onboardingTeacher();
     TeacherVerificationDocument::factory()->for($teacher->teacherProfile)->create();
 
@@ -47,6 +47,15 @@ test('submitting verification unlocks the teacher area', function () {
         ->assertSessionHas('status', 'submitted-for-review');
 
     $teacher->refresh()->unsetRelation('teacherProfile');
+
+    $this->actingAs($teacher)
+        ->get(route('teacher.dashboard'))
+        ->assertRedirect(route('teacher.approval.status'))
+        ->assertSessionHas('status', 'approval-pending');
+});
+
+test('an approved teacher reaches the teacher workspace', function () {
+    $teacher = User::factory()->teacher()->onboarded()->create();
 
     $this->actingAs($teacher)
         ->get(route('teacher.dashboard'))

@@ -632,6 +632,59 @@ function registerThroughOtp(array $payload, string $url = '/register'): TestResp
 }
 
 /**
+ * Walk the guest invite wizard from the link to the SMS step: the three answer
+ * steps, then the account form. Returns the account details it submitted.
+ *
+ * @param  array<string, string>  $account
+ * @return array<string, string>
+ */
+function joinThroughInvite(string $token, array $account = [], array $steps = []): array
+{
+    $account = array_merge([
+        'first_name' => 'Amara',
+        'last_name' => 'Silva',
+        'email' => 'amara@example.com',
+        'mobile' => '077 123 4567',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ], $account);
+
+    $steps = array_merge([
+        'about' => [
+            'headline' => 'Physics tutor for O/L students',
+            'bio' => 'Ten years of classroom experience.',
+            'experience_years' => 10,
+            'education' => 'B.Sc. Physics, University of Colombo',
+        ],
+        'preferences' => [
+            'languages' => ['English', 'Sinhala'],
+            'hourly_rate' => 2500,
+        ],
+        'availability' => [
+            'days' => [
+                ['value' => 1, 'enabled' => 1, 'ranges' => [['start_time' => '15:00', 'end_time' => '18:00']]],
+            ],
+        ],
+    ], $steps);
+
+    test()->get('/register?invite='.$token)->assertRedirect(route('join.start'));
+
+    test()->put(route('join.profile.update'), $steps['about'])
+        ->assertRedirect(route('join.preferences'));
+
+    test()->put(route('join.preferences.update'), $steps['preferences'])
+        ->assertRedirect(route('join.availability'));
+
+    test()->put(route('join.availability.update'), $steps['availability'])
+        ->assertRedirect(route('join.account'));
+
+    test()->post(route('join.account.store'), $account)
+        ->assertRedirect(route('join.account'));
+
+    return $account;
+}
+
+/**
  * The id of the seeded grade with this number (6-13). The migrations seed the
  * Sri Lankan levels and grades, so tests can rely on them being present.
  */

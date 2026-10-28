@@ -52,6 +52,7 @@ use App\Http\Controllers\Teacher\AvailabilityController as TeacherAvailabilityCo
 use App\Http\Controllers\Teacher\BookingController as TeacherBookingController;
 use App\Http\Controllers\Teacher\DashboardController as TeacherDashboardController;
 use App\Http\Controllers\Teacher\EarningsController as TeacherEarningsController;
+use App\Http\Controllers\Teacher\LiveController as TeacherLiveController;
 use App\Http\Controllers\Teacher\OnboardingController as TeacherOnboardingController;
 use App\Http\Controllers\Teacher\PaperMarkingController as TeacherPaperMarkingController;
 use App\Http\Controllers\Teacher\OrderController as TeacherOrderController;
@@ -192,7 +193,7 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
     ->prefix('teacher')
     ->name('teacher.')
     ->group(function () {
-        Route::get('/dashboard', TeacherDashboardController::class)->middleware('onboarded')->name('dashboard');
+        Route::get('/dashboard', TeacherDashboardController::class)->middleware(['onboarded', 'approved-teacher'])->name('dashboard');
 
         // The onboarding wizard. Every step is its own URL so a reload always
         // lands where the teacher was, and each step autosaves into a draft.
@@ -210,6 +211,19 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
             Route::delete('/draft', [TeacherOnboardingController::class, 'destroyDraft'])->middleware('throttle:onboarding-draft')->name('draft.destroy');
         });
 
+        // The approval status page, addressable outside the wizard so the
+        // sidebar, the shell banner and the review gate can all link to it.
+        Route::get('/approval', [TeacherOnboardingController::class, 'submitted'])->name('approval.status');
+
+        // A teacher-only, watermarked preview of the public profile. It exists
+        // before approval so the teacher knows exactly what students will see.
+        Route::get('/profile/preview', [TeacherDirectoryController::class, 'preview'])->name('profile.preview');
+
+        // The one-time "You're live" announcement, shown the first time an
+        // approved teacher returns after review.
+        Route::get('/welcome-live', [TeacherLiveController::class, 'show'])->name('welcome.live');
+        Route::post('/welcome-live/ack', [TeacherLiveController::class, 'acknowledge'])->name('welcome.live.ack');
+
         Route::get('/profile', [TeacherProfileController::class, 'edit'])->name('profile');
         Route::put('/profile', [TeacherProfileController::class, 'update'])->middleware('throttle:uploads')->name('profile.update');
 
@@ -219,11 +233,11 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
         Route::post('/verification/subjects', [TeacherVerificationController::class, 'storeSubjects'])->name('verification.subjects.store');
         Route::post('/verification/submit', [TeacherVerificationController::class, 'submit'])->name('verification.submit');
 
-        Route::get('/subjects', [TeacherSubjectsController::class, 'index'])->middleware('onboarded')->name('subjects.index');
-        Route::post('/subjects/add', [TeacherSubjectsController::class, 'addSubjects'])->middleware('onboarded')->name('subjects.add');
-        Route::post('/subjects/request', [TeacherSubjectsController::class, 'storeRequest'])->middleware('onboarded')->name('subjects.request');
-        Route::post('/subjects/request/{subjectRequest}/cancel', [TeacherSubjectsController::class, 'cancelRequest'])->middleware('onboarded')->name('subjects.request.cancel');
-        Route::post('/subjects/{subject}', [TeacherSubjectsController::class, 'update'])->middleware('onboarded')->name('subjects.update');
+        Route::get('/subjects', [TeacherSubjectsController::class, 'index'])->middleware(['onboarded', 'approved-teacher'])->name('subjects.index');
+        Route::post('/subjects/add', [TeacherSubjectsController::class, 'addSubjects'])->middleware(['onboarded', 'approved-teacher'])->name('subjects.add');
+        Route::post('/subjects/request', [TeacherSubjectsController::class, 'storeRequest'])->middleware(['onboarded', 'approved-teacher'])->name('subjects.request');
+        Route::post('/subjects/request/{subjectRequest}/cancel', [TeacherSubjectsController::class, 'cancelRequest'])->middleware(['onboarded', 'approved-teacher'])->name('subjects.request.cancel');
+        Route::post('/subjects/{subject}', [TeacherSubjectsController::class, 'update'])->middleware(['onboarded', 'approved-teacher'])->name('subjects.update');
 
         Route::get('/availability', [TeacherAvailabilityController::class, 'index'])->middleware('onboarded')->name('availability.index');
         // The manager replaces the whole week in one PUT (same payload shape as
@@ -241,36 +255,36 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
         Route::get('/availability/setup', [TeacherAvailabilityController::class, 'setup'])->name('availability.setup');
         Route::put('/availability/setup', [TeacherAvailabilityController::class, 'updateWeek'])->name('availability.setup.update');
 
-        Route::get('/schedule', [TeacherBookingController::class, 'index'])->middleware('onboarded')->name('schedule.index');
-        Route::get('/schedule/{booking}', [TeacherBookingController::class, 'show'])->middleware('onboarded')->name('bookings.show');
-        Route::post('/schedule/{booking}/start', [TeacherBookingController::class, 'start'])->middleware('onboarded')->name('bookings.start');
-        Route::post('/schedule/{booking}/complete', [TeacherBookingController::class, 'complete'])->middleware('onboarded')->name('bookings.complete');
-        Route::post('/schedule/{booking}/no-show', [TeacherBookingController::class, 'markNoShow'])->middleware('onboarded')->name('bookings.no-show');
-        Route::post('/schedule/{booking}/cancel', [TeacherBookingController::class, 'cancel'])->middleware('onboarded')->name('bookings.cancel');
+        Route::get('/schedule', [TeacherBookingController::class, 'index'])->middleware(['onboarded', 'approved-teacher'])->name('schedule.index');
+        Route::get('/schedule/{booking}', [TeacherBookingController::class, 'show'])->middleware(['onboarded', 'approved-teacher'])->name('bookings.show');
+        Route::post('/schedule/{booking}/start', [TeacherBookingController::class, 'start'])->middleware(['onboarded', 'approved-teacher'])->name('bookings.start');
+        Route::post('/schedule/{booking}/complete', [TeacherBookingController::class, 'complete'])->middleware(['onboarded', 'approved-teacher'])->name('bookings.complete');
+        Route::post('/schedule/{booking}/no-show', [TeacherBookingController::class, 'markNoShow'])->middleware(['onboarded', 'approved-teacher'])->name('bookings.no-show');
+        Route::post('/schedule/{booking}/cancel', [TeacherBookingController::class, 'cancel'])->middleware(['onboarded', 'approved-teacher'])->name('bookings.cancel');
 
-        Route::get('/earnings', [TeacherEarningsController::class, 'index'])->middleware('onboarded')->name('earnings.index');
-        Route::get('/reviews', [TeacherReviewController::class, 'index'])->middleware('onboarded')->name('reviews.index');
-        Route::post('/reviews/{review}/flag', [TeacherReviewController::class, 'flag'])->middleware('onboarded')->name('reviews.flag');
+        Route::get('/earnings', [TeacherEarningsController::class, 'index'])->middleware(['onboarded', 'approved-teacher'])->name('earnings.index');
+        Route::get('/reviews', [TeacherReviewController::class, 'index'])->middleware(['onboarded', 'approved-teacher'])->name('reviews.index');
+        Route::post('/reviews/{review}/flag', [TeacherReviewController::class, 'flag'])->middleware(['onboarded', 'approved-teacher'])->name('reviews.flag');
 
         // Services & pricing: lesson plans, paper marking, paper discussions
         // and Q&A offerings.
-        Route::get('/services', [TeacherServiceOfferingController::class, 'index'])->middleware('onboarded')->name('services.index');
-        Route::post('/services', [TeacherServiceOfferingController::class, 'store'])->middleware('onboarded')->name('services.store');
-        Route::put('/services/{offering}', [TeacherServiceOfferingController::class, 'update'])->middleware('onboarded')->name('services.update');
-        Route::delete('/services/{offering}', [TeacherServiceOfferingController::class, 'destroy'])->middleware('onboarded')->name('services.destroy');
-        Route::post('/services/{offering}/toggle', [TeacherServiceOfferingController::class, 'toggle'])->middleware('onboarded')->name('services.toggle');
+        Route::get('/services', [TeacherServiceOfferingController::class, 'index'])->middleware(['onboarded', 'approved-teacher'])->name('services.index');
+        Route::post('/services', [TeacherServiceOfferingController::class, 'store'])->middleware(['onboarded', 'approved-teacher'])->name('services.store');
+        Route::put('/services/{offering}', [TeacherServiceOfferingController::class, 'update'])->middleware(['onboarded', 'approved-teacher'])->name('services.update');
+        Route::delete('/services/{offering}', [TeacherServiceOfferingController::class, 'destroy'])->middleware(['onboarded', 'approved-teacher'])->name('services.destroy');
+        Route::post('/services/{offering}/toggle', [TeacherServiceOfferingController::class, 'toggle'])->middleware(['onboarded', 'approved-teacher'])->name('services.toggle');
 
         // Orders: student purchases and their sessions.
-        Route::get('/orders', [TeacherOrderController::class, 'index'])->middleware('onboarded')->name('orders.index');
-        Route::get('/orders/{purchase}', [TeacherOrderController::class, 'show'])->middleware('onboarded')->name('orders.show');
+        Route::get('/orders', [TeacherOrderController::class, 'index'])->middleware(['onboarded', 'approved-teacher'])->name('orders.index');
+        Route::get('/orders/{purchase}', [TeacherOrderController::class, 'show'])->middleware(['onboarded', 'approved-teacher'])->name('orders.show');
 
         // Paper marking inbox.
-        Route::get('/marking', [TeacherPaperMarkingController::class, 'index'])->middleware('onboarded')->name('marking.index');
-        Route::get('/marking/{order}', [TeacherPaperMarkingController::class, 'show'])->middleware('onboarded')->name('marking.show');
-        Route::patch('/marking/{order}/draft', [TeacherPaperMarkingController::class, 'saveDraft'])->middleware(['onboarded', 'throttle:marking-draft'])->name('marking.draft');
-        Route::post('/marking/{order}/mark', [TeacherPaperMarkingController::class, 'mark'])->middleware(['onboarded', 'throttle:uploads'])->name('marking.mark');
-        Route::get('/marking/{order}/files/{kind}/{index}', [TeacherPaperMarkingController::class, 'download'])->middleware('onboarded')->name('marking.download');
-        Route::get('/marking/{order}/preview/{kind}/{index}', [TeacherPaperMarkingController::class, 'preview'])->middleware('onboarded')->name('marking.preview');
+        Route::get('/marking', [TeacherPaperMarkingController::class, 'index'])->middleware(['onboarded', 'approved-teacher'])->name('marking.index');
+        Route::get('/marking/{order}', [TeacherPaperMarkingController::class, 'show'])->middleware(['onboarded', 'approved-teacher'])->name('marking.show');
+        Route::patch('/marking/{order}/draft', [TeacherPaperMarkingController::class, 'saveDraft'])->middleware(['onboarded', 'approved-teacher', 'throttle:marking-draft'])->name('marking.draft');
+        Route::post('/marking/{order}/mark', [TeacherPaperMarkingController::class, 'mark'])->middleware(['onboarded', 'approved-teacher', 'throttle:uploads'])->name('marking.mark');
+        Route::get('/marking/{order}/files/{kind}/{index}', [TeacherPaperMarkingController::class, 'download'])->middleware(['onboarded', 'approved-teacher'])->name('marking.download');
+        Route::get('/marking/{order}/preview/{kind}/{index}', [TeacherPaperMarkingController::class, 'preview'])->middleware(['onboarded', 'approved-teacher'])->name('marking.preview');
     });
 
 Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended', LogAdminActivity::class])

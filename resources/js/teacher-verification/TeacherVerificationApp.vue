@@ -123,7 +123,7 @@ async function confirmRemoval() {
         <RevealOnScroll v-if="config.mode === 'onboarding'">
             <div>
                 <p class="text-[11px] font-bold uppercase tracking-wider text-primary">
-                    {{ format(copy.stepOf, { current: 5, total: (config.steps ?? []).length || 5 }) }}
+                    {{ format(copy.stepOf, { current: config.currentStep ?? 5, total: (config.steps ?? []).length || 6 }) }}
                 </p>
                 <h1 class="mt-1 text-xl font-bold leading-tight text-slate-900 dark:text-slate-100 sm:text-2xl">
                     {{ copy.stepTitle }}
@@ -158,7 +158,7 @@ async function confirmRemoval() {
                 </RevealOnScroll>
 
                 <RevealOnScroll v-else :delay="40">
-                    <CompletedCard />
+                    <CompletedCard :status="config.status ?? {}" />
                 </RevealOnScroll>
             </div>
 

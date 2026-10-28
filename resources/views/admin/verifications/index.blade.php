@@ -37,6 +37,12 @@
                     <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">{{ $tab['count'] }}</span>
                 </a>
             @endforeach
+
+            @if ($overdue > 0)
+                <p class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200/80 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
+                    {{ trans_choice(':count application is past review promise|:count applications are past review promise', $overdue, ['count' => $overdue]) }}
+                </p>
+            @endif
         </div>
 
         <!-- Queue -->
@@ -69,6 +75,11 @@
                                     {{ $profile->documents_count }} {{ Str::plural('document', $profile->documents_count) }}
                                 </span>
                                 <span>Submitted {{ $profile->submitted_at?->diffForHumans() ?? 'not yet' }}</span>
+                                @if (\App\Support\TeacherApproval::isOverdue($profile))
+                                    <span class="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+                                        {{ __('Overdue') }}
+                                    </span>
+                                @endif
                                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $profile->verification_status->badgeClasses() }}">
                                     {{ $profile->verification_status->label() }}
                                 </span>

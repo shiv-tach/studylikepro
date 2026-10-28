@@ -141,6 +141,17 @@
                         {{ __('Nothing reaches our team until you submit. After that your documents are locked while we review — usually 1–2 business days.') }}
                     </p>
 
+                    <ol class="mt-4 grid gap-2 sm:grid-cols-3">
+                        @foreach ($config['copy']['submitStages'] as $index => $stage)
+                            <li class="rounded-xl border border-slate-200/80 p-3 dark:border-slate-800/80">
+                                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                    {{ $index + 1 }}. {{ $stage['title'] }}
+                                </p>
+                                <p class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{{ $stage['body'] }}</p>
+                            </li>
+                        @endforeach
+                    </ol>
+
                     <form method="POST" action="{{ route('teacher.verification.submit') }}" class="mt-4 space-y-4">
                         @csrf
                         <input type="hidden" name="return" value="onboarding">
@@ -150,6 +161,9 @@
                                    class="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary dark:border-slate-600 dark:bg-slate-900">
                             <span>{{ __('I have read and accept the teacher terms and the privacy policy, including the commission and cancellation rules.') }}</span>
                         </label>
+                        <p class="px-1 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
+                            {{ $config['copy']['termsAcknowledge'] }}
+                        </p>
                         <x-input-error :messages="$errors->get('agree')" />
 
                         <div class="flex justify-end">

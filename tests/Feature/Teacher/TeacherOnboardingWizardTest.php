@@ -107,8 +107,8 @@ test('the verification step renders inside the wizard after availability', funct
         ->get(route('teacher.onboarding.verification'))
         ->assertOk()
         ->assertSee('id="teacher-verification-app"', false)
-        ->assertSee('Two things and you are in')
-        ->assertSee('Step 5 of 5')
+        ->assertSee('Two things left before review')
+        ->assertSee('Step 5 of 6')
         ->assertDontSee('id="studylikepro-shell"', false);
 });
 
@@ -125,8 +125,9 @@ test('submitting from the wizard lands on the confirmation screen', function () 
         ->get(route('teacher.onboarding.submitted'))
         ->assertOk()
         ->assertSee('Application received')
-        ->assertSee('What happens next')
-        ->assertSee('Go to dashboard');
+        ->assertSee('Where your application is')
+        ->assertSee('not visible to students yet')
+        ->assertSee('Preview my public profile');
 });
 
 test('the confirmation screen is guarded until the application is submitted', function () {

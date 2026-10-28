@@ -185,6 +185,10 @@ function verifiedTeacher(Subject $subject, Lesson $lesson, CarbonImmutable $wind
 
     expect($profile->refresh()->verification_status)->toBe(VerificationStatus::Approved);
 
+    // The one-time "You're live" screen is acknowledged, as a real teacher
+    // would do on their first page load after approval.
+    $profile->update(['approved_seen_at' => now()]);
+
     // Teach this subject's lesson, at this rate, on the evening the student booked.
     $teacherUser->refresh()->unsetRelation('teacherProfile');
 

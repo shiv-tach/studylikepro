@@ -27,6 +27,18 @@ final class TeacherOnboarding
 
     public const STEP_VERIFICATION = 'verification';
 
+    /**
+     * The review phase. It is not a form: it is the state the teacher is in
+     * after submitting, and it only turns green when an admin approves.
+     */
+    public const STEP_REVIEW = 'review';
+
+    /**
+     * The last step of the *guest* wizard: the account is created here, after
+     * the mobile number is proved with the SMS passcode.
+     */
+    public const STEP_ACCOUNT = 'account';
+
     /** The data steps, in order (the welcome screen is an intro, not a form). */
     public const DATA_STEPS = [
         self::STEP_ABOUT,
@@ -38,7 +50,7 @@ final class TeacherOnboarding
     /**
      * Every step of the wizard, with the state the progress rail renders.
      *
-     * @return list<array{key: string, number: int, label: string, hint: string, url: string, done: bool, reachable: bool}>
+     * @return list<array{key: string, number: int, label: string, hint: string, url: string, done: bool, reachable: bool, state?: string|null}>
      */
     public static function steps(?TeacherProfile $profile, ?TeacherOnboardingDraft $draft = null): array
     {
@@ -48,6 +60,8 @@ final class TeacherOnboarding
         $profileComplete = (bool) $profile?->isComplete();
         $hasAvailability = $profile !== null && self::hasAvailability($profile);
         $verificationSubmitted = (bool) $profile?->hasSubmittedVerification();
+        $approved = (bool) $profile?->isApproved();
+        $rejected = (bool) $profile?->isRejected();
 
         return [
             [
@@ -108,12 +122,35 @@ final class TeacherOnboarding
                 'done' => $verificationSubmitted,
                 'reachable' => $profileComplete && $hasAvailability,
             ],
+            [
+                'key' => self::STEP_REVIEW,
+                'number' => 6,
+                'label' => __('Review & approval'),
+                'hint' => match (true) {
+                    $approved => __('Approved — you are live. Students can find and book you.'),
+                    $rejected => __('Action needed — update your application and resubmit.'),
+                    $verificationSubmitted => __('Our team is reviewing — usually 1–2 business days.'),
+                    default => __('Unlocks when you submit your application.'),
+                },
+                'url' => route('teacher.onboarding.submitted'),
+                // Green is reserved for an actual approval: submitting only moves
+                // the teacher into the review state.
+                'done' => $approved,
+                'reachable' => $verificationSubmitted,
+                'state' => match (true) {
+                    $approved => null,
+                    $rejected => 'action',
+                    $verificationSubmitted => 'pending',
+                    default => null,
+                },
+            ],
         ];
     }
 
     /**
      * The step the teacher should resume at: the first one that is not done and
-     * is reachable, or verification when everything else is finished.
+     * is reachable, or verification when everything else is finished. The review
+     * step is a state, not a form, so it is never a resume target.
      */
     public static function resumeStep(?TeacherProfile $profile, ?TeacherOnboardingDraft $draft = null): string
     {
@@ -124,6 +161,10 @@ final class TeacherOnboarding
         }
 
         foreach ($steps as $step) {
+            if ($step['key'] === self::STEP_REVIEW) {
+                continue;
+            }
+
             if (! $step['done'] && $step['reachable']) {
                 return $step['key'];
             }
@@ -170,5 +211,79 @@ final class TeacherOnboarding
         return $profile->relationLoaded('availabilitySlots')
             ? $profile->availabilitySlots->isNotEmpty()
             : $profile->availabilitySlots()->exists();
+    }
+
+    /**
+     * The steps of the *guest* wizard an invite link opens before any account
+     * exists (see `PendingTeacherSignup`).
+     *
+     * It mirrors the first four steps of the signed-in wizard — same labels and
+     * numbers — and ends with the account itself, because identity and password
+     * are deliberately the last thing a visitor is asked for. Verification
+     * follows immediately after sign-in, so it is explained on the account step
+     * instead of being listed as a locked row here.
+     *
+     * @param  array<string, mixed>  $answers  the answers already submitted in the guest wizard
+     * @return list<array{key: string, number: int, label: string, hint: string, url: string, done: bool, reachable: bool}>
+     */
+    public static function guestSteps(array $answers = []): array
+    {
+        $aboutDone = ! empty($answers[self::STEP_ABOUT]);
+        $preferencesDone = ! empty($answers[self::STEP_PREFERENCES]);
+        $availabilityDone = ! empty($answers[self::STEP_AVAILABILITY]);
+
+        return [
+            [
+                'key' => self::STEP_WELCOME,
+                'number' => 1,
+                'label' => __('Getting started'),
+                'hint' => __('What to prepare and how long setup takes.'),
+                'url' => route('join.start'),
+                'done' => $aboutDone,
+                'reachable' => true,
+            ],
+            [
+                'key' => self::STEP_ABOUT,
+                'number' => 2,
+                'label' => __('About you'),
+                'hint' => __('Headline, biography and teaching experience.'),
+                'url' => route('join.profile'),
+                'done' => $aboutDone,
+                'reachable' => true,
+            ],
+            [
+                'key' => self::STEP_PREFERENCES,
+                'number' => 3,
+                'label' => __('Teaching preferences'),
+                'hint' => $aboutDone
+                    ? __('Languages, hourly rate and profile photo.')
+                    : __('Unlocks once you fill in the About you step.'),
+                'url' => route('join.preferences'),
+                'done' => $preferencesDone,
+                'reachable' => $aboutDone || $preferencesDone,
+            ],
+            [
+                'key' => self::STEP_AVAILABILITY,
+                'number' => 4,
+                'label' => __('Weekly availability'),
+                'hint' => $preferencesDone
+                    ? __('Students can book lessons inside these hours.')
+                    : __('Unlocks once you save your teaching preferences.'),
+                'url' => route('join.availability'),
+                'done' => $availabilityDone,
+                'reachable' => $preferencesDone || $availabilityDone,
+            ],
+            [
+                'key' => self::STEP_ACCOUNT,
+                'number' => 5,
+                'label' => __('Create your account'),
+                'hint' => $availabilityDone
+                    ? __('Your name, password and a code we text to your mobile.')
+                    : __('Unlocks once you set your weekly availability.'),
+                'url' => route('join.account'),
+                'done' => false,
+                'reachable' => $availabilityDone,
+            ],
+        ];
     }
 }

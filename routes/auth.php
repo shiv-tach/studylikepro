@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\InviteOnboardingController;
 use App\Http\Controllers\Auth\MobileVerificationController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
@@ -18,6 +19,43 @@ Route::middleware('guest')->group(function () {
 
     Route::post('register', [RegisteredUserController::class, 'store'])
         ->middleware(['throttle:register', 'throttle:otp']);
+
+    // The invite wizard. A teacher onboarding link opens the onboarding steps as
+    // a guest: nothing is written to `users` until the last step collects the
+    // password and proves the mobile number with an SMS code.
+    Route::prefix('join')->name('join.')->middleware('invite.signup')->group(function () {
+        Route::get('/', [InviteOnboardingController::class, 'welcome'])->name('start');
+
+        Route::get('/profile', [InviteOnboardingController::class, 'editAbout'])->name('profile');
+        Route::put('/profile', [InviteOnboardingController::class, 'updateAbout'])
+            ->middleware('throttle:uploads')
+            ->name('profile.update');
+
+        Route::get('/preferences', [InviteOnboardingController::class, 'editPreferences'])->name('preferences');
+        Route::put('/preferences', [InviteOnboardingController::class, 'updatePreferences'])
+            ->middleware('throttle:uploads')
+            ->name('preferences.update');
+
+        Route::get('/availability', [InviteOnboardingController::class, 'editAvailability'])->name('availability');
+        Route::put('/availability', [InviteOnboardingController::class, 'updateAvailability'])->name('availability.update');
+
+        Route::patch('/draft', [InviteOnboardingController::class, 'saveDraft'])
+            ->middleware('throttle:onboarding-draft')
+            ->name('draft');
+
+        // The final step: identity + password, then the SMS code on the same URL.
+        Route::get('/account', [InviteOnboardingController::class, 'editAccount'])->name('account');
+        Route::post('/account', [InviteOnboardingController::class, 'storeAccount'])
+            ->middleware(['throttle:register', 'throttle:otp'])
+            ->name('account.store');
+        Route::post('/account/verify', [InviteOnboardingController::class, 'verify'])
+            ->middleware('throttle:otp-verify')
+            ->name('account.verify');
+        Route::post('/account/resend', [InviteOnboardingController::class, 'resend'])
+            ->middleware('throttle:otp')
+            ->name('account.resend');
+        Route::post('/account/edit', [InviteOnboardingController::class, 'editDetails'])->name('account.edit');
+    });
 
     // Step two: the mobile number is proved with the code sent by SMSLenz and
     // only then is the account created. Resending and restarting the form are

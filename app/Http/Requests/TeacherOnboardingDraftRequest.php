@@ -15,7 +15,8 @@ class TeacherOnboardingDraftRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->isTeacher() ?? false;
+        // The invite wizard (join.*) autosaves before the account exists.
+        return ($this->user()?->isTeacher() ?? false) || $this->routeIs('join.*');
     }
 
     public function rules(): array

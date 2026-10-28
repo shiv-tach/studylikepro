@@ -75,8 +75,8 @@ class UserFactory extends Factory
     }
 
     /**
-     * Create a completed profile matching the user's role. Teachers also have
-     * their verification submitted, i.e. they can reach the teacher area.
+     * Create a completed profile matching the user's role. Teachers are past
+     * review, i.e. they can reach the whole teacher workspace.
      */
     public function onboarded(): static
     {
@@ -85,6 +85,19 @@ class UserFactory extends Factory
                 StudentProfile::factory()->for($user)->create();
             }
 
+            if ($user->isTeacher()) {
+                TeacherProfile::factory()->approved()->for($user)->create();
+            }
+        });
+    }
+
+    /**
+     * A teacher who finished setup and submitted, but is still waiting for an
+     * admin decision: only the pending-approval workspace is open to them.
+     */
+    public function awaitingApproval(): static
+    {
+        return $this->afterCreating(function (User $user) {
             if ($user->isTeacher()) {
                 TeacherProfile::factory()->pending()->for($user)->create();
             }

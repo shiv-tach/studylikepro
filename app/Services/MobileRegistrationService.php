@@ -23,7 +23,10 @@ use Illuminate\Validation\ValidationException;
  */
 class MobileRegistrationService
 {
-    public function __construct(private readonly SmsGateway $sms) {}
+    public function __construct(
+        private readonly SmsGateway $sms,
+        private readonly InviteOnboardingService $invites,
+    ) {}
 
     /**
      * The live policy (admin settings win over the config defaults).
@@ -57,7 +60,7 @@ class MobileRegistrationService
      * kept even when the provider rejects the message, so the visitor can retry
      * from the verify screen instead of losing the form.
      *
-     * @param  array{first_name: string, last_name: string, email: string, mobile: string, password: string, role?: string, invite?: string|null}  $data
+     * @param  array{first_name: string, last_name: string, email: string, mobile: string, password: string, role?: string, invite?: string|null, onboarding?: array<string, mixed>|null}  $data
      *
      * @throws SmsDeliveryException
      */
@@ -77,6 +80,9 @@ class MobileRegistrationService
             'mobile' => $data['mobile'],
             'role' => $data['role'] ?? User::ROLE_STUDENT,
             'invite' => $data['invite'] ?? null,
+            // The invite wizard's answers travel with the pending registration
+            // and are written once the passcode proves the number.
+            'onboarding' => $data['onboarding'] ?? null,
             'password' => Hash::make($data['password']),
             'attempts' => 0,
             'resends' => 0,
@@ -284,6 +290,14 @@ class MobileRegistrationService
 
                 if ($invite !== null) {
                     $invite->forceFill(['consumed_at' => now()])->save();
+                }
+
+                // A teacher who filled in the invitation wizard gets the profile,
+                // week and photo they already entered, inside this transaction.
+                $onboarding = $data['onboarding'] ?? null;
+
+                if ($role === User::ROLE_TEACHER && is_array($onboarding) && $onboarding !== []) {
+                    $this->invites->apply($user, $onboarding);
                 }
 
                 return $user;

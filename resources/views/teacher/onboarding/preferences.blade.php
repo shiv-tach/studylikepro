@@ -6,9 +6,9 @@
     $cardClasses = 'rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800/80 dark:bg-slate-900 sm:p-6';
     $languages = config('studylikepro.languages');
 @endphp
-<x-onboarding-layout>
+<x-onboarding-layout :guest="$guest ?? false">
     <x-slot name="progress">
-        <x-onboarding-progress :current="3" />
+        <x-onboarding-progress :current="$currentStep ?? 3" :steps="$config['steps']" />
     </x-slot>
 
     <script type="application/json" id="teacher-profile-config">@json($config, $jsonFlags)</script>
@@ -28,7 +28,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('teacher.onboarding.preferences.update') }}" enctype="multipart/form-data" class="space-y-5">
+            <form method="POST" action="{{ $config['urls']['update'] }}" enctype="multipart/form-data" class="space-y-5">
                 @csrf
                 @method('PUT')
 
@@ -42,7 +42,7 @@
                                 <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200/80 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-300">
                                     <input type="checkbox" name="languages[]" value="{{ $language }}"
                                            class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900"
-                                           @checked(in_array($language, old('languages', $profile?->languages ?? ['English']), true)) />
+                                           @checked(in_array($language, $config['values']['languages'], true)) />
                                     {{ $language }}
                                 </label>
                             @endforeach
@@ -58,7 +58,7 @@
                             </span>
                             <input id="hourly_rate" name="hourly_rate" type="number" inputmode="numeric" min="100" max="100000" step="1" required
                                    class="block w-full rounded-xl border-slate-300 bg-white pl-8 text-base shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 sm:text-sm"
-                                   value="{{ old('hourly_rate', $profile ? (int) $profile->hourlyRate() : '') }}" />
+                                   value="{{ $config['values']['hourlyRate'] }}" />
                         </div>
                         <x-input-error :messages="$errors->get('hourly_rate')" class="mt-2" />
                     </div>
@@ -72,7 +72,7 @@
                 </div>
 
                 <div class="flex items-center justify-between gap-3">
-                    <a href="{{ route('teacher.onboarding.profile') }}" class="text-sm font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100">
+                    <a href="{{ $config['urls']['back'] ?? route('teacher.onboarding.profile') }}" class="text-sm font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100">
                         {{ __('Back') }}
                     </a>
                     <x-primary-button>{{ __('Save & continue') }}</x-primary-button>

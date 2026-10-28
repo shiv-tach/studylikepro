@@ -7,9 +7,9 @@
     $cardClasses = 'rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800/80 dark:bg-slate-900 sm:p-6';
     $fieldClasses = 'mt-1 rounded-xl border-slate-300 bg-white text-base shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 sm:text-sm';
 @endphp
-<x-onboarding-layout>
+<x-onboarding-layout :guest="$guest ?? false">
     <x-slot name="progress">
-        <x-onboarding-progress :current="4" />
+        <x-onboarding-progress :current="$currentStep ?? 4" :steps="$config['steps']" />
     </x-slot>
 
     <script type="application/json" id="teacher-availability-setup-config">@json($config, $jsonFlags)</script>
@@ -29,7 +29,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('teacher.onboarding.availability.update') }}" class="space-y-5">
+            <form method="POST" action="{{ $config['urls']['update'] }}" class="space-y-5">
                 @csrf
                 @method('PUT')
 
@@ -75,7 +75,7 @@
                 </div>
 
                 <div class="flex items-center justify-between gap-3">
-                    <a href="{{ route('teacher.onboarding.preferences') }}" class="text-sm font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100">
+                    <a href="{{ $config['urls']['back'] ?? route('teacher.onboarding.preferences') }}" class="text-sm font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100">
                         {{ __('Back') }}
                     </a>
                     <x-primary-button>{{ __('Save week & continue') }}</x-primary-button>

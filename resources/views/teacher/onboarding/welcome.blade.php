@@ -4,7 +4,8 @@
     // where a returning teacher left off.
     $hasStarted = $hasStarted ?? false;
     $totalSteps = count($steps);
-    $dataSteps = array_values(array_filter($steps, fn (array $step) => $step['key'] !== 'welcome'));
+    $dataSteps = array_values(array_filter($steps, fn (array $step) => in_array($step['key'], \App\Support\TeacherOnboarding::DATA_STEPS, true)));
+    $reviewStep = collect($steps)->firstWhere('key', \App\Support\TeacherOnboarding::STEP_REVIEW);
     $completed = count(array_filter($dataSteps, fn (array $step) => $step['done']));
     $nextLabel = collect($steps)->firstWhere('key', $resume)['label'] ?? __('About you');
     $currentNumber = $resume === 'welcome' ? 1 : (int) (collect($steps)->firstWhere('key', $resume)['number'] ?? 1);
@@ -84,8 +85,7 @@
             <h2 id="setup-steps-title" class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ __('What happens in setup') }}</h2>
 
             <ol class="mt-4 grid gap-3 sm:grid-cols-2">
-                @foreach ($dataSteps as $step)
-                    @php
+                @foreach ($dataSteps as $step)                    @php
                         $isNext = $step['key'] === $resume;
                     @endphp
 
@@ -117,6 +117,25 @@
                     </li>
                 @endforeach
             </ol>
+
+            @if ($reviewStep)
+                {{-- The review phase is deliberately outside the setup list: it is
+                     not something the teacher fills in, and it is what happens
+                     after the last form. --}}
+                <div class="mt-5 flex items-start gap-3 rounded-xl border border-amber-200/80 bg-amber-50/60 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-400 text-amber-950" aria-hidden="true">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l2.5 2.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                            {{ __('After you submit: :step', ['step' => $reviewStep['label']]) }}
+                        </p>
+                        <p class="mt-0.5 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{{ $reviewStep['hint'] }}</p>
+                    </div>
+                </div>
+            @endif
         </section>
 
         <p class="text-xs leading-relaxed text-slate-400">

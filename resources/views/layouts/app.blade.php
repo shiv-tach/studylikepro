@@ -134,6 +134,10 @@
                      its JSON island into the content column. --}}
                 @include('layouts.navigation')
 
+                {{-- Teachers who are not live yet get a permanent, non-dismissable
+                     answer to "is my profile live?" on every workspace page. --}}
+                @include('layouts.approval-banner')
+
                 <!-- Page Content -->
                 <main class="flex-1 p-4 md:p-6 lg:p-8">
                     {{ $slot }}

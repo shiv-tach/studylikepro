@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Teacher;
 
+use App\Enums\ApprovalStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TeacherOnboardingDraftRequest;
 use App\Models\TeacherOnboardingDraft;
 use App\Services\TeacherOnboardingService;
+use App\Support\TeacherApproval;
 use App\Support\TeacherOnboarding;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -66,8 +68,9 @@ class OnboardingController extends Controller
     }
 
     /**
-     * The screen a teacher sees right after submitting their application, so
-     * onboarding ends with a clear answer instead of a status card.
+     * The approval status page: what the teacher sees after submitting, and the
+     * page the pending-approval workspace points at. It has three phases —
+     * in review, live, and action needed — so submitting never reads as "done".
      */
     public function submitted(Request $request): View|RedirectResponse
     {
@@ -78,10 +81,25 @@ class OnboardingController extends Controller
             return redirect()->route('teacher.onboarding.verification');
         }
 
+        $profile->loadMissing(['documents', 'subjects']);
+
+        $stage = TeacherApproval::stage($profile);
+        $expectedDecisionAt = TeacherApproval::expectedDecisionAt($profile);
+
         return view('teacher.onboarding.submitted', [
             'profile' => $profile,
+            'stage' => $stage,
             'submittedAt' => display_datetime($profile->submitted_at),
+            'expectedDecisionAt' => $expectedDecisionAt ? display_datetime($expectedDecisionAt) : null,
+            'isOverdue' => TeacherApproval::isOverdue($profile),
             'steps' => TeacherOnboarding::steps($profile, $user->onboardingDraft),
+            'subjects' => $profile->subjects
+                ->map(fn ($subject) => [
+                    'name' => $subject->name,
+                    'approved' => $subject->pivot->status === ApprovalStatus::Approved,
+                ])
+                ->values(),
+            'documentCount' => $profile->documents->count(),
         ]);
     }
 

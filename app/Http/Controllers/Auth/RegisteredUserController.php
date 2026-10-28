@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Rules\SriLankanMobile;
 use App\Services\MobileRegistrationService;
 use App\Support\PendingRegistration;
+use App\Support\PendingTeacherSignup;
 use App\Support\PhoneNumber;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -24,8 +25,12 @@ class RegisteredUserController extends Controller
 {
     /**
      * Display the registration view.
+     *
+     * A usable invite link does not open a sign-up form: it starts the guest
+     * half of the teacher onboarding wizard, which creates the account in its
+     * last step (see `InviteOnboardingController`).
      */
-    public function create(Request $request): View
+    public function create(Request $request): View|RedirectResponse
     {
         // Opening the form always starts a fresh attempt: any details waiting
         // for a passcode are superseded by what is typed here.
@@ -45,6 +50,10 @@ class RegisteredUserController extends Controller
 
             if ($invite === null) {
                 $inviteError = 'This teacher onboarding link is invalid, expired, or already used.';
+            } else {
+                PendingTeacherSignup::start($inviteToken);
+
+                return redirect()->route('join.start');
             }
         }
 

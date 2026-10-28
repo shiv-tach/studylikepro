@@ -13,7 +13,9 @@ class TeacherOnboardingPreferencesRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->isTeacher() ?? false;
+        // The invite wizard (join.*) collects this step before the account
+        // exists, so a guest is allowed here as well.
+        return ($this->user()?->isTeacher() ?? false) || $this->routeIs('join.*');
     }
 
     public function rules(): array

@@ -60,6 +60,9 @@ class TeacherProfileFactory extends Factory
             'verification_status' => VerificationStatus::Approved,
             'submitted_at' => now()->subDay(),
             'verified_at' => now(),
+            // Approved teachers have already seen the "You're live" screen
+            // unless a test clears this to exercise the announcement.
+            'approved_seen_at' => now(),
         ]);
     }
 

@@ -24,12 +24,13 @@ use Illuminate\Support\Str;
 final class PublicTeacherPageConfig
 {
     /**
-     * @param  array{gradesById?: Collection<int, Grade>, availability?: array<int, array<string, mixed>>, windows?: array<int, array{start: CarbonImmutable, end: CarbonImmutable}>, reviews?: Collection<int, mixed>, breakdown?: array<int, int>, slotLimit?: int, offerings?: Collection<int, ServiceOffering>}  $payload
+     * @param  array{gradesById?: Collection<int, Grade>, availability?: array<int, array<string, mixed>>, windows?: array<int, array{start: CarbonImmutable, end: CarbonImmutable}>, reviews?: Collection<int, mixed>, breakdown?: array<int, int>, slotLimit?: int, offerings?: Collection<int, ServiceOffering>, preview?: bool}  $payload
      */
     public static function build(TeacherProfile $teacher, array $payload): array
     {
         $money = static fn (int $minor) => platform_settings()->formatMinor($minor);
         $copy = self::copy();
+        $preview = (bool) ($payload['preview'] ?? false);
 
         $gradesById = $payload['gradesById'] ?? collect();
         $availability = self::availability(
@@ -41,15 +42,23 @@ final class PublicTeacherPageConfig
             (int) ($payload['slotLimit'] ?? 0),
         );
 
+        $teacherPayload = self::teacher($teacher, $money, $copy);
+
+        if ($preview) {
+            // A preview must never claim verification the admin has not given.
+            $teacherPayload['verifiedLabel'] = __('Awaiting approval');
+        }
+
         return [
             'appName' => config('app.name', 'Studylikepro'),
             'authenticated' => auth()->check(),
-            'teacher' => self::teacher($teacher, $money, $copy),
+            'preview' => $preview,
+            'teacher' => $teacherPayload,
             'services' => self::services($payload['offerings'] ?? collect(), $copy),
             'grades' => self::grades($teacher, $gradesById, $money),
             'availability' => $availability,
             'reviews' => self::reviews($teacher, $payload['reviews'] ?? collect(), $payload['breakdown'] ?? []),
-            'booking' => self::booking($teacher, $money, $availability, $copy),
+            'booking' => self::booking($teacher, $money, $availability, $copy, $preview),
             'breadcrumbs' => [
                 ['label' => __('Home'), 'url' => route('home')],
                 ['label' => __('Teachers'), 'url' => route('teachers.index')],
@@ -410,12 +419,13 @@ final class PublicTeacherPageConfig
      * @param  array<string, mixed>  $availability
      * @return array<string, mixed>
      */
-    private static function booking(TeacherProfile $teacher, callable $money, array $availability, array $copy): array
+    private static function booking(TeacherProfile $teacher, callable $money, array $availability, array $copy, bool $preview = false): array
     {
         $user = auth()->user();
-        $canBook = $user !== null && $user->can('create', [Booking::class, $teacher]);
+        $canBook = ! $preview && $user !== null && $user->can('create', [Booking::class, $teacher]);
 
         $action = match (true) {
+            $preview => ['label' => __('Not bookable yet'), 'url' => route('teacher.approval.status')],
             $canBook => ['label' => __('Book a lesson'), 'url' => route('student.bookings.create', $teacher)],
             $user !== null => ['label' => __('Go to dashboard'), 'url' => route('dashboard')],
             default => ['label' => __('Log in to book'), 'url' => route('login')],
@@ -434,9 +444,9 @@ final class PublicTeacherPageConfig
                     ? __(':count+ open slots in the next two weeks', ['count' => $availability['slotCount']])
                     : trans_choice(':count open slot in the next two weeks|:count open slots in the next two weeks', $availability['slotCount'])),
             'action' => $action,
-            'secondary' => $user === null
-                ? ['label' => __('Create a student account'), 'url' => route('register', ['role' => 'student'])]
-                : null,
+            'secondary' => $preview || $user !== null
+                ? null
+                : ['label' => __('Create a student account'), 'url' => route('register', ['role' => 'student'])],
             'trust' => [
                 ['icon' => 'shield-check', 'label' => __('Every teacher is document-checked')],
                 ['icon' => 'calendar', 'label' => __('Free cancellation up to :hours hours before the lesson', ['hours' => platform_settings()->int('student_cancel_window_hours')])],

@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureInviteSignupStarted;
 use App\Http\Middleware\EnsureOnboardingCompleted;
+use App\Http\Middleware\EnsureTeacherApproved;
 use App\Http\Middleware\EnsureUserIsNotSuspended;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
@@ -23,7 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'onboarded' => EnsureOnboardingCompleted::class,
+            'approved-teacher' => EnsureTeacherApproved::class,
             'not-suspended' => EnsureUserIsNotSuspended::class,
+            'invite.signup' => EnsureInviteSignupStarted::class,
         ]);
 
         // Payment providers post signed callbacks with no session or CSRF token.

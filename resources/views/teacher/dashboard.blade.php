@@ -109,10 +109,10 @@
         </div>
 
         <div class="grid gap-6 lg:grid-cols-3">
-            <!-- Verification status -->
+            <!-- Approval status -->
             <div class="{{ $cardBase }} hover:shadow-none" :class="{{ $cardTheme }}">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Verification</h3>
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Approval status</h3>
                     @if ($status)
                         <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold {{ $status->badgeClasses() }}">{{ $status->label() }}</span>
                     @else
@@ -122,7 +122,7 @@
 
                 <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
                     @if ($status === \App\Enums\VerificationStatus::Pending)
-                        Your documents were submitted {{ $profile->submitted_at?->diffForHumans() }} and are waiting for admin review. We will notify you once approved.
+                        Your documents were submitted {{ $profile->submitted_at?->diffForHumans() }}. You are not visible to students yet — approval usually takes 1–2 business days.
                     @elseif ($status === \App\Enums\VerificationStatus::Approved)
                         You are verified — students can find you and book your open slots.
                     @elseif ($status === \App\Enums\VerificationStatus::Rejected)
@@ -133,6 +133,11 @@
                 </p>
 
                 <div class="mt-4 flex flex-wrap gap-2">
+                    @if ($status === \App\Enums\VerificationStatus::Pending || $status === \App\Enums\VerificationStatus::Rejected)
+                        <a href="{{ route('teacher.onboarding.submitted') }}" class="rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20">
+                            View approval status
+                        </a>
+                    @endif
                     <a href="{{ route('teacher.profile') }}" class="rounded-xl border border-slate-200/80 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-slate-800 dark:text-slate-300">
                         Edit profile
                     </a>
