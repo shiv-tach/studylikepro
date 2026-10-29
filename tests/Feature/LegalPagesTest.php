@@ -14,6 +14,13 @@ it('publishes the policy pages', function (string $route, string $expect) {
     ['legal.contact', 'Talk to support'],
 ]);
 
+it('brands the public header with the wordmark', function () {
+    $this->get(route('legal.terms'))
+        ->assertOk()
+        ->assertSee('images/brand/logo-nav.png', false)
+        ->assertSee('images/brand/logo-nav-dark.png', false);
+});
+
 it('shows the live cancellation figures on the refund page', function () {
     platform_settings()->set('student_cancel_window_hours', 36);
     platform_settings()->set('refund_student_percent', 80);

@@ -60,6 +60,9 @@ class OnboardingController extends Controller
             'resumeUrl' => $resumeUrl,
             'hasStarted' => $profile !== null || ($draft !== null && ! $draft->isEmpty()),
             'firstName' => $user->displayName(),
+            // Present only on the screen that follows the invite survey: what
+            // the teacher just answered, shown as the celebration.
+            'joinSummary' => $request->session()->get('join_summary'),
             'draftSavedAt' => $draft?->saved_at
                 ? display_datetime($draft->saved_at)
                 : null,

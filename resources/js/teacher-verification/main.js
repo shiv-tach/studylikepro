@@ -4,7 +4,7 @@ import TeacherVerificationApp from './TeacherVerificationApp.vue';
 /**
  * Blade owns the application status, the documents on file, the document types,
  * the upload limits, the validation errors and the route map for the
- * verification step, and hands them over as a JSON island, so no label or URL is
+ * verification page, and hands them over as a JSON island, so no label or URL is
  * hardcoded here. Only /teacher/verification mounts this bundle.
  */
 const DEFAULT_CONFIG = {
@@ -22,8 +22,6 @@ const DEFAULT_CONFIG = {
     values: { agree: false },
     errors: { type: [], document: [], agree: [], subjects: [], byType: null },
     notices: [],
-    steps: [],
-    currentStep: 3,
     copy: {},
     urls: {},
 };

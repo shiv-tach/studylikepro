@@ -119,6 +119,33 @@ class TeacherVerificationController extends Controller
     }
 
     /**
+     * Confirm (or remove) the government-teacher badge.
+     *
+     * The survey lets a teacher claim a government post and attach proof; the
+     * public badge only ever renders from this confirmation, never from the
+     * claim itself. It can be toggled after approval as well, because a proof
+     * often arrives later.
+     */
+    public function government(Request $request, TeacherProfile $teacherProfile): RedirectResponse
+    {
+        $validated = $request->validate([
+            'government_verified' => ['required', 'boolean'],
+        ]);
+
+        $confirmed = (bool) $validated['government_verified'];
+
+        $teacherProfile->update([
+            'government_verified_at' => $confirmed
+                ? ($teacherProfile->government_verified_at ?? now())
+                : null,
+        ]);
+
+        return redirect()
+            ->route('admin.verifications.show', $teacherProfile)
+            ->with('status', $confirmed ? 'government-teacher-confirmed' : 'government-teacher-cleared');
+    }
+
+    /**
      * Reject a pending application with a reason.
      */
     public function reject(RejectVerificationRequest $request, TeacherProfile $teacherProfile): RedirectResponse

@@ -1,5 +1,5 @@
 @php
-    // /teacher/verification is onboarding step 2 and is rendered by
+    // /teacher/verification is the application page and is rendered by
     // resources/js/teacher-verification. Blade keeps the application status, the
     // documents on file, the document types, the limits, the validation errors
     // and the route map, then hands them over as a JSON island. The noscript
@@ -170,7 +170,7 @@
             'privacy' => route('legal.privacy'),
             'dashboard' => route('teacher.dashboard'),
             'profile' => route('teacher.profile'),
-            'availability' => route('teacher.availability.setup'),
+            'availability' => route('teacher.availability.index'),
         ],
         'copy' => [
             'toastLabel' => __('Notifications'),
@@ -281,8 +281,8 @@
         ],
     ];
 
-    // The island is built by App\Support\VerificationStepConfig so the wizard
-    // step and this status page agree on every key.
+    // The island is built by App\Support\VerificationStepConfig so every key
+    // matches the Vue app exactly.
     $payload = $config;
 
     // JSON_UNESCAPED_SLASHES keeps the URLs readable; the HEX flags keep the
@@ -321,7 +321,7 @@
                 </div>
             @endforeach
 
-            <x-teacher-onboarding-steps :current="5" />
+            <x-teacher-onboarding-steps :current="3" />
 
             @unless ($status === \App\Enums\VerificationStatus::Draft)
                 <!-- Status overview -->
@@ -350,13 +350,13 @@
             @endunless
 
             @if ($status->isSubmitted())
-                <!-- Step 2 is done: the rest of the teacher area is unlocked. -->
+                <!-- The application is in: the rest of the teacher area is unlocked. -->
                 <div class="{{ $cardClasses }}">
                     <div class="flex flex-wrap items-center justify-between gap-4">
                         <div class="flex items-start gap-3">
                             <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-xl dark:bg-emerald-900/30">✅</span>
                             <div>
-                                <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">Onboarding complete</h3>
+                                <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">Application submitted</h3>
                                 <p class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
                                     You can use your dashboard while our team reviews your application, or update your documents if we ask for changes.
                                 </p>
@@ -500,7 +500,7 @@
                                 </svg>
                                 <span class="flex flex-wrap items-center gap-x-2">
                                     Weekly availability required
-                                    <a href="{{ route('teacher.availability.setup') }}" class="font-semibold text-primary hover:underline">Set now</a>
+                                    <a href="{{ route('teacher.availability.index') }}" class="font-semibold text-primary hover:underline">Set now</a>
                                 </span>
                             @endif
                         </li>

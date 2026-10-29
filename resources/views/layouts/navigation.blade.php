@@ -79,17 +79,22 @@
         $navItems[] = ['label' => 'Find a teacher', 'url' => route('student.teachers.index'), 'active' => request()->routeIs('student.teachers*', 'teachers.*'), 'icon' => 'search', 'badge' => null];
     }
 
-    if ($user->isTeacher() && ! $user->hasCompletedOnboarding()) {
-        // Onboarding is its own section now, so the sidebar shows a single way
-        // into it instead of three workspace-looking links.
-        $navItems = [
-            ['label' => 'Finish setup', 'url' => route('teacher.onboarding.show'), 'active' => request()->routeIs('teacher.onboarding*'), 'icon' => 'shield', 'badge' => null],
-        ];
-    } elseif ($user->isTeacher() && ! $user->teacherProfile?->isApproved()) {
+    if ($user->isTeacher() && ! $user->teacherProfile?->isApproved()) {
         // Focused pending workspace: only what can work before approval. The
         // rest of the teacher area unlocks once an admin approves the profile.
-        $navItems[] = ['label' => 'Approval status', 'url' => route('teacher.approval.status'), 'active' => request()->routeIs('teacher.approval*', 'teacher.onboarding.submitted'), 'icon' => 'shield', 'badge' => null];
-        $navItems[] = ['label' => 'Preview profile', 'url' => route('teacher.profile.preview'), 'active' => request()->routeIs('teacher.profile.preview'), 'icon' => 'user', 'badge' => null];
+        $verificationSubmitted = (bool) $user->teacherProfile?->hasSubmittedVerification();
+
+        $navItems[] = [
+            'label' => $verificationSubmitted ? 'Approval status' : 'Finish setup',
+            'url' => $verificationSubmitted ? route('teacher.approval.status') : route('teacher.verification'),
+            'active' => $verificationSubmitted
+                ? request()->routeIs('teacher.approval*')
+                : request()->routeIs('teacher.verification*'),
+            'icon' => 'shield',
+            'badge' => null,
+        ];
+        $navItems[] = ['label' => 'Teaching profile', 'url' => route('teacher.profile'), 'active' => request()->routeIs('teacher.profile'), 'icon' => 'user', 'badge' => null];
+        $navItems[] = ['label' => 'Preview profile', 'url' => route('teacher.profile.preview'), 'active' => request()->routeIs('teacher.profile.preview'), 'icon' => 'search', 'badge' => null];
         $navItems[] = ['label' => 'Availability', 'url' => route('teacher.availability.index'), 'active' => request()->routeIs('teacher.availability*'), 'icon' => 'calendar', 'badge' => null];
         $navItems[] = ['label' => 'Messages', 'url' => route('messages.index'), 'active' => request()->routeIs('messages.*'), 'icon' => 'chat', 'badge' => ($unreadMessageCount ?? 0) ?: null];
     } elseif ($user->isTeacher()) {
@@ -144,7 +149,8 @@
     // no URL is ever hardcoded in resources/js/app-shell.
     $shell = [
         'appName' => config('app.name', 'Study Like Pro'),
-        'logoUrl' => asset('images/brand/logo-mark.png'),
+        'logoUrl' => asset('images/brand/logo-nav.png'),
+        'logoDarkUrl' => asset('images/brand/logo-nav-dark.png'),
         'csrfToken' => csrf_token(),
         'user' => [
             'name' => $user->displayName(),

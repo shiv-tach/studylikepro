@@ -1,29 +1,55 @@
 <?php
 
-use App\Models\TeacherAvailabilitySlot;
+use App\Enums\ApprovalStatus;
+use App\Models\EducationLevel;
+use App\Models\Subject;
 use App\Models\TeacherInvite;
 use App\Models\TeacherProfile;
 use App\Models\User;
 use App\Services\Sms\FakeSmsGateway;
 use App\Support\PendingRegistration;
 use App\Support\PendingTeacherSignup;
+use App\Support\TeacherSurvey;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 /**
- * The invite link opens the teacher onboarding wizard as a guest: the three
- * answer steps are filled in first and the account — with its profile, weekly
- * hours and photo — is created only when the SMS code is confirmed.
+ * A teacher onboarding link opens the invite survey as a guest: nine questions
+ * are answered first and the account — carrying those answers — is created only
+ * when the SMS code is confirmed.
  */
 
-test('an invite link opens the guest onboarding wizard instead of a sign-up form', function () {
+beforeEach(function () {
+    $olId = EducationLevel::query()->where('key', 'ol')->value('id');
+    $alId = EducationLevel::query()->where('key', 'al')->value('id');
+
+    $this->olSubject = Subject::factory()->create([
+        'education_level_id' => $olId,
+        'name' => 'Mathematics',
+        'slug' => 'survey-mathematics',
+    ]);
+
+    $this->secondOlSubject = Subject::factory()->create([
+        'education_level_id' => $olId,
+        'name' => 'Science',
+        'slug' => 'survey-science',
+    ]);
+
+    $this->alSubject = Subject::factory()->create([
+        'education_level_id' => $alId,
+        'name' => 'Physics',
+        'slug' => 'survey-physics',
+    ]);
+});
+
+test('an invite link opens the teacher survey instead of a sign-up form', function () {
     [, $token] = makeTeacherInvite();
 
     $this->get('/register?invite='.$token)
         ->assertRedirect(route('join.start'));
 
     $this->get(route('join.start'))
-        ->assertOk()
-        ->assertSee('No account needed yet')
-        ->assertSee('Create your account');
+        ->assertRedirect(route('join.level'));
 
     expect(User::count())->toBe(0)
         ->and(PendingTeacherSignup::token())->toBe($token);
@@ -35,7 +61,7 @@ test('an invalid invite link still shows the error on the register page', functi
         ->assertSee('onboarding link is invalid', false);
 });
 
-test('a used invite cannot start the wizard', function () {
+test('a used invite cannot start the survey', function () {
     [$invite, $token] = makeTeacherInvite();
     $invite->forceFill(['consumed_at' => now()])->save();
 
@@ -44,8 +70,8 @@ test('a used invite cannot start the wizard', function () {
         ->assertSee('onboarding link is invalid', false);
 });
 
-test('the guest steps need the invite the visitor arrived with', function () {
-    $this->get(route('join.profile'))->assertRedirect(route('register'));
+test('every survey question needs the invite the visitor arrived with', function () {
+    $this->get(route('join.level'))->assertRedirect(route('register'));
 
     [, $token] = makeTeacherInvite();
 
@@ -54,97 +80,380 @@ test('the guest steps need the invite the visitor arrived with', function () {
     $this->get('/register?invite='.$token);
     TeacherInvite::query()->update(['expires_at' => now()->subDay()]);
 
-    $this->get(route('join.profile'))
+    $this->get(route('join.level'))
         ->assertRedirect(route('register', ['invite' => $token]));
 });
 
-test('the wizard fills in every step before the account exists', function () {
+test('the nine questions are answered before the account exists', function () {
     [, $token] = makeTeacherInvite();
 
     $this->get('/register?invite='.$token)->assertRedirect(route('join.start'));
 
-    $this->get(route('join.profile'))
+    $this->get(route('join.level'))
         ->assertOk()
-        ->assertSee('teacher-profile-config', false);
+        ->assertSee('Who are you tutoring for?')
+        ->assertSee('name="level"', false);
 
-    $this->put(route('join.profile.update'), [
-        'headline' => 'Physics tutor for O/L students',
-        'bio' => 'Ten years of classroom experience.',
-        'experience_years' => 10,
-        'education' => 'B.Sc. Physics, University of Colombo',
-    ])->assertRedirect(route('join.preferences'));
+    $this->put(route('join.level.update'), ['level' => 'ol'])
+        ->assertRedirect(route('join.subjects'));
 
-    $this->get(route('join.preferences'))
+    $this->get(route('join.subjects'))
         ->assertOk()
-        ->assertSee('teacher-profile-config', false);
+        ->assertSee('What subjects do you teach?')
+        ->assertSee('Mathematics')
+        // Only the level that was picked is offered.
+        ->assertDontSee('Physics');
 
-    $this->put(route('join.preferences.update'), [
-        'languages' => ['English', 'Sinhala'],
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id, $this->secondOlSubject->id]])
+        ->assertRedirect(route('join.languages'));
+
+    $this->put(route('join.languages.update'), ['languages' => ['English', 'Sinhala']])
+        ->assertRedirect(route('join.services'));
+
+    $this->put(route('join.services.update'), ['services' => ['lesson', 'paper_marking', 'qna']])
+        ->assertRedirect(route('join.experience'));
+
+    $this->get(route('join.experience'))
+        ->assertOk()
+        ->assertSee('How long have you been teaching?')
+        ->assertSee('name="experience_years"', false);
+
+    $this->put(route('join.experience.update'), ['experience_years' => 8])
+        ->assertRedirect(route('join.education'));
+
+    $this->get(route('join.education'))
+        ->assertOk()
+        ->assertSee('Where did you study?')
+        ->assertSee('Government university')
+        ->assertSee('National College of Education');
+
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_PRIVATE_UNIVERSITY])
+        ->assertRedirect(route('join.rates'));
+
+    // The rates question only prices the services picked a moment ago.
+    $this->get(route('join.rates'))
+        ->assertOk()
+        ->assertSee('What do you charge?')
+        ->assertSee('name="hourly_rate"', false)
+        ->assertSee('name="service_rates[paper_marking]"', false)
+        ->assertSee('name="service_rates[qna]"', false)
+        ->assertDontSee('name="service_rates[lesson]"', false);
+
+    $this->put(route('join.rates.update'), [
         'hourly_rate' => 2500,
+        'service_rates' => ['paper_marking' => 1500, 'qna' => 800],
     ])->assertRedirect(route('join.availability'));
 
     $this->get(route('join.availability'))
         ->assertOk()
-        ->assertSee('teacher-availability-setup-config', false);
+        ->assertSee('Which days can you teach?')
+        ->assertSee('name="days[]"', false);
 
-    $this->put(route('join.availability.update'), [
-        'days' => [
-            ['value' => 1, 'enabled' => 1, 'ranges' => [['start_time' => '15:00', 'end_time' => '18:00']]],
-        ],
-    ])->assertRedirect(route('join.account'));
+    $this->put(route('join.availability.update'), ['days' => [1, 3, 5]])
+        ->assertRedirect(route('join.proof'));
+
+    $this->get(route('join.proof'))
+        ->assertOk()
+        ->assertSee('Are you a government teacher?')
+        ->assertSee('name="claims"', false);
+
+    $this->post(route('join.proof.update'), ['claims' => '0'])
+        ->assertRedirect(route('join.account'));
 
     $this->get(route('join.account'))
         ->assertOk()
         ->assertSee('Create your account')
-        ->assertSee('name="password"', false);
+        ->assertSee('name="password"', false)
+        ->assertSee('name="agree"', false)
+        ->assertSee('Terms and policies accepted');
 
     // Nothing has been written to `users` yet.
     expect(User::count())->toBe(0)
-        ->and(PendingTeacherSignup::isComplete())->toBeTrue();
+        ->and(PendingTeacherSignup::isComplete())->toBeTrue()
+        ->and(PendingTeacherSignup::step(TeacherSurvey::STEP_SUBJECTS))
+        ->toBe([$this->olSubject->id, $this->secondOlSubject->id])
+        ->and(PendingTeacherSignup::step(TeacherSurvey::STEP_EXPERIENCE))->toBe(['value' => 8])
+        ->and(PendingTeacherSignup::step(TeacherSurvey::STEP_EDUCATION))
+        ->toBe(['value' => TeacherSurvey::EDUCATION_PRIVATE_UNIVERSITY])
+        ->and(PendingTeacherSignup::step(TeacherSurvey::STEP_AVAILABILITY))->toBe(['days' => [1, 3, 5], 'preset' => null]);
 });
 
-test('a step cannot be skipped before the previous one is saved', function () {
+test('a question cannot be answered before the one it depends on', function () {
     [, $token] = makeTeacherInvite();
     $this->get('/register?invite='.$token);
 
-    $this->get(route('join.preferences'))
-        ->assertRedirect(route('join.profile'))
-        ->assertSessionHas('status', 'complete-your-profile');
+    $this->get(route('join.subjects'))
+        ->assertRedirect(route('join.level'))
+        ->assertSessionHas('status', 'answer-the-level-question');
+
+    $this->get(route('join.languages'))
+        ->assertRedirect(route('join.subjects'));
+
+    $this->get(route('join.experience'))
+        ->assertRedirect(route('join.services'));
+
+    $this->get(route('join.education'))
+        ->assertRedirect(route('join.experience'));
+
+    $this->get(route('join.rates'))
+        ->assertRedirect(route('join.education'));
 
     $this->get(route('join.availability'))
-        ->assertRedirect(route('join.preferences'));
+        ->assertRedirect(route('join.rates'));
 
-    $this->get(route('join.account'))->assertRedirect(route('join.profile'));
+    $this->get(route('join.proof'))
+        ->assertRedirect(route('join.availability'));
+
+    $this->get(route('join.account'))->assertRedirect(route('join.level'));
 });
 
-test('the availability step needs at least one weekly range', function () {
+test('the rates question needs a price for every service that was picked', function () {
     [, $token] = makeTeacherInvite();
     $this->get('/register?invite='.$token);
 
-    $this->put(route('join.profile.update'), [
-        'headline' => 'Physics tutor',
-        'experience_years' => 3,
-        'education' => 'B.Sc. Physics',
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+    $this->put(route('join.languages.update'), ['languages' => ['English']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson', 'paper_marking']]);
+    $this->put(route('join.experience.update'), ['experience_years' => 3]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
+
+    $this->from(route('join.rates'))
+        ->put(route('join.rates.update'), ['hourly_rate' => 2000])
+        ->assertSessionHasErrors('service_rates.paper_marking');
+
+    $this->from(route('join.rates'))
+        ->put(route('join.rates.update'), ['hourly_rate' => 50])
+        ->assertSessionHasErrors('hourly_rate');
+
+    expect(PendingTeacherSignup::hasStep(TeacherSurvey::STEP_RATES))->toBeFalse();
+});
+
+test('changing the services drops the prices given for the old picks', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+    $this->put(route('join.languages.update'), ['languages' => ['English']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson', 'paper_marking']]);
+    $this->put(route('join.experience.update'), ['experience_years' => 4]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
+    $this->put(route('join.rates.update'), [
+        'hourly_rate' => 2000,
+        'service_rates' => ['paper_marking' => 900],
     ]);
 
-    $this->put(route('join.preferences.update'), [
-        'languages' => ['English'],
-        'hourly_rate' => 2500,
+    expect(PendingTeacherSignup::hasStep(TeacherSurvey::STEP_RATES))->toBeTrue();
+
+    // A different service list cannot keep the price of a service that is gone.
+    $this->put(route('join.services.update'), ['services' => ['lesson', 'qna']])
+        ->assertRedirect(route('join.experience'));
+
+    expect(PendingTeacherSignup::hasStep(TeacherSurvey::STEP_RATES))->toBeFalse();
+});
+
+test('the days question needs at least one day', function () {    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+    $this->put(route('join.languages.update'), ['languages' => ['English']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson']]);
+    $this->put(route('join.experience.update'), ['experience_years' => 0]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_GOVERNMENT_UNIVERSITY]);
+    $this->put(route('join.rates.update'), ['hourly_rate' => 2000]);
+
+    $this->from(route('join.availability'))
+        ->put(route('join.availability.update'), ['days' => []])
+        ->assertSessionHasErrors('days');
+
+    expect(PendingTeacherSignup::hasStep(TeacherSurvey::STEP_AVAILABILITY))->toBeFalse();
+});
+
+test('the days question offers the same suggested weeks and times as onboarding', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+    $this->put(route('join.languages.update'), ['languages' => ['English']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson']]);
+    $this->put(route('join.experience.update'), ['experience_years' => 0]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
+    $this->put(route('join.rates.update'), ['hourly_rate' => 2000]);
+
+    $this->get(route('join.availability'))
+        ->assertOk()
+        ->assertSee('Suggested weeks')
+        ->assertSee('School-friendly')
+        ->assertSee('Evenings only')
+        ->assertSee('Weekends only')
+        // The onboarding presets are shown with the clock times they fill in,
+        // not only with their labels.
+        ->assertSee('Mon – Fri · 3:00 PM – 9:00 PM')
+        ->assertSee('Sat – Sun · 8:00 AM – 8:00 PM')
+        ->assertSee('name="preset"', false)
+        ->assertSee('name="days[]"', false)
+        // The day grid is only for "My own days", and the hint says the answer
+        // can be changed later.
+        ->assertSee('Days you can teach')
+        ->assertSee('x-show="preset === \'\' || false"', false)
+        ->assertSee('You can change your availability any time after you register.');
+});
+
+test('the days question only accepts a suggested week it knows', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+    $this->put(route('join.languages.update'), ['languages' => ['English']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson']]);
+    $this->put(route('join.experience.update'), ['experience_years' => 0]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
+    $this->put(route('join.rates.update'), ['hourly_rate' => 2000]);
+
+    $this->from(route('join.availability'))
+        ->put(route('join.availability.update'), ['days' => [1], 'preset' => 'midnight-oil'])
+        ->assertSessionHasErrors('preset');
+
+    expect(PendingTeacherSignup::hasStep(TeacherSurvey::STEP_AVAILABILITY))->toBeFalse();
+});
+
+test('the suggested week picked in the survey becomes the teacher week', function () {
+    [, $token] = makeTeacherInvite();
+
+    $account = joinThroughInvite($token, [], [
+        'availability' => ['days' => [1, 3], 'preset' => 'evenings'],
     ]);
 
-    $this->from(route('join.availability'))->put(route('join.availability.update'), [
-        'days' => [
-            ['value' => 1, 'enabled' => 0],
-        ],
-    ])->assertSessionHasErrors('days');
+    $this->post(route('join.account.verify'), ['code' => FakeSmsGateway::lastCode()]);
 
-    expect(PendingTeacherSignup::hasStep('availability'))->toBeFalse();
+    $slots = User::where('email', $account['email'])->firstOrFail()
+        ->teacherProfile
+        ->availabilitySlots()
+        ->orderBy('day_of_week')
+        ->get();
+
+    // "Evenings only" is 5:00 PM – 9:00 PM every day, so the two chosen days
+    // open on those hours instead of the recommended school-friendly ones.
+    expect($slots->pluck('day_of_week')->all())->toBe([1, 3])
+        ->and($slots->pluck('start_minute')->all())->toBe([1020, 1020])
+        ->and($slots->pluck('end_minute')->all())->toBe([1260, 1260]);
+});
+
+test('the subject question only accepts subjects of the level that was picked', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+
+    $this->from(route('join.subjects'))
+        ->put(route('join.subjects.update'), ['subjects' => [$this->alSubject->id]])
+        ->assertSessionHasErrors('subjects.0');
+
+    expect(PendingTeacherSignup::hasStep(TeacherSurvey::STEP_SUBJECTS))->toBeFalse();
+});
+
+test('choosing both levels offers the subjects of both', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => TeacherSurvey::LEVEL_BOTH]);
+
+    $this->get(route('join.subjects'))
+        ->assertOk()
+        ->assertSee('Mathematics')
+        ->assertSee('Physics');
+
+    $this->put(route('join.subjects.update'), [
+        'subjects' => [$this->olSubject->id, $this->alSubject->id],
+    ])->assertRedirect(route('join.languages'));
+});
+
+test('changing the level drops subject picks it no longer offers', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+
+    // O/L only -> A/L only: the O/L pick cannot survive.
+    $this->put(route('join.level.update'), ['level' => 'al'])
+        ->assertRedirect(route('join.subjects'));
+
+    expect(PendingTeacherSignup::hasStep(TeacherSurvey::STEP_SUBJECTS))->toBeFalse();
+});
+
+test('languages and services need at least one answer', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+
+    $this->from(route('join.languages'))
+        ->put(route('join.languages.update'), ['languages' => []])
+        ->assertSessionHasErrors('languages');
+
+    $this->put(route('join.languages.update'), ['languages' => ['English']]);
+
+    $this->from(route('join.services'))
+        ->put(route('join.services.update'), ['services' => []])
+        ->assertSessionHasErrors('services');
+
+    expect(PendingTeacherSignup::hasStep(TeacherSurvey::STEP_SERVICES))->toBeFalse();
+});
+
+test('the proof question is optional but needs a file when a teacher claims a government post', function () {
+    Storage::fake('local');
+
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+    $this->put(route('join.languages.update'), ['languages' => ['English']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson']]);
+    $this->put(route('join.experience.update'), ['experience_years' => 5]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
+    $this->put(route('join.rates.update'), ['hourly_rate' => 2500]);
+    $this->put(route('join.availability.update'), ['days' => [2, 4]]);
+
+    $this->from(route('join.proof'))
+        ->post(route('join.proof.update'), ['claims' => '1'])
+        ->assertSessionHasErrors('document');
+
+    $this->post(route('join.proof.update'), [
+        'claims' => '1',
+        'document' => UploadedFile::fake()->create('appointment-letter.pdf', 120, 'application/pdf'),
+    ])->assertRedirect(route('join.account'));
+
+    $proof = PendingTeacherSignup::step(TeacherSurvey::STEP_PROOF);
+
+    expect($proof['claimed'])->toBeTrue()
+        ->and($proof['original_name'])->toBe('appointment-letter.pdf')
+        ->and($proof['path'])->toStartWith('verification-documents/pending/')
+        ->and(Storage::disk('local')->exists($proof['path']))->toBeTrue();
 });
 
 test('the account is created only once the texted code is confirmed', function () {
+    Storage::fake('local');
+
     [, $token] = makeTeacherInvite();
     $invite = TeacherInvite::firstOrFail();
-    $account = joinThroughInvite($token);
+
+    $account = joinThroughInvite($token, [], [
+        'level' => ['level' => 'ol'],
+        'subjects' => ['subjects' => [$this->olSubject->id]],
+        'languages' => ['languages' => ['English', 'Sinhala']],
+        'services' => ['services' => ['lesson', 'paper_marking']],
+        'proof' => [
+            'claims' => '1',
+            'document' => UploadedFile::fake()->create('staff-id.pdf', 120, 'application/pdf'),
+        ],
+    ]);
 
     // The details wait for the passcode; no account exists yet.
     $this->assertGuest();
@@ -158,45 +467,96 @@ test('the account is created only once the texted code is confirmed', function (
         ->and($messages[0]['to'])->toBe('0771234567');
 
     $this->post(route('join.account.verify'), ['code' => FakeSmsGateway::lastCode()])
-        ->assertRedirect(route('teacher.onboarding.verification'));
+        ->assertRedirect(route('teacher.approval.status'));
 
     $this->assertAuthenticated();
 
     $user = User::where('email', $account['email'])->firstOrFail();
+    $profile = $user->teacherProfile;
 
     expect($user->hasRole(User::ROLE_TEACHER))->toBeTrue()
         ->and($user->mobile)->toBe('0771234567')
         ->and($user->mobile_verified_at)->not->toBeNull()
-        // The wizard's answers are now the profile.
-        ->and($user->teacherProfile)->not->toBeNull()
-        ->and($user->teacherProfile->headline)->toBe('Physics tutor for O/L students')
-        ->and($user->teacherProfile->hourly_rate_minor)->toBe(250000)
-        ->and($user->teacherProfile->languages)->toBe(['English', 'Sinhala'])
-        ->and($user->teacherProfile->isComplete())->toBeTrue()
-        ->and($user->teacherProfile->availabilitySlots()->count())->toBe(1)
-        ->and($user->hasCompletedOnboarding())->toBeFalse();
+        // The survey answers are now the profile.
+        ->and($profile)->not->toBeNull()
+        ->and($profile->languages)->toBe(['English', 'Sinhala'])
+        ->and($profile->tutoring_levels)->toBe(['ol'])
+        ->and($profile->service_interests)->toBe(['lesson', 'paper_marking'])
+        ->and($profile->serviceInterestTypes())->toHaveCount(2)
+        // The survey's profile answers are already on the profile.
+        ->and($profile->experience_years)->toBe(5)
+        ->and($profile->education)->toBe('Government university')
+        ->and($profile->hourly_rate_minor)->toBe(250000)
+        ->and($profile->service_rates)->toBe(['paper_marking' => 150000])
+        ->and($profile->availabilitySlots()->orderBy('day_of_week')->pluck('day_of_week')->all())->toBe([1, 3, 5])
+        // The survey is the profile form now, so the profile counts as saved
+        // and the application is already with our team.
+        ->and($profile->about_completed_at)->not->toBeNull()
+        ->and($profile->preferences_completed_at)->not->toBeNull()
+        ->and($profile->completed_at)->not->toBeNull()
+        ->and($profile->isComplete())->toBeTrue()
+        ->and($profile->verification_status->value)->toBe('pending')
+        ->and($profile->submitted_at)->not->toBeNull()
+        ->and($profile->agreement_accepted_at)->not->toBeNull()
+        // Onboarding is finished; only the admin decision is left.
+        ->and($user->hasCompletedOnboarding())->toBeTrue();
+
+    // The subject is a pending pivot, approved with the application.
+    $subject = $profile->subjects()->firstOrFail();
+    expect((int) $subject->id)->toBe($this->olSubject->id)
+        ->and($subject->pivot->status)->toBe(ApprovalStatus::Pending);
+
+    // The government proof was moved out of the pending folder.
+    $document = $profile->documents()->firstOrFail();
+    expect($document->type)->toBe('government_proof')
+        ->and($document->original_name)->toBe('staff-id.pdf')
+        ->and($document->path)->toBe('verification-documents/'.$profile->id.'/'.basename($document->path))
+        ->and(Storage::disk('local')->exists($document->path))->toBeTrue()
+        ->and($profile->hasGovernmentProof())->toBeTrue()
+        // The claim alone never shows the badge.
+        ->and($profile->isGovernmentTeacher())->toBeFalse();
 
     // The single-use link is spent.
     expect($invite->fresh()->consumed_at)->not->toBeNull()
         ->and(PendingTeacherSignup::get())->toBeNull();
-
-    // Verification is where the signed-in wizard resumes.
-    $this->get(route('teacher.onboarding.verification'))->assertOk();
 });
 
-test('the availability week from the wizard is bookable', function () {
+test('a teacher who is not a government teacher gets no proof document', function () {
+    Storage::fake('local');
+
     [, $token] = makeTeacherInvite();
     joinThroughInvite($token);
 
     $this->post(route('join.account.verify'), ['code' => FakeSmsGateway::lastCode()]);
 
     $profile = TeacherProfile::firstOrFail();
-    $slot = TeacherAvailabilitySlot::firstOrFail();
 
-    expect($slot->teacher_profile_id)->toBe($profile->id)
-        ->and($slot->day_of_week)->toBe(1)
-        ->and($slot->startLabel())->toBe('15:00')
-        ->and($slot->endLabel())->toBe('18:00');
+    expect($profile->documents()->count())->toBe(0)
+        ->and($profile->hasGovernmentProof())->toBeFalse();
+});
+
+test('an admin confirms the government teacher badge', function () {
+    [, $token] = makeTeacherInvite();
+    joinThroughInvite($token);
+
+    $this->post(route('join.account.verify'), ['code' => FakeSmsGateway::lastCode()]);
+
+    $profile = TeacherProfile::firstOrFail();
+
+    expect($profile->isGovernmentTeacher())->toBeFalse();
+
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->post(route('admin.verifications.government', $profile), ['government_verified' => 1])
+        ->assertRedirect(route('admin.verifications.show', $profile));
+
+    expect($profile->fresh()->isGovernmentTeacher())->toBeTrue();
+
+    $this->actingAs($admin)
+        ->post(route('admin.verifications.government', $profile), ['government_verified' => 0]);
+
+    expect($profile->fresh()->isGovernmentTeacher())->toBeFalse();
 });
 
 test('the code step can be reopened on the same url', function () {
@@ -219,10 +579,6 @@ test('changing the details drops the passcode but keeps the answers', function (
 
     expect(PendingRegistration::get())->toBeNull()
         ->and(PendingTeacherSignup::isComplete())->toBeTrue();
-
-    $this->get(route('join.account'))
-        ->assertOk()
-        ->assertSee('Create your account');
 });
 
 test('an email that is already registered is caught before the code is sent', function () {
@@ -231,20 +587,15 @@ test('an email that is already registered is caught before the code is sent', fu
     [, $token] = makeTeacherInvite();
     $this->get('/register?invite='.$token);
 
-    $this->put(route('join.profile.update'), [
-        'headline' => 'Physics tutor',
-        'experience_years' => 3,
-        'education' => 'B.Sc. Physics',
-    ]);
-    $this->put(route('join.preferences.update'), [
-        'languages' => ['English'],
-        'hourly_rate' => 2500,
-    ]);
-    $this->put(route('join.availability.update'), [
-        'days' => [
-            ['value' => 2, 'enabled' => 1, 'ranges' => [['start_time' => '09:00', 'end_time' => '12:00']]],
-        ],
-    ]);
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+    $this->put(route('join.languages.update'), ['languages' => ['English']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson']]);
+    $this->put(route('join.experience.update'), ['experience_years' => 5]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
+    $this->put(route('join.rates.update'), ['hourly_rate' => 2500]);
+    $this->put(route('join.availability.update'), ['days' => [2, 4]]);
+    $this->post(route('join.proof.update'), ['claims' => '0']);
 
     $this->from(route('join.account'))
         ->post(route('join.account.store'), [
@@ -254,11 +605,33 @@ test('an email that is already registered is caught before the code is sent', fu
             'mobile' => '077 123 4567',
             'password' => 'password',
             'password_confirmation' => 'password',
+            'agree' => '1',
         ])
         ->assertSessionHasErrors('email');
 
     expect(FakeSmsGateway::messages())->toBeEmpty()
         ->and(User::count())->toBe(1);
+});
+
+test('the account is not registered until the terms are accepted', function () {
+    [, $token] = makeTeacherInvite();
+    joinThroughInvite($token);
+
+    $sentBefore = count(FakeSmsGateway::messages());
+
+    $this->from(route('join.account'))
+        ->post(route('join.account.store'), [
+            'first_name' => 'Amara',
+            'last_name' => 'Silva',
+            'email' => 'amara@example.com',
+            'mobile' => '077 123 4567',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])
+        ->assertSessionHasErrors('agree');
+
+    // No new passcode is texted while the terms are unticked.
+    expect(FakeSmsGateway::messages())->toHaveCount($sentBefore);
 });
 
 test('the account is created immediately when mobile verification is switched off', function () {
@@ -267,20 +640,18 @@ test('the account is created immediately when mobile verification is switched of
     [, $token] = makeTeacherInvite();
     $this->get('/register?invite='.$token);
 
-    $this->put(route('join.profile.update'), [
-        'headline' => 'Chemistry tutor',
-        'experience_years' => 5,
-        'education' => 'B.Sc. Chemistry',
-    ]);
-    $this->put(route('join.preferences.update'), [
-        'languages' => ['English'],
+    $this->put(route('join.level.update'), ['level' => 'al']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->alSubject->id]]);
+    $this->put(route('join.languages.update'), ['languages' => ['Tamil']]);
+    $this->put(route('join.services.update'), ['services' => ['paper_discussion']]);
+    $this->put(route('join.experience.update'), ['experience_years' => 12]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_NATIONAL_COLLEGE]);
+    $this->put(route('join.rates.update'), [
         'hourly_rate' => 3000,
+        'service_rates' => ['paper_discussion' => 1200],
     ]);
-    $this->put(route('join.availability.update'), [
-        'days' => [
-            ['value' => 3, 'enabled' => 1, 'ranges' => [['start_time' => '16:00', 'end_time' => '19:00']]],
-        ],
-    ]);
+    $this->put(route('join.availability.update'), ['days' => [0, 6]]);
+    $this->post(route('join.proof.update'), ['claims' => '0']);
 
     $this->post(route('join.account.store'), [
         'first_name' => 'Amara',
@@ -289,15 +660,112 @@ test('the account is created immediately when mobile verification is switched of
         'mobile' => '077 123 4567',
         'password' => 'password',
         'password_confirmation' => 'password',
-    ])->assertRedirect(route('teacher.onboarding.verification'));
+        'agree' => '1',
+    ])->assertRedirect(route('teacher.approval.status'));
 
     $this->assertAuthenticated();
 
     $user = User::where('email', 'amara@example.com')->firstOrFail();
 
     expect($user->hasRole(User::ROLE_TEACHER))->toBeTrue()
-        ->and($user->teacherProfile?->headline)->toBe('Chemistry tutor')
-        ->and($user->teacherProfile?->availabilitySlots()->count())->toBe(1);
+        ->and($user->teacherProfile?->tutoring_levels)->toBe(['al'])
+        ->and($user->teacherProfile?->languages)->toBe(['Tamil'])
+        ->and($user->teacherProfile?->service_interests)->toBe(['paper_discussion'])
+        ->and($user->teacherProfile?->subjects()->count())->toBe(1);
 
-    expect(FakeSmsGateway::messages())->toBeEmpty();
+    // No passcode was needed, but the operations team is told about the new
+    // application exactly like a manual submission would tell them.
+    $messages = FakeSmsGateway::messages();
+
+    expect($messages)->toHaveCount(1)
+        ->and($messages[0]['message'])->toBe('New teacher verification: Amara.');
+});
+
+test('the survey shows what has been answered and a sticky way forward', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->get(route('join.level'))
+        ->assertOk()
+        // The guest header can switch the theme of the invite link.
+        ->assertSee('x-data="themeToggle"', false)
+        // Phones submit the question through the fixed bottom bar.
+        ->assertSee('form="join-question-form"', false)
+        // Nothing is answered yet, and the recap says so rather than hiding.
+        ->assertSee('Not answered yet');
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+
+    $this->get(route('join.languages'))
+        ->assertOk()
+        ->assertSee('Question 3 of 9')
+        // The recap repeats the answers already saved.
+        ->assertSee('Exam level')
+        ->assertSee('O/L')
+        ->assertSee('Mathematics')
+        ->assertSee('You can change any answer before you create your account.');
+});
+
+test('the last step recaps every answer and submits from the phone bar', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+    $this->put(route('join.languages.update'), ['languages' => ['English', 'Sinhala']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson', 'paper_marking']]);
+    $this->put(route('join.experience.update'), ['experience_years' => 5]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_GOVERNMENT_UNIVERSITY]);
+    $this->put(route('join.rates.update'), [
+        'hourly_rate' => 2500,
+        'service_rates' => ['paper_marking' => 1500],
+    ]);
+    $this->put(route('join.availability.update'), ['days' => [1, 3, 5]]);
+    $this->post(route('join.proof.update'), ['claims' => '0']);
+
+    $this->get(route('join.account'))
+        ->assertOk()
+        ->assertSee('Last step')
+        ->assertSee('form="join-account-form"', false)
+        // The recap carries the answers the wizard is about to receive.
+        ->assertSee('English, Sinhala')
+        ->assertSee(platform_settings()->formatMinor(250000))
+        ->assertSee('Monday, Wednesday, Friday');
+
+    // The code state uses its own form, so the phone bar keeps working.
+    $this->post(route('join.account.store'), [
+        'first_name' => 'Amara',
+        'last_name' => 'Silva',
+        'email' => 'amara@example.com',
+        'mobile' => '077 123 4567',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+        'agree' => '1',
+    ]);
+
+    $this->get(route('join.account'))
+        ->assertOk()
+        ->assertSee('Almost done')
+        ->assertSee('form="join-verify-form"', false);
+});
+
+test('finishing the survey opens the approval status page with a celebration and the saved answers', function () {
+    [, $token] = makeTeacherInvite();
+    joinThroughInvite($token);
+
+    $this->post(route('join.account.verify'), ['code' => FakeSmsGateway::lastCode()])
+        ->assertRedirect(route('teacher.approval.status'));
+
+    $this->get(route('teacher.approval.status'))
+        ->assertOk()
+        ->assertSee('Your account is ready')
+        ->assertSee("You're in")
+        ->assertSee('English, Sinhala')
+        ->assertSee('in review');
+
+    // The celebration is a one-time hand-off, not a permanent banner.
+    $this->get(route('teacher.approval.status'))
+        ->assertOk()
+        ->assertDontSee('Your account is ready');
 });

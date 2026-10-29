@@ -7,7 +7,8 @@ import AppShell from './AppShell.vue';
 // are read before Vue clears the container.
 const DEFAULT_CONFIG = {
     appName: 'Study Like Pro',
-    logoUrl: '/images/brand/logo-mark.png',
+    logoUrl: '/images/brand/logo-nav.png',
+    logoDarkUrl: '/images/brand/logo-nav-dark.png',
     csrfToken: '',
     user: { name: '', initials: '', roleLabel: 'Member', avatarUrl: null },
     navItems: [],

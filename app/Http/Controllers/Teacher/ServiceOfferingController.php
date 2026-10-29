@@ -108,6 +108,17 @@ class ServiceOfferingController extends Controller
             'subjectsAwaitingApproval' => $subjects->isEmpty() && $pivotSubjects->isNotEmpty(),
             'offerings' => $offerings,
             'types' => ServiceType::cases(),
+            // What the teacher said they want to offer in the invite survey: the
+            // composer opens on the first of these instead of a blank type.
+            'serviceInterests' => array_map(
+                fn (ServiceType $type) => $type->value,
+                $profile->serviceInterestTypes(),
+            ),
+            // What the invite survey priced: the composer opens a new offering
+            // on these amounts instead of a blank price field.
+            'suggestedRates' => collect(ServiceType::cases())
+                ->mapWithKeys(fn (ServiceType $type) => [$type->value => $profile->serviceRateMinor($type)])
+                ->all(),
             'durations' => config('studylikepro.lesson_durations'),
         ]);
     }

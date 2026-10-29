@@ -168,6 +168,115 @@ it('rejects a range that overlaps an existing one', function () {
     expect($this->profile->availabilitySlots()->count())->toBe(1);
 });
 
+it('validates the week payload', function (array $days, string $field) {
+    $this->actingAs($this->teacher)
+        ->put(route('teacher.availability.week.update'), ['days' => $days])
+        ->assertSessionHasErrors($field);
+
+    expect($this->profile->availabilitySlots()->count())->toBe(0);
+})->with([
+    'no ranges at all' => [
+        [
+            ['value' => 1, 'enabled' => '0'],
+            ['value' => 2, 'enabled' => '0'],
+        ],
+        'days',
+    ],
+    'end before start' => [
+        [
+            ['value' => 1, 'enabled' => '1', 'ranges' => [['start_time' => '21:00', 'end_time' => '18:00']]],
+        ],
+        'days.0.ranges.0.end_time',
+    ],
+    'shorter than the lesson length' => [
+        [
+            ['value' => 1, 'enabled' => '1', 'ranges' => [['start_time' => '15:00', 'end_time' => '15:30']]],
+        ],
+        'days.0.ranges.0.end_time',
+    ],
+    'overlapping ranges on one day' => [
+        [
+            [
+                'value' => 1,
+                'enabled' => '1',
+                'ranges' => [
+                    ['start_time' => '15:00', 'end_time' => '18:00'],
+                    ['start_time' => '17:00', 'end_time' => '20:00'],
+                ],
+            ],
+        ],
+        'days.0.ranges.1.start_time',
+    ],
+    'missing one end of a range' => [
+        [
+            ['value' => 1, 'enabled' => '1', 'ranges' => [['start_time' => '15:00']]],
+        ],
+        'days.0.ranges.0.start_time',
+    ],
+    'unknown weekday' => [
+        [
+            ['value' => 9, 'enabled' => '1', 'ranges' => [['start_time' => '15:00', 'end_time' => '21:00']]],
+        ],
+        'days.0.value',
+    ],
+    'the same weekday twice' => [
+        [
+            ['value' => 1, 'enabled' => '1', 'ranges' => [['start_time' => '15:00', 'end_time' => '21:00']]],
+            ['value' => 1, 'enabled' => '1', 'ranges' => [['start_time' => '08:00', 'end_time' => '12:00']]],
+        ],
+        'days.1.value',
+    ],
+    'a time that is not H:i' => [
+        [
+            ['value' => 1, 'enabled' => '1', 'ranges' => [['start_time' => '6pm', 'end_time' => '21:00']]],
+        ],
+        'days.0.ranges.0.start_time',
+    ],
+]);
+
+it('keeps the teacher time off when the week is replaced', function () {
+    $timeOff = TeacherTimeOff::create([
+        'teacher_profile_id' => $this->profile->id,
+        'starts_on' => now()->addWeek()->toDateString(),
+        'ends_on' => now()->addWeek()->addDays(2)->toDateString(),
+        'reason' => 'Family function',
+    ]);
+
+    $this->actingAs($this->teacher)->put(route('teacher.availability.week.update'), weekPayload([
+        ['value' => 1, 'enabled' => '1', 'ranges' => [['start_time' => '15:00', 'end_time' => '21:00']]],
+    ]))->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('teacher_time_off', ['id' => $timeOff->id]);
+});
+
+it('ignores days that are switched off', function () {
+    $this->actingAs($this->teacher)
+        ->put(route('teacher.availability.week.update'), weekPayload([
+            [
+                'value' => 1,
+                'enabled' => '1',
+                'ranges' => [
+                    ['start_time' => '15:00', 'end_time' => '18:00'],
+                    ['start_time' => '19:00', 'end_time' => '21:00'],
+                ],
+            ],
+            [
+                'value' => 2,
+                'enabled' => '1',
+                'ranges' => [['start_time' => '08:00', 'end_time' => '12:00']],
+            ],
+            [
+                'value' => 6,
+                'enabled' => '0',
+                'ranges' => [['start_time' => '08:00', 'end_time' => '20:00']],
+            ],
+        ]))
+        ->assertSessionHasNoErrors();
+
+    expect($this->profile->availabilitySlots()->count())->toBe(3)
+        ->and($this->profile->availabilitySlots()->where('day_of_week', 6)->exists())->toBeFalse();
+});
+
 it('rejects invalid ranges', function (array $payload, string $field) {
     $this->actingAs($this->teacher)
         ->post(route('teacher.availability.slots.store'), $payload)

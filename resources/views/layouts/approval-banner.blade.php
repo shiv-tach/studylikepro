@@ -5,7 +5,7 @@
     $bannerUser = Auth::user();
     $bannerProfile = $bannerUser?->isTeacher() ? $bannerUser->teacherProfile : null;
     $bannerStage = \App\Support\TeacherApproval::stage($bannerProfile);
-    $bannerOnStatusPage = request()->routeIs('teacher.approval.status', 'teacher.onboarding.submitted');
+    $bannerOnStatusPage = request()->routeIs('teacher.approval.status');
 @endphp
 
 @if (! $bannerOnStatusPage && in_array($bannerStage, [\App\Support\TeacherApproval::STAGE_REVIEW, \App\Support\TeacherApproval::STAGE_ACTION], true))

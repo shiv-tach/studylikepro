@@ -6,13 +6,11 @@ use App\Enums\ApprovalStatus;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TeacherDocumentRequest;
-use App\Models\EducationLevel;
-use App\Models\Subject;
 use App\Models\TeacherProfile;
 use App\Models\TeacherVerificationDocument;
 use App\Services\TeacherSubjectService;
 use App\Services\VerificationAlertService;
-use App\Support\TeacherOnboarding;
+use App\Support\SubjectCatalog;
 use App\Support\VerificationStepConfig;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -30,30 +28,22 @@ class VerificationController extends Controller
     ) {}
 
     /**
-     * Show the verification step. `$mode` is `onboarding` when the wizard owns
-     * the page and `workspace` when it is the post-onboarding status page.
+     * Show the verification page: the documents on file, the subject picker and
+     * the checklist that has to be green before the application can be sent for
+     * review.
      */
-    public function index(Request $request, string $mode = 'workspace'): View|RedirectResponse
+    public function index(Request $request): View|RedirectResponse
     {
         $user = $request->user();
         $profile = $user->teacherProfile;
 
-        // The old URL forwards into the wizard until onboarding is finished;
-        // afterwards it is the status page for the submitted application.
-        if ($mode !== 'onboarding' && ! $user->hasCompletedOnboarding()) {
-            $user->loadMissing('onboardingDraft');
-
+        if ($profile === null) {
             return redirect()
-                ->route(TeacherOnboarding::nextRouteName($profile, $user->onboardingDraft))
-                ->with('status', TeacherOnboarding::nextStatus($profile, $user->onboardingDraft));
-        }
-
-        if ($gate = $this->onboardingGate($profile)) {
-            return $gate;
+                ->route('teacher.profile')
+                ->with('status', 'complete-your-profile');
         }
 
         $profile->load('documents');
-        $user->loadMissing('onboardingDraft');
         $subjectGroups = $this->subjectGroups();
         $selectedSubjectIds = $this->selectedSubjectIds($profile);
         $documentTypes = (array) config('studylikepro.verification_document_types');
@@ -67,13 +57,10 @@ class VerificationController extends Controller
             $selectedSubjectIds,
             $user->theme['preset'] ?? 'classic',
             $highlightDocumentId !== null ? (int) $highlightDocumentId : null,
-            $mode,
-            $user->onboardingDraft,
         );
 
-        return view($mode === 'onboarding' ? 'teacher.onboarding.verification' : 'teacher.verification', [
+        return view('teacher.verification', [
             'profile' => $profile,
-            'mode' => $mode,
             'config' => $config,
             'canEditDocuments' => $profile->verification_status->allowsDocumentEditing(),
             'documentTypes' => $documentTypes,
@@ -89,10 +76,6 @@ class VerificationController extends Controller
     public function store(TeacherDocumentRequest $request): RedirectResponse|JsonResponse
     {
         $profile = $request->user()->teacherProfile;
-
-        if ($gate = $this->onboardingGate($profile)) {
-            return $gate;
-        }
 
         if (! $profile->verification_status->allowsDocumentEditing()) {
             if ($request->wantsJson()) {
@@ -131,10 +114,6 @@ class VerificationController extends Controller
      */
     public function destroy(Request $request, TeacherVerificationDocument $document): RedirectResponse|JsonResponse
     {
-        if ($gate = $this->onboardingGate($request->user()->teacherProfile)) {
-            return $gate;
-        }
-
         Gate::authorize('delete', $document);
 
         $label = $document->typeLabel();
@@ -164,10 +143,6 @@ class VerificationController extends Controller
     public function storeSubjects(Request $request): RedirectResponse|JsonResponse
     {
         $profile = $request->user()->teacherProfile;
-
-        if ($gate = $this->onboardingGate($profile)) {
-            return $gate;
-        }
 
         if (! $profile->verification_status->allowsDocumentEditing()) {
             if ($request->wantsJson()) {
@@ -207,10 +182,6 @@ class VerificationController extends Controller
     {
         $profile = $request->user()->teacherProfile;
 
-        if ($gate = $this->onboardingGate($profile)) {
-            return $gate;
-        }
-
         if (! $profile->verification_status->allowsDocumentEditing()) {
             return $this->redirectAfterAction($request, 'verification-locked');
         }
@@ -241,58 +212,22 @@ class VerificationController extends Controller
             'agreement_version' => (string) config('studylikepro.support.policy_version'),
         ]);
 
-        // Onboarding is finished: nothing is left to restore.
-        $request->user()->onboardingDraft()->delete();
-
         $this->alerts->notifyNewSubmission($profile);
 
         return redirect()
-            ->route($this->isOnboardingReturn($request) ? 'teacher.onboarding.submitted' : 'teacher.verification')
+            ->route('teacher.approval.status')
             ->with('status', 'submitted-for-review');
     }
 
     /**
-     * Everything redirects back to the page the action came from: the wizard
-     * step while onboarding, the workspace status page afterwards.
+     * Every action returns to the verification page, where the updated state
+     * (documents, checklist, status) is rendered again.
      */
     private function redirectAfterAction(Request $request, string $status): RedirectResponse
     {
         return redirect()
-            ->route($this->isOnboardingReturn($request) ? 'teacher.onboarding.verification' : 'teacher.verification')
+            ->route('teacher.verification')
             ->with('status', $status);
-    }
-
-    private function isOnboardingReturn(Request $request): bool
-    {
-        return $request->input('return') === 'onboarding' || $request->route('mode') === 'onboarding';
-    }
-
-    /**
-     * The onboarding gate every verification action shares: both profile steps
-     * have to be saved and at least one weekly range set, otherwise the teacher
-     * is sent to the step they still owe rather than to a dead end.
-     */
-    private function onboardingGate(?TeacherProfile $profile): ?RedirectResponse
-    {
-        if (! $profile?->hasCompletedAboutStep()) {
-            return redirect()
-                ->route('teacher.onboarding.profile')
-                ->with('status', 'complete-your-profile');
-        }
-
-        if (! $profile->hasCompletedPreferencesStep()) {
-            return redirect()
-                ->route('teacher.onboarding.preferences')
-                ->with('status', 'complete-your-preferences');
-        }
-
-        if (! TeacherOnboarding::hasAvailability($profile)) {
-            return redirect()
-                ->route('teacher.onboarding.availability')
-                ->with('status', 'complete-your-availability');
-        }
-
-        return null;
     }
 
     /**
@@ -303,51 +238,9 @@ class VerificationController extends Controller
      */
     private function subjectGroups(): array
     {
-        $levels = EducationLevel::query()->active()->ordered()->get();
-
-        $byLevel = Subject::query()
-            ->active()
-            ->ordered()
-            ->with('educationLevel')
-            ->get()
-            ->groupBy('education_level_id');
-
-        $groups = $levels->map(function (EducationLevel $level) use ($byLevel) {
-            return [
-                'key' => $level->key,
-                'name' => $level->name,
-                'icon' => $level->icon,
-                'subjects' => $byLevel->get($level->id, collect())
-                    ->map(fn (Subject $subject) => [
-                        'id' => $subject->id,
-                        'name' => $subject->name,
-                        'icon' => $subject->icon ?? '📘',
-                    ])
-                    ->values()
-                    ->all(),
-            ];
-        });
-
-        // Subjects that somehow have no level still need a home in the picker.
-        $unassigned = $byLevel->get(null, collect());
-
-        if ($unassigned->isNotEmpty()) {
-            $groups->push([
-                'key' => 'other',
-                'name' => __('Other'),
-                'icon' => '🧭',
-                'subjects' => $unassigned
-                    ->map(fn (Subject $subject) => [
-                        'id' => $subject->id,
-                        'name' => $subject->name,
-                        'icon' => $subject->icon ?? '📘',
-                    ])
-                    ->values()
-                    ->all(),
-            ]);
-        }
-
-        return $groups->filter(fn (array $group) => $group['subjects'] !== [])->values()->all();
+        // Shared with the invite survey's subject question so both pickers offer
+        // exactly the same catalog.
+        return SubjectCatalog::groups();
     }
 
     /**

@@ -56,6 +56,7 @@
             'initials' => (string) Str::of($teacher->user->name)->substr(0, 2),
             'avatarUrl' => $teacher->user->avatarUrl(),
             'headline' => $teacher->headline,
+            'governmentBadge' => $teacher->isGovernmentTeacher(),
             'url' => route('teachers.show', $teacher),
             'rating' => $ratingCount > 0 ? number_format((float) $teacher->rating_avg, 1) : null,
             'ratingCount' => $ratingCount,
@@ -110,6 +111,7 @@
             'noResults' => __('No verified teachers match those filters yet. Try widening your search.'),
             'newTeacher' => __('New teacher'),
             'verified' => __('Verified'),
+            'governmentTeacher' => __('Government teacher'),
             'noSlots' => __('No slots in the next 7 days'),
             'nextLabel' => __('Next:'),
             'perHour' => __('/hr'),
@@ -195,7 +197,7 @@
             'hours' => config('studylikepro.support.hours'),
         ],
         'images' => [
-            'logo' => asset('images/brand/logo-mark.png'),
+            'logo' => asset('images/brand/logo-nav.png'),
         ],
     ];
 

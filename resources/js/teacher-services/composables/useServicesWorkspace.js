@@ -14,6 +14,14 @@ export function createServicesWorkspace(config) {
     const options = config.options ?? {};
     const limits = config.limits ?? {};
     const offerings = config.offerings ?? [];
+    // The invite survey's "services you would like to offer": known types only,
+    // in the order the teacher picked them.
+    const knownTypes = (config.types ?? []).map((type) => type.value);
+    const interests = (config.serviceInterests ?? []).filter((value) => knownTypes.includes(value));
+    // The price the teacher gave in the invite survey, per service type.
+    const suggestedPrices = Object.fromEntries(
+        (config.types ?? []).map((type) => [type.value, type.suggestedPrice ?? null]),
+    );
     const VIEW_STORAGE_KEY = 'teacherServicesView';
     const VIEWS = ['list', 'card'];
 
@@ -130,10 +138,12 @@ export function createServicesWorkspace(config) {
     }
 
     function blankValues(type) {
+        const suggested = suggestedPrices[type];
+
         return {
             title: '',
             description: '',
-            price: '',
+            price: suggested === null || suggested === undefined ? '' : String(suggested),
             gradeId: null,
             subjectId: null,
             lessonId: null,
@@ -216,8 +226,13 @@ export function createServicesWorkspace(config) {
         errors.value = {};
         discardOpen.value = false;
         submitting.value = false;
-        composer.value = { mode: 'create', type: type || null, offeringId: null, updateUrl: null };
-        assign(blankValues(type || ''));
+
+        // No explicit pick (the "New service" button): open on what the teacher
+        // said they wanted to offer in the survey, if anything.
+        const preferred = type || interests[0] || null;
+
+        composer.value = { mode: 'create', type: preferred, offeringId: null, updateUrl: null };
+        assign(blankValues(preferred || ''));
         resetBaseline();
     }
 
@@ -263,6 +278,14 @@ export function createServicesWorkspace(config) {
     function selectType(type) {
         if (!composer.value || composer.value.mode === 'edit' || composer.value.type === type) {
             return;
+        }
+
+        // A blank price, or one the survey filled in for the previous type,
+        // follows the new type instead of being carried over.
+        const previousSuggestion = suggestedPrices[composer.value.type] ?? null;
+
+        if (values.price === '' || String(values.price) === String(previousSuggestion ?? '')) {
+            values.price = suggestedPrices[type] ?? '';
         }
 
         composer.value = { ...composer.value, type };

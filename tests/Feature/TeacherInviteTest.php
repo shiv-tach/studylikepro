@@ -45,15 +45,18 @@ test('non-admin cannot manage invites', function () {
     $this->actingAs($student)->post(route('admin.invites.store'), ['expires_in_days' => 7])->assertForbidden();
 });
 
-test('a valid invite link opens the teacher onboarding wizard', function () {
+test('a valid invite link opens the teacher survey', function () {
     [, $token] = makeTeacherInvite();
 
     $this->get('/register?invite='.$token)
         ->assertRedirect(route('join.start'));
 
     $this->get(route('join.start'))
+        ->assertRedirect(route('join.level'));
+
+    $this->get(route('join.level'))
         ->assertOk()
-        ->assertSee('Let’s set up your teaching profile');
+        ->assertSee('Who are you tutoring for?');
 });
 
 test('an invalid invite link shows an error', function () {

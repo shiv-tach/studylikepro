@@ -27,9 +27,8 @@
         <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/80 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/80">
             <div class="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center gap-5">
-                    <a href="/" class="flex items-center gap-2.5">
-                        <x-application-logo class="h-9 w-auto" />
-                        <span class="text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100">Studylikepro</span>
+                    <a href="/" class="flex items-center">
+                        <x-application-logo class="h-8 w-auto sm:h-9" />
                     </a>
                     <nav class="hidden items-center gap-1 sm:flex">
                         <a href="{{ route('catalog.subjects.index') }}"

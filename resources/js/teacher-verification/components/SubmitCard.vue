@@ -79,7 +79,6 @@ function submit() {
 
         <form ref="form" method="POST" :action="urls.submit" class="mt-5 space-y-3">
             <input type="hidden" name="_token" :value="csrfToken">
-            <input v-if="urls.return" type="hidden" name="return" :value="urls.return">
 
             <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 text-sm text-slate-600 transition-colors hover:border-primary/40 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-300">
                 <input

@@ -9,10 +9,10 @@ use App\Services\Sms\FakeSmsGateway;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
-test('the verification page redirects until the profile is complete', function () {
+test('the verification page sends a teacher without a profile to the profile form', function () {
     $this->actingAs(User::factory()->teacher()->create())
         ->get(route('teacher.verification'))
-        ->assertRedirect(route('teacher.onboarding.show'))
+        ->assertRedirect(route('teacher.profile'))
         ->assertSessionHas('status', 'complete-your-profile');
 });
 
@@ -148,7 +148,7 @@ test('teachers can submit their application for review', function () {
 
     $this->actingAs($user)
         ->post(route('teacher.verification.submit'), ['agree' => '1'])
-        ->assertRedirect(route('teacher.verification'))
+        ->assertRedirect(route('teacher.approval.status'))
         ->assertSessionHas('status', 'submitted-for-review');
 
     $profile = $user->teacherProfile->fresh();
@@ -197,7 +197,7 @@ test('an undeliverable admin alert never blocks the submission', function () {
 
     $this->actingAs($user)
         ->post(route('teacher.verification.submit'), ['agree' => '1'])
-        ->assertRedirect(route('teacher.verification'))
+        ->assertRedirect(route('teacher.approval.status'))
         ->assertSessionHas('status', 'submitted-for-review');
 
     expect($user->teacherProfile->fresh()->verification_status->value)->toBe('pending');
@@ -209,7 +209,7 @@ test('the terms checklist keeps showing acceptance after the application is subm
 
     $this->actingAs($user)->post(route('teacher.verification.submit'), ['agree' => '1']);
 
-    $config = verificationConfig($this->actingAs($user)->get(route('teacher.onboarding.verification'))->assertOk());
+    $config = verificationConfig($this->actingAs($user)->get(route('teacher.verification'))->assertOk());
 
     expect($config['canEditDocuments'])->toBeFalse()
         ->and($config['values']['agree'])->toBeTrue();
@@ -218,7 +218,7 @@ test('the terms checklist keeps showing acceptance after the application is subm
 test('the terms checklist stays unticked until the teacher accepts them', function () {
     $user = onboardingTeacher();
 
-    $config = verificationConfig($this->actingAs($user)->get(route('teacher.onboarding.verification'))->assertOk());
+    $config = verificationConfig($this->actingAs($user)->get(route('teacher.verification'))->assertOk());
 
     expect($config['values']['agree'])->toBeFalse();
 });
@@ -231,7 +231,7 @@ test('a failed submission without the terms does not tick the checklist', functi
         ->post(route('teacher.verification.submit'))
         ->assertSessionHasErrors('agree');
 
-    $config = verificationConfig($this->actingAs($user)->get(route('teacher.onboarding.verification'))->assertOk());
+    $config = verificationConfig($this->actingAs($user)->get(route('teacher.verification'))->assertOk());
 
     expect($config['values']['agree'])->toBeFalse();
 });
@@ -255,7 +255,7 @@ test('rejected teachers can resubmit their application', function () {
 
     $this->actingAs($user)
         ->post(route('teacher.verification.submit'), ['agree' => '1'])
-        ->assertRedirect(route('teacher.verification'));
+        ->assertRedirect(route('teacher.approval.status'));
 
     $profile = $user->teacherProfile->fresh();
 
@@ -267,7 +267,7 @@ test('the verification page points teachers to upload an ID before they can subm
     $user = onboardingTeacher();
 
     $response = $this->actingAs($user)
-        ->get(route('teacher.onboarding.verification'))
+        ->get(route('teacher.verification'))
         ->assertOk()
         ->assertSee('What will you teach?')
         ->assertSee('Upload a document');
@@ -283,7 +283,7 @@ test('the verification page shows the submission checklist once the ID is upload
     TeacherVerificationDocument::factory()->for($user->teacherProfile)->create();
 
     $config = verificationConfig(
-        $this->actingAs($user)->get(route('teacher.onboarding.verification'))->assertOk()
+        $this->actingAs($user)->get(route('teacher.verification'))->assertOk()
     );
 
     expect(collect($config['documents'])->firstWhere('type', 'id_proof'))->not->toBeNull()
@@ -294,7 +294,7 @@ test('the verification page ships the checklist, documents and notices as an isl
     $user = onboardingTeacher();
     TeacherVerificationDocument::factory()->for($user->teacherProfile)->create(['type' => 'degree']);
 
-    $response = $this->actingAs($user)->get(route('teacher.onboarding.verification'))->assertOk();
+    $response = $this->actingAs($user)->get(route('teacher.verification'))->assertOk();
 
     $response->assertSee('id="teacher-verification-app"', false);
 
@@ -308,7 +308,8 @@ test('the verification page ships the checklist, documents and notices as an isl
         // The id is the only required type, so it is the one offered first.
         ->and($config['selectedType'])->toBe('id_proof')
         ->and(collect($config['documentTypes'])->firstWhere('value', 'id_proof')['required'])->toBeTrue()
-        ->and($config['currentStep'])->toBe(5)
+        ->and($config['steps'])->toHaveCount(4)
+        ->and($config['urls']['submitted'])->toBe(route('teacher.approval.status'))
         ->and($config['urls']['upload'])->toBe(route('teacher.verification.documents.store'));
 });
 
@@ -316,14 +317,16 @@ test('every document type ships its own upload slot', function () {
     $user = onboardingTeacher();
 
     $config = verificationConfig(
-        $this->actingAs($user)->get(route('teacher.onboarding.verification'))->assertOk()
+        $this->actingAs($user)->get(route('teacher.verification'))->assertOk()
     );
 
     $types = collect($config['documentTypes']);
 
-    expect($types->pluck('value')->all())->toBe(['id_proof', 'degree', 'certificate', 'other'])
+    expect($types->pluck('value')->all())->toBe(['id_proof', 'degree', 'certificate', 'government_proof', 'other'])
         ->and($types->firstWhere('value', 'id_proof')['icon'])->toBe('shield')
         ->and($types->firstWhere('value', 'degree')['icon'])->toBe('graduation')
+        // The government proof is optional: the ID remains the only required type.
+        ->and($types->firstWhere('value', 'government_proof')['required'])->toBeFalse()
         // A two-page ID scan is normal, so every slot accepts more than one file.
         ->and($types->every(fn (array $type) => $type['multiple'] === true))->toBeTrue()
         // The picker uploads on choice: the page has to say so, show progress and
@@ -341,7 +344,7 @@ test('the no-js fallback renders one upload form per document type', function ()
     $user = onboardingTeacher();
 
     $html = $this->actingAs($user)
-        ->get(route('teacher.onboarding.verification'))
+        ->get(route('teacher.verification'))
         ->assertOk()
         ->assertSee('Upload a document')
         ->getContent();
@@ -357,16 +360,15 @@ test('a rejected upload points at the slot it came from', function () {
     $user = onboardingTeacher();
 
     $this->actingAs($user)
-        ->from(route('teacher.onboarding.verification'))
+        ->from(route('teacher.verification'))
         ->post(route('teacher.verification.documents.store'), [
             'type' => 'degree',
             'document' => UploadedFile::fake()->create('virus.exe', 10),
-            'return' => 'onboarding',
         ])
         ->assertSessionHasErrors(['document']);
 
     $config = verificationConfig(
-        $this->actingAs($user)->get(route('teacher.onboarding.verification'))->assertOk()
+        $this->actingAs($user)->get(route('teacher.verification'))->assertOk()
     );
 
     expect($config['errors']['byType']['type'])->toBe('degree')
@@ -386,7 +388,7 @@ test('an uploaded document is shipped with the flash notice for the toast', func
         ])
         ->assertRedirect(route('teacher.verification'));
 
-    $config = verificationConfig($this->actingAs($user)->get(route('teacher.onboarding.verification'))->assertOk());
+    $config = verificationConfig($this->actingAs($user)->get(route('teacher.verification'))->assertOk());
 
     expect($config['notices'])->toHaveCount(1)
         ->and($config['notices'][0]['tone'])->toBe('emerald')

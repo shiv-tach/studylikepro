@@ -2,7 +2,7 @@ import { createApp } from 'vue';
 import TeacherProfileApp from './TeacherProfileApp.vue';
 
 /**
- * Blade owns the language catalog, the stored answers, the onboarding steps, the
+ * Blade owns the language catalog, the stored answers, the setup steps, the
  * validation errors and the route map for the teaching profile, and hands them
  * over as a JSON island, so no label or URL is hardcoded here. Only
  * /teacher/profile mounts this bundle.
@@ -19,7 +19,6 @@ const DEFAULT_CONFIG = {
     values: {},
     preview: {},
     steps: [],
-    currentStep: 1,
     errors: {},
     copy: {},
     urls: {},

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ApprovalStatus;
+use App\Enums\ServiceType;
 use App\Enums\VerificationStatus;
 use App\Support\TeacherApproval;
 use Database\Factories\TeacherProfileFactory;
@@ -26,14 +27,18 @@ class TeacherProfile extends Model
         'experience_years',
         'education',
         'languages',
+        'tutoring_levels',
+        'service_interests',
         'timezone',
         'lesson_duration_minutes',
         'hourly_rate_minor',
+        'service_rates',
         'verification_status',
         'verification_notes',
         'submitted_at',
         'verified_at',
         'approved_seen_at',
+        'government_verified_at',
         'completed_at',
         'about_completed_at',
         'preferences_completed_at',
@@ -41,14 +46,29 @@ class TeacherProfile extends Model
         'agreement_version',
     ];
 
+    /**
+     * A freshly created profile (via `firstOrNew()` when the teacher saves the
+     * profile form) has not been reloaded from the database, so the column
+     * default has to exist on the model as well.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'verification_status' => VerificationStatus::Draft->value,
+    ];
+
     protected function casts(): array
     {
         return [
             'languages' => 'array',
+            'tutoring_levels' => 'array',
+            'service_interests' => 'array',
+            'service_rates' => 'array',
             'verification_status' => VerificationStatus::class,
             'submitted_at' => 'datetime',
             'verified_at' => 'datetime',
             'approved_seen_at' => 'datetime',
+            'government_verified_at' => 'datetime',
             'completed_at' => 'datetime',
             'about_completed_at' => 'datetime',
             'preferences_completed_at' => 'datetime',
@@ -467,6 +487,61 @@ class TeacherProfile extends Model
     public function isApproved(): bool
     {
         return $this->verification_status === VerificationStatus::Approved;
+    }
+
+    /**
+     * Our team confirmed the government-teacher proof: the profile card shows the
+     * badge. Only the confirmation timestamp counts, never the teacher's claim.
+     */
+    public function isGovernmentTeacher(): bool
+    {
+        return $this->government_verified_at !== null;
+    }
+
+    /**
+     * The teacher uploaded a document claiming government-teacher status. An
+     * admin still has to confirm it before the badge appears.
+     */
+    public function hasGovernmentProof(): bool
+    {
+        return $this->relationLoaded('documents')
+            ? $this->documents->contains('type', 'government_proof')
+            : $this->documents()->where('type', 'government_proof')->exists();
+    }
+
+    /**
+     * The service types the teacher said they want to sell in the invite survey,
+     * in enum order. Unknown values are dropped so a renamed case cannot leak.
+     *
+     * @return list<ServiceType>
+     */
+    public function serviceInterestTypes(): array
+    {
+        $values = array_map('strval', (array) ($this->service_interests ?? []));
+
+        return array_values(array_filter(
+            ServiceType::cases(),
+            fn (ServiceType $type) => in_array($type->value, $values, true),
+        ));
+    }
+
+    /**
+     * The price the invite survey collected for this service, in minor units.
+     * Lessons have no separate answer: their price is the hourly rate.
+     */
+    public function serviceRateMinor(ServiceType|string $type): ?int
+    {
+        $value = $type instanceof ServiceType ? $type->value : $type;
+        $rates = is_array($this->service_rates) ? $this->service_rates : [];
+        $minor = $rates[$value] ?? null;
+
+        if (is_numeric($minor) && (int) $minor > 0) {
+            return (int) $minor;
+        }
+
+        return $value === ServiceType::Lesson->value && (int) $this->hourly_rate_minor > 0
+            ? (int) $this->hourly_rate_minor
+            : null;
     }
 
     /**

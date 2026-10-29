@@ -18,9 +18,7 @@ class WeeklyAvailabilityRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // The invite wizard (join.*) collects the week before the account
-        // exists, so a guest is allowed here as well.
-        return ($this->user()?->isTeacher() ?? false) || $this->routeIs('join.*');
+        return $this->user()?->isTeacher() ?? false;
     }
 
     /**

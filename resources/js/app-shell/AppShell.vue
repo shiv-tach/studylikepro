@@ -57,6 +57,7 @@ const { sidebarOpen, closeSidebar } = shell;
         :user="config.user"
         :dashboard-url="config.urls.dashboard"
         :logo-url="config.logoUrl"
+        :logo-dark-url="config.logoDarkUrl"
         :app-name="config.appName"
     />
 

@@ -39,6 +39,7 @@ const panel = usePanel();
                         {{ teacher.name }}
                     </h1>
                     <UiChip tone="emerald" icon="check-circle">{{ copy.verified }}</UiChip>
+                    <UiChip v-if="teacher.governmentBadge" tone="primary">{{ copy.governmentTeacher }}</UiChip>
                 </div>
 
                 <p v-if="teacher.headline" class="mt-1 text-slate-600 dark:text-slate-400">{{ teacher.headline }}</p>

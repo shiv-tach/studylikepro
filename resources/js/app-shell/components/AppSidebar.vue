@@ -11,6 +11,7 @@ const props = defineProps({
     user: { type: Object, required: true },
     dashboardUrl: { type: String, required: true },
     logoUrl: { type: String, required: true },
+    logoDarkUrl: { type: String, required: true },
     appName: { type: String, default: 'Study Like Pro' },
 });
 
@@ -19,7 +20,6 @@ const { preset, sidebarOpen, closeSidebar } = useShell();
 const asideClass = computed(() => sidebarClass(preset.value));
 const dividerClass = computed(() => sidebarDividerClass(preset.value));
 const footerSurface = computed(() => sidebarFooterSurfaceClass(preset.value));
-const brandTextClass = computed(() => (preset.value === 'midnight' ? 'text-slate-100' : ''));
 const nameClass = computed(() => (preset.value === 'midnight' ? 'text-slate-200' : 'text-slate-700 dark:text-slate-300'));
 </script>
 
@@ -33,9 +33,12 @@ const nameClass = computed(() => (preset.value === 'midnight' ? 'text-slate-200'
     >
         <!-- Brand + mobile close -->
         <div :class="[dividerClass, 'flex h-16 items-center justify-between border-b px-6']">
-            <a :href="dashboardUrl" class="flex items-center gap-2.5 text-lg font-bold text-primary">
-                <AppLogo :src="logoUrl" class="h-9 w-auto" />
-                <span :class="[brandTextClass, 'tracking-tight']">{{ appName }}</span>
+            <a :href="dashboardUrl" class="flex items-center">
+                <AppLogo v-if="preset === 'midnight'" :src="logoDarkUrl" :alt="appName" class="h-8 w-auto" />
+                <template v-else>
+                    <AppLogo :src="logoUrl" :alt="appName" class="h-8 w-auto dark:hidden" />
+                    <AppLogo :src="logoDarkUrl" :alt="appName" class="hidden h-8 w-auto dark:block" />
+                </template>
             </a>
 
             <button

@@ -3,19 +3,15 @@
 namespace App\Support;
 
 use App\Models\TeacherInvite;
-use App\Models\TeacherOnboardingDraft;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
 /**
- * The teacher onboarding wizard a visitor is filling in *before* they have an
- * account.
+ * The teacher invite survey a visitor fills in *before* they have an account.
  *
- * An invite link opens the wizard as a guest: the answers live in the session
+ * An invite link opens the survey as a guest: the answers live in the session
  * (nothing is written to `users`), and only the final "Create your account"
  * step hands them to `PendingRegistration`, which waits for the SMS passcode.
- * The session row mirrors the shape of `PendingRegistration` so the two steps
- * of the flow read the same way.
  *
  * Key: `invite.signup`.
  */
@@ -23,17 +19,11 @@ final class PendingTeacherSignup
 {
     public const KEY = 'invite.signup';
 
-    /**
-     * The wizard steps that hold answers before the account exists.
-     */
-    public const ANSWER_STEPS = [
-        TeacherOnboarding::STEP_ABOUT,
-        TeacherOnboarding::STEP_PREFERENCES,
-        TeacherOnboarding::STEP_AVAILABILITY,
-    ];
+    /** The questions of the survey, in order (see `TeacherSurvey`). */
+    public const ANSWER_STEPS = TeacherSurvey::ANSWER_STEPS;
 
     /**
-     * Begin (or continue) the guest wizard for one invite token.
+     * Begin (or continue) the guest survey for one invite token.
      */
     public static function start(string $token): void
     {
@@ -46,14 +36,12 @@ final class PendingTeacherSignup
         session([self::KEY => [
             'token' => $token,
             'answers' => [],
-            'drafts' => [],
-            'avatar_path' => null,
             'saved_at' => null,
         ]]);
     }
 
     /**
-     * @return array{token?: string, answers?: array<string, mixed>, drafts?: array<string, mixed>, avatar_path?: string|null, saved_at?: string|null}|null
+     * @return array{token?: string, answers?: array<string, mixed>, saved_at?: string|null}|null
      */
     public static function get(): ?array
     {
@@ -86,7 +74,7 @@ final class PendingTeacherSignup
     }
 
     /**
-     * The *submitted* answers, keyed by wizard step.
+     * The answers already given, keyed by question.
      *
      * @return array<string, mixed>
      */
@@ -98,9 +86,8 @@ final class PendingTeacherSignup
     }
 
     /**
-     * The submitted answer of one step. Autosaved, half-typed input is kept
-     * apart on purpose: only a step the guest actually saved can unlock the next
-     * one, or become part of the account.
+     * One answer. Every next question is gated on this: a question that was
+     * never saved cannot unlock the next one, or become part of the account.
      *
      * @return array<string, mixed>
      */
@@ -117,7 +104,7 @@ final class PendingTeacherSignup
     }
 
     /**
-     * Store a submitted step and drop the autosaved draft it supersedes.
+     * Store a submitted answer.
      *
      * @param  array<string, mixed>  $data
      */
@@ -130,21 +117,16 @@ final class PendingTeacherSignup
         }
 
         $answers = is_array($current['answers'] ?? null) ? $current['answers'] : [];
-        $drafts = is_array($current['drafts'] ?? null) ? $current['drafts'] : [];
-
         $answers[$step] = $data;
-        unset($drafts[$step]);
 
-        self::put(['answers' => $answers, 'drafts' => $drafts]);
+        self::put(['answers' => $answers]);
     }
 
     /**
-     * Store what is on screen right now, for the island to restore. Never used
-     * as an answer.
-     *
-     * @param  array<string, mixed>  $data
+     * Forget one answer — the subject picks when the level changed under them,
+     * or the proof when a guest removes it.
      */
-    public static function putDraft(string $step, array $data): void
+    public static function forgetStep(string $step): void
     {
         $current = self::get();
 
@@ -152,26 +134,21 @@ final class PendingTeacherSignup
             return;
         }
 
-        $drafts = is_array($current['drafts'] ?? null) ? $current['drafts'] : [];
-        $drafts[$step] = $data;
+        $answers = is_array($current['answers'] ?? null) ? $current['answers'] : [];
+        unset($answers[$step]);
 
-        self::put(['drafts' => $drafts]);
+        self::put(['answers' => $answers]);
     }
 
     /**
-     * The uploaded photo of a guest, kept outside the user tree until the
+     * The proof file a guest uploaded, parked outside the user tree until the
      * account exists (see `InviteOnboardingService::apply()`).
      */
-    public static function avatarPath(): ?string
+    public static function proofPath(): ?string
     {
-        $path = self::get()['avatar_path'] ?? null;
+        $path = self::step(TeacherSurvey::STEP_PROOF)['path'] ?? null;
 
         return is_string($path) && $path !== '' ? $path : null;
-    }
-
-    public static function putAvatar(?string $path): void
-    {
-        self::put(['avatar_path' => $path]);
     }
 
     public static function forget(): void
@@ -180,10 +157,10 @@ final class PendingTeacherSignup
     }
 
     /**
-     * Everything the wizard has collected, in the shape the account creation
+     * Everything the survey collected, in the shape the account creation
      * replays after the passcode is checked.
      *
-     * @return array{about: array<string, mixed>, preferences: array<string, mixed>, availability: array<string, mixed>, avatar_path: string|null}|null
+     * @return array<string, mixed>|null
      */
     public static function onboardingPayload(): ?array
     {
@@ -191,69 +168,29 @@ final class PendingTeacherSignup
             return null;
         }
 
-        return [
-            'about' => self::step(TeacherOnboarding::STEP_ABOUT),
-            'preferences' => self::step(TeacherOnboarding::STEP_PREFERENCES),
-            'availability' => self::step(TeacherOnboarding::STEP_AVAILABILITY),
-            'avatar_path' => self::avatarPath(),
-        ];
+        $payload = [];
+
+        foreach (self::ANSWER_STEPS as $step) {
+            $payload[$step] = self::step($step);
+        }
+
+        return $payload;
     }
 
     /**
-     * True once every answer step has been saved.
+     * True once every question has an answer.
      */
     public static function isComplete(): bool
     {
-        foreach (self::ANSWER_STEPS as $step) {
-            if (! self::hasStep($step)) {
-                return false;
-            }
-        }
-
-        return true;
+        return TeacherSurvey::isComplete(self::answers());
     }
 
     /**
-     * The first step still missing an answer, as a route name.
+     * The first question still missing an answer, as a route name.
      */
     public static function nextRouteName(): string
     {
-        foreach (self::ANSWER_STEPS as $step) {
-            if (self::hasStep($step)) {
-                continue;
-            }
-
-            return match ($step) {
-                TeacherOnboarding::STEP_ABOUT => 'join.profile',
-                TeacherOnboarding::STEP_PREFERENCES => 'join.preferences',
-                default => 'join.availability',
-            };
-        }
-
-        return 'join.account';
-    }
-
-    /**
-     * The saved answers of a step as a transient draft model, so the existing
-     * island builders (and their "restored draft" banners) work for a guest too.
-     * Autosaved typing wins over the stored answer, which is what the visitor
-     * last saw on screen.
-     */
-    public static function draft(): ?TeacherOnboardingDraft
-    {
-        $current = self::get();
-        $answers = self::answers();
-        $drafts = $current['drafts'] ?? [];
-        $payload = array_merge($answers, is_array($drafts) ? $drafts : []);
-
-        if ($payload === []) {
-            return null;
-        }
-
-        return new TeacherOnboardingDraft([
-            'payload' => $payload,
-            'saved_at' => self::savedAt(),
-        ]);
+        return TeacherSurvey::nextRouteName(self::answers());
     }
 
     public static function savedAt(): ?CarbonInterface

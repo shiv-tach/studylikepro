@@ -25,7 +25,7 @@ const DEFAULT_CONFIG = {
     },
     support: {},
     images: {
-        logo: '/images/brand/logo-mark.png',
+        logo: '/images/brand/logo-nav.png',
         hero: {
             src: '/images/hero/hero-students-800.jpg',
             webpHref: '/images/hero/hero-students-800.webp',

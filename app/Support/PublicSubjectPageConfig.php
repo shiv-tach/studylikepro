@@ -269,7 +269,7 @@ final class PublicSubjectPageConfig
                 'hours' => config('studylikepro.support.hours'),
             ],
             'images' => [
-                'logo' => asset('images/brand/logo-mark.png'),
+                'logo' => asset('images/brand/logo-nav.png'),
             ],
         ];
     }

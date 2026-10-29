@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\TeacherSurveyController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,28 +21,49 @@ Route::middleware('guest')->group(function () {
     Route::post('register', [RegisteredUserController::class, 'store'])
         ->middleware(['throttle:register', 'throttle:otp']);
 
-    // The invite wizard. A teacher onboarding link opens the onboarding steps as
-    // a guest: nothing is written to `users` until the last step collects the
+    // The invite survey. A teacher onboarding link opens the questions as a
+    // guest: nothing is written to `users` until the last step collects the
     // password and proves the mobile number with an SMS code.
     Route::prefix('join')->name('join.')->middleware('invite.signup')->group(function () {
-        Route::get('/', [InviteOnboardingController::class, 'welcome'])->name('start');
+        // No intro screen: the link goes straight to question 1.
+        Route::get('/', [TeacherSurveyController::class, 'start'])->name('start');
 
-        Route::get('/profile', [InviteOnboardingController::class, 'editAbout'])->name('profile');
-        Route::put('/profile', [InviteOnboardingController::class, 'updateAbout'])
-            ->middleware('throttle:uploads')
-            ->name('profile.update');
+        // Question 1: are you tutoring for O/L, A/L or both?
+        Route::get('/level', [TeacherSurveyController::class, 'editLevel'])->name('level');
+        Route::put('/level', [TeacherSurveyController::class, 'updateLevel'])->name('level.update');
 
-        Route::get('/preferences', [InviteOnboardingController::class, 'editPreferences'])->name('preferences');
-        Route::put('/preferences', [InviteOnboardingController::class, 'updatePreferences'])
-            ->middleware('throttle:uploads')
-            ->name('preferences.update');
+        // Question 2: the subjects that belong to that level.
+        Route::get('/subjects', [TeacherSurveyController::class, 'editSubjects'])->name('subjects');
+        Route::put('/subjects', [TeacherSurveyController::class, 'updateSubjects'])->name('subjects.update');
 
-        Route::get('/availability', [InviteOnboardingController::class, 'editAvailability'])->name('availability');
-        Route::put('/availability', [InviteOnboardingController::class, 'updateAvailability'])->name('availability.update');
+        // Question 3: the languages you teach in.
+        Route::get('/languages', [TeacherSurveyController::class, 'editLanguages'])->name('languages');
+        Route::put('/languages', [TeacherSurveyController::class, 'updateLanguages'])->name('languages.update');
 
-        Route::patch('/draft', [InviteOnboardingController::class, 'saveDraft'])
-            ->middleware('throttle:onboarding-draft')
-            ->name('draft');
+        // Question 4: the services you would like to offer.
+        Route::get('/services', [TeacherSurveyController::class, 'editServices'])->name('services');
+        Route::put('/services', [TeacherSurveyController::class, 'updateServices'])->name('services.update');
+
+        // Question 5: how many years you have been teaching.
+        Route::get('/experience', [TeacherSurveyController::class, 'editExperience'])->name('experience');
+        Route::put('/experience', [TeacherSurveyController::class, 'updateExperience'])->name('experience.update');
+
+        // Question 6: the kind of institute you studied at.
+        Route::get('/education', [TeacherSurveyController::class, 'editEducation'])->name('education');
+        Route::put('/education', [TeacherSurveyController::class, 'updateEducation'])->name('education.update');
+
+        // Question 7: the hourly fee plus a price for each service picked in
+        // question 4.
+        Route::get('/rates', [TeacherSurveyController::class, 'editRates'])->name('rates');
+        Route::put('/rates', [TeacherSurveyController::class, 'updateRates'])->name('rates.update');
+
+        // Question 8: the days of the week you can teach.
+        Route::get('/availability', [TeacherSurveyController::class, 'editAvailability'])->name('availability');
+        Route::put('/availability', [TeacherSurveyController::class, 'updateAvailability'])->name('availability.update');
+
+        // Question 9: prove you are a government teacher (optional).
+        Route::get('/proof', [TeacherSurveyController::class, 'editProof'])->name('proof');
+        Route::post('/proof', [TeacherSurveyController::class, 'updateProof'])->name('proof.update');
 
         // The final step: identity + password, then the SMS code on the same URL.
         Route::get('/account', [InviteOnboardingController::class, 'editAccount'])->name('account');

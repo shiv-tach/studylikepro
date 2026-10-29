@@ -55,6 +55,12 @@ const tone = computed(() => statusTone(props.status.state));
                                 <AppIcon name="shield-check" class="h-3.5 w-3.5" />
                                 {{ teacher.verifiedLabel }}
                             </span>
+                            <span
+                                v-if="teacher.governmentBadge"
+                                class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-semibold text-brand-600"
+                            >
+                                {{ copy.governmentTeacher }}
+                            </span>
                         </div>
 
                         <p v-if="teacher.headline" class="mt-2 max-w-2xl text-lg leading-relaxed text-ink-700">

@@ -59,9 +59,8 @@ const columns = computed(() => [
                 class="grid grid-cols-2 gap-x-6 gap-y-10 py-14 sm:grid-cols-3 lg:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,1fr))] lg:gap-x-10 lg:py-16"
             >
                 <div class="col-span-2 sm:col-span-3 lg:col-span-1">
-                    <a :href="homeHref" class="inline-flex items-center gap-2.5">
-                        <AppLogo :src="logo" class="h-9 w-auto" />
-                        <span class="font-display text-xl font-semibold tracking-tight">{{ appName }}</span>
+                    <a :href="homeHref" class="inline-flex items-center">
+                        <AppLogo :src="logo" :alt="appName" class="h-9 w-auto" />
                     </a>
                     <p class="mt-4 max-w-md text-sm leading-relaxed text-ink-500">
                         Live 1-on-1 lessons for grades 6–13, mapped to the Sri Lankan syllabus — taught by verified

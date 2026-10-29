@@ -284,7 +284,6 @@ function retry() {
             >
                 <input type="hidden" name="_token" :value="csrfToken">
                 <input type="hidden" name="type" :value="type.value">
-                <input v-if="urls.return" type="hidden" name="return" :value="urls.return">
 
                 <input
                     :id="`document-${type.value}`"

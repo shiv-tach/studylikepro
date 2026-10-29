@@ -69,5 +69,5 @@ test('the status page is guarded until the application is submitted', function (
 
     $this->actingAs($teacher)
         ->get(route('teacher.approval.status'))
-        ->assertRedirect(route('teacher.onboarding.verification'));
+        ->assertRedirect(route('teacher.verification'));
 });

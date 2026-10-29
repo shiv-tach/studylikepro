@@ -94,5 +94,6 @@ test('a teacher without a profile is sent back to setup', function () {
 
     $this->actingAs($teacher)
         ->get(route('teacher.profile.preview'))
-        ->assertRedirect(route('teacher.onboarding.show'));
+        ->assertRedirect(route('teacher.profile'))
+        ->assertSessionHas('status', 'complete-your-profile');
 });

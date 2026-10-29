@@ -59,9 +59,8 @@ function closeMenu() {
                 <span class="sr-only sm:not-sr-only">Menu</span>
             </button>
 
-            <a :href="homeUrl" class="flex shrink-0 items-center gap-2">
-                <AppLogo :src="logo" class="h-8 w-auto" />
-                <span class="font-display text-lg font-semibold tracking-tight">{{ appName }}</span>
+            <a :href="homeUrl" class="flex shrink-0 items-center">
+                <AppLogo :src="logo" :alt="appName" class="h-7 w-auto sm:h-8" />
             </a>
 
             <nav class="hidden items-center gap-6 text-sm text-ink-700 lg:flex" aria-label="Page sections">

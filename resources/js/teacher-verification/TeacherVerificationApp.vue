@@ -1,20 +1,19 @@
 <script setup>
 /**
- * Onboarding step 2 at /teacher/verification: the documents, the checklist that
- * says what is still missing, and the final submit. Blade decides the status, the
- * document types, the limits and every message — this app arranges them and keeps
- * the checklist, the document list and the notices in step while the teacher
- * works.
+ * The application page at /teacher/verification: the documents, the checklist
+ * that says what is still missing, and the final submit. Blade decides the
+ * status, the document types, the limits and every message — this app arranges
+ * them and keeps the checklist, the document list and the notices in step while
+ * the teacher works.
  */
-import { computed, onMounted, provide, ref, watch } from 'vue';
+import { computed, provide, ref } from 'vue';
 import { THEME_PRESET_KEY, useThemePreset } from '../shared/composables/useThemePreset';
 import RevealOnScroll from '../shared/components/RevealOnScroll.vue';
 import UiAlert from '../shared/components/UiAlert.vue';
 import UiToastStack from '../shared/components/UiToastStack.vue';
-import { COPY_KEY, CSRF_KEY, URLS_KEY, format } from './composables/usePageContext';
+import { COPY_KEY, CSRF_KEY, URLS_KEY } from './composables/usePageContext';
 import { VERIFICATION_KEY, createVerification } from './composables/useVerification';
 import { useNotices } from '../shared/composables/useNotices';
-import { createOnboardingDraft, localDraftIsNewer } from '../shared/onboarding/useOnboardingDraft';
 import CompletedCard from './components/CompletedCard.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
 import DocumentsCard from './components/DocumentsCard.vue';
@@ -39,36 +38,7 @@ const { toasts, push, dismiss } = useNotices(props.config.notices ?? []);
 const verification = createVerification(props.config, { onNotice: push });
 provide(VERIFICATION_KEY, verification);
 
-const { canEdit, remove, agree, progress, blockingReason } = verification;
-
-// The terms tick is the only unsubmitted field on this step; keep it in the
-// same draft store as the other wizard steps.
-const draft = props.config.mode === 'onboarding'
-    ? createOnboardingDraft({
-        url: props.config.urls?.draft ?? null,
-        deleteUrl: props.config.urls?.draftDelete ?? null,
-        token: props.config.csrfToken ?? '',
-        step: 'verification',
-        snapshot: () => ({ agree: agree.value ? 1 : 0 }),
-        initialSavedAt: props.config.draft?.savedAt ?? null,
-    })
-    : null;
-
-onMounted(() => {
-    if (!draft) {
-        return;
-    }
-
-    const local = draft.readLocal();
-
-    if (localDraftIsNewer(local, props.config.draft?.savedAt)) {
-        agree.value = Boolean(local.data?.agree);
-    }
-});
-
-if (draft) {
-    watch(agree, () => draft.schedule());
-}
+const { canEdit, remove, progress, blockingReason } = verification;
 
 // Every message Laravel sent back that is not already attached to a field below.
 // Listed explicitly: `errors` also carries `byType` (an object for the slot that
@@ -120,18 +90,6 @@ async function confirmRemoval() {
             </UiAlert>
         </RevealOnScroll>
 
-        <RevealOnScroll v-if="config.mode === 'onboarding'">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-primary">
-                    {{ format(copy.stepOf, { current: config.currentStep ?? 5, total: (config.steps ?? []).length || 6 }) }}
-                </p>
-                <h1 class="mt-1 text-xl font-bold leading-tight text-slate-900 dark:text-slate-100 sm:text-2xl">
-                    {{ copy.stepTitle }}
-                </h1>
-                <p class="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{{ copy.stepBody }}</p>
-            </div>
-        </RevealOnScroll>
-
         <div class="grid gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
             <div class="min-w-0 space-y-5 sm:space-y-6">
                 <RevealOnScroll v-if="showStatus">
@@ -141,7 +99,7 @@ async function confirmRemoval() {
                 <!-- On a phone the checklist belongs before the long form, not
                      after the submit card where it is only found by scrolling
                      past everything it is meant to explain. -->
-                <RevealOnScroll class="lg:hidden">
+                <RevealOnScroll v-if="canEdit" class="lg:hidden">
                     <RequirementsCard />
                 </RevealOnScroll>
 
@@ -162,7 +120,7 @@ async function confirmRemoval() {
                 </RevealOnScroll>
             </div>
 
-            <aside class="hidden space-y-6 lg:sticky lg:block lg:self-start" :class="config.mode === 'onboarding' ? 'lg:top-36' : 'lg:top-24'">
+            <aside v-if="canEdit" class="hidden space-y-6 lg:sticky lg:top-24 lg:block lg:self-start">
                 <RevealOnScroll :delay="20">
                     <RequirementsCard />
                 </RevealOnScroll>
@@ -214,7 +172,6 @@ async function confirmRemoval() {
         <form ref="deleteForm" method="POST" class="hidden">
             <input type="hidden" name="_token" :value="config.csrfToken">
             <input type="hidden" name="_method" value="DELETE">
-            <input v-if="config.urls?.return" type="hidden" name="return" :value="config.urls.return">
         </form>
     </div>
 </template>

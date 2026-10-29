@@ -33,16 +33,16 @@
                     <img
                         src="{{ asset('images/brand/logo-full.png') }}"
                         alt="Studylikepro"
-                        width="480"
-                        height="425"
-                        class="h-auto w-52 dark:hidden"
+                        width="960"
+                        height="851"
+                        class="h-auto w-64 dark:hidden"
                     >
                     <img
                         src="{{ asset('images/brand/logo-full-dark.png') }}"
                         alt="Studylikepro"
-                        width="480"
-                        height="425"
-                        class="hidden h-auto w-52 dark:block"
+                        width="960"
+                        height="850"
+                        class="hidden h-auto w-64 dark:block"
                     >
                 </a>
             </div>

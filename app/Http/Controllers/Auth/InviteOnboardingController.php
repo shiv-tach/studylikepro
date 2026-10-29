@@ -5,222 +5,49 @@ namespace App\Http\Controllers\Auth;
 use App\Exceptions\RegistrationConflictException;
 use App\Exceptions\SmsDeliveryException;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\TeacherOnboardingAboutRequest;
-use App\Http\Requests\TeacherOnboardingDraftRequest;
-use App\Http\Requests\TeacherOnboardingPreferencesRequest;
-use App\Http\Requests\WeeklyAvailabilityRequest;
-use App\Models\TeacherProfile;
 use App\Models\User;
 use App\Rules\SriLankanMobile;
-use App\Services\InviteOnboardingService;
 use App\Services\MobileRegistrationService;
-use App\Support\AvailabilitySetupConfig;
 use App\Support\PendingRegistration;
 use App\Support\PendingTeacherSignup;
 use App\Support\PhoneNumber;
-use App\Support\TeacherOnboarding;
-use App\Support\TeacherProfileConfig;
+use App\Support\TeacherSurvey;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\MessageBag;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
 /**
- * The teacher onboarding wizard as a *guest*.
+ * The last step of the invite survey: the account itself.
  *
- * An invite link opens this instead of a sign-up form: the visitor answers the
- * same steps an invited teacher answers, but nothing is stored against a user
- * yet — the answers live in the session. The last step asks for the account
- * details and password, texts an SMS passcode, and only when the code matches
- * is the `users` row created, with the profile, weekly hours and photo the
- * guest already filled in (see `InviteOnboardingService`).
+ * The nine survey questions run as a guest (see `TeacherSurveyController`) and
+ * their answers sit in the session. This step asks for the identity, the email,
+ * the mobile number and a password, texts an SMS passcode, and only when that
+ * code matches is the `users` row created — with the survey answers applied to
+ * its profile by `InviteOnboardingService`.
  */
 class InviteOnboardingController extends Controller
 {
     public function __construct(private readonly MobileRegistrationService $registration) {}
 
     /**
-     * Step 1: what setup needs, and where to continue.
-     */
-    public function welcome(): View
-    {
-        $draft = PendingTeacherSignup::draft();
-        $invite = PendingTeacherSignup::invite();
-
-        return view('join.welcome', [
-            'steps' => TeacherOnboarding::guestSteps(PendingTeacherSignup::answers()),
-            'resume' => PendingTeacherSignup::nextRouteName(),
-            'resumeUrl' => route(PendingTeacherSignup::nextRouteName()),
-            'hasStarted' => $draft !== null,
-            'draftSavedAt' => PendingTeacherSignup::savedAt()
-                ? display_datetime(PendingTeacherSignup::savedAt())
-                : null,
-            'inviteExpiresAt' => $invite?->expires_at ? display_datetime($invite->expires_at) : null,
-            'guest' => true,
-            'currentStep' => 1,
-        ]);
-    }
-
-    /**
-     * Step 2: "About you".
-     */
-    public function editAbout(Request $request): View|RedirectResponse
-    {
-        return view('teacher.onboarding.about', [
-            'profile' => $this->blankProfile(),
-            'config' => TeacherProfileConfig::build(
-                null,
-                $this->blankProfile(),
-                PendingTeacherSignup::draft(),
-                $this->errorBag($request),
-                'classic',
-                'onboarding',
-                TeacherOnboarding::STEP_ABOUT,
-                null,
-                guest: true,
-            ),
-            'guest' => true,
-            'currentStep' => 2,
-        ]);
-    }
-
-    public function updateAbout(TeacherOnboardingAboutRequest $request): RedirectResponse
-    {
-        PendingTeacherSignup::putStep(TeacherOnboarding::STEP_ABOUT, $request->validated());
-
-        return redirect()
-            ->route('join.preferences')
-            ->with('status', 'about-saved');
-    }
-
-    /**
-     * Step 3: "Teaching preferences".
-     */
-    public function editPreferences(Request $request): View|RedirectResponse
-    {
-        if (! PendingTeacherSignup::hasStep(TeacherOnboarding::STEP_ABOUT)) {
-            return redirect()
-                ->route('join.profile')
-                ->with('status', 'complete-your-profile');
-        }
-
-        return view('teacher.onboarding.preferences', [
-            'profile' => $this->blankProfile(),
-            'config' => TeacherProfileConfig::build(
-                null,
-                $this->blankProfile(),
-                PendingTeacherSignup::draft(),
-                $this->errorBag($request),
-                'classic',
-                'onboarding',
-                TeacherOnboarding::STEP_PREFERENCES,
-                null,
-                guest: true,
-            ),
-            'guest' => true,
-            'currentStep' => 3,
-        ]);
-    }
-
-    public function updatePreferences(TeacherOnboardingPreferencesRequest $request): RedirectResponse
-    {
-        PendingTeacherSignup::putStep(
-            TeacherOnboarding::STEP_PREFERENCES,
-            $request->safe()->except(['avatar']),
-        );
-
-        $this->storePendingAvatar($request);
-
-        return redirect()
-            ->route('join.availability')
-            ->with('status', 'preferences-saved');
-    }
-
-    /**
-     * Step 4: "Weekly availability".
-     */
-    public function editAvailability(Request $request): View|RedirectResponse
-    {
-        if (! PendingTeacherSignup::hasStep(TeacherOnboarding::STEP_PREFERENCES)) {
-            return redirect()
-                ->route('join.preferences')
-                ->with('status', 'complete-your-preferences');
-        }
-
-        $profile = $this->blankProfile();
-
-        return view('teacher.onboarding.availability', [
-            'profile' => $profile,
-            'config' => AvailabilitySetupConfig::build(
-                $profile,
-                $this->errorBag($request),
-                'classic',
-                PendingTeacherSignup::draft(),
-                guest: true,
-            ),
-            'guest' => true,
-            'currentStep' => 4,
-        ]);
-    }
-
-    public function updateAvailability(WeeklyAvailabilityRequest $request): RedirectResponse
-    {
-        PendingTeacherSignup::putStep(TeacherOnboarding::STEP_AVAILABILITY, [
-            'days' => $request->validated('days'),
-        ]);
-
-        return redirect()->route('join.account');
-    }
-
-    /**
-     * Autosave one step while the visitor is still typing. Nothing is validated
-     * beyond types: half-typed answers are the whole point.
-     */
-    public function saveDraft(TeacherOnboardingDraftRequest $request): JsonResponse
-    {
-        $step = (string) $request->validated('step');
-        $data = (array) $request->validated('data');
-
-        abort_unless(in_array($step, PendingTeacherSignup::ANSWER_STEPS, true), 422);
-
-        $data = $step === TeacherOnboarding::STEP_AVAILABILITY
-            ? $this->normaliseWeek($data)
-            : $data;
-
-        // A week with no usable range must never replace one that was already
-        // submitted, or the account would be created without bookable hours.
-        if ($data !== []) {
-            PendingTeacherSignup::putDraft($step, $data);
-        }
-
-        return response()->json([
-            'step' => $step,
-            'savedAt' => PendingTeacherSignup::savedAt()?->toIso8601String(),
-            'label' => PendingTeacherSignup::savedAt()
-                ? display_datetime(PendingTeacherSignup::savedAt())
-                : null,
-        ]);
-    }
-
-    /**
-     * Step 5: identity + password, or the SMS code when one was already sent.
+     * Step 6: identity + password, or the SMS code when one was already sent.
      */
     public function editAccount(Request $request): View|RedirectResponse
     {
         if (! PendingTeacherSignup::isComplete()) {
             return redirect()
                 ->route(PendingTeacherSignup::nextRouteName())
-                ->with('status', 'complete-your-availability');
+                ->with('status', 'complete-your-survey');
         }
 
         $pending = PendingRegistration::get();
         $policy = $this->registration->policy();
+
+        $answers = PendingTeacherSignup::answers();
 
         return view('join.account', [
             'pending' => $pending,
@@ -228,9 +55,12 @@ class InviteOnboardingController extends Controller
             'length' => $policy['length'],
             'cooldown' => $this->registration->cooldownRemaining(),
             'otpEnabled' => $policy['enabled'],
-            'steps' => TeacherOnboarding::guestSteps(PendingTeacherSignup::answers()),
+            'steps' => TeacherSurvey::steps($answers),
+            'summary' => TeacherSurvey::summary($answers),
+            'answered' => TeacherSurvey::answeredCount($answers),
+            'questions' => count(TeacherSurvey::ANSWER_STEPS),
             'guest' => true,
-            'currentStep' => 5,
+            'currentStep' => TeacherSurvey::GROUP_ACCOUNT,
         ]);
     }
 
@@ -253,7 +83,11 @@ class InviteOnboardingController extends Controller
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'mobile' => ['required', 'string', new SriLankanMobile, Rule::unique(User::class, 'mobile')],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ], [], [
+            // The account cannot be registered before the terms are accepted.
+            'agree' => ['accepted'],
+        ], [
+            'agree.accepted' => __('Please accept the terms and policies before creating your account.'),
+        ], [
             'mobile' => __('mobile number'),
         ]);
 
@@ -353,11 +187,16 @@ class InviteOnboardingController extends Controller
     }
 
     /**
-     * Sign the new teacher in and hand them the signed-in wizard, which now
-     * resumes at the verification step (ID documents + subjects).
+     * Sign the new teacher in and hand them the approval status page: the
+     * survey is the whole application, so the only thing still owed is our
+     * team's decision.
      */
     private function complete(Request $request, User $user): RedirectResponse
     {
+        // Build the recap before the survey session is dropped: the status page
+        // celebrates exactly what this teacher just answered.
+        $summary = TeacherSurvey::summary(PendingTeacherSignup::answers());
+
         event(new Registered($user));
 
         Auth::login($user);
@@ -367,100 +206,8 @@ class InviteOnboardingController extends Controller
         PendingTeacherSignup::forget();
 
         return redirect()
-            ->route('teacher.onboarding.verification')
-            ->with('status', 'welcome-to-teacher-setup');
-    }
-
-    /**
-     * A photo is validated like any other upload, but a guest has no user to
-     * attach it to yet: park it and let `InviteOnboardingService` move it.
-     */
-    private function storePendingAvatar(Request $request): void
-    {
-        if (! $request->hasFile('avatar')) {
-            return;
-        }
-
-        $current = PendingTeacherSignup::avatarPath();
-
-        if ($current !== null) {
-            Storage::disk('public')->delete($current);
-        }
-
-        PendingTeacherSignup::putAvatar(
-            $request->file('avatar')->store(InviteOnboardingService::PENDING_AVATAR_DIRECTORY, 'public'),
-        );
-    }
-
-    /**
-     * The week arrives from the Vue editor with `start`/`end` keys, while the
-     * submitted form and `WeeklyAvailabilityService` use `start_time`/`end_time`.
-     * Store the canonical shape, and nothing at all when no range is usable.
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
-     */
-    private function normaliseWeek(array $data): array
-    {
-        $days = $data['days'] ?? null;
-
-        if (! is_array($days)) {
-            return [];
-        }
-
-        $saved = 0;
-        $normalised = [];
-
-        foreach (array_values($days) as $day) {
-            if (! is_array($day)) {
-                continue;
-            }
-
-            $enabled = filter_var($day['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            $ranges = [];
-
-            foreach ((array) ($day['ranges'] ?? []) as $range) {
-                if (! is_array($range)) {
-                    continue;
-                }
-
-                $start = $range['start_time'] ?? $range['start'] ?? null;
-                $end = $range['end_time'] ?? $range['end'] ?? null;
-
-                if (blank($start) || blank($end)) {
-                    continue;
-                }
-
-                $ranges[] = ['start_time' => (string) $start, 'end_time' => (string) $end];
-            }
-
-            if ($enabled && $ranges !== []) {
-                $saved += count($ranges);
-            }
-
-            $normalised[] = [
-                'value' => (int) ($day['value'] ?? 0),
-                'enabled' => $enabled,
-                'ranges' => $ranges,
-            ];
-        }
-
-        return $saved > 0 ? ['days' => $normalised] : [];
-    }
-
-    /**
-     * The wizard views expect a profile; a guest has none yet, so an unsaved
-     * one stands in with the platform's default timezone and lesson length.
-     */
-    private function blankProfile(): TeacherProfile
-    {
-        return new TeacherProfile([
-            'timezone' => config('studylikepro.default_display_timezone'),
-        ]);
-    }
-
-    private function errorBag(Request $request): MessageBag
-    {
-        return $request->session()->get('errors')?->getBag('default') ?? new MessageBag;
+            ->route('teacher.approval.status')
+            ->with('status', 'welcome-to-teacher-setup')
+            ->with('join_summary', $summary);
     }
 }

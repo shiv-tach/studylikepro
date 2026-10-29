@@ -1,7 +1,7 @@
 @php
-    // /teacher/profile is onboarding step 1 and is rendered by
-    // resources/js/teacher-profile. Blade keeps the language catalog, the
-    // onboarding steps, the stored answers, the validation errors and the route
+    // /teacher/profile is the teacher's teaching profile and is rendered by
+    // resources/js/teacher-profile. Blade keeps the language catalog, the setup
+    // checklist, the stored answers, the validation errors and the route
     // map, then hands them over as a JSON island. The same data feeds the live
     // preview of the card students see in the public teacher directory.
     $user = Auth::user();
@@ -65,7 +65,7 @@
                 </div>
             @endif
 
-            <x-teacher-onboarding-steps :current="2" />
+            <x-teacher-onboarding-steps :current="1" />
 
             @if ($profileComplete && ! $verificationSubmitted)
                 <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
@@ -73,13 +73,13 @@
                         <div class="flex items-start gap-3">
                             <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xl">🪪</span>
                             <div>
-                                <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ $nextStepIsAvailability ? __('Step 1 complete — next: weekly availability') : __('Step 1 complete — next: verification') }}</h3>
+                                <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">{{ $nextStepIsAvailability ? __('Profile saved — next: weekly availability') : __('Profile saved — next: verification') }}</h3>
                                 <p class="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
                                     {{ $nextStepIsAvailability ? __('Set the days and hours you teach so students can book you. You can load a suggested week and change anything.') : __('Upload your documents and submit them for review to unlock your dashboard.') }}
                                 </p>
                             </div>
                         </div>
-                        <a href="{{ $nextStepIsAvailability ? route('teacher.availability.setup') : route('teacher.verification') }}" class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all duration-200 hover:bg-primary/90 hover:shadow-lg active:scale-[0.98]">
+                        <a href="{{ $nextStepIsAvailability ? route('teacher.availability.index') : route('teacher.verification') }}" class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all duration-200 hover:bg-primary/90 hover:shadow-lg active:scale-[0.98]">
                             {{ $nextStepIsAvailability ? __('Continue to availability') : __('Continue to verification') }}
                             <span aria-hidden="true">→</span>
                         </a>

@@ -134,7 +134,7 @@
 
                 <div class="mt-4 flex flex-wrap gap-2">
                     @if ($status === \App\Enums\VerificationStatus::Pending || $status === \App\Enums\VerificationStatus::Rejected)
-                        <a href="{{ route('teacher.onboarding.submitted') }}" class="rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20">
+                        <a href="{{ route('teacher.approval.status') }}" class="rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20">
                             View approval status
                         </a>
                     @endif

@@ -65,7 +65,7 @@
             'refunds' => route('legal.refunds'),
         ],
         'images' => [
-            'logo' => asset('images/brand/logo-mark.png'),
+            'logo' => asset('images/brand/logo-nav.png'),
         ],
     ];
 

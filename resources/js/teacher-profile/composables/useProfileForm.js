@@ -12,9 +12,6 @@ export const PROFILE_FORM_KEY = Symbol('teacher-profile.form');
 export function createProfileForm(config) {
     const teacher = config.teacher ?? {};
     const previewConfig = config.preview ?? {};
-    const stepKey = config.stepKey ?? 'all';
-    const mode = config.mode ?? 'workspace';
-    const draftConfig = config.draft ?? {};
 
     const languages = config.languages ?? [];
     const limits = config.limits ?? {};
@@ -133,68 +130,6 @@ export function createProfileForm(config) {
         resetToken.value += 1;
     }
 
-    /**
-     * Hydrate the form from a local draft that is newer than the one the server
-     * rendered (the request that would have saved it was interrupted).
-     */
-    function applyValues(data) {
-        if (!data || typeof data !== 'object') {
-            return;
-        }
-
-        // The draft stores the field names Laravel validates; the form uses the
-        // camelCase names the island ships.
-        const aliases = {
-            experience_years: 'experienceYears',
-            hourly_rate: 'hourlyRate',
-        };
-
-        Object.entries(data).forEach(([key, value]) => {
-            const field = aliases[key] ?? key;
-
-            if (field === 'languages') {
-                values.languages = Array.isArray(value) ? [...value] : [];
-
-                return;
-            }
-
-            if (Object.prototype.hasOwnProperty.call(values, field)) {
-                values[field] = value ?? '';
-            }
-        });
-    }
-
-    /**
-     * The payload the draft endpoint stores. It only carries the fields of the
-     * step being edited, so saving one step can never overwrite another.
-     */
-    function snapshot() {
-        if (stepKey === 'about') {
-            return {
-                headline: values.headline,
-                bio: values.bio,
-                experience_years: values.experienceYears,
-                education: values.education,
-            };
-        }
-
-        if (stepKey === 'preferences') {
-            return {
-                languages: [...(values.languages ?? [])],
-                hourly_rate: values.hourlyRate,
-            };
-        }
-
-        return {
-            headline: values.headline,
-            bio: values.bio,
-            experience_years: values.experienceYears,
-            education: values.education,
-            languages: [...(values.languages ?? [])],
-            hourly_rate: values.hourlyRate,
-        };
-    }
-
     // Exactly the fields the public directory card reads, refreshed from the
     // form — this is what makes the preview live.
     const card = computed(() => ({
@@ -224,9 +159,6 @@ export function createProfileForm(config) {
         teacher,
         languages,
         limits,
-        stepKey,
-        mode,
-        draftConfig,
         currencySymbol: previewConfig.currencySymbol ?? '',
         values,
         errors,
@@ -241,8 +173,6 @@ export function createProfileForm(config) {
         toggleLanguage,
         pickAvatar,
         reset,
-        applyValues,
-        snapshot,
         sameLanguages,
     };
 }

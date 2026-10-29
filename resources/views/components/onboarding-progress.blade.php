@@ -1,19 +1,23 @@
-@props(['current' => 1, 'steps' => null])
+@props(['current' => 1, 'steps' => null, 'answered' => null, 'questions' => null, 'question' => null])
 
 @php
     // Blade decides the labels and the state; this component only decides how a
-    // done, current or locked step looks. The same definitions drive the
-    // sidebar and the middleware, so the wizard cannot describe itself twice.
-    if ($steps === null) {
-        $user = Auth::user();
-        $user?->loadMissing('onboardingDraft');
-        $steps = \App\Support\TeacherOnboarding::steps($user?->teacherProfile, $user?->onboardingDraft);
-    }
+    // done, current or locked step looks.
+    $steps = $steps ?? [];
 
     $total = count($steps);
     $completedCount = count(array_filter($steps, fn (array $step) => $step['done']));
     $active = collect($steps)->firstWhere('number', $current) ?? ($steps[0] ?? null);
-    $percent = $total > 0 ? (int) round((($current - 1) / $total) * 100) : 0;
+
+    // The guest survey answers nine questions but only has six rail segments,
+    // so it also passes how many answers are already saved. That keeps the bar
+    // moving on every screen instead of every second screen.
+    $answeredCount = $answered === null ? null : (int) $answered;
+    $questionTotal = $questions === null ? null : (int) $questions;
+
+    $percent = $answeredCount !== null && $questionTotal
+        ? ($answeredCount / $questionTotal) * 100
+        : ($total > 0 ? (($current - 1) / $total) * 100 : 0);
 @endphp
 
 <div {{ $attributes->merge(['class' => 'border-t border-slate-200/70 bg-white/80 dark:border-slate-800/70 dark:bg-slate-950/60']) }}>
@@ -21,15 +25,30 @@
         {{-- Compact line for phones: the one thing a small screen needs. --}}
         <div class="flex items-center justify-between gap-3 sm:hidden">
             <p class="min-w-0 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                <span class="text-primary">{{ __('Step :number of :total', ['number' => $current, 'total' => $total]) }}</span>
+                <span class="text-primary">
+                    @if ($question !== null && $questionTotal)
+                        {{ __('Question :number of :total', ['number' => $question, 'total' => $questionTotal]) }}
+                    @elseif ($questionTotal)
+                        {{ __('Last step') }}
+                    @else
+                        {{ __('Step :number of :total', ['number' => $current, 'total' => $total]) }}
+                    @endif
+                </span>
                 <span class="mx-1 text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
                 <span class="truncate align-bottom">{{ $active['label'] ?? '' }}</span>
             </p>
-            <p class="shrink-0 text-[11px] font-semibold text-slate-400">{{ $completedCount }}/{{ $total }}</p>
+            <p class="shrink-0 text-[11px] font-semibold text-slate-400">
+                {{ $questionTotal ? $answeredCount.'/'.$questionTotal : $completedCount.'/'.$total }}
+            </p>
         </div>
 
-        <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800 sm:hidden" aria-hidden="true">
-            <div class="h-full rounded-full bg-primary transition-all duration-500" style="width: {{ max(4, $percent) }}%"></div>
+        <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800 sm:hidden"
+             role="progressbar"
+             aria-valuemin="0"
+             aria-valuemax="100"
+             aria-valuenow="{{ (int) round($percent) }}"
+             aria-label="{{ __('Your progress') }}">
+            <div class="h-full rounded-full bg-primary transition-all duration-500 motion-reduce:transition-none" style="width: {{ max(2, min(100, (int) round($percent))) }}%"></div>
         </div>
 
         {{-- Full rail from `sm` upwards. --}}
@@ -80,13 +99,13 @@
                             </span>
                             <span class="h-1 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                                 <span @class([
-                                    'block h-full rounded-full',
+                                    'block h-full rounded-full transition-all duration-500 motion-reduce:transition-none',
                                     'bg-emerald-400' => $state === 'done',
                                     'bg-amber-300' => $state === 'pending',
                                     'bg-rose-400' => $state === 'action',
                                     'bg-primary' => $state === 'current',
                                     'bg-transparent' => $state === 'todo',
-                                ])></span>
+                                ]) style="width: {{ max(0, min(100, (int) round(($step['progress'] ?? ($step['done'] ? 1 : 0)) * 100))) }}%"></span>
                             </span>
                         </span>
                         <span @class([

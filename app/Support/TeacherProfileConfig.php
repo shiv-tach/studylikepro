@@ -3,42 +3,31 @@
 namespace App\Support;
 
 use App\Enums\VerificationStatus;
-use App\Models\TeacherOnboardingDraft;
 use App\Models\TeacherProfile;
 use App\Models\User;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\Str;
 
 /**
- * The JSON island behind `/teacher/profile` and the two profile steps of the
- * onboarding wizard.
+ * The JSON island behind `/teacher/profile`.
  *
- * One builder for all three screens keeps the field limits, the language
- * catalog, the live public-card preview and the validation messages identical,
- * while `stepKey` decides which cards the Vue app renders and where the form
- * posts.
+ * One builder keeps the field limits, the language catalog, the live public-card
+ * preview and the validation messages identical to what `TeacherProfileRequest`
+ * accepts.
  */
 final class TeacherProfileConfig
 {
     /**
-     * @param  'workspace'|'onboarding'  $mode
-     * @param  'all'|'about'|'preferences'  $stepKey
      * @param  Collection<int, mixed>|null  $subjects
-     * @param  bool  $guest  the invite wizard, where no `users` row exists yet
      * @return array<string, mixed>
      */
     public static function build(
         ?User $user,
         ?TeacherProfile $profile,
-        ?TeacherOnboardingDraft $draft,
         MessageBag $errors,
         string $themePreset = 'classic',
-        string $mode = 'workspace',
-        string $stepKey = 'all',
         ?Collection $subjects = null,
-        bool $guest = false,
     ): array {
         $profileComplete = (bool) $profile?->isComplete();
         $verificationSubmitted = (bool) $profile?->hasSubmittedVerification();
@@ -47,71 +36,35 @@ final class TeacherProfileConfig
         $hasAvailability = $profile !== null && TeacherOnboarding::hasAvailability($profile);
 
         $subjects ??= $profile?->subjects ?? collect();
-        $onboarding = $mode === 'onboarding';
-        $draftStep = $onboarding ? ($draft?->step($stepKey) ?? []) : [];
-        $restored = $draftStep !== [] && ! session()->hasOldInput();
-
-        $source = $restored ? $draftStep : [];
         $languages = config('studylikepro.languages');
 
-        $steps = $guest
-            ? TeacherOnboarding::guestSteps(PendingTeacherSignup::answers())
-            : TeacherOnboarding::steps($profile, $draft);
-        $currentStep = match ($stepKey) {
-            'about' => 2,
-            'preferences' => 3,
-            default => 1,
-        };
-
         $values = [
-            'headline' => old('headline', $source['headline'] ?? $profile?->headline) ?? '',
-            'bio' => old('bio', $source['bio'] ?? $profile?->bio) ?? '',
-            'experienceYears' => old('experience_years', $source['experience_years'] ?? $profile?->experience_years) ?? '',
-            'education' => old('education', $source['education'] ?? $profile?->education) ?? '',
-            'languages' => array_values(old('languages', $source['languages'] ?? $profile?->languages ?? ['English'])),
-            'hourlyRate' => old('hourly_rate', $source['hourly_rate'] ?? ($profile && (int) $profile->hourly_rate_minor > 0 ? (int) $profile->hourlyRate() : '')) ?? '',
+            'headline' => old('headline', $profile?->headline) ?? '',
+            'bio' => old('bio', $profile?->bio) ?? '',
+            'experienceYears' => old('experience_years', $profile?->experience_years) ?? '',
+            'education' => old('education', $profile?->education) ?? '',
+            'languages' => array_values(old('languages', $profile?->languages ?? ['English'])),
+            'hourlyRate' => old('hourly_rate', ($profile && (int) $profile->hourly_rate_minor > 0 ? (int) $profile->hourlyRate() : '')) ?? '',
         ];
-
-        $updateUrl = match (true) {
-            $onboarding && $guest && $stepKey === 'about' => route('join.profile.update'),
-            $onboarding && $guest && $stepKey === 'preferences' => route('join.preferences.update'),
-            $onboarding && $stepKey === 'about' => route('teacher.onboarding.profile.update'),
-            $onboarding && $stepKey === 'preferences' => route('teacher.onboarding.preferences.update'),
-            default => route('teacher.profile.update'),
-        };
-
-        $urls = $guest
-            ? self::guestUrls($stepKey, $hasAvailability)
-            : self::teacherUrls($onboarding, $stepKey, $hasAvailability, $updateUrl);
 
         return [
             'appName' => config('app.name', 'Studylikepro'),
             'csrfToken' => csrf_token(),
             'theme' => ['preset' => $themePreset],
-            'mode' => $mode,
-            'guest' => $guest,
-            'stepKey' => $stepKey,
             'status' => [
                 'updated' => session('status') === 'profile-updated',
                 'incomplete' => session('status') === 'complete-your-profile',
-                'preferencesMissing' => session('status') === 'complete-your-preferences',
-                'aboutSaved' => session('status') === 'about-saved',
-                'preferencesSaved' => session('status') === 'preferences-saved',
             ],
             'teacher' => [
                 'name' => $user?->name ?? '',
                 'firstName' => $user?->displayName() ?? '',
                 'initials' => $user !== null ? (string) Str::of($user->name)->substr(0, 2) : '',
-                // A guest's photo is parked on the public disk until the account
-                // exists, so the preview still shows what they uploaded.
-                'avatarUrl' => $user?->avatarUrl() ?? ($guest ? self::pendingAvatarUrl() : null),
+                'avatarUrl' => $user?->avatarUrl(),
             ],
             'profile' => [
                 'isComplete' => $profileComplete,
                 'hasSubmittedVerification' => $verificationSubmitted,
                 'hasAvailability' => $hasAvailability,
-                'aboutComplete' => (bool) $profile?->hasCompletedAboutStep(),
-                'preferencesComplete' => (bool) $profile?->hasCompletedPreferencesStep(),
             ],
             'languages' => $languages,
             'limits' => [
@@ -150,115 +103,30 @@ final class TeacherProfileConfig
                 'hourlyRate' => $errors->get('hourly_rate'),
                 'avatar' => $errors->get('avatar'),
             ],
-            'steps' => $steps,
-            'currentStep' => $currentStep,
-            'draft' => [
-                'restored' => $restored,
-                'savedAt' => $restored ? $draft?->saved_at?->toIso8601String() : null,
-                'savedAtLabel' => $restored ? display_datetime($draft?->saved_at) : null,
-                'hasAny' => $draft !== null && ! $draft->isEmpty(),
-                'step' => $stepKey,
+            'steps' => TeacherOnboarding::steps($profile),
+            'urls' => [
+                'update' => route('teacher.profile.update'),
+                'profile' => route('teacher.profile'),
+                'verification' => route('teacher.verification'),
+                'availability' => route('teacher.availability.index'),
+                'nextStep' => $hasAvailability
+                    ? route('teacher.verification')
+                    : route('teacher.availability.index'),
             ],
-            'urls' => $urls + ['update' => $updateUrl],
-            'copy' => self::copy($mode),
+            'copy' => self::copy(),
         ];
-    }
-
-    /**
-     * The URL map of the signed-in wizard and the workspace page.
-     *
-     * @return array<string, string|null>
-     */
-    private static function teacherUrls(bool $onboarding, string $stepKey, bool $hasAvailability, string $updateUrl): array
-    {
-        return [
-            'back' => match (true) {
-                $onboarding && $stepKey === 'about' => route('teacher.onboarding.show'),
-                $onboarding && $stepKey === 'preferences' => route('teacher.onboarding.profile'),
-                default => null,
-            },
-            'next' => match (true) {
-                $onboarding && $stepKey === 'about' => route('teacher.onboarding.preferences'),
-                $onboarding && $stepKey === 'preferences' => route('teacher.onboarding.availability'),
-                default => null,
-            },
-            'draft' => $onboarding ? route('teacher.onboarding.draft') : null,
-            'draftDelete' => $onboarding ? route('teacher.onboarding.draft.destroy') : null,
-            'hub' => route('teacher.onboarding.show'),
-            'verification' => route('teacher.onboarding.verification'),
-            'availability' => route('teacher.onboarding.availability'),
-            'nextStep' => $hasAvailability
-                ? route('teacher.onboarding.verification')
-                : route('teacher.onboarding.availability'),
-        ];
-    }
-
-    /**
-     * The same keys for the invite wizard: the account does not exist yet, so
-     * "next" leads to the next guest step and the last one to the account form.
-     *
-     * @return array<string, string|null>
-     */
-    private static function guestUrls(string $stepKey, bool $hasAvailability): array
-    {
-        return [
-            'back' => match ($stepKey) {
-                'about' => route('join.start'),
-                'preferences' => route('join.profile'),
-                default => null,
-            },
-            'next' => match ($stepKey) {
-                'about' => route('join.preferences'),
-                'preferences' => route('join.availability'),
-                default => null,
-            },
-            'draft' => route('join.draft'),
-            'draftDelete' => null,
-            'hub' => route('join.start'),
-            'verification' => route('join.account'),
-            'availability' => route('join.availability'),
-            'nextStep' => $hasAvailability ? route('join.account') : route('join.availability'),
-        ];
-    }
-
-    /**
-     * A guest's photo, uploaded before the user existed.
-     */
-    private static function pendingAvatarUrl(): ?string
-    {
-        $path = PendingTeacherSignup::avatarPath();
-
-        if ($path === null || ! Storage::disk('public')->exists($path)) {
-            return null;
-        }
-
-        return Storage::disk('public')->url($path);
     }
 
     /**
      * @return array<string, string>
      */
-    private static function copy(string $mode): array
+    private static function copy(): array
     {
-        $onboarding = $mode === 'onboarding';
-
         return [
-            'incomplete' => __('Finish your teaching profile to unlock weekly availability and continue to verification.'),
+            'incomplete' => __('Finish your teaching profile so students know who you are.'),
             'updated' => __('Your teaching profile has been updated.'),
-            'aboutSavedTitle' => __('About you saved'),
-            'aboutSavedBody' => __('Next: how you teach and what you charge. You can change any of this later.'),
-            'preferencesSavedTitle' => __('Teaching preferences saved'),
-            'preferencesSavedBody' => __('Almost there — set your weekly hours next.'),
-            'preferencesMissingBody' => __('Save your teaching preferences to unlock the weekly availability step.'),
             'errorTitle' => __('Please fix the following:'),
-            'stepsTitle' => __('Teacher setup'),
-            'stepsCompleted' => __(':completed of :total steps completed'),
-            'stepLabel' => __('Step :number'),
-            'stepStatusDone' => __('Completed'),
-            'stepStatusCurrent' => __('In progress'),
-            'stepStatusUpNext' => __('Up next'),
-            'stepStatusLocked' => __('Locked'),
-            'stepCompleteTitle' => __('Step 1 complete — next: weekly availability'),
+            'stepCompleteTitle' => __('Next: weekly availability'),
             'stepCompleteBody' => __('Set the days and hours you teach so students can book you. You can load a suggested week and change anything.'),
             'stepCompleteCta' => __('Continue to availability'),
             'professionalTitle' => __('Professional details'),
@@ -301,26 +169,6 @@ final class TeacherProfileConfig
             'noSlots' => __('No slots in the next 7 days'),
             'perHour' => __('/hr'),
             'view' => __('View'),
-            // Wizard additions.
-            'back' => __('Back'),
-            'continue' => __('Save & continue'),
-            'finishLater' => __('Save & finish later'),
-            'draftDirty' => __('Unsaved changes — keeping a draft…'),
-            'draftSaving' => __('Saving draft…'),
-            'draftSaved' => __('Draft saved just now'),
-            'draftOffline' => __('Offline — your answers are kept on this device.'),
-            'draftError' => __('Could not save the draft. Your answers are kept on this device.'),
-            'draftRestoredTitle' => __('We restored your unsaved answers'),
-            'draftRestoredBody' => __('Carry on from :time. Save the step to keep them. Your photo needs to be selected again.'),
-            'draftRestoredBodyNoPhoto' => __('Carry on from :time. Save the step to keep them.'),
-            'draftDiscard' => __('Start over'),
-            'draftDiscardConfirm' => __('Discard the draft and restore your saved answers?'),
-            'aboutStepTitle' => __('Tell students about you'),
-            'aboutStepBody' => __('This is the first thing a student reads. Keep it specific and friendly.'),
-            'preferencesStepTitle' => __('How you teach and what you charge'),
-            'preferencesStepBody' => __('Students filter by language, and your rate is what they see before booking.'),
-            'previewToggle' => __('Preview my public card'),
-            'stepOf' => $onboarding ? __('Step :current of :total') : '',
         ];
     }
 }

@@ -266,6 +266,12 @@ const labelClass = 'text-xs font-semibold tracking-widest text-ink-400 uppercase
 
                             <div class="flex min-w-0 flex-col px-6 pt-5">
                                 <h3 class="truncate font-display text-lg font-semibold text-ink">{{ teacher.name }}</h3>
+                                <span
+                                    v-if="teacher.governmentBadge"
+                                    class="mt-1 inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-semibold text-brand-600"
+                                >
+                                    {{ copy.governmentTeacher }}
+                                </span>
                                 <p v-if="teacher.headline" class="mt-0.5 line-clamp-2 text-sm text-ink-500">{{ teacher.headline }}</p>
                             </div>
 

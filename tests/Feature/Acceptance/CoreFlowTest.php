@@ -141,14 +141,14 @@ function verifiedTeacher(Subject $subject, Lesson $lesson, CarbonImmutable $wind
     // between requests inside one test, unlike a real per-request lifecycle.
     $teacherUser->refresh()->unsetRelation('teacherProfile');
 
-    // Onboarding step 2: a weekly range is required before verification opens.
+    // The weekly hours are edited in the manager, which the profile page links to.
     test()->actingAs($teacherUser)
-        ->put(route('teacher.availability.setup.update'), [
+        ->put(route('teacher.availability.week.update'), [
             'days' => [
                 ['value' => 1, 'enabled' => '1', 'ranges' => [['start_time' => '15:00', 'end_time' => '17:00']]],
             ],
         ])
-        ->assertRedirect(route('teacher.onboarding.verification'));
+        ->assertRedirect(route('teacher.availability.index'));
 
     $teacherUser->refresh()->unsetRelation('teacherProfile');
 

@@ -21,7 +21,7 @@ const DEFAULTS = {
     copy: {},
     urls: {},
     support: {},
-    images: { logo: '/images/brand/logo-mark.png' },
+    images: { logo: '/images/brand/logo-nav.png' },
 };
 
 const PAGE_DEFAULTS = {

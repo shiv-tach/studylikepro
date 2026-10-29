@@ -74,7 +74,7 @@ final class TeacherScheduleConfig
             'urls' => [
                 'schedule' => route('teacher.schedule.index'),
                 'availability' => route('teacher.availability.index'),
-                'availabilitySetup' => route('teacher.availability.setup'),
+                'availabilitySetup' => route('teacher.availability.index'),
                 'dashboard' => route('teacher.dashboard'),
                 'messages' => route('messages.index'),
             ],

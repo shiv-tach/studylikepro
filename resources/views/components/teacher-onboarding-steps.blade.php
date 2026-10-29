@@ -2,8 +2,8 @@
 
 @php
     $profile = Auth::user()->teacherProfile;
-    // Shared with the three onboarding pages and the sidebar, so the labels,
-    // hints and lock states cannot drift apart.
+    // Shared with the step rails and the approval page, so the labels, hints and
+    // lock states cannot drift apart.
     $steps = \App\Support\TeacherOnboarding::steps($profile);
     $total = count($steps);
     $completedCount = count(array_filter($steps, fn (array $step) => $step['done']));
@@ -17,7 +17,7 @@
         </p>
     </div>
 
-    <ol class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <ol class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         @foreach ($steps as $step)
             @php
                 $status = $step['done']

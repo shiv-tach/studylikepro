@@ -47,13 +47,12 @@ use App\Http\Controllers\Student\ReceiptController;
 use App\Http\Controllers\Student\ReviewController as StudentReviewController;
 use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
 use App\Http\Controllers\Student\TeacherFinderController;
-use App\Http\Controllers\Student\TeacherProfileController as StudentTeacherProfileController;
+use App\Http\Controllers\Student\TeacherProfileController as StudentTeacherProfileController;use App\Http\Controllers\Teacher\ApprovalController as TeacherApprovalController;
 use App\Http\Controllers\Teacher\AvailabilityController as TeacherAvailabilityController;
 use App\Http\Controllers\Teacher\BookingController as TeacherBookingController;
 use App\Http\Controllers\Teacher\DashboardController as TeacherDashboardController;
 use App\Http\Controllers\Teacher\EarningsController as TeacherEarningsController;
 use App\Http\Controllers\Teacher\LiveController as TeacherLiveController;
-use App\Http\Controllers\Teacher\OnboardingController as TeacherOnboardingController;
 use App\Http\Controllers\Teacher\PaperMarkingController as TeacherPaperMarkingController;
 use App\Http\Controllers\Teacher\OrderController as TeacherOrderController;
 use App\Http\Controllers\Teacher\ProfileController as TeacherProfileController;
@@ -63,6 +62,7 @@ use App\Http\Controllers\Teacher\SubjectsController as TeacherSubjectsController
 use App\Http\Controllers\Teacher\VerificationController as TeacherVerificationController;
 use App\Http\Controllers\TeacherDirectoryController;
 use App\Http\Controllers\VerificationDocumentController;
+use App\Http\Middleware\AnnounceTeacherApproval;
 use App\Http\Middleware\LogAdminActivity;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -189,31 +189,17 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_STUDENT, 'not-suspende
         Route::get('/marking-orders/{order}/files/{kind}/{index}', [StudentPaperMarkingController::class, 'download'])->middleware('onboarded')->name('marking-orders.download');
     });
 
-Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspended'])
+Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspended', AnnounceTeacherApproval::class])
     ->prefix('teacher')
     ->name('teacher.')
     ->group(function () {
-        Route::get('/dashboard', TeacherDashboardController::class)->middleware(['onboarded', 'approved-teacher'])->name('dashboard');
+        // The dashboard is the landing page right after the invite survey, so a
+        // teacher whose application is still in setup or in review can see it.
+        Route::get('/dashboard', TeacherDashboardController::class)->middleware('approved-teacher')->name('dashboard');
 
-        // The onboarding wizard. Every step is its own URL so a reload always
-        // lands where the teacher was, and each step autosaves into a draft.
-        Route::prefix('onboarding')->name('onboarding.')->group(function () {
-            Route::get('/', [TeacherOnboardingController::class, 'show'])->name('show');
-            Route::get('/profile', [TeacherProfileController::class, 'editAbout'])->name('profile');
-            Route::put('/profile', [TeacherProfileController::class, 'updateAbout'])->middleware('throttle:uploads')->name('profile.update');
-            Route::get('/preferences', [TeacherProfileController::class, 'editPreferences'])->name('preferences');
-            Route::put('/preferences', [TeacherProfileController::class, 'updatePreferences'])->middleware('throttle:uploads')->name('preferences.update');
-            Route::get('/availability', [TeacherAvailabilityController::class, 'setup'])->defaults('mode', 'onboarding')->name('availability');
-            Route::put('/availability', [TeacherAvailabilityController::class, 'updateWeek'])->name('availability.update');
-            Route::get('/verification', [TeacherVerificationController::class, 'index'])->defaults('mode', 'onboarding')->name('verification');
-            Route::get('/submitted', [TeacherOnboardingController::class, 'submitted'])->name('submitted');
-            Route::patch('/draft', [TeacherOnboardingController::class, 'saveDraft'])->middleware('throttle:onboarding-draft')->name('draft');
-            Route::delete('/draft', [TeacherOnboardingController::class, 'destroyDraft'])->middleware('throttle:onboarding-draft')->name('draft.destroy');
-        });
-
-        // The approval status page, addressable outside the wizard so the
-        // sidebar, the shell banner and the review gate can all link to it.
-        Route::get('/approval', [TeacherOnboardingController::class, 'submitted'])->name('approval.status');
+        // The approval status page, addressable from the sidebar, the shell
+        // banner and the review gate.
+        Route::get('/approval', [TeacherApprovalController::class, 'show'])->name('approval.status');
 
         // A teacher-only, watermarked preview of the public profile. It exists
         // before approval so the teacher knows exactly what students will see.
@@ -239,21 +225,18 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_TEACHER, 'not-suspende
         Route::post('/subjects/request/{subjectRequest}/cancel', [TeacherSubjectsController::class, 'cancelRequest'])->middleware(['onboarded', 'approved-teacher'])->name('subjects.request.cancel');
         Route::post('/subjects/{subject}', [TeacherSubjectsController::class, 'update'])->middleware(['onboarded', 'approved-teacher'])->name('subjects.update');
 
-        Route::get('/availability', [TeacherAvailabilityController::class, 'index'])->middleware('onboarded')->name('availability.index');
-        // The manager replaces the whole week in one PUT (same payload shape as
-        // onboarding step 2) and edits the default hourly rate on its own form.
-        Route::put('/availability/week', [TeacherAvailabilityController::class, 'updateRanges'])->middleware('onboarded')->name('availability.week.update');
-        Route::put('/availability/pricing', [TeacherAvailabilityController::class, 'updatePricing'])->middleware('onboarded')->name('availability.pricing.update');
-        Route::put('/availability/settings', [TeacherAvailabilityController::class, 'updateSettings'])->middleware('onboarded')->name('availability.settings.update');
-        Route::post('/availability/slots', [TeacherAvailabilityController::class, 'storeSlot'])->middleware('onboarded')->name('availability.slots.store');
-        Route::delete('/availability/slots/{slot}', [TeacherAvailabilityController::class, 'destroySlot'])->middleware('onboarded')->name('availability.slots.destroy');
-        Route::post('/availability/time-off', [TeacherAvailabilityController::class, 'storeTimeOff'])->middleware('onboarded')->name('availability.time-off.store');
-        Route::delete('/availability/time-off/{timeOff}', [TeacherAvailabilityController::class, 'destroyTimeOff'])->middleware('onboarded')->name('availability.time-off.destroy');
-
-        // Onboarding step 2. Deliberately NOT behind `onboarded`: it is the step
-        // that has to be finished before verification can be submitted.
-        Route::get('/availability/setup', [TeacherAvailabilityController::class, 'setup'])->name('availability.setup');
-        Route::put('/availability/setup', [TeacherAvailabilityController::class, 'updateWeek'])->name('availability.setup.update');
+        // Weekly hours stay editable while the application is being prepared, so
+        // these are deliberately NOT behind `onboarded`.
+        Route::get('/availability', [TeacherAvailabilityController::class, 'index'])->name('availability.index');
+        // The manager replaces the whole week in one PUT and edits the default
+        // hourly rate on its own form.
+        Route::put('/availability/week', [TeacherAvailabilityController::class, 'updateRanges'])->name('availability.week.update');
+        Route::put('/availability/pricing', [TeacherAvailabilityController::class, 'updatePricing'])->name('availability.pricing.update');
+        Route::put('/availability/settings', [TeacherAvailabilityController::class, 'updateSettings'])->name('availability.settings.update');
+        Route::post('/availability/slots', [TeacherAvailabilityController::class, 'storeSlot'])->name('availability.slots.store');
+        Route::delete('/availability/slots/{slot}', [TeacherAvailabilityController::class, 'destroySlot'])->name('availability.slots.destroy');
+        Route::post('/availability/time-off', [TeacherAvailabilityController::class, 'storeTimeOff'])->name('availability.time-off.store');
+        Route::delete('/availability/time-off/{timeOff}', [TeacherAvailabilityController::class, 'destroyTimeOff'])->name('availability.time-off.destroy');
 
         Route::get('/schedule', [TeacherBookingController::class, 'index'])->middleware(['onboarded', 'approved-teacher'])->name('schedule.index');
         Route::get('/schedule/{booking}', [TeacherBookingController::class, 'show'])->middleware(['onboarded', 'approved-teacher'])->name('bookings.show');
@@ -309,6 +292,7 @@ Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN, 'not-suspended'
         Route::get('/verifications/{teacherProfile}', [AdminTeacherVerificationController::class, 'show'])->name('verifications.show');
         Route::post('/verifications/{teacherProfile}/approve', [AdminTeacherVerificationController::class, 'approve'])->name('verifications.approve');
         Route::post('/verifications/{teacherProfile}/reject', [AdminTeacherVerificationController::class, 'reject'])->name('verifications.reject');
+        Route::post('/verifications/{teacherProfile}/government', [AdminTeacherVerificationController::class, 'government'])->name('verifications.government');
 
         Route::get('/subject-requests', [AdminSubjectRequestController::class, 'index'])->name('subject-requests.index');
         Route::post('/subject-requests/{subjectRequest}/approve', [AdminSubjectRequestController::class, 'approve'])->name('subject-requests.approve');

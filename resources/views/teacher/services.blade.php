@@ -234,9 +234,11 @@
         $priceHints,
         $priceSuffixes,
         $typeHints,
-        $typeIcons
+        $typeIcons,
+        $suggestedRates
     ) {
         $rows = $offeringsPayload->where('type', $type->value);
+        $suggestedMinor = $suggestedRates[$type->value] ?? null;
 
         return [
             'value' => $type->value,
@@ -247,6 +249,8 @@
             'hint' => $typeHints[$type->value] ?? '',
             'priceSuffix' => $priceSuffixes[$type->value] ?? __('per session'),
             'priceHint' => $priceHints[$type->value] ?? __('Flat price per session.'),
+            // The price the teacher gave in the invite survey, in rupees.
+            'suggestedPrice' => $suggestedMinor === null ? null : (string) (int) round($suggestedMinor / 100),
             'requiresLesson' => $type->requiresLesson(),
             'allowsLessonOrSubject' => $type->allowsLessonOrSubject(),
             'requiresSubject' => $type->requiresSubject(),
@@ -438,6 +442,7 @@
             'types' => $typesPayload->where('count', '>', 0)->count(),
         ],
         'types' => $typesPayload->all(),
+        'serviceInterests' => $serviceInterests,
         'offerings' => $offeringsPayload->all(),
         'options' => [
             'grades' => $gradeOptions,

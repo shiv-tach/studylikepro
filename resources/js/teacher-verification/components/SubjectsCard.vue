@@ -140,7 +140,6 @@ watch([activeTab, query], () => {
              and always carries the full selection, whatever tab is open. -->
         <form ref="form" method="POST" :action="urls.subjects" class="contents">
             <input type="hidden" name="_token" :value="csrfToken">
-            <input v-if="urls.return" type="hidden" name="return" :value="urls.return">
             <input v-for="id in subjectIds" :key="id" type="hidden" name="subjects[]" :value="id">
         </form>
 

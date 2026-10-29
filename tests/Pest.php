@@ -16,6 +16,7 @@ use App\Services\Meetings\MeetingService;
 use App\Services\Payments\EarningsService;
 use App\Services\Sms\FakeSmsGateway;
 use App\Support\BookingDraft;
+use App\Support\TeacherSurvey;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -117,23 +118,7 @@ function teachingProfileConfig(TestResponse $response): array
 }
 
 /**
- * Read the config island the availability setup step renders its week from.
- *
- * @return array<string, mixed>
- */
-function availabilitySetupConfig(TestResponse $response): array
-{
-    preg_match(
-        '#<script type="application/json" id="teacher-availability-setup-config">(.*?)</script>#s',
-        $response->getContent(),
-        $matches
-    );
-
-    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
-}
-
-/**
- * Read the config island the verification step renders its checklist, documents
+ * Read the config island the verification page renders its checklist, documents
  * and upload cards from.
  *
  * @return array<string, mixed>
@@ -632,10 +617,11 @@ function registerThroughOtp(array $payload, string $url = '/register'): TestResp
 }
 
 /**
- * Walk the guest invite wizard from the link to the SMS step: the three answer
- * steps, then the account form. Returns the account details it submitted.
+ * Walk the invite survey from the link to the SMS step: the nine questions,
+ * then the account form. Returns the account details it submitted.
  *
  * @param  array<string, string>  $account
+ * @param  array<string, mixed>  $steps  override any question payload
  * @return array<string, string>
  */
 function joinThroughInvite(string $token, array $account = [], array $steps = []): array
@@ -647,35 +633,60 @@ function joinThroughInvite(string $token, array $account = [], array $steps = []
         'mobile' => '077 123 4567',
         'password' => 'password',
         'password_confirmation' => 'password',
+        'agree' => '1',
     ], $account);
 
+    $subjectId = Subject::query()
+        ->active()
+        ->whereHas('educationLevel', fn ($query) => $query->where('key', 'ol'))
+        ->value('id');
+
+    $subjectId ??= Subject::factory()->create([
+        'education_level_id' => \App\Models\EducationLevel::query()->where('key', 'ol')->value('id'),
+    ])->id;
+
     $steps = array_merge([
-        'about' => [
-            'headline' => 'Physics tutor for O/L students',
-            'bio' => 'Ten years of classroom experience.',
-            'experience_years' => 10,
-            'education' => 'B.Sc. Physics, University of Colombo',
-        ],
-        'preferences' => [
-            'languages' => ['English', 'Sinhala'],
+        'level' => ['level' => 'ol'],
+        'subjects' => ['subjects' => [$subjectId]],
+        'languages' => ['languages' => ['English', 'Sinhala']],
+        'services' => ['services' => ['lesson', 'paper_marking']],
+        'experience' => ['experience_years' => 5],
+        'education' => ['education' => TeacherSurvey::EDUCATION_GOVERNMENT_UNIVERSITY],
+        'rates' => [
             'hourly_rate' => 2500,
+            'service_rates' => ['paper_marking' => 1500],
         ],
-        'availability' => [
-            'days' => [
-                ['value' => 1, 'enabled' => 1, 'ranges' => [['start_time' => '15:00', 'end_time' => '18:00']]],
-            ],
-        ],
+        'availability' => ['days' => [1, 3, 5]],
+        'proof' => ['claims' => '0'],
     ], $steps);
 
     test()->get('/register?invite='.$token)->assertRedirect(route('join.start'));
 
-    test()->put(route('join.profile.update'), $steps['about'])
-        ->assertRedirect(route('join.preferences'));
+    test()->put(route('join.level.update'), $steps['level'])
+        ->assertRedirect(route('join.subjects'));
 
-    test()->put(route('join.preferences.update'), $steps['preferences'])
+    test()->put(route('join.subjects.update'), $steps['subjects'])
+        ->assertRedirect(route('join.languages'));
+
+    test()->put(route('join.languages.update'), $steps['languages'])
+        ->assertRedirect(route('join.services'));
+
+    test()->put(route('join.services.update'), $steps['services'])
+        ->assertRedirect(route('join.experience'));
+
+    test()->put(route('join.experience.update'), $steps['experience'])
+        ->assertRedirect(route('join.education'));
+
+    test()->put(route('join.education.update'), $steps['education'])
+        ->assertRedirect(route('join.rates'));
+
+    test()->put(route('join.rates.update'), $steps['rates'])
         ->assertRedirect(route('join.availability'));
 
     test()->put(route('join.availability.update'), $steps['availability'])
+        ->assertRedirect(route('join.proof'));
+
+    test()->post(route('join.proof.update'), $steps['proof'])
         ->assertRedirect(route('join.account'));
 
     test()->post(route('join.account.store'), $account)
@@ -694,10 +705,21 @@ function gradeId(int $number): int
 }
 
 /**
- * A teacher who finished onboarding steps 1 and 2: the profile is complete and
- * a weekly range exists, but the verification documents have not been submitted,
- * so the teacher area stays locked at step 3. A subject is attached because the
- * verification step requires at least one before the application can be submitted.
+ * The day rows the availability week editor and its no-JS twin both submit.
+ *
+ * @param  array<int, array{value: int, enabled?: string, ranges?: array<int, array{start_time?: string, end_time?: string}>}>  $days
+ * @return array{days: array<int, mixed>}
+ */
+function weekPayload(array $days): array
+{
+    return ['days' => $days];
+}
+
+/**
+ * A teacher whose profile is complete and a weekly range exists, but whose
+ * verification documents have not been submitted, so the teacher area stays
+ * locked at verification. A subject is attached because the application needs at
+ * least one before it can be submitted.
  */
 function onboardingTeacher(): User
 {

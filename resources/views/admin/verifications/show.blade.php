@@ -29,6 +29,14 @@
             <div class="rounded-2xl border border-amber-200/80 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
                 This application is no longer pending — it may already be decided.
             </div>
+        @elseif (session('status') === 'government-teacher-confirmed')
+            <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                Government teacher confirmed — the badge now shows on their profile card.
+            </div>
+        @elseif (session('status') === 'government-teacher-cleared')
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-800/80 dark:bg-slate-900 dark:text-slate-300">
+                Government teacher badge removed.
+            </div>
         @endif
 
         <div class="grid gap-6 lg:grid-cols-3">
@@ -75,6 +83,26 @@
                             @foreach ($profile->languages as $language)
                                 <span class="{{ $chip }}">{{ $language }}</span>
                             @endforeach
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Tutoring level</dt>
+                        <dd class="mt-1 flex flex-wrap gap-1.5">
+                            @forelse ($profile->tutoring_levels ?? [] as $levelKey)
+                                <span class="{{ $chip }}">{{\App\Support\TeacherSurvey::levelLabel((string) $levelKey)}}</span>
+                            @empty
+                                <span class="text-sm text-slate-400">Not answered</span>
+                            @endforelse
+                        </dd>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-slate-400">Services wanted</dt>
+                        <dd class="mt-1 flex flex-wrap gap-1.5">
+                            @forelse ($profile->serviceInterestTypes() as $type)
+                                <span class="{{ $chip }}">{{ $type->icon() }} {{ $type->pluralLabel() }}</span>
+                            @empty
+                                <span class="text-sm text-slate-400">Not answered</span>
+                            @endforelse
                         </dd>
                     </div>
                 </dl>
@@ -136,6 +164,44 @@
                             @endforeach
                         </ul>
                     @endif
+                </div>
+
+                <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Government teacher</h3>
+                            <p class="mt-1 text-xs text-slate-400">Claimed in the invite survey.</p>
+                        </div>
+
+                        @if ($profile->isGovernmentTeacher())
+                            <span class="shrink-0 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Badge on</span>
+                        @elseif ($profile->hasGovernmentProof())
+                            <span class="shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Proof on file</span>
+                        @else
+                            <span class="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">No proof</span>
+                        @endif
+                    </div>
+
+                    <form method="POST" action="{{ route('admin.verifications.government', $profile) }}" class="mt-4">
+                        @csrf
+                        <input type="hidden" name="government_verified" value="{{ $profile->isGovernmentTeacher() ? 0 : 1 }}" />
+
+                        @if ($profile->isGovernmentTeacher())
+                            <button type="submit"
+                                    class="inline-flex w-full items-center justify-center rounded-xl border border-slate-200/80 px-4 py-2.5 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800">
+                                Remove government badge
+                            </button>
+                        @else
+                            <button type="submit"
+                                    class="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary/90">
+                                Confirm government teacher
+                            </button>
+                        @endif
+                    </form>
+
+                    <p class="mt-2 text-xs leading-relaxed text-slate-400">
+                        The badge appears on the public profile card as soon as it is confirmed, whether or not the application is approved yet.
+                    </p>
                 </div>
 
                 <div class="{{ $cardBase }}" :class="{{ $cardTheme }}">

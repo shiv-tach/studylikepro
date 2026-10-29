@@ -27,7 +27,9 @@ class TeacherDirectoryController extends Controller
         $profile = $request->user()->teacherProfile;
 
         if ($profile === null) {
-            return redirect()->route('teacher.onboarding.show');
+            return redirect()
+                ->route('teacher.profile')
+                ->with('status', 'complete-your-profile');
         }
 
         $profile->load([

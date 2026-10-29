@@ -314,7 +314,7 @@ final class PublicCatalogConfig
     private static function images(): array
     {
         return [
-            'logo' => asset('images/brand/logo-mark.png'),
+            'logo' => asset('images/brand/logo-nav.png'),
         ];
     }
 }

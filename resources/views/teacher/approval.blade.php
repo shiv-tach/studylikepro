@@ -24,13 +24,53 @@
         $needsAction => __('Our team could not approve the application yet. Fix what is noted below and resubmit — you stay in review until then.'),
         default => __('Thanks, :name. Your profile and documents are with our team. You are not visible to students yet and cannot be booked until the application is approved.', ['name' => Auth::user()->displayName()]),
     };
+
+    // The invite survey just finished: celebrate once, with the answers it kept.
+    $joinChips = collect(session('join_summary') ?? [])
+        ->map(fn (array $group) => collect($group['items'])->first(fn (array $item) => $item['done']))
+        ->filter()
+        ->take(4)
+        ->values();
 @endphp
 <x-onboarding-layout>
     <x-slot name="progress">
-        <x-onboarding-progress :current="6" :steps="$steps" />
+        <x-onboarding-progress :current="4" :steps="$steps" />
     </x-slot>
 
     <div class="mx-auto w-full max-w-3xl space-y-6">
+        @if ($joinChips->isNotEmpty())
+            {{-- The invite survey just finished: celebrate before the review
+                 status, and show back the answers that were kept. --}}
+            <section class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-primary/80 to-purple-600 p-6 text-white shadow-lg shadow-primary/10 dark:shadow-primary/5" aria-labelledby="join-welcome-title">
+                <div class="flex flex-col gap-5 sm:flex-row sm:items-start">
+                    <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/20 text-white ring-4 ring-white/15">
+                        <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </span>
+
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">{{ __('Your account is ready') }}</p>
+                        <h1 id="join-welcome-title" class="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
+                            {{ __("You're in, :name", ['name' => Auth::user()->displayName()]) }}
+                        </h1>
+                        <p class="mt-2 max-w-xl text-sm leading-relaxed text-white/90">
+                            {{ __('Onboarding is done — your answers are saved and your application is with our team. The only thing left is our verification decision.') }}
+                        </p>
+
+                        <ul class="mt-4 flex flex-wrap gap-2" aria-label="{{ __('Answers saved from your survey') }}">
+                            @foreach ($joinChips as $joinChip)
+                                <li class="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+                                    <span class="shrink-0 text-white/60">{{ $joinChip['label'] }}</span>
+                                    <span class="break-words">{{ $joinChip['value'] }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        @endif
+
         <div class="rounded-2xl border p-6 text-center {{ $heroClasses }}">
             <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg {{ $heroIconClasses }}">
                 @if ($isLive)
@@ -195,7 +235,7 @@
                         {{ __('View my public profile') }}
                     </a>
                 @elseif ($needsAction)
-                    <a href="{{ route('teacher.onboarding.verification') }}"
+                    <a href="{{ route('teacher.verification') }}"
                        class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-colors hover:bg-primary/90">
                         {{ __('Update my application') }}
                         <span aria-hidden="true">→</span>
@@ -210,7 +250,7 @@
                         {{ __('Preview my public profile') }}
                         <span aria-hidden="true">→</span>
                     </a>
-                    <a href="{{ route('teacher.onboarding.verification') }}"
+                    <a href="{{ route('teacher.verification') }}"
                        class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-800 dark:border-slate-700 dark:text-slate-300">
                         {{ __('Review my documents') }}
                     </a>

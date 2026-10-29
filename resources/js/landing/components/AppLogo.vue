@@ -3,9 +3,10 @@
 // looks identical whether it is drawn by Blade or by the Vue landing app.
 defineProps({
     src: { type: String, required: true },
+    alt: { type: String, default: '' },
 });
 </script>
 
 <template>
-    <img :src="src" alt="" decoding="async" class="object-contain" />
+    <img :src="src" :alt="alt" decoding="async" class="object-contain" />
 </template>

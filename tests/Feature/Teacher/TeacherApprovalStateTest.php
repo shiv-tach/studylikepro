@@ -44,7 +44,7 @@ test('only a pending application can be overdue', function () {
         ->and(TeacherApproval::isOverdue($approved))->toBeFalse();
 });
 
-test('the wizard ends on a review step that only turns green when approved', function () {
+test('the setup checklist ends on a review step that only turns green when approved', function () {
     $pending = TeacherProfile::factory()->make([
         'verification_status' => VerificationStatus::Pending,
         'submitted_at' => now(),
@@ -61,7 +61,13 @@ test('the wizard ends on a review step that only turns green when approved', fun
         ->and($pendingReview['reachable'])->toBeTrue()
         ->and($approvedReview['done'])->toBeTrue()
         ->and($approvedReview['state'])->toBeNull()
-        ->and(TeacherOnboarding::steps($pending))->toHaveCount(6);
+        ->and(TeacherOnboarding::steps($pending))->toHaveCount(4)
+        ->and(collect(TeacherOnboarding::steps($pending))->pluck('url')->all())->toBe([
+            route('teacher.profile'),
+            route('teacher.availability.index'),
+            route('teacher.verification'),
+            route('teacher.approval.status'),
+        ]);
 });
 
 test('a rejected application shows the review step as action needed', function () {
@@ -76,12 +82,13 @@ test('a rejected application shows the review step as action needed', function (
         ->and($review['done'])->toBeFalse();
 });
 
-test('the review step is never a resume target', function () {
-    $submitted = TeacherProfile::factory()->make([
-        'verification_status' => VerificationStatus::Pending,
-        'submitted_at' => now(),
+test('the review step is not reachable before the application is submitted', function () {
+    $draft = TeacherProfile::factory()->make([
+        'verification_status' => VerificationStatus::Draft,
     ]);
 
-    expect(TeacherOnboarding::resumeStep($submitted))->not->toBe(TeacherOnboarding::STEP_REVIEW)
-        ->and(TeacherOnboarding::nextRouteName($submitted))->not->toBe('teacher.onboarding.submitted');
+    $review = collect(TeacherOnboarding::steps($draft))->firstWhere('key', TeacherOnboarding::STEP_REVIEW);
+
+    expect($review['reachable'])->toBeFalse()
+        ->and($review['done'])->toBeFalse();
 });

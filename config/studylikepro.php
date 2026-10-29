@@ -338,6 +338,9 @@ return [
         'id_proof' => 'Government ID',
         'degree' => 'Degree or diploma',
         'certificate' => 'Teaching certificate',
+        // Optional proof of a government teaching post: an admin confirms it and
+        // the teacher's public profile card carries the Government teacher badge.
+        'government_proof' => 'Government teacher proof',
         'other' => 'Other supporting document',
     ],
 

@@ -24,9 +24,9 @@
         ],
         // The hero photo ships as pre-cropped 4:5 WebP + JPEG derivatives, so the
         // above-the-fold image never pulls the multi-megabyte camera original.
-        // The logo is the brand mark; Blade owns the URL so Vite never guesses it.
+        // The header and footer show the wordmark; Blade owns the URL so Vite never guesses it.
         'images' => [
-            'logo' => asset('images/brand/logo-mark.png'),
+            'logo' => asset('images/brand/logo-nav.png'),
             'hero' => [
                 'alt' => 'Two students holding a graded exam paper and a tablet showing their lesson dashboard',
                 'width' => 1200,

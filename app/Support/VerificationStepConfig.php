@@ -2,14 +2,12 @@
 
 namespace App\Support;
 
-use App\Models\TeacherOnboardingDraft;
 use App\Models\TeacherProfile;
 use Illuminate\Support\MessageBag;
 
 /**
- * The island behind the verification step. It is shared by the onboarding
- * wizard and the post-onboarding verification status page so the checklist,
- * the document types and every message stay identical.
+ * The island behind the verification page: the checklist, the document types,
+ * the subject picker and every server-written message.
  */
 final class VerificationStepConfig
 {
@@ -27,21 +25,17 @@ final class VerificationStepConfig
         array $selectedSubjectIds,
         string $themePreset = 'classic',
         ?int $highlightDocumentId = null,
-        string $mode = 'workspace',
-        ?TeacherOnboardingDraft $draft = null,
     ): array {
         $status = $profile->verification_status;
         $hasIdProof = $profile->documents->contains('type', 'id_proof');
-        $profileComplete = (bool) $profile->isComplete();
         $verificationSubmitted = (bool) $profile->hasSubmittedVerification();
         $hasAvailability = TeacherOnboarding::hasAvailability($profile);
-        $hasSubjects = $selectedSubjectIds !== [];
-        $onboarding = $mode === 'onboarding';
 
         $typeHints = [
             'id_proof' => __('A passport, national ID card or driving licence — this is the one we need before you can submit.'),
             'degree' => __('Your degree or diploma certificate.'),
             'certificate' => __('A teaching qualification or training certificate.'),
+            'government_proof' => __('A school letter, appointment letter or staff ID that shows your government teaching post. Optional — it earns the badge on your profile card.'),
             'other' => __('Anything else that supports your application.'),
         ];
 
@@ -52,6 +46,7 @@ final class VerificationStepConfig
             'id_proof' => 'shield',
             'degree' => 'graduation',
             'certificate' => 'check-circle',
+            'government_proof' => 'shield',
             'other' => 'folder',
         ];
 
@@ -79,12 +74,10 @@ final class VerificationStepConfig
 
         // Acceptance is stored on the profile when the application is submitted,
         // so the checklist keeps showing it as done afterwards. A failed submit
-        // keeps whatever the teacher actually ticked, error included — and an
-        // unsaved tick is restored from the draft.
-        $draftedAgree = $draft?->step(TeacherOnboarding::STEP_VERIFICATION)['agree'] ?? null;
+        // keeps whatever the teacher actually ticked, error included.
         $agreementAccepted = session()->hasOldInput()
             ? (bool) old('agree')
-            : ($draftedAgree !== null ? (bool) $draftedAgree : $profile->hasAcceptedAgreement());
+            : $profile->hasAcceptedAgreement();
 
         $notices = self::notices($profile, $hasIdProof);
 
@@ -92,14 +85,12 @@ final class VerificationStepConfig
             'appName' => config('app.name', 'Studylikepro'),
             'csrfToken' => csrf_token(),
             'theme' => ['preset' => $themePreset],
-            'mode' => $mode,
-            'stepKey' => TeacherOnboarding::STEP_VERIFICATION,
             'status' => [
                 'current' => $status->value,
                 'label' => $status->label(),
             ],
             'profile' => [
-                'isComplete' => $profileComplete,
+                'isComplete' => (bool) $profile->isComplete(),
                 'hasSubmittedVerification' => $verificationSubmitted,
                 'hasAvailability' => $hasAvailability,
                 'submittedAt' => display_datetime($profile->submitted_at),
@@ -145,14 +136,6 @@ final class VerificationStepConfig
             ],
             'notices' => $notices,
             'steps' => TeacherOnboarding::steps($profile),
-            'currentStep' => 5,
-            'draft' => [
-                'restored' => $draftedAgree !== null,
-                'savedAt' => $draftedAgree !== null ? $draft?->saved_at?->toIso8601String() : null,
-                'savedAtLabel' => $draftedAgree !== null ? display_datetime($draft?->saved_at) : null,
-                'hasAny' => $draft !== null && ! $draft->isEmpty(),
-                'step' => TeacherOnboarding::STEP_VERIFICATION,
-            ],
             'urls' => [
                 'upload' => route('teacher.verification.documents.store'),
                 'submit' => route('teacher.verification.submit'),
@@ -160,15 +143,12 @@ final class VerificationStepConfig
                 'terms' => route('legal.terms'),
                 'privacy' => route('legal.privacy'),
                 'dashboard' => route('teacher.dashboard'),
-                'profile' => $onboarding ? route('teacher.onboarding.profile') : route('teacher.profile'),
-                'availability' => $onboarding ? route('teacher.onboarding.availability') : route('teacher.availability.setup'),
-                'back' => $onboarding ? route('teacher.onboarding.availability') : null,
-                'submitted' => route('teacher.onboarding.submitted'),
-                'draft' => $onboarding ? route('teacher.onboarding.draft') : null,
-                'draftDelete' => $onboarding ? route('teacher.onboarding.draft.destroy') : null,
-                'return' => $onboarding ? 'onboarding' : null,
+                'profile' => route('teacher.profile'),
+                'availability' => route('teacher.availability.index'),
+                'back' => null,
+                'submitted' => route('teacher.approval.status'),
             ],
-            'copy' => self::copy($onboarding),
+            'copy' => self::copy(),
         ];
     }
 
@@ -251,7 +231,7 @@ final class VerificationStepConfig
     /**
      * @return array<string, mixed>
      */
-    private static function copy(bool $onboarding): array
+    private static function copy(): array
     {
         return [
             'toastLabel' => __('Notifications'),
@@ -390,11 +370,6 @@ final class VerificationStepConfig
             'reviewTitle' => __('Application in review'),
             'reviewBody' => __('Your documents are with our team. You are not visible to students yet — we will notify you as soon as your profile is approved.'),
             'reviewCta' => __('View approval status'),
-            // Wizard additions.
-            'back' => __('Back to availability'),
-            'stepTitle' => __('Verification'),
-            'stepBody' => __('Two things left before review: your government ID and the subjects you teach.'),
-            'stepOf' => $onboarding ? __('Step :current of :total') : '',
         ];
     }
 }

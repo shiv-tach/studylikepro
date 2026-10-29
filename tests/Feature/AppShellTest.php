@@ -35,17 +35,23 @@ test('the shell island carries the user, the route map and the student menu', fu
     expect($config['urls']['logout'])->toBe(route('logout'));
     expect($config['urls']['notificationOpen'])->toContain('NOTIFICATION_ID');
 
+    expect($config['logoUrl'])->toBe(asset('images/brand/logo-nav.png'));
+    expect($config['logoDarkUrl'])->toBe(asset('images/brand/logo-nav-dark.png'));
+
     expect(collect($config['navItems'])->pluck('label')->all())
         ->toContain('My subjects', 'My lessons', 'Find a teacher');
 });
 
-test('the onboarding wizard replaces the dashboard shell for a new teacher', function () {
+test('a teacher in setup sees the pending sidebar instead of the full menu', function () {
     $teacher = User::factory()->teacher()->create();
 
-    $this->actingAs($teacher)
-        ->get(route('teacher.onboarding.show'))
-        ->assertOk()
-        ->assertDontSee('id="studylikepro-shell"', false);
+    $config = shellConfig(
+        $this->actingAs($teacher)->get(route('teacher.dashboard'))->assertOk()
+    );
+
+    expect(collect($config['navItems'])->pluck('label')->all())
+        ->toContain('Finish setup', 'Teaching profile', 'Availability')
+        ->not->toContain('Earnings', 'Services & pricing');
 });
 
 test('a teacher sidebar counts the lessons still to teach and never badges reviews', function () {

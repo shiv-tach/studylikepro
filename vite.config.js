@@ -113,20 +113,15 @@ export default defineConfig({
                 // The student's learning profile at /student/profile: the
                 // answers that scope every lesson, teacher and price.
                 'resources/js/student-profile/main.js',
-                // The teacher's onboarding step 1 at /teacher/profile, with the
-                // live preview of their public directory card; step 2 is the
-                // availability week and step 3 stays Blade.
+                // The teacher's profile at /teacher/profile, with the live
+                // preview of their public directory card.
                 'resources/js/teacher-profile/main.js',
-                // The teacher's onboarding step 2 at /teacher/availability/setup:
-                // the preset weeks and the editable week grid.
-                'resources/js/teacher-availability-setup/main.js',
-                // The availability manager at /teacher/availability: the same
-                // week editor plus the default price, the bookable preview and
-                // the time off. Its own bundle, so the onboarding step never
-                // pays for the pricing panel and vice versa.
+                // The availability manager at /teacher/availability: the week
+                // editor plus the default price, the bookable preview and the
+                // time off.
                 'resources/js/teacher-availability/main.js',
-                // Onboarding step 3 at /teacher/verification: the documents, the
-                // live checklist and the submit confirmation.
+                // The application page at /teacher/verification: the documents,
+                // the live checklist and the submit confirmation.
                 'resources/js/teacher-verification/main.js',
                 // The teacher's subject setup at /teacher/subjects: the grade and
                 // lesson scope, the per-grade rates, the request queue and the

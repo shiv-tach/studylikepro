@@ -102,6 +102,7 @@ final class PublicTeacherPageConfig
             'reviewsLabel' => trans_choice(':count review|:count reviews', $ratingCount),
             'lessonsTaught' => $teacher->lessons_completed_count.' '.__('lessons taught'),
             'experience' => $teacher->experience_years.' '.__('yrs experience'),
+            'governmentBadge' => $teacher->isGovernmentTeacher(),
             'rateChip' => $money($teacher->startingRateMinor()).$copy['perHourShort'],
             'facts' => [
                 ['label' => __('Education'), 'value' => $teacher->education],
@@ -462,6 +463,7 @@ final class PublicTeacherPageConfig
     {
         return [
             'verified' => __('Verified'),
+            'governmentTeacher' => __('Government teacher'),
             'live' => __('Live'),
             'liveNote' => __('Updates live'),
             'aboutTitle' => __('About'),
@@ -532,7 +534,7 @@ final class PublicTeacherPageConfig
     private static function images(): array
     {
         return [
-            'logo' => asset('images/brand/logo-mark.png'),
+            'logo' => asset('images/brand/logo-nav.png'),
         ];
     }
 }

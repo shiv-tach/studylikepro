@@ -137,6 +137,7 @@
             'avatarUrl' => $teacher->user->avatarUrl(),
             'headline' => $teacher->headline,
             'bio' => $teacher->bio,
+            'governmentBadge' => $teacher->isGovernmentTeacher(),
             'rating' => $ratingAvg,
             'ratingCount' => $ratingCount,
             'reviewsLabel' => $reviewsLabel,
@@ -200,6 +201,7 @@
         ],
         'copy' => [
             'verified' => __('Verified'),
+            'governmentTeacher' => __('Government teacher'),
             'noReviewsYet' => __('No reviews yet'),
             'addGrade' => __('Add your grade to your learning profile to see only the lessons and rates that match you.'),
             'completeProfile' => __('Complete your profile'),

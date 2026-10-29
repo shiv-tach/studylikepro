@@ -16,6 +16,14 @@
         ['icon' => '🪪', 'title' => __('A government ID'), 'body' => __('A passport, national ID card or driving licence.')],
         ['icon' => '📸', 'title' => __('A profile photo'), 'body' => __('A clear, friendly photo — you can add it later.')],
     ];
+
+    // Present only on the screen that follows the invite survey: the first
+    // answered item of each group is short enough to read as a chip.
+    $joinChips = collect($joinSummary ?? [])
+        ->map(fn (array $group) => collect($group['items'])->first(fn (array $item) => $item['done']))
+        ->filter()
+        ->take(4)
+        ->values();
 @endphp
 <x-onboarding-layout>
     <x-slot name="progress">
@@ -23,17 +31,50 @@
     </x-slot>
 
     <div class="space-y-6">
-        <div>
-            <p class="text-[11px] font-bold uppercase tracking-wider text-primary">{{ __('Teacher setup') }}</p>
-            <h1 class="mt-1 text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">
-                {{ $hasStarted ? __('Welcome back, :name', ['name' => $firstName]) : __('Let’s set up your teaching profile') }}
-            </h1>
-            <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                {{ $hasStarted
-                    ? __('Your answers are saved as you go. Pick up wherever you left off — nothing is lost.')
-                    : __('About 10 minutes, in four short steps. You can leave and come back at any time — every answer is kept.') }}
-            </p>
-        </div>
+        @if ($joinChips->isNotEmpty())
+            {{-- The invite survey just finished: celebrate before asking for the
+                 long-form profile, and show back the answers that were kept. --}}
+            <section class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-primary/80 to-purple-600 p-6 text-white shadow-lg shadow-primary/10 dark:shadow-primary/5 sm:p-8" aria-labelledby="join-welcome-title">
+                <div class="flex flex-col gap-5 sm:flex-row sm:items-start">
+                    <span class="survey-celebrate flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/20 text-white ring-4 ring-white/15">
+                        <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </span>
+
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">{{ __('Your account is ready') }}</p>
+                        <h1 id="join-welcome-title" class="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
+                            {{ __("You're in, :name", ['name' => $firstName]) }}
+                        </h1>
+                        <p class="mt-2 max-w-xl text-sm leading-relaxed text-white/90">
+                            {{ __('Your survey answers are saved to your profile. Two short steps finish the rest: a headline and photo, then the exact hours you teach.') }}
+                        </p>
+
+                        <ul class="mt-4 flex flex-wrap gap-2" aria-label="{{ __('Answers saved from your survey') }}">
+                            @foreach ($joinChips as $chip)
+                                <li class="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+                                    <span class="shrink-0 text-white/60">{{ $chip['label'] }}</span>
+                                    <span class="break-words">{{ $chip['value'] }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        @else
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-primary">{{ __('Teacher setup') }}</p>
+                <h1 class="mt-1 text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">
+                    {{ $hasStarted ? __('Welcome back, :name', ['name' => $firstName]) : __('Let’s set up your teaching profile') }}
+                </h1>
+                <p class="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                    {{ $hasStarted
+                        ? __('Your answers are saved as you go. Pick up wherever you left off — nothing is lost.')
+                        : __('About 10 minutes, in four short steps. You can leave and come back at any time — every answer is kept.') }}
+                </p>
+            </div>
+        @endif
 
         @if ($hasStarted)
             <div class="rounded-2xl border border-primary/30 bg-primary/5 p-5 dark:border-primary/30 dark:bg-primary/10">

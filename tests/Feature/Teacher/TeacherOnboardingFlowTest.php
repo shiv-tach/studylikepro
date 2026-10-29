@@ -4,46 +4,48 @@ use App\Models\TeacherProfile;
 use App\Models\TeacherVerificationDocument;
 use App\Models\User;
 
-test('a teacher who saved the profile but not the week is sent to the availability step', function () {
+test('a new teacher lands on the dashboard, not a wizard', function () {
+    $this->actingAs(User::factory()->teacher()->create())
+        ->get(route('teacher.dashboard'))
+        ->assertOk()
+        ->assertSee('Teacher Dashboard');
+});
+
+test('a teacher without a profile is sent to the profile form', function () {
+    $teacher = User::factory()->teacher()->create();
+
+    $this->actingAs($teacher)
+        ->get(route('teacher.subjects.index'))
+        ->assertRedirect(route('teacher.profile'))
+        ->assertSessionHas('status', 'complete-your-profile');
+});
+
+test('a teacher with a profile is sent to verification', function () {
+    $teacher = onboardingTeacher();
+
+    $this->actingAs($teacher)
+        ->get(route('teacher.subjects.index'))
+        ->assertRedirect(route('teacher.verification'))
+        ->assertSessionHas('status', 'complete-your-verification');
+});
+
+test('verification is open before any weekly range is saved', function () {
     $teacher = User::factory()->teacher()->create();
     TeacherProfile::factory()->for($teacher)->create();
 
     $this->actingAs($teacher)
-        ->get(route('teacher.dashboard'))
-        ->assertRedirect(route('teacher.onboarding.availability'))
-        ->assertSessionHas('status', 'complete-your-availability');
-});
-
-test('a teacher who finished the profile and week is sent to the verification step', function () {
-    $teacher = onboardingTeacher();
-
-    $this->actingAs($teacher)
-        ->get(route('teacher.dashboard'))
-        ->assertRedirect(route('teacher.onboarding.verification'))
-        ->assertSessionHas('status', 'complete-your-verification');
-
-    $this->actingAs($teacher)
-        ->get(route('teacher.subjects.index'))
-        ->assertRedirect(route('teacher.onboarding.verification'));
-});
-
-test('the verification step explains what is left before review', function () {
-    $teacher = onboardingTeacher();
-
-    $this->actingAs($teacher)
-        ->followingRedirects()
-        ->get(route('teacher.dashboard'))
+        ->get(route('teacher.verification'))
         ->assertOk()
-        ->assertSee('Two things left before review');
+        ->assertSee('id="teacher-verification-app"', false);
 });
 
-test('a submitted teacher is sent to the approval status page, not the workspace', function () {
+test('submitting moves the teacher to the approval status page', function () {
     $teacher = onboardingTeacher();
     TeacherVerificationDocument::factory()->for($teacher->teacherProfile)->create();
 
     $this->actingAs($teacher)
-        ->post(route('teacher.verification.submit'), ['agree' => '1', 'return' => 'onboarding'])
-        ->assertRedirect(route('teacher.onboarding.submitted'))
+        ->post(route('teacher.verification.submit'), ['agree' => '1'])
+        ->assertRedirect(route('teacher.approval.status'))
         ->assertSessionHas('status', 'submitted-for-review');
 
     $teacher->refresh()->unsetRelation('teacherProfile');
@@ -62,61 +64,32 @@ test('an approved teacher reaches the teacher workspace', function () {
         ->assertOk();
 });
 
-test('the welcome screen shows the resume point and the remaining steps', function () {
-    $teacher = onboardingTeacher();
+test('the sidebar shows the setup menu before approval and the full menu after', function () {
+    $pending = onboardingTeacher();
+    $approved = User::factory()->teacher()->onboarded()->create();
 
-    $this->actingAs($teacher)
-        ->get(route('teacher.onboarding.show'))
-        ->assertOk()
-        ->assertSee('Welcome back')
-        ->assertSee('Continue where you left off: Verification')
-        ->assertSee('3 of 4 steps completed');
+    $pendingNav = collect(
+        shellConfig($this->actingAs($pending)->get(route('teacher.dashboard'))->assertOk())['navItems']
+    )->pluck('label')->all();
+
+    $approvedNav = collect(
+        shellConfig($this->actingAs($approved)->get(route('teacher.dashboard'))->assertOk())['navItems']
+    )->pluck('label')->all();
+
+    expect($pendingNav)->toContain('Finish setup', 'Teaching profile', 'Availability')
+        ->not->toContain('Earnings')
+        ->and($approvedNav)->toContain('Earnings', 'Services & pricing')
+        ->not->toContain('Finish setup');
 });
 
-test('the onboarding layout replaces the dashboard chrome', function () {
+test('the removed onboarding URLs are gone', function () {
     $teacher = onboardingTeacher();
 
-    $this->actingAs($teacher)
-        ->get(route('teacher.onboarding.show'))
-        ->assertOk()
-        ->assertSee('Teacher setup')
-        ->assertSee('Save &amp; exit', false)
-        ->assertDontSee('id="studylikepro-shell"', false);
-});
-
-test('every wizard step uses the onboarding chrome instead of the dashboard', function () {
-    $teacher = onboardingTeacher();
-
-    foreach ([
-        route('teacher.onboarding.show'),
-        route('teacher.onboarding.preferences'),
-        route('teacher.onboarding.availability'),
-        route('teacher.onboarding.verification'),
-    ] as $url) {
-        $this->actingAs($teacher)
-            ->get($url)
-            ->assertOk()
-            ->assertDontSee('id="studylikepro-shell"', false);
+    foreach (['/teacher/onboarding', '/teacher/onboarding/profile', '/teacher/onboarding/verification'] as $url) {
+        $this->actingAs($teacher)->get($url)->assertNotFound();
     }
-});
-
-test('the sidebar shows the full teacher menu once onboarding is complete', function () {
-    $teacher = User::factory()->teacher()->onboarded()->create();
 
     $this->actingAs($teacher)
-        ->get(route('teacher.profile'))
-        ->assertOk()
-        ->assertSee('Earnings');
-});
-
-test('a finished teacher is sent out of the wizard', function () {
-    $teacher = User::factory()->teacher()->onboarded()->create();
-
-    $this->actingAs($teacher)
-        ->get(route('teacher.onboarding.show'))
-        ->assertRedirect(route('teacher.dashboard'));
-
-    $this->actingAs($teacher)
-        ->get(route('teacher.onboarding.profile'))
-        ->assertRedirect(route('teacher.profile'));
+        ->patchJson('/teacher/onboarding/draft', [])
+        ->assertNotFound();
 });
