@@ -17,7 +17,7 @@ final class SubjectCatalog
 {
     /**
      * @param  list<string>|null  $levelKeys  only these levels (null = every active level)
-     * @return list<array{key: string, name: string, icon: ?string, subjects: list<array{id: int, name: string, icon: string}>}>
+     * @return list<array{key: string, name: string, shortName: string, icon: ?string, subjects: list<array{id: int, name: string, icon: string}>}>
      */
     public static function groups(?array $levelKeys = null): array
     {
@@ -39,6 +39,7 @@ final class SubjectCatalog
         $groups = $levels->map(fn (EducationLevel $level) => [
             'key' => $level->key,
             'name' => $level->name,
+            'shortName' => self::shortLevelName($level),
             'icon' => $level->icon,
             'subjects' => self::subjectRows($byLevel->get($level->id, collect())),
         ]);
@@ -52,6 +53,7 @@ final class SubjectCatalog
             $groups->push([
                 'key' => 'other',
                 'name' => __('Other'),
+                'shortName' => __('Other'),
                 'icon' => '🧭',
                 'subjects' => self::subjectRows($unassigned),
             ]);
@@ -84,6 +86,19 @@ final class SubjectCatalog
             ->map(fn ($id) => (int) $id)
             ->values()
             ->all();
+    }
+
+    /**
+     * The compact label a narrow tab or a badge can carry: "O/L" instead of
+     * "O/L (Ordinary Level)". Admin-added levels keep their full name.
+     */
+    private static function shortLevelName(EducationLevel $level): string
+    {
+        return match ((string) $level->key) {
+            'ol' => __('O/L'),
+            'al' => __('A/L'),
+            default => (string) $level->name,
+        };
     }
 
     /**

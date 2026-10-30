@@ -47,20 +47,15 @@ class InviteOnboardingController extends Controller
         $pending = PendingRegistration::get();
         $policy = $this->registration->policy();
 
-        $answers = PendingTeacherSignup::answers();
-
         return view('join.account', [
             'pending' => $pending,
             'mobile' => $pending !== null ? PhoneNumber::mask((string) $pending['mobile']) : null,
             'length' => $policy['length'],
             'cooldown' => $this->registration->cooldownRemaining(),
             'otpEnabled' => $policy['enabled'],
-            'steps' => TeacherSurvey::steps($answers),
-            'summary' => TeacherSurvey::summary($answers),
-            'answered' => TeacherSurvey::answeredCount($answers),
-            'questions' => count(TeacherSurvey::ANSWER_STEPS),
+            'answers' => PendingTeacherSignup::answers(),
+            'status' => $request->session()->get('status'),
             'guest' => true,
-            'currentStep' => TeacherSurvey::GROUP_ACCOUNT,
         ]);
     }
 

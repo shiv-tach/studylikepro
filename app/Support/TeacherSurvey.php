@@ -241,13 +241,25 @@ final class TeacherSurvey
         $levelValue = (string) ($level['value'] ?? '');
         $subjectIds = array_values(array_unique(array_map('intval', $subjects)));
 
-        $subjectNames = $subjectIds === []
-            ? []
+        // The recap is read at a glance, so a teacher who tutors both levels sees
+        // "O/L: … · A/L: …" instead of one long undifferentiated name list. A
+        // single-level answer keeps its plain list (and its existing wording).
+        $subjectRows = $subjectIds === []
+            ? collect()
             : Subject::query()
+                ->with('educationLevel:id,key,name,sort_order')
                 ->whereIn('id', $subjectIds)
                 ->orderBy('name')
-                ->pluck('name')
-                ->all();
+                ->get();
+
+        $subjectLevels = $subjectRows
+            ->map(fn (Subject $subject) => $subject->educationLevel)
+            ->filter()
+            ->unique('id')
+            ->sortBy('sort_order')
+            ->values();
+
+        $subjectValue = self::subjectSummaryValue($subjectRows, $subjectLevels);
 
         $serviceLabels = collect(self::serviceOptions())->pluck('label', 'value');
         $serviceNames = array_values(array_filter(array_map(
@@ -305,7 +317,7 @@ final class TeacherSurvey
                 'icon' => '🎯',
                 'items' => [
                     ['key' => self::STEP_LEVEL, 'label' => __('Exam level'), 'value' => $levelValue === '' ? null : self::levelLabel($levelValue), 'meta' => null, 'url' => route('join.level')],
-                    ['key' => self::STEP_SUBJECTS, 'label' => __('Subjects'), 'value' => $subjectNames === [] ? null : implode(', ', $subjectNames), 'meta' => null, 'url' => route('join.subjects')],
+                    ['key' => self::STEP_SUBJECTS, 'label' => __('Subjects'), 'value' => $subjectValue, 'meta' => null, 'url' => route('join.subjects')],
                 ],
             ],
             [
@@ -367,6 +379,44 @@ final class TeacherSurvey
 
             return $group;
         }, $definition);
+    }
+
+    /**
+     * The readable subject answer: plain names for one level, level-prefixed
+     * chunks once the teacher covers more than one level.
+     *
+     * @param  \Illuminate\Support\Collection<int, Subject>  $subjects
+     * @param  \Illuminate\Support\Collection<int, EducationLevel>  $levels
+     */
+    private static function subjectSummaryValue($subjects, $levels): ?string
+    {
+        if ($subjects->isEmpty()) {
+            return null;
+        }
+
+        if ($levels->count() <= 1) {
+            return $subjects->pluck('name')->implode(', ');
+        }
+
+        $grouped = $subjects->groupBy(fn (Subject $subject) => (int) ($subject->education_level_id ?? 0));
+        $chunks = [];
+
+        foreach ($levels as $level) {
+            $rows = $grouped->get((int) $level->id);
+
+            if ($rows === null) {
+                continue;
+            }
+
+            $chunks[] = self::levelTitle($level).': '.$rows->pluck('name')->implode(', ');
+        }
+
+        // A subject without a level still has to appear in the recap.
+        if ($grouped->has(0)) {
+            $chunks[] = $grouped->get(0)->pluck('name')->implode(', ');
+        }
+
+        return $chunks === [] ? null : implode(' · ', $chunks);
     }
 
     /**

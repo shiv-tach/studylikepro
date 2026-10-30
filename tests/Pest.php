@@ -169,6 +169,39 @@ function teacherServicesConfig(TestResponse $response): array
 }
 
 /**
+ * Read the config island one invite survey screen renders its question,
+ * options, recap and rail from.
+ *
+ * @return array<string, mixed>
+ */
+function joinSurveyConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="join-survey-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Read the config island the last invite screen renders its two states from.
+ *
+ * @return array<string, mixed>
+ */
+function joinAccountConfig(TestResponse $response): array
+{
+    preg_match(
+        '#<script type="application/json" id="join-account-config">(.*?)</script>#s',
+        $response->getContent(),
+        $matches
+    );
+
+    return json_decode($matches[1] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
+}
+
+/**
  * Read the config island the teacher order book renders its status rail, search
  * and order cards from.
  *

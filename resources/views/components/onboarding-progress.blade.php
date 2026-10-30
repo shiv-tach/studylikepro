@@ -18,6 +18,13 @@
     $percent = $answeredCount !== null && $questionTotal
         ? ($answeredCount / $questionTotal) * 100
         : ($total > 0 ? (($current - 1) / $total) * 100 : 0);
+
+    // A phone shows the finished questions in emerald and the question being
+    // answered now in primary, mirroring the segments of the rail.
+    $stepShare = $questionTotal ? 100 / $questionTotal : ($total > 0 ? 100 / $total : 0);
+    $donePercent = max(0, min(100, (int) round($percent)));
+    $activePercent = max(0, min(100 - $donePercent, (int) round($stepShare)));
+    $activePercent = $donePercent === 0 && $activePercent === 0 ? 2 : $activePercent;
 @endphp
 
 <div {{ $attributes->merge(['class' => 'border-t border-slate-200/70 bg-white/80 dark:border-slate-800/70 dark:bg-slate-950/60']) }}>
@@ -42,13 +49,14 @@
             </p>
         </div>
 
-        <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800 sm:hidden"
+        <div class="mt-1.5 flex h-1 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800 sm:hidden"
              role="progressbar"
              aria-valuemin="0"
              aria-valuemax="100"
-             aria-valuenow="{{ (int) round($percent) }}"
+             aria-valuenow="{{ $donePercent }}"
              aria-label="{{ __('Your progress') }}">
-            <div class="h-full rounded-full bg-primary transition-all duration-500 motion-reduce:transition-none" style="width: {{ max(2, min(100, (int) round($percent))) }}%"></div>
+            <div class="h-full shrink-0 bg-emerald-400 transition-all duration-500 motion-reduce:transition-none" style="width: {{ $donePercent }}%"></div>
+            <div class="h-full shrink-0 bg-primary transition-all duration-500 motion-reduce:transition-none" style="width: {{ $activePercent }}%"></div>
         </div>
 
         {{-- Full rail from `sm` upwards. --}}

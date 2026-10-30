@@ -71,28 +71,8 @@ Alpine.data('themeToggle', () => ({
     },
 }));
 
-// One question per screen means one submit per screen: the first click locks
-// the form so a double tap cannot post the same answer twice while the page
-// transition is still running.
-Alpine.data('submitOnce', () => ({
-    busy: false,
-
-    init() {
-        // Restored from the back/forward cache: the page was never submitted.
-        window.addEventListener('pageshow', () => {
-            this.busy = false;
-        });
-    },
-
-    guard(event) {
-        if (this.busy) {
-            event.preventDefault();
-
-            return;
-        }
-
-        this.busy = true;
-    },
-}));
+// One question per screen means one submit per screen. The invite survey is a
+// Vue app now (resources/js/join), whose `createSurveyForm` keeps the same
+// guard, so no Alpine helper is registered here for it.
 
 Alpine.start();

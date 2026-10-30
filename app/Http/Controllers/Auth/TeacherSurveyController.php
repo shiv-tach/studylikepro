@@ -13,7 +13,6 @@ use App\Http\Requests\TeacherSurveyRatesRequest;
 use App\Http\Requests\TeacherSurveyServicesRequest;
 use App\Http\Requests\TeacherSurveySubjectsRequest;
 use App\Services\InviteOnboardingService;
-use App\Support\AvailabilityPresets;
 use App\Support\PendingTeacherSignup;
 use App\Support\SubjectCatalog;
 use App\Support\TeacherSurvey;
@@ -49,7 +48,7 @@ class TeacherSurveyController extends Controller
      */
     public function editLevel(Request $request): View
     {
-        return $this->question(TeacherSurvey::STEP_LEVEL, $request);
+        return $this->question(TeacherSurvey::STEP_LEVEL);
     }
 
     public function updateLevel(TeacherSurveyLevelRequest $request): RedirectResponse
@@ -74,7 +73,7 @@ class TeacherSurveyController extends Controller
                 ->with('status', 'answer-the-level-question');
         }
 
-        return $this->question(TeacherSurvey::STEP_SUBJECTS, $request);
+        return $this->question(TeacherSurvey::STEP_SUBJECTS);
     }
 
     public function updateSubjects(TeacherSurveySubjectsRequest $request): RedirectResponse
@@ -98,7 +97,7 @@ class TeacherSurveyController extends Controller
                 ->with('status', 'answer-the-subject-question');
         }
 
-        return $this->question(TeacherSurvey::STEP_LANGUAGES, $request);
+        return $this->question(TeacherSurvey::STEP_LANGUAGES);
     }
 
     public function updateLanguages(TeacherSurveyLanguagesRequest $request): RedirectResponse
@@ -122,7 +121,7 @@ class TeacherSurveyController extends Controller
                 ->with('status', 'answer-the-language-question');
         }
 
-        return $this->question(TeacherSurvey::STEP_SERVICES, $request);
+        return $this->question(TeacherSurvey::STEP_SERVICES);
     }
 
     public function updateServices(TeacherSurveyServicesRequest $request): RedirectResponse
@@ -153,7 +152,7 @@ class TeacherSurveyController extends Controller
                 ->with('status', 'answer-the-service-question');
         }
 
-        return $this->question(TeacherSurvey::STEP_EXPERIENCE, $request);
+        return $this->question(TeacherSurvey::STEP_EXPERIENCE);
     }
 
     public function updateExperience(TeacherSurveyExperienceRequest $request): RedirectResponse
@@ -176,7 +175,7 @@ class TeacherSurveyController extends Controller
                 ->with('status', 'answer-the-experience-question');
         }
 
-        return $this->question(TeacherSurvey::STEP_EDUCATION, $request);
+        return $this->question(TeacherSurvey::STEP_EDUCATION);
     }
 
     public function updateEducation(TeacherSurveyEducationRequest $request): RedirectResponse
@@ -200,7 +199,7 @@ class TeacherSurveyController extends Controller
                 ->with('status', 'answer-the-education-question');
         }
 
-        return $this->question(TeacherSurvey::STEP_RATES, $request);
+        return $this->question(TeacherSurvey::STEP_RATES);
     }
 
     public function updateRates(TeacherSurveyRatesRequest $request): RedirectResponse
@@ -235,7 +234,7 @@ class TeacherSurveyController extends Controller
                 ->with('status', 'answer-the-rates-question');
         }
 
-        return $this->question(TeacherSurvey::STEP_AVAILABILITY, $request);
+        return $this->question(TeacherSurvey::STEP_AVAILABILITY);
     }
 
     public function updateAvailability(TeacherSurveyAvailabilityRequest $request): RedirectResponse
@@ -264,7 +263,7 @@ class TeacherSurveyController extends Controller
                 ->with('status', 'answer-the-availability-question');
         }
 
-        return $this->question(TeacherSurvey::STEP_PROOF, $request);
+        return $this->question(TeacherSurvey::STEP_PROOF);
     }
 
     /**
@@ -300,185 +299,17 @@ class TeacherSurveyController extends Controller
     }
 
     /**
-     * The shared frame of one question: the rail, the copy, the answer values and
-     * the options that question actually needs.
+     * The shared frame of one question. Blade builds the island (and its
+     * `<noscript>` twin) from `JoinSurveyConfig`, so the controller only has to
+     * pass the step and the answers given so far.
      */
-    private function question(string $step, Request $request): View
+    private function question(string $step): View
     {
-        $answers = PendingTeacherSignup::answers();
-        $index = (int) array_search($step, TeacherSurvey::ANSWER_STEPS, true);
-        $presets = [];
-        $dayTimes = [];
-
-        if ($step === TeacherSurvey::STEP_AVAILABILITY) {
-            $presets = AvailabilityPresets::options();
-
-            // With no suggested week chosen, every picked day opens on the
-            // recommended hours, so the day cards can say which hours those are.
-            $defaultWeek = AvailabilityPresets::defaultWeek();
-
-            foreach (TeacherSurvey::availabilityDays() as $day) {
-                $dayTimes[$day['value']] = AvailabilityPresets::timeLabel($defaultWeek[$day['value']]);
-            }
-        }
-
         return view('join.survey', [
             'guest' => true,
             'step' => $step,
-            'title' => $this->titleFor($step),
-            'body' => $this->bodyFor($step, $answers),
-            'index' => $index + 1,
-            'total' => count(TeacherSurvey::ANSWER_STEPS),
-            'answered' => TeacherSurvey::answeredCount($answers),
-            'steps' => TeacherSurvey::steps($answers),
-            'summary' => TeacherSurvey::summary($answers),
-            'currentGroup' => TeacherSurvey::groupFor($step),
-            'submitUrl' => route(match ($step) {
-                TeacherSurvey::STEP_LEVEL => 'join.level.update',
-                TeacherSurvey::STEP_SUBJECTS => 'join.subjects.update',
-                TeacherSurvey::STEP_LANGUAGES => 'join.languages.update',
-                TeacherSurvey::STEP_SERVICES => 'join.services.update',
-                TeacherSurvey::STEP_EXPERIENCE => 'join.experience.update',
-                TeacherSurvey::STEP_EDUCATION => 'join.education.update',
-                TeacherSurvey::STEP_RATES => 'join.rates.update',
-                TeacherSurvey::STEP_AVAILABILITY => 'join.availability.update',
-                default => 'join.proof.update',
-            }),
-            'backUrl' => $this->backUrl($step),
-            'values' => $this->values($step, $answers),
-            'levels' => TeacherSurvey::levels(),
-            'subjectGroups' => $step === TeacherSurvey::STEP_SUBJECTS
-                ? SubjectCatalog::groups(TeacherSurvey::allowedLevelKeys($answers[TeacherSurvey::STEP_LEVEL]['value'] ?? null))
-                : [],
-            'languages' => array_values((array) config('studylikepro.languages')),
-            'services' => TeacherSurvey::serviceOptions(),
-            'educationOptions' => TeacherSurvey::educationOptions(),
-            'pricedServices' => $step === TeacherSurvey::STEP_RATES
-                ? TeacherSurvey::pricedServiceOptions($answers[TeacherSurvey::STEP_SERVICES] ?? [])
-                : [],
-            'days' => TeacherSurvey::availabilityDays(),
-            'availabilityPresets' => $presets,
-            'presetDays' => collect($presets)
-                ->mapWithKeys(fn (array $preset) => [$preset['key'] => array_keys($preset['days'])])
-                ->all(),
-            'dayTimes' => $dayTimes,
-            'proofName' => $step === TeacherSurvey::STEP_PROOF
-                ? ($answers[TeacherSurvey::STEP_PROOF]['original_name'] ?? null)
-                : null,
+            'answers' => PendingTeacherSignup::answers(),
         ]);
-    }
-
-    private function titleFor(string $step): string
-    {
-        return match ($step) {
-            TeacherSurvey::STEP_LEVEL => __('Who are you tutoring for?'),
-            TeacherSurvey::STEP_SUBJECTS => __('What subjects do you teach?'),
-            TeacherSurvey::STEP_LANGUAGES => __('What language do you teach in?'),
-            TeacherSurvey::STEP_SERVICES => __('What would you like to do on :app?', [
-                'app' => config('app.name', 'Studylikepro'),
-            ]),
-            TeacherSurvey::STEP_EXPERIENCE => __('How long have you been teaching?'),
-            TeacherSurvey::STEP_EDUCATION => __('Where did you study?'),
-            TeacherSurvey::STEP_RATES => __('What do you charge?'),
-            TeacherSurvey::STEP_AVAILABILITY => __('Which days can you teach?'),
-            default => __('Are you a government teacher?'),
-        };
-    }
-
-    /**
-     * @param  array<string, mixed>  $answers
-     */
-    private function bodyFor(string $step, array $answers): string
-    {
-        $level = $answers[TeacherSurvey::STEP_LEVEL]['value'] ?? null;
-
-        return match ($step) {
-            TeacherSurvey::STEP_LEVEL => __('Pick the exam level your students are preparing for. You can change this later.'),
-            TeacherSurvey::STEP_SUBJECTS => __('Only the :level subjects are listed. Pick every subject you would take students for.', [
-                'level' => TeacherSurvey::levelLabel(is_string($level) ? $level : ''),
-            ]),
-            TeacherSurvey::STEP_LANGUAGES => __('Pick every language you can teach a lesson in — more than one is fine.'),
-            TeacherSurvey::STEP_SERVICES => __('Pick everything you would like to offer. You will set prices in a moment.'),
-            TeacherSurvey::STEP_EXPERIENCE => __('Students see this on your profile card. Count the years you have taught, including school and tuition classes.'),
-            TeacherSurvey::STEP_EDUCATION => __('Pick the institute where you earned your highest qualification.'),
-            TeacherSurvey::STEP_RATES => __('Set your hourly fee for a lesson, then a price for each service you picked. You can change these later.'),
-            TeacherSurvey::STEP_AVAILABILITY => __('Pick the days you can teach, starting from one of the suggested weeks. You will set the exact hours in the next step after signing up.'),
-            default => __('Upload any document that proves your government teaching post. Verified government teachers get a badge on their profile card.'),
-        };
-    }
-
-    private function backUrl(string $step): ?string
-    {
-        return match ($step) {
-            TeacherSurvey::STEP_LEVEL => null,
-            TeacherSurvey::STEP_SUBJECTS => route('join.level'),
-            TeacherSurvey::STEP_LANGUAGES => route('join.subjects'),
-            TeacherSurvey::STEP_SERVICES => route('join.languages'),
-            TeacherSurvey::STEP_EXPERIENCE => route('join.services'),
-            TeacherSurvey::STEP_EDUCATION => route('join.experience'),
-            TeacherSurvey::STEP_RATES => route('join.education'),
-            TeacherSurvey::STEP_AVAILABILITY => route('join.rates'),
-            default => route('join.availability'),
-        };
-    }
-
-    /**
-     * The answers to replay: old input first, then what the survey already holds.
-     *
-     * @param  array<string, mixed>  $answers
-     * @return array<string, mixed>
-     */
-    private function values(string $step, array $answers): array
-    {
-        $stored = $answers[$step] ?? [];
-
-        return match ($step) {
-            TeacherSurvey::STEP_LEVEL => [
-                'level' => old('level', is_array($stored) ? ($stored['value'] ?? null) : null),
-            ],
-            TeacherSurvey::STEP_SUBJECTS => [
-                'subjects' => array_values(array_map('intval', (array) old('subjects', is_array($stored) ? $stored : []))),
-            ],
-            TeacherSurvey::STEP_LANGUAGES => [
-                'languages' => array_values(array_map('strval', (array) old('languages', is_array($stored) ? $stored : []))),
-            ],
-            TeacherSurvey::STEP_SERVICES => [
-                'services' => array_values(array_map('strval', (array) old('services', is_array($stored) ? $stored : []))),
-            ],
-            TeacherSurvey::STEP_EXPERIENCE => [
-                'experience_years' => old('experience_years', is_array($stored) ? ($stored['value'] ?? null) : null),
-            ],
-            TeacherSurvey::STEP_EDUCATION => [
-                'education' => old('education', is_array($stored) ? ($stored['value'] ?? null) : null),
-            ],
-            TeacherSurvey::STEP_RATES => [
-                'hourly_rate' => old('hourly_rate', is_array($stored) ? ($stored['hourly_rate'] ?? null) : null),
-                'service_rates' => (array) old('service_rates', is_array($stored) ? ($stored['service_rates'] ?? []) : []),
-            ],
-            TeacherSurvey::STEP_AVAILABILITY => [
-                'days' => array_values(array_map('intval', (array) old('days', is_array($stored) ? ($stored['days'] ?? []) : []))),
-                'preset' => $this->presetValue($stored),
-            ],
-            default => [
-                'claims' => old('claims', is_array($stored) && isset($stored['claimed'])
-                    ? ($stored['claimed'] ? '1' : '0')
-                    : null),
-            ],
-        };
-    }
-
-    /**
-     * The suggested week to re-select: a rejected save replays its own choice,
-     * otherwise the answer the survey already holds. "No preset" is null so the
-     * radio and the day picker agree on the empty value.
-     *
-     * @param  array<string, mixed>  $stored
-     */
-    private function presetValue(array $stored): ?string
-    {
-        $value = old('preset', $stored['preset'] ?? null);
-
-        return is_string($value) && $value !== '' ? $value : null;
     }
 
     /**

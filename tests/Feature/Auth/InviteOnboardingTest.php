@@ -283,8 +283,9 @@ test('the days question offers the same suggested weeks and times as onboarding'
     $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
     $this->put(route('join.rates.update'), ['hourly_rate' => 2000]);
 
-    $this->get(route('join.availability'))
-        ->assertOk()
+    $response = $this->get(route('join.availability'));
+
+    $response->assertOk()
         ->assertSee('Suggested weeks')
         ->assertSee('School-friendly')
         ->assertSee('Evenings only')
@@ -298,8 +299,16 @@ test('the days question offers the same suggested weeks and times as onboarding'
         // The day grid is only for "My own days", and the hint says the answer
         // can be changed later.
         ->assertSee('Days you can teach')
-        ->assertSee('x-show="preset === \'\' || false"', false)
         ->assertSee('You can change your availability any time after you register.');
+
+    // The Vue island carries the rule the grid follows: a picked week replaces
+    // the days, and every day card shows the hours that week would use.
+    $config = joinSurveyConfig($response);
+
+    expect($config['values']['preset'])->toBeNull()
+        ->and($config['options']['presetDays']['school_friendly'])->toBe([1, 2, 3, 4, 5, 6, 0])
+        ->and($config['options']['dayTimes'][1])->toBe('3:00 PM – 9:00 PM')
+        ->and($config['options']['presetDays'])->toHaveKeys(['school_friendly', 'evenings', 'weekends']);
 });
 
 test('the days question only accepts a suggested week it knows', function () {
@@ -768,4 +777,170 @@ test('finishing the survey opens the approval status page with a celebration and
     $this->get(route('teacher.approval.status'))
         ->assertOk()
         ->assertDontSee('Your account is ready');
+});
+
+test('every survey screen ships the island its Vue app renders', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    // Question 1: the three level cards come from the seeded catalog.
+    $level = joinSurveyConfig($this->get(route('join.level')));
+
+    expect($level['step'])->toBe('level')
+        ->and($level['index'])->toBe(1)
+        ->and($level['total'])->toBe(9)
+        ->and($level['answered'])->toBe(0)
+        ->and(array_column($level['options']['levels'], 'value'))->toBe(['ol', 'al', 'both'])
+        ->and($level['urls']['submit'])->toBe(route('join.level.update'))
+        ->and($level['urls']['back'])->toBeNull()
+        // Six rail segments: nine questions, the account step on its own.
+        ->and($level['rail'])->toHaveCount(6);
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+
+    // Question 2: only the O/L subjects, and the recap says nothing yet.
+    $subjects = joinSurveyConfig($this->get(route('join.subjects')));
+
+    expect(collect($subjects['options']['subjectGroups'])->pluck('key')->all())->toBe(['ol'])
+        ->and($subjects['options']['subjectGroups'][0]['subjects'])->not->toBeEmpty()
+        ->and($subjects['urls']['back'])->toBe(route('join.level'))
+        ->and($subjects['summary'][1]['items'][0]['value'])->toBeNull();
+
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+
+    // The answer comes back on a revisit, and the recap repeats it.
+    $replayed = joinSurveyConfig($this->get(route('join.subjects')));
+
+    expect($replayed['values']['subjects'])->toBe([$this->olSubject->id])
+        ->and($replayed['answered'])->toBe(2)
+        ->and($replayed['summary'][0]['items'][1]['value'])->toBe('Mathematics');
+});
+
+test('the subjects question separates both levels and pairs same-named subjects', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $olIct = Subject::factory()->create([
+        'education_level_id' => EducationLevel::query()->where('key', 'ol')->value('id'),
+        'name' => 'ICT',
+        'slug' => 'survey-ol-ict',
+    ]);
+
+    $alIct = Subject::factory()->create([
+        'education_level_id' => EducationLevel::query()->where('key', 'al')->value('id'),
+        'name' => 'ICT',
+        'slug' => 'survey-al-ict',
+    ]);
+
+    $this->put(route('join.level.update'), ['level' => 'both']);
+
+    $this->get(route('join.subjects'))
+        ->assertOk()
+        ->assertSee('name="subjects[]"', false);
+
+    $config = joinSurveyConfig($this->get(route('join.subjects')));
+
+    $groups = collect($config['options']['subjectGroups']);
+
+    expect($groups->pluck('key')->all())->toBe(['ol', 'al'])
+        // A compact label the tabs and the tile badges can carry.
+        ->and(array_column($groups->all(), 'shortName'))->toBe(['O/L', 'A/L'])
+        // The picker's copy travels in the island; Vue hardcodes no label.
+        ->and($config['questionCopy']['subjectSearch'])->not->toBeEmpty()
+        ->and($config['questionCopy']['subjectMissingLevel'])->toContain(':level')
+        ->and($config['questionCopy']['subjectTwinHint'])->toContain(':name');
+
+    $olRows = collect($groups[0]['subjects']);
+    $alRows = collect($groups[1]['subjects']);
+
+    $olIctRow = $olRows->firstWhere('id', $olIct->id);
+    $alIctRow = $alRows->firstWhere('id', $alIct->id);
+
+    expect(array_column($olIctRow['twins'], 'id'))->toBe([$alIct->id])
+        ->and(array_column($alIctRow['twins'], 'id'))->toBe([$olIct->id])
+        // A name that only exists once has no twin to suggest.
+        ->and($olRows->firstWhere('id', $this->olSubject->id)['twins'])->toBe([])
+        // Every row knows its own level, so a search across both can badge it.
+        ->and($olIctRow['levelName'])->toBe('O/L')
+        ->and($alIctRow['levelName'])->toBe('A/L');
+});
+
+test('the recap groups subjects by level when both levels are covered', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => 'both']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id, $this->alSubject->id]]);
+
+    $summary = joinSurveyConfig($this->get(route('join.subjects')))['summary'];
+
+    expect($summary[0]['items'][1]['value'])->toBe('O/L: Mathematics · A/L: Physics');
+});
+
+test('the rates island prices only the services the teacher picked', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+    $this->put(route('join.languages.update'), ['languages' => ['English']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson', 'paper_marking']]);
+    $this->put(route('join.experience.update'), ['experience_years' => 3]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
+
+    $config = joinSurveyConfig($this->get(route('join.rates')));
+
+    expect(array_column($config['options']['pricedServices'], 'value'))->toBe(['paper_marking'])
+        // Lessons are priced by the hourly fee itself.
+        ->and($config['limits'])->toMatchArray(['rateMin' => 100, 'rateMax' => 100000])
+        ->and($config['currency']['symbol'])->not->toBeEmpty()
+        ->and($config['csrfToken'])->not->toBeEmpty();
+});
+
+test('a rejected answer reaches Vue as field errors and old input', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+    $this->put(route('join.languages.update'), ['languages' => ['English']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson', 'paper_marking']]);
+    $this->put(route('join.experience.update'), ['experience_years' => 3]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
+
+    $this->from(route('join.rates'))
+        ->put(route('join.rates.update'), ['hourly_rate' => 2000])
+        ->assertSessionHasErrors(['service_rates.paper_marking']);
+
+    $config = joinSurveyConfig($this->get(route('join.rates')));
+
+    expect($config['errorList'])->not->toBeEmpty()
+        ->and($config['fieldErrors']['service_rates.paper_marking'])->not->toBeEmpty()
+        // What was typed survives the bounce.
+        ->and($config['values']['hourly_rate'])->toEqual(2000);
+});
+
+test('the account step ships both of its states to Vue', function () {
+    [, $token] = makeTeacherInvite();
+    joinThroughInvite($token);
+
+    // State 1: the code is out, so the SMS form is the one on screen.
+    $pending = joinAccountConfig($this->get(route('join.account')));
+
+    expect($pending['pending'])->toBeTrue()
+        ->and($pending['formId'])->toBe('join-verify-form')
+        ->and($pending['urls']['verify'])->toBe(route('join.account.verify'))
+        ->and($pending['mobile'])->toBe('077 ••• 45 67')
+        ->and($pending['length'])->toBeGreaterThan(0)
+        ->and($pending['summary'])->toHaveCount(5);
+
+    // "Change my details" drops the passcode and brings the identity form back.
+    $this->post(route('join.account.edit'));
+
+    $identity = joinAccountConfig($this->get(route('join.account')));
+
+    expect($identity['pending'])->toBeFalse()
+        ->and($identity['formId'])->toBe('join-account-form')
+        ->and($identity['urls']['store'])->toBe(route('join.account.store'))
+        ->and($identity['otpEnabled'])->toBeTrue();
 });
