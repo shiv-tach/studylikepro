@@ -45,15 +45,26 @@ final class JoinSurveyConfig
 
         [$plainErrors, $fieldErrors] = self::splitErrors($errors);
 
+        $availability = $answers[TeacherSurvey::STEP_AVAILABILITY] ?? null;
+        $availability = is_array($availability) ? $availability : null;
+
         $answered = TeacherSurvey::answeredCount($answers);
         $total = count(TeacherSurvey::ANSWER_STEPS);
 
         return [
             'step' => $step,
             'isProof' => $isProof,
+            // True while the days screen only shows the recommended week
+            // because nothing has been answered yet: the no-JavaScript twin
+            // keeps the day grid on screen so the days can still be changed.
+            'presetDefaulted' => $step === TeacherSurvey::STEP_AVAILABILITY && self::presetIsDefault($availability),
             'index' => self::index($step),
             'total' => $total,
             'answered' => $answered,
+            // What the rail labels the question with ("Question 3 of 8"), while
+            // the bar itself counts one unit more for the account form.
+            'questions' => $total,
+            'railUnits' => $total + 1,
             'percent' => $total > 0 ? (int) round(($answered / $total) * 100) : 0,
             'title' => self::title($step),
             'body' => self::body($step, $answers),
@@ -72,9 +83,6 @@ final class JoinSurveyConfig
                 'languages' => array_values((array) config('studylikepro.languages')),
                 'services' => TeacherSurvey::serviceOptions(),
                 'educationOptions' => TeacherSurvey::educationOptions(),
-                'pricedServices' => $step === TeacherSurvey::STEP_RATES
-                    ? TeacherSurvey::pricedServiceOptions((array) ($answers[TeacherSurvey::STEP_SERVICES] ?? []))
-                    : [],
                 'days' => TeacherSurvey::availabilityDays(),
                 'presets' => $presets,
                 'presetDays' => $presetDays,
@@ -100,7 +108,6 @@ final class JoinSurveyConfig
                     TeacherSurvey::STEP_SERVICES => 'join.services.update',
                     TeacherSurvey::STEP_EXPERIENCE => 'join.experience.update',
                     TeacherSurvey::STEP_EDUCATION => 'join.education.update',
-                    TeacherSurvey::STEP_RATES => 'join.rates.update',
                     TeacherSurvey::STEP_AVAILABILITY => 'join.availability.update',
                     default => 'join.proof.update',
                 }),
@@ -219,7 +226,6 @@ final class JoinSurveyConfig
             ]),
             TeacherSurvey::STEP_EXPERIENCE => __('How long have you been teaching?'),
             TeacherSurvey::STEP_EDUCATION => __('Where did you study?'),
-            TeacherSurvey::STEP_RATES => __('What do you charge?'),
             TeacherSurvey::STEP_AVAILABILITY => __('Which days can you teach?'),
             default => __('Are you a government teacher?'),
         };
@@ -240,10 +246,9 @@ final class JoinSurveyConfig
                     'level' => TeacherSurvey::levelLabel($level ?? ''),
                 ]),
             TeacherSurvey::STEP_LANGUAGES => __('Pick every language you can teach a lesson in — more than one is fine.'),
-            TeacherSurvey::STEP_SERVICES => __('Pick everything you would like to offer. You will set prices in a moment.'),
+            TeacherSurvey::STEP_SERVICES => __('Pick every service you would like to offer, then set the price for each one you tick. You can change these prices later.'),
             TeacherSurvey::STEP_EXPERIENCE => __('Students see this on your profile card. Count the years you have taught, including school and tuition classes.'),
             TeacherSurvey::STEP_EDUCATION => __('Pick the institute where you earned your highest qualification.'),
-            TeacherSurvey::STEP_RATES => __('Set your hourly fee for a lesson, then a price for each service you picked. You can change these later.'),
             TeacherSurvey::STEP_AVAILABILITY => __('Pick the days you can teach, starting from one of the suggested weeks. You will set the exact hours in the next step after signing up.'),
             default => __('Upload any document that proves your government teaching post. Verified government teachers get a badge on their profile card.'),
         };
@@ -258,8 +263,7 @@ final class JoinSurveyConfig
             TeacherSurvey::STEP_SERVICES => route('join.languages'),
             TeacherSurvey::STEP_EXPERIENCE => route('join.services'),
             TeacherSurvey::STEP_EDUCATION => route('join.experience'),
-            TeacherSurvey::STEP_RATES => route('join.education'),
-            TeacherSurvey::STEP_AVAILABILITY => route('join.rates'),
+            TeacherSurvey::STEP_AVAILABILITY => route('join.education'),
             default => route('join.availability'),
         };
     }
@@ -273,6 +277,7 @@ final class JoinSurveyConfig
     public static function values(string $step, array $answers): array
     {
         $stored = $answers[$step] ?? [];
+        $rates = is_array($answers[TeacherSurvey::STEP_RATES] ?? null) ? $answers[TeacherSurvey::STEP_RATES] : [];
 
         return match ($step) {
             TeacherSurvey::STEP_LEVEL => [
@@ -286,6 +291,13 @@ final class JoinSurveyConfig
             ],
             TeacherSurvey::STEP_SERVICES => [
                 'services' => array_values(array_map('strval', (array) old('services', is_array($stored) ? $stored : []))),
+                // The prices are asked on this screen, so a bounced save (or a
+                // teacher stepping back) has to replay them with the picks.
+                'hourly_rate' => old('hourly_rate', $rates['hourly_rate'] ?? null),
+                'service_rates' => (array) old(
+                    'service_rates',
+                    is_array($rates['service_rates'] ?? null) ? $rates['service_rates'] : [],
+                ),
             ],
             TeacherSurvey::STEP_EXPERIENCE => [
                 'experience_years' => old('experience_years', is_array($stored) ? ($stored['value'] ?? null) : null),
@@ -293,14 +305,7 @@ final class JoinSurveyConfig
             TeacherSurvey::STEP_EDUCATION => [
                 'education' => old('education', is_array($stored) ? ($stored['value'] ?? null) : null),
             ],
-            TeacherSurvey::STEP_RATES => [
-                'hourly_rate' => old('hourly_rate', is_array($stored) ? ($stored['hourly_rate'] ?? null) : null),
-                'service_rates' => (array) old('service_rates', is_array($stored) ? ($stored['service_rates'] ?? []) : []),
-            ],
-            TeacherSurvey::STEP_AVAILABILITY => [
-                'days' => array_values(array_map('intval', (array) old('days', is_array($stored) ? ($stored['days'] ?? []) : []))),
-                'preset' => self::presetValue($stored),
-            ],
+            TeacherSurvey::STEP_AVAILABILITY => self::availabilityValues(is_array($stored) ? $stored : []),
             default => [
                 'claims' => old('claims', is_array($stored) && isset($stored['claimed'])
                     ? ($stored['claimed'] ? '1' : '0')
@@ -321,6 +326,45 @@ final class JoinSurveyConfig
         $value = old('preset', $stored['preset'] ?? null);
 
         return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * The days screen opens on the week we recommend (weekday evenings and full
+     * weekends) so a teacher starts from a school-friendly schedule instead of
+     * an empty one. The days come with the choice, otherwise the required day
+     * list would be empty and the save would be refused.
+     *
+     * @param  array<string, mixed>  $stored
+     * @return array{days: list<int>, preset: ?string}
+     */
+    private static function availabilityValues(array $stored): array
+    {
+        if (self::presetIsDefault($stored)) {
+            $recommended = AvailabilityPresets::recommended();
+
+            return [
+                'days' => array_values(array_map('intval', array_keys($recommended['days']))),
+                'preset' => (string) $recommended['key'],
+            ];
+        }
+
+        return [
+            'days' => array_values(array_map('intval', (array) old('days', $stored['days'] ?? []))),
+            'preset' => self::presetValue($stored),
+        ];
+    }
+
+    /**
+     * Nothing answered and nothing posted yet, so the screen is free to show
+     * the recommended week as its default.
+     *
+     * @param  array<string, mixed>|null  $stored
+     */
+    private static function presetIsDefault(?array $stored): bool
+    {
+        return ($stored === null || $stored === [])
+            && old('preset') === null
+            && old('days') === null;
     }
 
     /**
@@ -378,16 +422,19 @@ final class JoinSurveyConfig
             'subjectTabsLabel' => __('Subject levels'),
             'subjectBrowseHint' => __('Pick every subject you would take students for.'),
             'subjectNoscriptHint' => __('Every subject is listed level by level below.'),
+            // Question 4: the services, each one priced on the spot.
+            'serviceSelectAll' => __('Select all'),
+            'serviceClear' => __('Clear'),
+            'servicePicked' => __(':count of :total picked'),
+            'servicePickedNone' => __('Nothing picked yet — tick the services you would like to offer.'),
+            'servicePriceHint' => __('Students see this price. You can change it later.'),
+            'serviceNoscriptHint' => __('Tick every service you would like to offer and set its price next to it.'),
             'years' => __('Years of experience'),
             'yearsUnit' => __('years'),
             'yearsHint' => __('Whole years. Enter 0 if you have not taught yet.'),
-            'hourlyRate' => __('Hourly fee for a lesson (rupees)'),
-            'hourlyRateHint' => __('What an hour of one-to-one teaching costs.'),
             'hourUnit' => __('hour'),
-            'serviceRate' => __('Price for :service (rupees)'),
-            'lessonsOnly' => __('You picked lessons only, so the hourly fee covers everything for now.'),
             'presetsTitle' => __('Suggested weeks'),
-            'presetsHint' => __('The weeks we suggest when you set your hours. Pick one to use its days and times, or pick My own days to choose the days yourself.'),
+            'presetsHint' => __('The weeks we suggest when you set your hours. We start you on the school-friendly week we recommend — pick another one to use its days and times, or pick My own days to choose the days yourself.'),
             'recommended' => __('Recommended'),
             'ownDaysTitle' => __('My own days'),
             'ownDaysHint' => __('Tick the days yourself. Each one starts at the recommended hours.'),

@@ -14,7 +14,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * A teacher onboarding link opens the invite survey as a guest: nine questions
+ * A teacher onboarding link opens the invite survey as a guest: eight questions
  * are answered first and the account — carrying those answers — is created only
  * when the SMS code is confirmed.
  */
@@ -84,7 +84,7 @@ test('every survey question needs the invite the visitor arrived with', function
         ->assertRedirect(route('register', ['invite' => $token]));
 });
 
-test('the nine questions are answered before the account exists', function () {
+test('the eight questions are answered before the account exists', function () {
     [, $token] = makeTeacherInvite();
 
     $this->get('/register?invite='.$token)->assertRedirect(route('join.start'));
@@ -110,8 +110,20 @@ test('the nine questions are answered before the account exists', function () {
     $this->put(route('join.languages.update'), ['languages' => ['English', 'Sinhala']])
         ->assertRedirect(route('join.services'));
 
-    $this->put(route('join.services.update'), ['services' => ['lesson', 'paper_marking', 'qna']])
-        ->assertRedirect(route('join.experience'));
+    // Question 4 asks for a price on every service that gets ticked.
+    $this->get(route('join.services'))
+        ->assertOk()
+        ->assertSee('What would you like to do on', false)
+        ->assertSee('name="hourly_rate"', false)
+        ->assertSee('name="service_rates[paper_marking]"', false)
+        ->assertSee('name="service_rates[qna]"', false)
+        ->assertDontSee('name="service_rates[lesson]"', false);
+
+    $this->put(route('join.services.update'), [
+        'services' => ['lesson', 'paper_marking', 'qna'],
+        'hourly_rate' => 2500,
+        'service_rates' => ['paper_marking' => 1500, 'qna' => 800],
+    ])->assertRedirect(route('join.experience'));
 
     $this->get(route('join.experience'))
         ->assertOk()
@@ -128,21 +140,7 @@ test('the nine questions are answered before the account exists', function () {
         ->assertSee('National College of Education');
 
     $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_PRIVATE_UNIVERSITY])
-        ->assertRedirect(route('join.rates'));
-
-    // The rates question only prices the services picked a moment ago.
-    $this->get(route('join.rates'))
-        ->assertOk()
-        ->assertSee('What do you charge?')
-        ->assertSee('name="hourly_rate"', false)
-        ->assertSee('name="service_rates[paper_marking]"', false)
-        ->assertSee('name="service_rates[qna]"', false)
-        ->assertDontSee('name="service_rates[lesson]"', false);
-
-    $this->put(route('join.rates.update'), [
-        'hourly_rate' => 2500,
-        'service_rates' => ['paper_marking' => 1500, 'qna' => 800],
-    ])->assertRedirect(route('join.availability'));
+        ->assertRedirect(route('join.availability'));
 
     $this->get(route('join.availability'))
         ->assertOk()
@@ -175,6 +173,9 @@ test('the nine questions are answered before the account exists', function () {
         ->and(PendingTeacherSignup::step(TeacherSurvey::STEP_EXPERIENCE))->toBe(['value' => 8])
         ->and(PendingTeacherSignup::step(TeacherSurvey::STEP_EDUCATION))
         ->toBe(['value' => TeacherSurvey::EDUCATION_PRIVATE_UNIVERSITY])
+        // The prices ride along with the services answer.
+        ->and(PendingTeacherSignup::step(TeacherSurvey::STEP_RATES))
+        ->toBe(['hourly_rate' => 2500.0, 'service_rates' => ['paper_marking' => 1500.0, 'qna' => 800.0]])
         ->and(PendingTeacherSignup::step(TeacherSurvey::STEP_AVAILABILITY))->toBe(['days' => [1, 3, 5], 'preset' => null]);
 });
 
@@ -195,11 +196,14 @@ test('a question cannot be answered before the one it depends on', function () {
     $this->get(route('join.education'))
         ->assertRedirect(route('join.experience'));
 
-    $this->get(route('join.rates'))
-        ->assertRedirect(route('join.education'));
-
     $this->get(route('join.availability'))
-        ->assertRedirect(route('join.rates'));
+        ->assertRedirect(route('join.services'))
+        ->assertSessionHas('status', 'answer-the-service-question');
+
+    // The rates question was folded into the services one, so an old link lands
+    // on the merged screen instead of a dead end.
+    $this->get(route('join.rates'))
+        ->assertRedirect(route('join.services'));
 
     $this->get(route('join.proof'))
         ->assertRedirect(route('join.availability'));
@@ -207,50 +211,66 @@ test('a question cannot be answered before the one it depends on', function () {
     $this->get(route('join.account'))->assertRedirect(route('join.level'));
 });
 
-test('the rates question needs a price for every service that was picked', function () {
+test('the services question needs a price for every service that was picked', function () {
     [, $token] = makeTeacherInvite();
     $this->get('/register?invite='.$token);
 
     $this->put(route('join.level.update'), ['level' => 'ol']);
     $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
     $this->put(route('join.languages.update'), ['languages' => ['English']]);
-    $this->put(route('join.services.update'), ['services' => ['lesson', 'paper_marking']]);
-    $this->put(route('join.experience.update'), ['experience_years' => 3]);
-    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
 
-    $this->from(route('join.rates'))
-        ->put(route('join.rates.update'), ['hourly_rate' => 2000])
+    // A ticked service without its own price is refused.
+    $this->from(route('join.services'))
+        ->put(route('join.services.update'), [
+            'services' => ['lesson', 'paper_marking'],
+            'hourly_rate' => 2000,
+        ])
         ->assertSessionHasErrors('service_rates.paper_marking');
 
-    $this->from(route('join.rates'))
-        ->put(route('join.rates.update'), ['hourly_rate' => 50])
+    // The hourly fee still has a floor.
+    $this->from(route('join.services'))
+        ->put(route('join.services.update'), [
+            'services' => ['lesson', 'paper_marking'],
+            'hourly_rate' => 50,
+            'service_rates' => ['paper_marking' => 900],
+        ])
         ->assertSessionHasErrors('hourly_rate');
 
-    expect(PendingTeacherSignup::hasStep(TeacherSurvey::STEP_RATES))->toBeFalse();
+    // Lessons ticked means an hourly fee is owed.
+    $this->from(route('join.services'))
+        ->put(route('join.services.update'), ['services' => ['lesson']])
+        ->assertSessionHasErrors('hourly_rate');
+
+    expect(PendingTeacherSignup::hasStep(TeacherSurvey::STEP_SERVICES))->toBeFalse()
+        ->and(PendingTeacherSignup::hasStep(TeacherSurvey::STEP_RATES))->toBeFalse();
 });
 
-test('changing the services drops the prices given for the old picks', function () {
+test('the services question stores the prices next to the picks', function () {
     [, $token] = makeTeacherInvite();
     $this->get('/register?invite='.$token);
 
     $this->put(route('join.level.update'), ['level' => 'ol']);
     $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
     $this->put(route('join.languages.update'), ['languages' => ['English']]);
-    $this->put(route('join.services.update'), ['services' => ['lesson', 'paper_marking']]);
-    $this->put(route('join.experience.update'), ['experience_years' => 4]);
-    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
-    $this->put(route('join.rates.update'), [
+    $this->put(route('join.services.update'), [
+        'services' => ['lesson', 'paper_marking'],
         'hourly_rate' => 2000,
         'service_rates' => ['paper_marking' => 900],
     ]);
 
-    expect(PendingTeacherSignup::hasStep(TeacherSurvey::STEP_RATES))->toBeTrue();
+    expect(PendingTeacherSignup::step(TeacherSurvey::STEP_RATES))
+        ->toBe(['hourly_rate' => 2000.0, 'service_rates' => ['paper_marking' => 900.0]]);
 
-    // A different service list cannot keep the price of a service that is gone.
-    $this->put(route('join.services.update'), ['services' => ['lesson', 'qna']])
-        ->assertRedirect(route('join.experience'));
+    // Picking a different service later replaces the answer: the price of a
+    // service that is gone cannot survive, and a teacher who does not offer
+    // lessons is not asked for an hourly fee at all.
+    $this->put(route('join.services.update'), [
+        'services' => ['qna'],
+        'service_rates' => ['qna' => 750, 'paper_marking' => 900],
+    ])->assertRedirect(route('join.experience'));
 
-    expect(PendingTeacherSignup::hasStep(TeacherSurvey::STEP_RATES))->toBeFalse();
+    expect(PendingTeacherSignup::step(TeacherSurvey::STEP_RATES))
+        ->toBe(['hourly_rate' => null, 'service_rates' => ['qna' => 750.0]]);
 });
 
 test('the days question needs at least one day', function () {    [, $token] = makeTeacherInvite();
@@ -259,10 +279,9 @@ test('the days question needs at least one day', function () {    [, $token] = m
     $this->put(route('join.level.update'), ['level' => 'ol']);
     $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
     $this->put(route('join.languages.update'), ['languages' => ['English']]);
-    $this->put(route('join.services.update'), ['services' => ['lesson']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson'], 'hourly_rate' => 2000]);
     $this->put(route('join.experience.update'), ['experience_years' => 0]);
     $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_GOVERNMENT_UNIVERSITY]);
-    $this->put(route('join.rates.update'), ['hourly_rate' => 2000]);
 
     $this->from(route('join.availability'))
         ->put(route('join.availability.update'), ['days' => []])
@@ -278,10 +297,9 @@ test('the days question offers the same suggested weeks and times as onboarding'
     $this->put(route('join.level.update'), ['level' => 'ol']);
     $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
     $this->put(route('join.languages.update'), ['languages' => ['English']]);
-    $this->put(route('join.services.update'), ['services' => ['lesson']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson'], 'hourly_rate' => 2000]);
     $this->put(route('join.experience.update'), ['experience_years' => 0]);
     $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
-    $this->put(route('join.rates.update'), ['hourly_rate' => 2000]);
 
     $response = $this->get(route('join.availability'));
 
@@ -302,13 +320,41 @@ test('the days question offers the same suggested weeks and times as onboarding'
         ->assertSee('You can change your availability any time after you register.');
 
     // The Vue island carries the rule the grid follows: a picked week replaces
-    // the days, and every day card shows the hours that week would use.
+    // the days, and every day card shows the hours that week would use. A first
+    // visit opens on the recommended week (with its days already ticked), so the
+    // teacher confirms a school-friendly schedule instead of an empty one.
     $config = joinSurveyConfig($response);
 
-    expect($config['values']['preset'])->toBeNull()
+    expect($config['values']['preset'])->toBe('school_friendly')
+        ->and($config['values']['days'])->toBe([1, 2, 3, 4, 5, 6, 0])
+        ->and($config['presetDefaulted'])->toBeTrue()
         ->and($config['options']['presetDays']['school_friendly'])->toBe([1, 2, 3, 4, 5, 6, 0])
         ->and($config['options']['dayTimes'][1])->toBe('3:00 PM – 9:00 PM')
         ->and($config['options']['presetDays'])->toHaveKeys(['school_friendly', 'evenings', 'weekends']);
+
+    // The no-JavaScript twin marks the same card, so both renderings agree on
+    // what is selected when the screen opens.
+    expect($response->getContent())
+        ->toMatch('/name="preset"\s+value="school_friendly"\s+class="peer sr-only"\s+checked/');
+});
+
+test('the days question keeps an answered week instead of the default', function () {
+    [, $token] = makeTeacherInvite();
+    $this->get('/register?invite='.$token);
+
+    $this->put(route('join.level.update'), ['level' => 'ol']);
+    $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
+    $this->put(route('join.languages.update'), ['languages' => ['English']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson'], 'hourly_rate' => 2000]);
+    $this->put(route('join.experience.update'), ['experience_years' => 0]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
+    $this->put(route('join.availability.update'), ['days' => [1, 3], 'preset' => 'evenings']);
+
+    $config = joinSurveyConfig($this->get(route('join.availability')));
+
+    expect($config['values']['preset'])->toBe('evenings')
+        ->and($config['values']['days'])->toBe([1, 3])
+        ->and($config['presetDefaulted'])->toBeFalse();
 });
 
 test('the days question only accepts a suggested week it knows', function () {
@@ -318,10 +364,9 @@ test('the days question only accepts a suggested week it knows', function () {
     $this->put(route('join.level.update'), ['level' => 'ol']);
     $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
     $this->put(route('join.languages.update'), ['languages' => ['English']]);
-    $this->put(route('join.services.update'), ['services' => ['lesson']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson'], 'hourly_rate' => 2000]);
     $this->put(route('join.experience.update'), ['experience_years' => 0]);
     $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
-    $this->put(route('join.rates.update'), ['hourly_rate' => 2000]);
 
     $this->from(route('join.availability'))
         ->put(route('join.availability.update'), ['days' => [1], 'preset' => 'midnight-oil'])
@@ -424,10 +469,9 @@ test('the proof question is optional but needs a file when a teacher claims a go
     $this->put(route('join.level.update'), ['level' => 'ol']);
     $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
     $this->put(route('join.languages.update'), ['languages' => ['English']]);
-    $this->put(route('join.services.update'), ['services' => ['lesson']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson'], 'hourly_rate' => 2500]);
     $this->put(route('join.experience.update'), ['experience_years' => 5]);
     $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
-    $this->put(route('join.rates.update'), ['hourly_rate' => 2500]);
     $this->put(route('join.availability.update'), ['days' => [2, 4]]);
 
     $this->from(route('join.proof'))
@@ -457,7 +501,11 @@ test('the account is created only once the texted code is confirmed', function (
         'level' => ['level' => 'ol'],
         'subjects' => ['subjects' => [$this->olSubject->id]],
         'languages' => ['languages' => ['English', 'Sinhala']],
-        'services' => ['services' => ['lesson', 'paper_marking']],
+        'services' => [
+            'services' => ['lesson', 'paper_marking'],
+            'hourly_rate' => 2500,
+            'service_rates' => ['paper_marking' => 1500],
+        ],
         'proof' => [
             'claims' => '1',
             'document' => UploadedFile::fake()->create('staff-id.pdf', 120, 'application/pdf'),
@@ -599,10 +647,9 @@ test('an email that is already registered is caught before the code is sent', fu
     $this->put(route('join.level.update'), ['level' => 'ol']);
     $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
     $this->put(route('join.languages.update'), ['languages' => ['English']]);
-    $this->put(route('join.services.update'), ['services' => ['lesson']]);
+    $this->put(route('join.services.update'), ['services' => ['lesson'], 'hourly_rate' => 2500]);
     $this->put(route('join.experience.update'), ['experience_years' => 5]);
     $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
-    $this->put(route('join.rates.update'), ['hourly_rate' => 2500]);
     $this->put(route('join.availability.update'), ['days' => [2, 4]]);
     $this->post(route('join.proof.update'), ['claims' => '0']);
 
@@ -652,13 +699,13 @@ test('the account is created immediately when mobile verification is switched of
     $this->put(route('join.level.update'), ['level' => 'al']);
     $this->put(route('join.subjects.update'), ['subjects' => [$this->alSubject->id]]);
     $this->put(route('join.languages.update'), ['languages' => ['Tamil']]);
-    $this->put(route('join.services.update'), ['services' => ['paper_discussion']]);
-    $this->put(route('join.experience.update'), ['experience_years' => 12]);
-    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_NATIONAL_COLLEGE]);
-    $this->put(route('join.rates.update'), [
-        'hourly_rate' => 3000,
+    // No lessons, so no hourly fee is asked for — only the session price.
+    $this->put(route('join.services.update'), [
+        'services' => ['paper_discussion'],
         'service_rates' => ['paper_discussion' => 1200],
     ]);
+    $this->put(route('join.experience.update'), ['experience_years' => 12]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_NATIONAL_COLLEGE]);
     $this->put(route('join.availability.update'), ['days' => [0, 6]]);
     $this->post(route('join.proof.update'), ['claims' => '0']);
 
@@ -708,7 +755,7 @@ test('the survey shows what has been answered and a sticky way forward', functio
 
     $this->get(route('join.languages'))
         ->assertOk()
-        ->assertSee('Question 3 of 9')
+        ->assertSee('Question 3 of 8')
         // The recap repeats the answers already saved.
         ->assertSee('Exam level')
         ->assertSee('O/L')
@@ -723,13 +770,13 @@ test('the last step recaps every answer and submits from the phone bar', functio
     $this->put(route('join.level.update'), ['level' => 'ol']);
     $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
     $this->put(route('join.languages.update'), ['languages' => ['English', 'Sinhala']]);
-    $this->put(route('join.services.update'), ['services' => ['lesson', 'paper_marking']]);
-    $this->put(route('join.experience.update'), ['experience_years' => 5]);
-    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_GOVERNMENT_UNIVERSITY]);
-    $this->put(route('join.rates.update'), [
+    $this->put(route('join.services.update'), [
+        'services' => ['lesson', 'paper_marking'],
         'hourly_rate' => 2500,
         'service_rates' => ['paper_marking' => 1500],
     ]);
+    $this->put(route('join.experience.update'), ['experience_years' => 5]);
+    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_GOVERNMENT_UNIVERSITY]);
     $this->put(route('join.availability.update'), ['days' => [1, 3, 5]]);
     $this->post(route('join.proof.update'), ['claims' => '0']);
 
@@ -788,12 +835,15 @@ test('every survey screen ships the island its Vue app renders', function () {
 
     expect($level['step'])->toBe('level')
         ->and($level['index'])->toBe(1)
-        ->and($level['total'])->toBe(9)
+        ->and($level['total'])->toBe(8)
         ->and($level['answered'])->toBe(0)
+        ->and($level['questions'])->toBe(8)
         ->and(array_column($level['options']['levels'], 'value'))->toBe(['ol', 'al', 'both'])
         ->and($level['urls']['submit'])->toBe(route('join.level.update'))
         ->and($level['urls']['back'])->toBeNull()
-        // Six rail segments: nine questions, the account step on its own.
+        // The bar counts eight questions plus the account form at the end.
+        ->and($level['railUnits'])->toBe(9)
+        // Six rail segments: eight questions, the account step on its own.
         ->and($level['rail'])->toHaveCount(6);
 
     $this->put(route('join.level.update'), ['level' => 'ol']);
@@ -877,24 +927,39 @@ test('the recap groups subjects by level when both levels are covered', function
     expect($summary[0]['items'][1]['value'])->toBe('O/L: Mathematics · A/L: Physics');
 });
 
-test('the rates island prices only the services the teacher picked', function () {
+test('the services island carries a price field for every service', function () {
     [, $token] = makeTeacherInvite();
     $this->get('/register?invite='.$token);
 
     $this->put(route('join.level.update'), ['level' => 'ol']);
     $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
     $this->put(route('join.languages.update'), ['languages' => ['English']]);
-    $this->put(route('join.services.update'), ['services' => ['lesson', 'paper_marking']]);
-    $this->put(route('join.experience.update'), ['experience_years' => 3]);
-    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
+    $this->put(route('join.services.update'), [
+        'services' => ['lesson', 'paper_marking'],
+        'hourly_rate' => 2000,
+        'service_rates' => ['paper_marking' => 900],
+    ]);
 
-    $config = joinSurveyConfig($this->get(route('join.rates')));
+    $config = joinSurveyConfig($this->get(route('join.services')));
 
-    expect(array_column($config['options']['pricedServices'], 'value'))->toBe(['paper_marking'])
-        // Lessons are priced by the hourly fee itself.
+    $services = collect($config['options']['services']);
+
+    expect($services->pluck('value')->all())->toBe(['lesson', 'paper_marking', 'paper_discussion', 'qna'])
+        // Every card says what its price is for, so the four are easy to tell
+        // apart before the teacher ticks anything.
+        ->and($services->pluck('badge')->all())->toBe(['Per hour', 'Per paper', 'Per session', 'Per session'])
+        ->and($services->pluck('unit')->all())->toBe(['hour', 'paper', 'session', 'session'])
+        // Lessons are priced by the hourly fee itself, not by `service_rates`.
+        ->and($services->firstWhere('value', 'lesson')['priced'])->toBeFalse()
+        ->and($services->where('priced', true))->toHaveCount(3)
+        // The picks and the prices they were given come back on a revisit.
+        ->and($config['values']['services'])->toBe(['lesson', 'paper_marking'])
+        ->and($config['values']['hourly_rate'])->toEqual(2000)
+        ->and($config['values']['service_rates'])->toEqual(['paper_marking' => 900])
         ->and($config['limits'])->toMatchArray(['rateMin' => 100, 'rateMax' => 100000])
         ->and($config['currency']['symbol'])->not->toBeEmpty()
-        ->and($config['csrfToken'])->not->toBeEmpty();
+        ->and($config['csrfToken'])->not->toBeEmpty()
+        ->and($config['questionCopy']['servicePicked'])->toContain(':count');
 });
 
 test('a rejected answer reaches Vue as field errors and old input', function () {
@@ -904,15 +969,15 @@ test('a rejected answer reaches Vue as field errors and old input', function () 
     $this->put(route('join.level.update'), ['level' => 'ol']);
     $this->put(route('join.subjects.update'), ['subjects' => [$this->olSubject->id]]);
     $this->put(route('join.languages.update'), ['languages' => ['English']]);
-    $this->put(route('join.services.update'), ['services' => ['lesson', 'paper_marking']]);
-    $this->put(route('join.experience.update'), ['experience_years' => 3]);
-    $this->put(route('join.education.update'), ['education' => TeacherSurvey::EDUCATION_OTHER]);
 
-    $this->from(route('join.rates'))
-        ->put(route('join.rates.update'), ['hourly_rate' => 2000])
+    $this->from(route('join.services'))
+        ->put(route('join.services.update'), [
+            'services' => ['lesson', 'paper_marking'],
+            'hourly_rate' => 2000,
+        ])
         ->assertSessionHasErrors(['service_rates.paper_marking']);
 
-    $config = joinSurveyConfig($this->get(route('join.rates')));
+    $config = joinSurveyConfig($this->get(route('join.services')));
 
     expect($config['errorList'])->not->toBeEmpty()
         ->and($config['fieldErrors']['service_rates.paper_marking'])->not->toBeEmpty()
@@ -932,7 +997,12 @@ test('the account step ships both of its states to Vue', function () {
         ->and($pending['urls']['verify'])->toBe(route('join.account.verify'))
         ->and($pending['mobile'])->toBe('077 ••• 45 67')
         ->and($pending['length'])->toBeGreaterThan(0)
-        ->and($pending['summary'])->toHaveCount(5);
+        ->and($pending['summary'])->toHaveCount(5)
+        // The last screen is not finished work: the bar counts the account form
+        // as one unit more than the eight questions already answered.
+        ->and($pending['answered'])->toBe(8)
+        ->and($pending['questions'])->toBe(8)
+        ->and($pending['railUnits'])->toBe(9);
 
     // "Change my details" drops the passcode and brings the identity form back.
     $this->post(route('join.account.edit'));

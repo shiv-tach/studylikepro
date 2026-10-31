@@ -650,7 +650,7 @@ function registerThroughOtp(array $payload, string $url = '/register'): TestResp
 }
 
 /**
- * Walk the invite survey from the link to the SMS step: the nine questions,
+ * Walk the invite survey from the link to the SMS step: the eight questions,
  * then the account form. Returns the account details it submitted.
  *
  * @param  array<string, string>  $account
@@ -682,13 +682,14 @@ function joinThroughInvite(string $token, array $account = [], array $steps = []
         'level' => ['level' => 'ol'],
         'subjects' => ['subjects' => [$subjectId]],
         'languages' => ['languages' => ['English', 'Sinhala']],
-        'services' => ['services' => ['lesson', 'paper_marking']],
-        'experience' => ['experience_years' => 5],
-        'education' => ['education' => TeacherSurvey::EDUCATION_GOVERNMENT_UNIVERSITY],
-        'rates' => [
+        // The services question asks for the prices on the spot.
+        'services' => [
+            'services' => ['lesson', 'paper_marking'],
             'hourly_rate' => 2500,
             'service_rates' => ['paper_marking' => 1500],
         ],
+        'experience' => ['experience_years' => 5],
+        'education' => ['education' => TeacherSurvey::EDUCATION_GOVERNMENT_UNIVERSITY],
         'availability' => ['days' => [1, 3, 5]],
         'proof' => ['claims' => '0'],
     ], $steps);
@@ -711,9 +712,6 @@ function joinThroughInvite(string $token, array $account = [], array $steps = []
         ->assertRedirect(route('join.education'));
 
     test()->put(route('join.education.update'), $steps['education'])
-        ->assertRedirect(route('join.rates'));
-
-    test()->put(route('join.rates.update'), $steps['rates'])
         ->assertRedirect(route('join.availability'));
 
     test()->put(route('join.availability.update'), $steps['availability'])

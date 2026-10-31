@@ -1,4 +1,4 @@
-@props(['current' => 1, 'steps' => null, 'answered' => null, 'questions' => null, 'question' => null])
+@props(['current' => 1, 'steps' => null, 'answered' => null, 'questions' => null, 'question' => null, 'railUnits' => null])
 
 @php
     // Blade decides the labels and the state; this component only decides how a
@@ -9,19 +9,24 @@
     $completedCount = count(array_filter($steps, fn (array $step) => $step['done']));
     $active = collect($steps)->firstWhere('number', $current) ?? ($steps[0] ?? null);
 
-    // The guest survey answers nine questions but only has six rail segments,
+    // The guest survey answers eight questions but only has six rail segments,
     // so it also passes how many answers are already saved. That keeps the bar
     // moving on every screen instead of every second screen.
     $answeredCount = $answered === null ? null : (int) $answered;
     $questionTotal = $questions === null ? null : (int) $questions;
 
-    $percent = $answeredCount !== null && $questionTotal
-        ? ($answeredCount / $questionTotal) * 100
+    // The bar measures one unit more than there are questions when the account
+    // form still has to be filled in, so it never looks finished too early. The
+    // question count above stays the label ("Question 3 of 8").
+    $unitTotal = $railUnits === null ? $questionTotal : (int) $railUnits;
+
+    $percent = $answeredCount !== null && $unitTotal
+        ? ($answeredCount / $unitTotal) * 100
         : ($total > 0 ? (($current - 1) / $total) * 100 : 0);
 
-    // A phone shows the finished questions in emerald and the question being
-    // answered now in primary, mirroring the segments of the rail.
-    $stepShare = $questionTotal ? 100 / $questionTotal : ($total > 0 ? 100 / $total : 0);
+    // A phone shows the finished units in emerald and the unit being worked on
+    // now in primary, mirroring the segments of the rail.
+    $stepShare = $unitTotal ? 100 / $unitTotal : ($total > 0 ? 100 / $total : 0);
     $donePercent = max(0, min(100, (int) round($percent)));
     $activePercent = max(0, min(100 - $donePercent, (int) round($stepShare)));
     $activePercent = $donePercent === 0 && $activePercent === 0 ? 2 : $activePercent;
@@ -45,7 +50,7 @@
                 <span class="truncate align-bottom">{{ $active['label'] ?? '' }}</span>
             </p>
             <p class="shrink-0 text-[11px] font-semibold text-slate-400">
-                {{ $questionTotal ? $answeredCount.'/'.$questionTotal : $completedCount.'/'.$total }}
+                {{ $unitTotal ? $answeredCount.'/'.$unitTotal : $completedCount.'/'.$total }}
             </p>
         </div>
 

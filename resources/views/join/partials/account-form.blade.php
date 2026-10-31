@@ -19,7 +19,7 @@
 @endphp
 
 <x-onboarding-progress :current="$c['currentGroup']" :steps="$c['rail']"
-                       :answered="$c['answered']" :questions="$c['questions']" />
+                       :answered="$c['answered']" :questions="$c['questions']" :rail-units="$c['railUnits']" />
 
 <div class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
     <div class="space-y-5">

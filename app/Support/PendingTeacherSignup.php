@@ -170,7 +170,11 @@ final class PendingTeacherSignup
 
         $payload = [];
 
-        foreach (self::ANSWER_STEPS as $step) {
+        // The rates answer is no longer a question of its own (the services
+        // question prices every pick), but the account still receives it under
+        // its own key because the profile stores the hourly fee and the service
+        // prices apart.
+        foreach ([...self::ANSWER_STEPS, TeacherSurvey::STEP_RATES] as $step) {
             $payload[$step] = self::step($step);
         }
 

@@ -22,7 +22,6 @@ import LanguagesQuestion from './components/questions/LanguagesQuestion.vue';
 import ServicesQuestion from './components/questions/ServicesQuestion.vue';
 import ExperienceQuestion from './components/questions/ExperienceQuestion.vue';
 import EducationQuestion from './components/questions/EducationQuestion.vue';
-import RatesQuestion from './components/questions/RatesQuestion.vue';
 import AvailabilityQuestion from './components/questions/AvailabilityQuestion.vue';
 import ProofQuestion from './components/questions/ProofQuestion.vue';
 import { CARD, GHOST_BUTTON } from './styles';
@@ -38,7 +37,6 @@ const QUESTIONS = {
     services: ServicesQuestion,
     experience: ExperienceQuestion,
     education: EducationQuestion,
-    rates: RatesQuestion,
     availability: AvailabilityQuestion,
     proof: ProofQuestion,
 };

@@ -19,14 +19,16 @@ const total = computed(() => steps.value.length);
 const current = computed(() => Number(props.config.currentGroup ?? 1));
 const answeredCount = computed(() => Number(props.config.answered ?? 0));
 const questionTotal = computed(() => Number(props.config.questions ?? props.config.total ?? 0));
+// One unit more than the questions: the account form at the end of the flow.
+const unitTotal = computed(() => Number(props.config.railUnits ?? questionTotal.value));
 const question = computed(() => Number(props.config.index ?? 0) || null);
 const completedCount = computed(() => steps.value.filter((step) => step.done).length);
 
 const active = computed(() => steps.value.find((step) => step.number === current.value) ?? steps.value[0] ?? null);
 
 const percent = computed(() => {
-    if (questionTotal.value > 0) {
-        return (answeredCount.value / questionTotal.value) * 100;
+    if (unitTotal.value > 0) {
+        return (answeredCount.value / unitTotal.value) * 100;
     }
 
     return total.value > 0 ? ((current.value - 1) / total.value) * 100 : 0;
@@ -34,19 +36,17 @@ const percent = computed(() => {
 
 const clampPercent = (value) => Math.max(0, Math.min(100, Math.round(value)));
 
-// How wide one segment is: a phone shows the finished questions in emerald and
-// the question being answered now in primary, mirroring the desktop rail.
+// How wide one segment is: a phone shows the finished units in emerald and the
+// unit being worked on now in primary, mirroring the desktop rail.
 const stepShare = computed(() => {
-    if (questionTotal.value > 0) {
-        return 100 / questionTotal.value;
+    if (unitTotal.value > 0) {
+        return 100 / unitTotal.value;
     }
 
     return total.value > 0 ? 100 / total.value : 0;
 });
 
-const donePercent = computed(() => clampPercent(questionTotal.value > 0
-    ? (answeredCount.value / questionTotal.value) * 100
-    : percent.value));
+const donePercent = computed(() => clampPercent(percent.value));
 
 const activePercent = computed(() => {
     const width = clampPercent(Math.min(stepShare.value, 100 - donePercent.value));
@@ -66,8 +66,8 @@ const mobileTitle = computed(() => {
     return format(copy.value.stepOf, { number: current.value, total: total.value });
 });
 
-const mobileCounter = computed(() => (questionTotal.value
-    ? `${answeredCount.value}/${questionTotal.value}`
+const mobileCounter = computed(() => (unitTotal.value
+    ? `${answeredCount.value}/${unitTotal.value}`
     : `${completedCount.value}/${total.value}`));
 
 function state(step) {

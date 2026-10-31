@@ -42,6 +42,10 @@ final class JoinAccountConfig
             'otpEnabled' => $otpEnabled,
             'answered' => $answered,
             'questions' => $questions,
+            // The rail bar counts the account form itself as one more unit, so
+            // this screen shows it as the step still to do rather than a bar
+            // that looks finished before the form is even filled in.
+            'railUnits' => $questions + 1,
             'percent' => $questions > 0 ? (int) round(($answered / $questions) * 100) : 0,
             'currentGroup' => TeacherSurvey::GROUP_ACCOUNT,
             'rail' => TeacherSurvey::steps($answers),

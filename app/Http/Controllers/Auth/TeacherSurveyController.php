@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\ServiceType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TeacherSurveyAvailabilityRequest;
 use App\Http\Requests\TeacherSurveyEducationRequest;
@@ -9,7 +10,6 @@ use App\Http\Requests\TeacherSurveyExperienceRequest;
 use App\Http\Requests\TeacherSurveyLanguagesRequest;
 use App\Http\Requests\TeacherSurveyLevelRequest;
 use App\Http\Requests\TeacherSurveyProofRequest;
-use App\Http\Requests\TeacherSurveyRatesRequest;
 use App\Http\Requests\TeacherSurveyServicesRequest;
 use App\Http\Requests\TeacherSurveySubjectsRequest;
 use App\Services\InviteOnboardingService;
@@ -111,7 +111,8 @@ class TeacherSurveyController extends Controller
     }
 
     /**
-     * Question 4: the services the teacher would like to offer.
+     * Question 4: the services the teacher would like to offer, each one priced
+     * on the spot.
      */
     public function editServices(Request $request): View|RedirectResponse
     {
@@ -127,16 +128,25 @@ class TeacherSurveyController extends Controller
     public function updateServices(TeacherSurveyServicesRequest $request): RedirectResponse
     {
         $services = array_values(array_map('strval', (array) $request->validated('services')));
-        $previous = array_values(array_map('strval', PendingTeacherSignup::step(TeacherSurvey::STEP_SERVICES)));
+        $offersLessons = in_array(ServiceType::Lesson->value, $services, true);
+
+        // Only the services this teacher ticked are kept, so a tampered field
+        // cannot price a service they never offered.
+        $rates = [];
+
+        foreach (TeacherSurvey::pricedServiceOptions($services) as $option) {
+            $rates[$option['value']] = (float) $request->validated('service_rates.'.$option['value']);
+        }
 
         PendingTeacherSignup::putStep(TeacherSurvey::STEP_SERVICES, $services);
 
-        // The rates question priced the services picked earlier by name, so a
-        // changed list has to be priced again instead of keeping stale amounts.
-        if ((array_diff($services, $previous) !== [] || array_diff($previous, $services) !== [])
-            && PendingTeacherSignup::hasStep(TeacherSurvey::STEP_RATES)) {
-            PendingTeacherSignup::forgetStep(TeacherSurvey::STEP_RATES);
-        }
+        // The prices ride along with the picks: this screen is the only place
+        // that asks for them, while the profile (and the signed-in services
+        // console) still reads the hourly fee and the service prices apart.
+        PendingTeacherSignup::putStep(TeacherSurvey::STEP_RATES, [
+            'hourly_rate' => $offersLessons ? (float) $request->validated('hourly_rate') : null,
+            'service_rates' => $rates,
+        ]);
 
         return redirect()->route('join.experience');
     }
@@ -184,54 +194,19 @@ class TeacherSurveyController extends Controller
             'value' => (string) $request->validated('education'),
         ]);
 
-        return redirect()->route('join.rates');
-    }
-
-    /**
-     * Question 7: the hourly fee, plus a price for every service picked in
-     * question 4.
-     */
-    public function editRates(Request $request): View|RedirectResponse
-    {
-        if (! PendingTeacherSignup::hasStep(TeacherSurvey::STEP_EDUCATION)) {
-            return redirect()
-                ->route('join.education')
-                ->with('status', 'answer-the-education-question');
-        }
-
-        return $this->question(TeacherSurvey::STEP_RATES);
-    }
-
-    public function updateRates(TeacherSurveyRatesRequest $request): RedirectResponse
-    {
-        $priced = TeacherSurvey::pricedServiceOptions(PendingTeacherSignup::step(TeacherSurvey::STEP_SERVICES));
-
-        // Only the services this teacher picked are kept, so a tampered field
-        // cannot price a service they never offered.
-        $rates = [];
-
-        foreach ($priced as $option) {
-            $rates[$option['value']] = (float) $request->validated('service_rates.'.$option['value']);
-        }
-
-        PendingTeacherSignup::putStep(TeacherSurvey::STEP_RATES, [
-            'hourly_rate' => (float) $request->validated('hourly_rate'),
-            'service_rates' => $rates,
-        ]);
-
         return redirect()->route('join.availability');
     }
 
     /**
-     * Question 8: the days of the week the teacher can teach, starting from one
+     * Question 7: the days of the week the teacher can teach, starting from one
      * of the suggested weeks so the clock times come with the choice.
      */
     public function editAvailability(Request $request): View|RedirectResponse
     {
-        if (! PendingTeacherSignup::hasStep(TeacherSurvey::STEP_RATES)) {
+        if (! PendingTeacherSignup::hasStep(TeacherSurvey::STEP_SERVICES)) {
             return redirect()
-                ->route('join.rates')
-                ->with('status', 'answer-the-rates-question');
+                ->route('join.services')
+                ->with('status', 'answer-the-service-question');
         }
 
         return $this->question(TeacherSurvey::STEP_AVAILABILITY);
@@ -253,7 +228,7 @@ class TeacherSurveyController extends Controller
     }
 
     /**
-     * Question 9: proof of a government teaching post (optional).
+     * Question 8: proof of a government teaching post (optional).
      */
     public function editProof(Request $request): View|RedirectResponse
     {

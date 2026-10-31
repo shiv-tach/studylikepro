@@ -40,9 +40,14 @@ Route::middleware('guest')->group(function () {
         Route::get('/languages', [TeacherSurveyController::class, 'editLanguages'])->name('languages');
         Route::put('/languages', [TeacherSurveyController::class, 'updateLanguages'])->name('languages.update');
 
-        // Question 4: the services you would like to offer.
+        // Question 4: the services you would like to offer, each priced on the
+        // spot (the prices used to be a question of their own, see below).
         Route::get('/services', [TeacherSurveyController::class, 'editServices'])->name('services');
         Route::put('/services', [TeacherSurveyController::class, 'updateServices'])->name('services.update');
+
+        // The old rates question was folded into the services one, so a link to
+        // it (bookmark, half-finished invite) lands on the merged screen.
+        Route::redirect('/rates', '/join/services')->name('rates');
 
         // Question 5: how many years you have been teaching.
         Route::get('/experience', [TeacherSurveyController::class, 'editExperience'])->name('experience');
@@ -52,16 +57,11 @@ Route::middleware('guest')->group(function () {
         Route::get('/education', [TeacherSurveyController::class, 'editEducation'])->name('education');
         Route::put('/education', [TeacherSurveyController::class, 'updateEducation'])->name('education.update');
 
-        // Question 7: the hourly fee plus a price for each service picked in
-        // question 4.
-        Route::get('/rates', [TeacherSurveyController::class, 'editRates'])->name('rates');
-        Route::put('/rates', [TeacherSurveyController::class, 'updateRates'])->name('rates.update');
-
-        // Question 8: the days of the week you can teach.
+        // Question 7: the days of the week you can teach.
         Route::get('/availability', [TeacherSurveyController::class, 'editAvailability'])->name('availability');
         Route::put('/availability', [TeacherSurveyController::class, 'updateAvailability'])->name('availability.update');
 
-        // Question 9: prove you are a government teacher (optional).
+        // Question 8: prove you are a government teacher (optional).
         Route::get('/proof', [TeacherSurveyController::class, 'editProof'])->name('proof');
         Route::post('/proof', [TeacherSurveyController::class, 'updateProof'])->name('proof.update');
 

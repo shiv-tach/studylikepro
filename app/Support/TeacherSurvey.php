@@ -14,8 +14,9 @@ use App\Models\Subject;
  * writes the answers to the profile cannot describe the flow differently.
  *
  * Order: 1 tutoring level -> 2 subjects -> 3 teaching languages -> 4 services
- * -> 5 years of experience -> 6 education -> 7 rates -> 8 teaching days
- * -> 9 government-teacher proof -> 10 your account (identity, password, SMS code).
+ * (each one priced on the spot) -> 5 years of experience -> 6 education
+ * -> 7 teaching days -> 8 government-teacher proof -> 9 your account
+ * (identity, password, SMS code).
  */
 final class TeacherSurvey
 {
@@ -31,6 +32,12 @@ final class TeacherSurvey
 
     public const STEP_EDUCATION = 'education';
 
+    /**
+     * No longer a question of its own: the services question prices every pick
+     * on the spot. The answer still lives under this key because the profile
+     * stores the hourly fee and the service prices apart, and
+     * `InviteOnboardingService` reads them from here.
+     */
     public const STEP_RATES = 'rates';
 
     public const STEP_AVAILABILITY = 'availability';
@@ -57,7 +64,6 @@ final class TeacherSurvey
         self::STEP_SERVICES,
         self::STEP_EXPERIENCE,
         self::STEP_EDUCATION,
-        self::STEP_RATES,
         self::STEP_AVAILABILITY,
         self::STEP_PROOF,
     ];
@@ -91,14 +97,13 @@ final class TeacherSurvey
         $servicesDone = self::answered($answers, self::STEP_SERVICES);
         $experienceDone = self::answered($answers, self::STEP_EXPERIENCE);
         $educationDone = self::answered($answers, self::STEP_EDUCATION);
-        $ratesDone = self::answered($answers, self::STEP_RATES);
         $availabilityDone = self::answered($answers, self::STEP_AVAILABILITY);
         $proofDone = self::answered($answers, self::STEP_PROOF);
 
         $teachingDone = $levelDone && $subjectsDone;
         $preferencesDone = $languagesDone && $servicesDone;
         $backgroundDone = $experienceDone && $educationDone;
-        $scheduleDone = $ratesDone && $availabilityDone;
+        $scheduleDone = $availabilityDone;
 
         return self::withProgress([
             [
@@ -114,7 +119,7 @@ final class TeacherSurvey
                 'key' => 'preferences',
                 'number' => self::GROUP_PREFERENCES,
                 'label' => __('How you teach'),
-                'hint' => __('The languages you teach in and the services you want to offer.'),
+                'hint' => __('The languages you teach in, the services you offer and the price of each one.'),
                 'url' => route($languagesDone ? 'join.services' : 'join.languages'),
                 'done' => $preferencesDone,
                 'reachable' => $teachingDone,
@@ -131,9 +136,9 @@ final class TeacherSurvey
             [
                 'key' => 'schedule',
                 'number' => self::GROUP_SCHEDULE,
-                'label' => __('Rates & days'),
-                'hint' => __('What you charge and the days you can teach.'),
-                'url' => route($ratesDone ? 'join.availability' : 'join.rates'),
+                'label' => __('Teaching days'),
+                'hint' => __('The days of the week you can take lessons.'),
+                'url' => route('join.availability'),
                 'done' => $scheduleDone,
                 'reachable' => $backgroundDone,
             ],
@@ -168,7 +173,7 @@ final class TeacherSurvey
         'teaching' => [self::STEP_LEVEL, self::STEP_SUBJECTS],
         'preferences' => [self::STEP_LANGUAGES, self::STEP_SERVICES],
         'background' => [self::STEP_EXPERIENCE, self::STEP_EDUCATION],
-        'schedule' => [self::STEP_RATES, self::STEP_AVAILABILITY],
+        'schedule' => [self::STEP_AVAILABILITY],
         'proof' => [self::STEP_PROOF],
         'account' => [],
     ];
@@ -196,7 +201,7 @@ final class TeacherSurvey
     }
 
     /**
-     * How many of the nine questions have an answer.
+     * How many of the eight questions have an answer.
      *
      * @param  array<string, mixed>  $answers
      */
@@ -281,16 +286,28 @@ final class TeacherSurvey
         $hourlyRate = $rates['hourly_rate'] ?? null;
         $serviceRates = is_array($rates['service_rates'] ?? null) ? $rates['service_rates'] : [];
 
-        $hasRates = $hourlyRate !== null || $serviceRates !== [];
-        $extraRateCount = count($serviceRates);
+        // The prices belong to the services that were picked, so the recap
+        // prints them beside those names instead of inventing a "Rates" row
+        // the survey no longer asks as its own question.
+        $priceChunks = [];
 
-        $rateValue = $hourlyRate === null
-            ? null
-            : platform_settings()->formatMinor((int) round(((float) $hourlyRate) * 100)).' / '.__('hour');
+        if (is_numeric($hourlyRate) && (float) $hourlyRate > 0) {
+            $priceChunks[] = platform_settings()->formatMinor((int) round(((float) $hourlyRate) * 100))
+                .' / '.__('hour');
+        }
 
-        $rateMeta = $extraRateCount === 0
-            ? null
-            : __(':count service price(s) set', ['count' => $extraRateCount]);
+        foreach (self::serviceOptions() as $option) {
+            $amount = $serviceRates[$option['value']] ?? null;
+
+            if (! is_numeric($amount) || (float) $amount <= 0) {
+                continue;
+            }
+
+            $priceChunks[] = $option['label'].' '
+                .platform_settings()->formatMinor((int) round(((float) $amount) * 100));
+        }
+
+        $serviceMeta = $priceChunks === [] ? null : implode(' · ', $priceChunks);
 
         $days = array_values(array_unique(array_map('intval', (array) ($availability['days'] ?? []))));
         $dayLabels = collect(self::availabilityDays())->pluck('label', 'value');
@@ -326,7 +343,7 @@ final class TeacherSurvey
                 'icon' => '🗣️',
                 'items' => [
                     ['key' => self::STEP_LANGUAGES, 'label' => __('Languages'), 'value' => $languageNames === [] ? null : implode(', ', $languageNames), 'meta' => null, 'url' => route('join.languages')],
-                    ['key' => self::STEP_SERVICES, 'label' => __('Services'), 'value' => $serviceNames === [] ? null : implode(', ', $serviceNames), 'meta' => null, 'url' => route('join.services')],
+                    ['key' => self::STEP_SERVICES, 'label' => __('Services'), 'value' => $serviceNames === [] ? null : implode(', ', $serviceNames), 'meta' => $serviceMeta, 'url' => route('join.services')],
                 ],
             ],
             [
@@ -340,10 +357,9 @@ final class TeacherSurvey
             ],
             [
                 'key' => 'schedule',
-                'label' => __('Rates & days'),
+                'label' => __('Teaching days'),
                 'icon' => '🕒',
                 'items' => [
-                    ['key' => self::STEP_RATES, 'label' => __('Rates'), 'value' => $hasRates ? $rateValue : null, 'meta' => $rateMeta, 'url' => route('join.rates')],
                     ['key' => self::STEP_AVAILABILITY, 'label' => __('Teaching days'), 'value' => $availabilityValue, 'meta' => $availabilityMeta, 'url' => route('join.availability')],
                 ],
             ],
@@ -439,7 +455,7 @@ final class TeacherSurvey
             self::STEP_LEVEL, self::STEP_SUBJECTS => self::GROUP_TEACHING,
             self::STEP_LANGUAGES, self::STEP_SERVICES => self::GROUP_PREFERENCES,
             self::STEP_EXPERIENCE, self::STEP_EDUCATION => self::GROUP_BACKGROUND,
-            self::STEP_RATES, self::STEP_AVAILABILITY => self::GROUP_SCHEDULE,
+            self::STEP_AVAILABILITY => self::GROUP_SCHEDULE,
             self::STEP_PROOF => self::GROUP_PROOF,
             default => self::GROUP_ACCOUNT,
         };
@@ -461,7 +477,6 @@ final class TeacherSurvey
                     self::STEP_SERVICES => 'join.services',
                     self::STEP_EXPERIENCE => 'join.experience',
                     self::STEP_EDUCATION => 'join.education',
-                    self::STEP_RATES => 'join.rates',
                     self::STEP_AVAILABILITY => 'join.availability',
                     default => 'join.proof',
                 };
@@ -541,21 +556,46 @@ final class TeacherSurvey
     }
 
     /**
-     * The four services a teacher can say they want to offer.
+     * The four services a teacher can say they want to offer, each carrying the
+     * unit it is sold in and the price field the survey draws on its card.
      *
-     * @return list<array{value: string, label: string, hint: string, icon: string}>
+     * @return list<array{value: string, label: string, hint: string, icon: string, unit: string, badge: string, priceLabel: string, priced: bool}>
      */
     public static function serviceOptions(): array
     {
         $hints = [
-            ServiceType::Lesson->value => __('Live 1-on-1 lessons on a topic or paper.'),
-            ServiceType::PaperMarking->value => __('Mark a student’s paper and return it with feedback.'),
-            ServiceType::PaperDiscussion->value => __('Walk through a past paper together, live.'),
-            ServiceType::Qna->value => __('Answer a student’s questions in a live session.'),
+            ServiceType::Lesson->value => __('One student, one hour, live — your usual tutoring lesson.'),
+            ServiceType::PaperMarking->value => __('The student uploads a paper; you return it marked with written feedback.'),
+            ServiceType::PaperDiscussion->value => __('Go through a past paper question by question, live.'),
+            ServiceType::Qna->value => __('A live session where the student brings their own questions.'),
         ];
 
         $labels = [
             ServiceType::Lesson->value => __('Lessons and tutoring'),
+        ];
+
+        // A lesson is sold by the hour, marking by the paper and both live
+        // discussion services by the session, so the survey can label each
+        // price field instead of asking for one generic amount.
+        $units = [
+            ServiceType::Lesson->value => 'hour',
+            ServiceType::PaperMarking->value => 'paper',
+            ServiceType::PaperDiscussion->value => 'session',
+            ServiceType::Qna->value => 'session',
+        ];
+
+        $badges = [
+            ServiceType::Lesson->value => __('Per hour'),
+            ServiceType::PaperMarking->value => __('Per paper'),
+            ServiceType::PaperDiscussion->value => __('Per session'),
+            ServiceType::Qna->value => __('Per session'),
+        ];
+
+        $priceLabels = [
+            ServiceType::Lesson->value => __('Hourly fee (rupees)'),
+            ServiceType::PaperMarking->value => __('Price per paper (rupees)'),
+            ServiceType::PaperDiscussion->value => __('Price per session (rupees)'),
+            ServiceType::Qna->value => __('Price per session (rupees)'),
         ];
 
         return array_map(fn (ServiceType $type) => [
@@ -563,6 +603,12 @@ final class TeacherSurvey
             'label' => $labels[$type->value] ?? $type->pluralLabel(),
             'hint' => $hints[$type->value],
             'icon' => $type->icon(),
+            'unit' => $units[$type->value],
+            'badge' => $badges[$type->value],
+            'priceLabel' => $priceLabels[$type->value],
+            // Lessons are priced by the hourly fee field itself, so they get no
+            // separate `service_rates` entry.
+            'priced' => $type !== ServiceType::Lesson,
         ], ServiceType::cases());
     }
 
@@ -629,11 +675,11 @@ final class TeacherSurvey
     }
 
     /**
-     * The services the rates question has to price: everything the teacher
-     * picked except lessons, whose price is the hourly rate itself.
+     * The picks that need a price of their own: everything the teacher ticked
+     * except lessons, whose price is the hourly rate itself.
      *
      * @param  array<int, mixed>  $selected
-     * @return list<array{value: string, label: string, hint: string, icon: string}>
+     * @return list<array{value: string, label: string, hint: string, icon: string, unit: string, badge: string, priceLabel: string, priced: bool}>
      */
     public static function pricedServiceOptions(array $selected): array
     {

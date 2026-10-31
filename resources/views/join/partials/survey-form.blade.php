@@ -20,7 +20,8 @@
 @endphp
 
 <x-onboarding-progress :current="$c['currentGroup']" :steps="$c['rail']"
-                       :answered="$c['answered']" :questions="$c['total']" :question="$c['index']" />
+                       :answered="$c['answered']" :questions="$c['total']" :rail-units="$c['railUnits']"
+                       :question="$c['index']" />
 
 <div class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
     <div class="space-y-5">
@@ -141,19 +142,55 @@
                     @break
 
                 @case(\App\Support\TeacherSurvey::STEP_SERVICES)
-                    <fieldset>
+                    <fieldset class="space-y-4">
                         <legend class="sr-only">{{ $c['title'] }}</legend>
+
+                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ $qc['serviceNoscriptHint'] }}</p>
 
                         <div class="grid gap-3 sm:grid-cols-2">
                             @foreach ($options['services'] as $service)
-                                <x-survey.option-card
-                                    type="checkbox"
-                                    name="services[]"
-                                    :value="$service['value']"
-                                    :checked="in_array($service['value'], $values['services'], true)"
-                                    :icon="$service['icon']"
-                                    :title="$service['label']"
-                                    :hint="$service['hint']" />
+                                @php
+                                    $checked = in_array($service['value'], $values['services'], true);
+                                    $priceName = $service['priced'] ? 'service_rates['.$service['value'].']' : 'hourly_rate';
+                                    $priceValue = $service['priced']
+                                        ? ($values['service_rates'][$service['value']] ?? '')
+                                        : $values['hourly_rate'];
+                                @endphp
+
+                                <div class="rounded-2xl border-2 border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                                    <label class="flex items-start gap-3">
+                                        <input type="checkbox" name="services[]" value="{{ $service['value'] }}"
+                                               @checked($checked)
+                                               class="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary">
+
+                                        <span class="min-w-0 flex-1">
+                                            <span class="flex flex-wrap items-center gap-2">
+                                                <span class="text-base font-bold text-slate-900 dark:text-slate-100">{{ $service['label'] }}</span>
+                                                <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">{{ $service['badge'] }}</span>
+                                            </span>
+                                            <span class="mt-1 block text-xs leading-relaxed text-slate-500 dark:text-slate-400">{{ $service['hint'] }}</span>
+                                        </span>
+                                    </label>
+
+                                    <div class="mt-3 border-t border-slate-200/80 pt-3 dark:border-slate-800/80">
+                                        <label for="price_{{ $service['value'] }}" class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                            {{ $service['priceLabel'] }}
+                                        </label>
+
+                                        <div class="mt-1.5 flex items-center gap-2">
+                                            <span class="shrink-0 text-sm font-semibold text-slate-500 dark:text-slate-400">{{ $c['currency']['symbol'] }}</span>
+                                            <input id="price_{{ $service['value'] }}" name="{{ $priceName }}" type="number" inputmode="numeric"
+                                                   min="{{ $c['limits']['rateMin'] }}" max="{{ $c['limits']['rateMax'] }}" step="1"
+                                                   value="{{ $priceValue }}"
+                                                   class="{{ $numberField }}">
+                                            @if ($service['unit'] === 'hour')
+                                                <span class="shrink-0 text-sm font-semibold text-slate-500 dark:text-slate-400">/ {{ $qc['hourUnit'] }}</span>
+                                            @endif
+                                        </div>
+
+                                        <x-input-error :messages="$errors->get($priceName)" class="mt-2" />
+                                    </div>
+                                </div>
                             @endforeach
                         </div>
 
@@ -199,51 +236,6 @@
                     </fieldset>
                     @break
 
-                @case(\App\Support\TeacherSurvey::STEP_RATES)
-                    <div class="space-y-4">
-                        <div class="rounded-xl border border-primary/25 bg-primary/5 p-4 dark:border-primary/30 dark:bg-primary/10">
-                            <label for="hourly_rate" class="block text-sm font-semibold text-slate-800 dark:text-slate-100">
-                                {{ $qc['hourlyRate'] }}
-                            </label>
-                            <div class="mt-2 flex items-center gap-2">
-                                <span class="shrink-0 text-sm font-semibold text-slate-500 dark:text-slate-400">{{ $c['currency']['symbol'] }}</span>
-                                <input id="hourly_rate" name="hourly_rate" type="number" inputmode="numeric"
-                                       min="{{ $c['limits']['rateMin'] }}" max="{{ $c['limits']['rateMax'] }}" step="1" required
-                                       value="{{ $values['hourly_rate'] }}"
-                                       class="{{ $numberField }}">
-                                <span class="shrink-0 text-sm font-semibold text-slate-500 dark:text-slate-400">/ {{ $qc['hourUnit'] }}</span>
-                            </div>
-                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $qc['hourlyRateHint'] }}</p>
-                            <x-input-error :messages="$errors->get('hourly_rate')" class="mt-2" />
-                        </div>
-
-                        @foreach ($options['pricedServices'] as $service)
-                            <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-800/40">
-                                <label for="service_rates_{{ $service['value'] }}" class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                    <span aria-hidden="true">{{ $service['icon'] }}</span>
-                                    {{ __('Price for :service (rupees)', ['service' => $service['label']]) }}
-                                </label>
-                                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{{ $service['hint'] }}</p>
-                                <div class="mt-2 flex items-center gap-2">
-                                    <span class="shrink-0 text-sm font-semibold text-slate-500 dark:text-slate-400">{{ $c['currency']['symbol'] }}</span>
-                                    <input id="service_rates_{{ $service['value'] }}"
-                                           name="service_rates[{{ $service['value'] }}]" type="number" inputmode="numeric"
-                                           min="{{ $c['limits']['rateMin'] }}" max="{{ $c['limits']['rateMax'] }}" step="1" required
-                                           value="{{ $values['service_rates'][$service['value']] ?? '' }}"
-                                           class="block w-full rounded-xl border-slate-300 bg-white text-base font-semibold text-slate-900 shadow-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                                </div>
-                                <x-input-error :messages="$errors->get('service_rates.'.$service['value'])" class="mt-2" />
-                            </div>
-                        @endforeach
-
-                        @if ($options['pricedServices'] === [])
-                            <p class="rounded-xl bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
-                                {{ $qc['lessonsOnly'] }}
-                            </p>
-                        @endif
-                    </div>
-                    @break
-
                 @case(\App\Support\TeacherSurvey::STEP_AVAILABILITY)
                     <fieldset>
                         <legend class="sr-only">{{ $c['title'] }}</legend>
@@ -279,8 +271,10 @@
                         <x-input-error :messages="$errors->get('preset')" class="mt-2" />
 
                         {{-- Without JavaScript every day is on screen; a suggested
-                             week can still be picked above. --}}
-                        <div class="mt-5" @if (! $daysMissing && $values['preset'] !== null) hidden @endif>
+                             week can still be picked above. A preset that is only
+                             this screen's default leaves the grid on screen, so
+                             the days can still be changed by hand. --}}
+                        <div class="mt-5" @if (! $daysMissing && $values['preset'] !== null && ! $c['presetDefaulted']) hidden @endif>
                             <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{{ $qc['daysTitle'] }}</p>
 
                             <div class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
